@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>CLUB INTRANET</title>
+    <style>
+        :root { --red: #e60000; --bg: #f4f4f4; --sidebar: #e60000; --green: #2eb85c; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; display: flex; background: var(--bg); height: 100vh; overflow: hidden; }
+
+        /* Barra Lateral */
+        .sidebar { width: 220px; background: var(--sidebar); color: white; display: flex; flex-direction: column; z-index: 10; }
+        .sidebar-header { padding: 25px 20px; font-weight: 900; font-size: 18px; }
+        .nav-item { padding: 15px 20px; font-size: 13px; font-weight: bold; cursor: pointer; opacity: 0.8; }
+        .nav-active { 
+    background: white; 
+    color: var(--red); 
+    border-radius: 8px 0 0 8px; /* Cambiado de 25px a 8px para que sea cuadrado redondeado */
+    margin-left: 10px; 
+    opacity: 1; 
+}
+
+        .main { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
+        
+        /* Header Superior Fijo */
+
+
+   /* Objetivos Superiores Estilo Imagen 1 */
+.obj-container { display: flex; align-items: stretch; gap: 10px; margin-bottom: 20px; width: 100%; }
+.obj-row { display: flex; gap: 10px; flex: 1; }
+.obj-box { flex: 1; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 8px 12px; }
+.obj-box label { display: block; font-size: 9px; color: #aaa; font-weight: bold; margin-bottom: 2px; }
+.obj-box input { width: 100%; border: none; outline: none; font-size: 14px; color: #333; font-weight: 500; background: transparent; }
+
+/* Botón Guardar a la derecha de los inputs */
+.save-btn { background: white; border: 1px solid #ddd; border-radius: 8px; width: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; font-size: 20px; }
+.save-btn:hover { background: #f9f9f9; transform: scale(1.05); color: var(--green); }
+
+        /* Calendario */
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr) 1.5fr; gap: 10px; }
+        .day { background: white; border: 1px solid #ddd; border-radius: 10px; padding: 12px; min-height: 160px; display: flex; flex-direction: column; position: relative; }
+        .day.today { border: 2px solid var(--red); }
+        .hoy-label { 
+    position: absolute; 
+    top: -8px; 
+    right: 10px; 
+    left: auto; /* Anula el left:10px que tenías antes */
+    background: var(--red); 
+    color: white; 
+    font-size: 10px; 
+    padding: 2px 6px; 
+    border-radius: 4px; 
+    font-weight: bold; 
+    z-index: 20; 
+}
+        .day-num { font-size: 18px; font-weight: 800; margin-bottom: 5px; }
+        
+        .cat-label { font-size: 10px; font-weight: 800; color: #333; margin-top: 5px; text-transform: uppercase; }
+        .item-list { font-size: 12px; color: #666; cursor: pointer; min-height: 15px; }
+        .item-list div.checked { color: var(--green); font-weight: bold; }
+
+        .btn-foto { background: var(--red); color: white; border: none; width: 100%; padding: 10px; border-radius: 6px; font-size: 11px; font-weight: 800; cursor: pointer; margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 5px; }
+
+        .weekend { background: #eee; border: 1px dashed #ccc; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; position: relative; }
+        .weekend.today { border: 2px solid var(--red); background: #fff5f5; }
+        .we-names { display: flex; justify-content: space-between; font-size: 11px; color: #999; font-weight: bold; }
+        .btn-form { background: #ffcccc; color: var(--red); border: none; padding: 15px; border-radius: 10px; font-size: 11px; font-weight: bold; cursor: pointer; margin-top: auto; text-align: center; text-decoration: none; }
+
+        /* Footer Contadores */
+        .footer-stats { margin-top: auto; padding-top: 20px; border-top: 1px solid #ddd; }
+        .stat-line { font-size: 12px; font-weight: bold; color: #444; display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .dots { display: flex; gap: 3px; }
+        .dot { width: 12px; height: 12px; background: #ddd; border-radius: 3px; }
+        .dot.active { background: var(--green); }
+
+        /* Modal Selección Foto */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 15px; text-align: center; width: 300px; }
+        .modal-btn { display: block; width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
+        /* Estilo para botón con foto subida */
+        .btn-foto.has-file { background: var(--green); }
+
+        /* Pop-up para ver la foto subida */
+        #viewPhotoModal .modal-content { width: 90%; max-width: 400px; position: relative; padding: 20px; }
+        #viewPhotoModal img { width: 100%; border-radius: 10px; margin-bottom: 15px; border: 1px solid #ddd; }
+        .close-view { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 24px; font-weight: bold; color: #666; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-header">INTRANET FR</div>
+        <div class="nav-item">INICIO</div>
+        <div class="nav-item nav-active">DEPORTIVO</div>
+        <div class="nav-item" onclick="location.href='/asistencias'">ASISTENCIAS</div>
+    </div>
+
+    <div class="main">
+        <div class="top-bar">
+            <div class="user-info">USUARIO: <span id="userId">{{ usuario }}</span></div>
+          
+        </div>
+
+     <div class="header-row">
+    <select id="monthSelect" style="border:none; background:transparent; font-size:24px; font-weight:900; outline:none; cursor:pointer;" onchange="location.href='?mes=' + this.value">
+        <option value="2026-05" {% if mes_actual == '2026-05' %}selected{% endif %}>MAYO 2026</option>
+        <option value="2026-06" {% if mes_actual == '2026-06' %}selected{% endif %}>JUNIO 2026</option>
+        <option value="2026-07" {% if mes_actual == '2026-07' %}selected{% endif %}>JULIO 2026</option>
+        <option value="2026-08" {% if mes_actual == '2026-08' %}selected{% endif %}>AGOSTO 2026</option>
+        <option value="2026-09" {% if mes_actual == '2026-09' %}selected{% endif %}>SEPTIEMBRE 2026</option>
+        <option value="2026-10" {% if mes_actual == '2026-10' %}selected{% endif %}>OCTUBRE 2026</option>
+        <option value="2026-11" {% if mes_actual == '2026-11' %}selected{% endif %}>NOVIEMBRE 2026</option>
+        <option value="2026-12" {% if mes_actual == '2026-12' %}selected{% endif %}>DICIEMBRE 2026</option>
+    </select>
+</div>
+
+        <div class="obj-container">
+    <div class="obj-row">
+        <div class="obj-box">
+            <label>TACTICO</label>
+            <input type="text" id="topTac" value="{{ objetivos.tactico }}" oninput="syncInputs()">
+        </div>
+        <div class="obj-box">
+            <label>TECNICO</label>
+            <input type="text" id="topTec" value="{{ objetivos.tecnico }}" oninput="syncInputs()">
+        </div>
+    </div>
+    <!-- Botón de guardado a la derecha -->
+    <div class="save-btn" title="Guardar Cambios" onclick="saveAll()">💾</div>
+</div>
+
+        <div class="grid">
+            {% for semana in semanas %}
+                {% for d in semana[:5] %}
+                    {% if d %}
+                    <div class="day {% if d.es_hoy %}today{% endif %}">
+                        {% if d.es_hoy %}<div class="hoy-label">HOY</div>{% endif %}
+                        <span class="day-num">{{ d.numero }}</span>
+                        <div class="cat-label">TÁCTICO</div>
+                        <div class="item-list list-tac"></div>
+                        <div class="cat-label">TÉCNICO</div>
+                        <div class="item-list list-tec"></div>
+                        {% set tiene_foto = d.numero|string in fotos_subidas %}
+<button class="btn-foto {{ 'has-file' if tiene_foto }}" 
+        style="width: 100%;
+               {% if tiene_foto %}
+                   /* Sin estilo extra, usa el verde de .has-file */
+               {% elif d.numero < dias_transcurridos %}
+                   background: #ff0000; color: white; border: none;
+               {% else %}
+                   background: white; color: #444; border: 1px solid #ccc;
+               {% endif %}"
+        onclick="{{ 'viewPhoto(' ~ d.numero ~ ')' if tiene_foto else 'openPhotoMenu(' ~ d.numero ~ ')' }}">
+    {% if tiene_foto %}
+        VER
+    {% else %}
+        📷 SUBIR
+    {% endif %}
+</button>
+                    </div>
+                    {% else %}
+                    <div style="visibility: hidden;"></div>
+                    {% endif %}
+                {% endfor %}
+
+                <div class="weekend" data-sab="{{ semana[5].numero if semana[5] }}" data-dom="{{ semana[6].numero if semana[6] }}">
+    <div class="hoy-label" style="display:none;">HOY</div>
+    <div class="we-names">
+        <span>SÁB {{ semana[5].numero if semana[5] }}</span>
+        <span>DOM {{ semana[6].numero if semana[6] }}</span>
+    </div>
+    <a href="https://forms.gle/sozVzJKkktKiRYzX8" target="_blank" class="btn-form">FORMULARIO PARTIDO</a>
+</div>
+            {% endfor %}
+        </div>
+
+        <div class="footer-stats">
+    <div class="stat-line">
+        ARCHIVOS SUBIDOS: {{ archivos_subidos }} / {{ dias_transcurridos }} DÍAS
+    </div>
+    <div class="stat-line" style="flex-direction: column; align-items: flex-start;">
+        <strong>RECUENTO DE OBJETIVOS:</strong>
+        <div id="dotContainer" style="width: 100%; margin-top: 10px;"></div>
+    </div>
+</div>
+    </div>
+{% include 'modales_fotos.html' %}
+    <!-- Menú Foto -->
+    <div id="photoMenu" class="modal">
+        <div class="modal-content">
+            <h3>Subir Evidencia</h3>
+            <button class="modal-btn" style="background:var(--red); color:white;" onclick="startCamera()">HACER FOTO</button>
+            <button class="modal-btn" style="background:#eee;" onclick="document.getElementById('fileInp').click()">SUBIR ARCHIVO</button>
+            <input type="file" id="fileInp" style="display:none" onchange="handleFile(this)">
+            <button class="modal-btn" style="background:#444; color:white;" onclick="closeModals()">CANCELAR</button>
+        </div>
+    </div>
+
+    <!-- Cámara -->
+    <div id="camModal" class="modal">
+        <div class="modal-content" style="width:90%; max-width:400px;">
+            <video id="video" autoplay playsinline style="width:100%; border-radius:10px;"></video>
+            <button class="modal-btn" style="background:var(--green); color:white;" onclick="takeSnap()">CAPTURAR</button>
+            <button class="modal-btn" style="background:#444; color:white;" onclick="closeModals()">CERRAR</button>
+        </div>
+    </div>
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <script>
+    let currentDay = 0;
+    const usuario = "{{ usuario }}";
+    // Esta línea es la que recupera los "verdes" del archivo JSON al recargar
+    let itemsCompletados = {{ objetivos.completados|tojson|safe if objetivos.completados else [] }};
+
+        // Sincronizar inputs superiores con tarjetas
+        function syncInputs() {
+            const tacVal = document.getElementById('topTac').value.split(',').map(s => s.trim()).filter(s => s);
+            const tecVal = document.getElementById('topTec').value.split(',').map(s => s.trim()).filter(s => s);
+
+            // Ahora cada div sabe a qué día pertenece
+            document.querySelectorAll('.day').forEach(dayDiv => {
+                const diaNum = dayDiv.querySelector('.day-num').innerText;
+                
+                const render = (arr, selector) => {
+                    dayDiv.querySelector(selector).innerHTML = arr.map(v => {
+                        const idUnico = diaNum + "-" + v; // Ejemplo: "4-CENTRO"
+                        const isChecked = itemsCompletados.includes(idUnico) ? 'checked' : '';
+                        return `<div class="${isChecked}" onclick="toggleCheck(this, '${diaNum}')">${v}</div>`;
+                    }).join('');
+                };
+
+                render(tacVal, '.list-tac');
+                render(tecVal, '.list-tec');
+            });
+            
+            updateStats();
+        }
+
+        function toggleCheck(el, dia) {
+            el.classList.toggle('checked');
+            const idUnico = dia + "-" + el.innerText; // Guardamos "4-CENTRO" en lugar de solo "CENTRO"
+            
+            if (el.classList.contains('checked')) {
+                if (!itemsCompletados.includes(idUnico)) itemsCompletados.push(idUnico);
+            } else {
+                itemsCompletados = itemsCompletados.filter(item => item !== idUnico);
+            }
+            
+            updateStats();
+            saveAll(); 
+        }
+
+        function updateStats() {
+            const conceptos = [
+                ...document.getElementById('topTac').value.split(','),
+                ...document.getElementById('topTec').value.split(',')
+            ].map(s => s.trim()).filter(s => s !== "");
+
+            const container = document.getElementById('dotContainer');
+            container.innerHTML = ""; 
+
+            conceptos.forEach(concept => {
+                // Ahora contamos cuántos IDs únicos terminan con esa palabra
+                const count = itemsCompletados.filter(item => item.split('-')[1] === concept).length;
+                let dots = "";
+                for(let i=0; i<22; i++) {
+                    dots += `<div class="dot ${i < count ? 'active' : ''}" style="display:inline-block; margin-right:3px;"></div>`;
+                }
+
+                container.innerHTML += `
+                    <div style="margin-bottom:15px;">
+                        <div style="font-size:11px; font-weight:bold; margin-bottom:5px;">${concept.toUpperCase()}: ${count}</div>
+                        <div class="dots">${dots}</div>
+                    </div>`;
+            });
+        }
+
+        function openPhotoMenu(dia) {
+            currentDay = dia;
+            document.getElementById('photoMenu').style.display = 'flex';
+        }
+
+        function closeModals() {
+            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+            const v = document.getElementById('video');
+            if(v.srcObject) v.srcObject.getTracks().forEach(t => t.stop());
+        }
+function viewPhoto(dia) {
+    currentDay = dia;
+    const userId = document.getElementById('userId').innerText.trim();
+    // Añadimos "entreno_" antes del nombre para que coincida con app.py
+    document.getElementById('imgPreview').src = `/static/uploads/entreno_${userId}_${dia}.jpg?t=` + new Date().getTime();
+    document.getElementById('viewPhotoModal').style.display = 'flex';
+}
+
+        function reUpload() {
+            document.getElementById('viewPhotoModal').style.display = 'none';
+            openPhotoMenu(currentDay);
+        }
+        function startCamera() {
+            document.getElementById('photoMenu').style.display = 'none';
+            document.getElementById('camModal').style.display = 'flex';
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(s => document.getElementById('video').srcObject = s);
+        }
+
+        function takeSnap() {
+            const v = document.getElementById('video');
+            const c = document.getElementById('canvas');
+            c.width = v.videoWidth; c.height = v.videoHeight;
+            c.getContext('2d').drawImage(v, 0, 0);
+            uploadImage(c.toDataURL('image/jpeg'));
+        }
+
+        function handleFile(input) {
+            const reader = new FileReader();
+            reader.onload = (e) => uploadImage(e.target.result);
+            reader.readAsDataURL(input.files[0]);
+        }
+
+        function uploadImage(base64) {
+            fetch('/upload_foto', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ usuario: usuario, dia: currentDay, image: base64 })
+            }).then(() => {
+                alert("Archivo subido!");
+                location.reload();
+            });
+        }
+
+        function saveAll() {
+    const data = {
+        usuario: usuario,
+        mes: document.getElementById('monthSelect').value,
+        objetivos: {
+            tactico: document.getElementById('topTac').value,
+            tecnico: document.getElementById('topTec').value,
+            completados: itemsCompletados
+        }
+    };
+    
+    // Usamos el return para poder esperar a que termine antes de recargar
+    return fetch('/save_all', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    });
+}
+
+      function aplicarResaltadoAutomatico() {
+    const hoy = new Date();
+    const diaMesActual = hoy.getDate();
+    const mesActualReal = hoy.getMonth() + 1; // Enero es 0
+    const añoActualReal = hoy.getFullYear();
+
+    // Obtener el mes que el usuario está viendo en el selector
+    const selectorMes = document.getElementById('monthSelect').value; // Formato "2026-05"
+    const [añoVer, mesVer] = selectorMes.split('-').map(Number);
+
+    // SOLO ejecutamos el resaltado si el mes/año que se ve es el mes/año real
+    if (añoVer === añoActualReal && mesVer === mesActualReal) {
+        const diaSemana = hoy.getDay(); // 0: Dom, 6: Sab
+
+        // 1. Resaltar días de lunes a viernes
+        document.querySelectorAll('.day').forEach(div => {
+            const numDia = parseInt(div.querySelector('.day-num').innerText);
+            if (numDia === diaMesActual && diaSemana >= 1 && diaSemana <= 5) {
+                div.classList.add('today');
+                if (!div.querySelector('.hoy-label')) {
+                    div.insertAdjacentHTML('afterbegin', '<div class="hoy-label">HOY</div>');
+                }
+            }
+        });
+
+        // 2. Resaltar bloque de fin de semana
+        if (diaSemana === 0 || diaSemana === 6) {
+            document.querySelectorAll('.weekend').forEach(div => {
+                const sab = parseInt(div.dataset.sab);
+                const dom = parseInt(div.dataset.dom);
+                
+                if (diaMesActual === sab || diaMesActual === dom) {
+                    div.style.border = "2px solid var(--red)";
+                    div.style.background = "#fff5f5";
+                    const label = div.querySelector('.hoy-label');
+                    if (label) label.style.display = 'block';
+                }
+            });
+        }
+    }
+}
+
+// Reemplaza tu window.onload por este:
+window.onload = function() {
+    syncInputs();
+    aplicarResaltadoAutomatico();
+};
+    </script>
+</body>
+</html>

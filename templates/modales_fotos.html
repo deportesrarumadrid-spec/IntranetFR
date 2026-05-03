@@ -1,0 +1,59 @@
+<!-- Estilos para el botón verde y el visor -->
+<style>
+    .btn-foto.has-file { background: #2eb85c !important; color: white !important; }
+    #viewPhotoModal .modal-content { width: 90%; max-width: 400px; position: relative; padding: 20px; text-align: center; }
+    #viewPhotoModal img { width: 100%; border-radius: 10px; margin-bottom: 15px; border: 1px solid #ddd; }
+    .close-view { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 24px; font-weight: bold; color: #666; }
+</style>
+
+<!-- Modal para ver la foto -->
+<div id="viewPhotoModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <span class="close-view" onclick="closeModals()">×</span>
+        <!-- Título eliminado -->
+        <img id="imgPreview" src="" alt="Cargando..." style="margin-top: 10px;">
+        
+        <button class="modal-btn" style="background:#eee; width: 100%; margin-bottom: 5px;" onclick="reUpload()">RESUBIR ARCHIVO</button>
+        
+        <!-- Nuevo botón Eliminar -->
+        <button class="modal-btn" style="background:#ffcccc; color: #e60000; width: 100%; margin-bottom: 5px;" onclick="deletePhoto()">ELIMINAR FOTO</button>
+        
+        <button class="modal-btn" style="background:#444; color:white; width: 100%;" onclick="closeModals()">CERRAR</button>
+    </div>
+</div>
+
+<script>
+    // Añade esta función al final de tu <script> en modales_fotos.html
+    function deletePhoto() {
+        if (confirm("¿Estás seguro de que quieres eliminar esta foto?")) {
+            const userId = document.getElementById('userId').innerText.trim();
+            fetch('/delete_foto', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ usuario: userId, dia: currentDay })
+            }).then(response => {
+                if (response.ok) {
+                    alert("Foto eliminada correctamente");
+                    location.reload(); // Recarga para que el botón vuelva a ser rojo
+                }
+            });
+        }
+    }
+</script>
+
+<script>
+    // Esta función se activa cuando el botón está en VERDE
+    function viewPhoto(dia) {
+        currentDay = dia;
+        const userId = document.getElementById('userId').innerText.trim();
+        // Cargamos la imagen con un truco (?t=...) para que no cargue la vieja de la memoria
+        document.getElementById('imgPreview').src = `/static/uploads/entreno_${userId}_${dia}.jpg?t=` + new Date().getTime();
+        document.getElementById('viewPhotoModal').style.display = 'flex';
+    }
+
+    // Esta función permite cambiar la foto si se equivocaron
+    function reUpload() {
+        document.getElementById('viewPhotoModal').style.display = 'none';
+        openPhotoMenu(currentDay); // Abre el menú de cámara/archivo original
+    }
+</script>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Intranet Club</title>
+    <style>
+        /* Fondo con degradado sutil y centrado total */
+        body { 
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); 
+            color: #333; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            margin: 0;
+        }
+
+        /* Tarjeta de login moderna */
+        .login-box { 
+            background: #ffffff; 
+            padding: 50px 40px; 
+            border-radius: 20px; /* Bordes más redondeados y modernos */
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1); /* Sombra más profunda y suave */
+            border: 1px solid rgba(255,255,255,0.3); 
+            width: 320px; 
+            text-align: center; 
+        }
+
+        /* Título con más personalidad */
+        h2 {
+            color: #e60000;
+            font-weight: 800;
+            margin-bottom: 30px;
+            letter-spacing: -0.5px;
+            text-transform: uppercase;
+        }
+
+        /* Inputs limpios y profesionales */
+        input { 
+            width: 100%; 
+            padding: 14px; 
+            margin: 12px 0; 
+            background: #fdfdfd; 
+            border: 2px solid #eee; 
+            color: #333; 
+            box-sizing: border-box; 
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        /* Efecto al hacer clic en los campos */
+        input:focus {
+            border-color: #e60000;
+            background: #fff;
+        }
+
+        /* Botón rojo identidad del club con efectos */
+        button { 
+            width: 100%; 
+            background: #e60000; 
+            color: white; 
+            border: none; 
+            padding: 15px; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 16px;
+            margin-top: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+
+        button:hover { 
+            background: #cc0000; 
+            transform: translateY(-2px); /* Pequeño salto al pasar el ratón */
+            box-shadow: 0 5px 15px rgba(230, 0, 0, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <!-- El escudo con el nombre de archivo correcto que vimos (.jpg) -->
+        <img src="{{ url_for('static', filename='escudo.jpg') }}" alt="Escudo" style="width: 90px; margin-bottom: 20px;">
+        
+        <h2>INTRANET CLUB</h2>
+        
+        <form action="/login" method="POST">
+            <input type="text" name="usuario" placeholder="Usuario" required>
+            <input type="password" name="password" placeholder="Contraseña" required>
+            <button type="submit">ACCEDER</button>
+        </form>
+    </div>
+</body>
+</html>

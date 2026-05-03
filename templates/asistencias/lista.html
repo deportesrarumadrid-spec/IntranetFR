@@ -1,0 +1,396 @@
+{% extends 'dashboard.html' %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<div style="padding: 20px; font-family: 'Montserrat', sans-serif;">
+    <!-- Filtros Superiores -->
+    <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: flex-end;">
+        <div style="flex: 1; min-width: 200px;">
+            <label style="font-size: 10px; font-weight: 900; color: #444;">EQUIPO</label>
+            <select id="selectEquipo" onchange="generarCalendario()" style="width: 100%; padding: 10px; border-radius: 8px; font-weight: 700; border: 1px solid #ddd;">
+                <option value="">Seleccionar...</option>
+                {% for equipo in equipos %}
+                <option value="{{ equipo }}">{{ equipo }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="flex: 1; min-width: 150px;">
+            <label style="font-size: 10px; font-weight: 900; color: #444;">MES</label>
+            <select id="selectMes" onchange="generarCalendario()" style="width: 100%; padding: 10px; border-radius: 8px; font-weight: 700; border: 1px solid #ddd;">
+                <option value="1">Enero 2026</option>
+                <option value="2">Febrero 2026</option>
+                <option value="3">Marzo 2026</option>
+                <option value="4">Abril 2026</option>
+                <option value="5" selected>Mayo 2026</option>
+                <option value="6">Junio 2026</option>
+                <option value="7">Julio 2026</option>
+                <option value="8">Agosto 2026</option>
+                <option value="9">Septiembre 2026</option>
+                <option value="10">Octubre 2026</option>
+                <option value="11">Noviembre 2026</option>
+                <option value="12">Diciembre 2026</option>
+            </select>
+        </div>
+        <div style="flex: 1; min-width: 150px;">
+            <label style="font-size: 10px; font-weight: 900; color: #444;">DÍAS ENTRENAMIENTO</label>
+            <select id="selectDias" onchange="generarCalendario()" style="width: 100%; padding: 10px; border-radius: 8px; font-weight: 700; border: 1px solid #ddd;">
+                <option value="LX">Lunes - Miércoles (LX)</option>
+                <option value="MJ">Martes - Jueves (MJ)</option>
+                <option value="ALL">Todos los días</option>
+            </select>
+        </div>
+        <!-- BOTÓN DE GUARDADO MASIVO -->
+        <div style="flex: 1; min-width: 200px;">
+            <button id="btnGuardarTodo" onclick="enviarCambiosAlServidor()" style="width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);">
+                <i class="fas fa-save" style="margin-right: 8px;"></i> GUARDAR CAMBIOS EN EXCEL
+            </button>
+        </div>
+    </div>
+
+    <!-- Tabla Principal -->
+    <div id="contenedorTabla" style="display: none; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden;">
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr id="cabeceraDias"></tr>
+                    <tr id="filaMarcarTodo"></tr>
+                </thead>
+                <tbody id="cuerpoTabla"></tbody>
+            </table>
+        </div>
+        
+        <!-- Estadísticas Inferiores -->
+        <div id="statsAsistencia" style="padding: 25px; background: #fff; border-top: 1px solid #eee; display: flex; justify-content: space-around; text-align: center;">
+            <div style="flex: 1;">
+                <p style="font-size: 10px; font-weight: 900; color: #999; margin: 0; letter-spacing: 1px;">% ASISTENCIA MEDIA</p>
+                <h2 id="mediaAsistencia" style="margin: 5px 0; color: #28a745; font-size: 32px; font-weight: 900;">0%</h2>
+                <p id="detalleMedia" style="font-size: 12px; color: #444; font-weight: 700; margin: 0;">-</p>
+            </div>
+            <div style="flex: 1; border-left: 1px solid #eee;">
+                <p style="font-size: 10px; font-weight: 900; color: #999; margin: 0; letter-spacing: 1px;">FALTAS O AVISOS</p>
+                <div id="jugadorFalton" style="margin: 8px 0; color: #dc3545; font-weight: 800; font-size: 14px; line-height: 1.4;">-</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PARA MOTIVOS -->
+<div id="modalMotivo" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top: 0; color: #E31E24; font-size: 14px; font-weight: 900;">MOTIVO DE AUSENCIA</h3>
+        <p id="modalSubtitulo" style="font-size: 13px; font-weight: 700; color: #555; margin-bottom: 15px;"></p>
+        <textarea id="textoMotivo" placeholder="Escribe el motivo aquí..." style="width: 100%; height: 90px; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-family: inherit; font-size: 13px; resize: none; box-sizing: border-box;"></textarea>
+        <div style="margin-top: 20px; display: flex; gap: 10px;">
+            <button onclick="cerrarModal()" style="flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; background: #eee;">CANCELAR</button>
+            <button onclick="guardarMotivo()" style="flex: 1; padding: 12px; background: #E31E24; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 700;">GUARDAR</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .td-asistencia { padding: 8px !important; min-width: 80px; border: 1px solid #f0f0f0; }
+    .wrapper-asistencia { display: flex; align-items: center; justify-content: center; gap: 4px; position: relative; }
+    .celda-asistencia { width: 38px; height: 38px; border-radius: 4px; cursor: pointer; font-weight: 800; font-size: 11px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .celda-asistencia:hover { transform: scale(1.1); }
+    .btn-nota { width: 25px; height: 38px; background: #f5f5f5; border-radius: 4px; display: none; align-items: center; justify-content: center; cursor: pointer; color: #bbb; font-size: 12px; }
+    .btn-nota.tiene-motivo { background: #E31E24; color: white; display: flex; }
+    .estado-vacio { background: #fff; color: #eee; border: 1px solid #f0f0f0; }
+    .estado-si { background: #28a745; color: white; }
+    .estado-no { background: #dc3545; color: white; }
+    .estado-av { background: #ffc107; color: #000; }
+    .sticky-col { position: sticky; left: 0; background: white; z-index: 10; width: 140px; min-width: 140px; padding: 15px 12px; text-align: left; font-weight: 900; color: #E31E24; border-right: 2px solid #f0f0f0; }
+    .th-dia { background: #6c757d; color: white; border: 1px solid #eee; text-align: center; }
+    .th-dia.alerta-pendiente { background: #E31E24 !important; }
+    .fila-todo-si-estilo { background: #fdfdfd; border-bottom: 1px solid #eee; }
+    .btn-todo-si { color: #E31E24; font-size: 10px; font-weight: 800; cursor: pointer; text-decoration: none; }
+    .warning-icon { display: none; font-size: 14px; margin-bottom: 2px; }
+    .alerta-pendiente .warning-icon { display: block; }
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); }
+    .modal-content { background: white; margin: 12% auto; padding: 25px; border-radius: 15px; width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    .celda-modificada { outline: 2px dashed #28a745; outline-offset: -2px; }
+</style>
+
+<script>
+let listaObservaciones = {}; 
+let cambiosPendientes = []; // Array para guardar los cambios antes de enviar
+
+async function obtenerObservaciones() {
+    try {
+        const response = await fetch('/obtener_observaciones_jugadores');
+        listaObservaciones = await response.json();
+    } catch (e) { console.error("Error cargando observaciones:", e); }
+} 
+obtenerObservaciones();
+
+const jugadoresRaw = {{ jugadores_raw | tojson }};
+const nombresDias = ['D', 'L', 'M', 'MI', 'J', 'V', 'S'];
+const hoy = new Date(); 
+let celdaActiva = null;
+
+function generarCalendario() {
+    const equipo = document.getElementById('selectEquipo').value;
+    const mes = parseInt(document.getElementById('selectMes').value) - 1;
+    const filtroDias = document.getElementById('selectDias').value;
+    if (!equipo) return;
+
+    cambiosPendientes = []; // Reiniciar cambios al cambiar de vista
+    const totalDias = new Date(2026, mes + 1, 0).getDate();
+    const diasValidos = [];
+
+    for (let d = 1; d <= totalDias; d++) {
+        const fecha = new Date(2026, mes, d);
+        const numDiaSemana = fecha.getDay();
+        if ((filtroDias === 'LX' && [1,3].includes(numDiaSemana)) || (filtroDias === 'MJ' && [2,4].includes(numDiaSemana)) || filtroDias === 'ALL') {
+            diasValidos.push({ num: d, label: nombresDias[numDiaSemana], fechaFull: fecha });
+        }
+    }
+
+    document.getElementById('cabeceraDias').innerHTML = `<th class="sticky-col" style="background:white;"></th>` +
+        diasValidos.map((d, i) => `
+            <th class="th-dia" id="th-col-${i}">
+                <div class="warning-icon">⚠️</div>
+                <div style="font-size: 10px; opacity: 0.8;">${d.label}</div>
+                <div style="font-size: 16px; font-weight: 900;">${d.num}</div>
+            </th>`).join('');
+
+    document.getElementById('filaMarcarTodo').innerHTML = `<td class="sticky-col fila-todo-si-estilo"></td>` + 
+        diasValidos.map((_, i) => `
+            <td class="fila-todo-si-estilo" style="text-align:center;">
+                <span class="btn-todo-si" onclick="marcarColumna(${i})">TODO SI</span>
+            </td>`).join('');
+
+    const filtrados = jugadoresRaw.filter(j => j.EQUIPO === equipo);
+    document.getElementById('cuerpoTabla').innerHTML = filtrados.map(j => {
+        const obs = listaObservaciones[j.NOMBRE] || "";
+        return `
+        <tr>
+            <td class="sticky-col">
+                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                    <span style="color: #333; font-weight: 700;">${j.NOMBRE}</span>
+                    ${obs.trim() !== "" ? `<div title="${obs}" style="background: #E31E24; color: white; padding: 2px 6px; border-radius: 4px; font-size: 9px; display: flex; align-items: center; gap: 3px; cursor: help; flex-shrink: 0;"><i class="fas fa-sticky-note" style="font-size: 8px;"></i>OBS</div>` : ""}
+                </div>
+            </td>
+            ${diasValidos.map(() => `
+                <td class="td-asistencia">
+                    <div class="wrapper-asistencia">
+                        <div class="celda-asistencia estado-vacio" onclick="ciclarEstado(this)">-</div>
+                        <div class="btn-nota" onclick="abrirModal(this)" style="display:none;">
+                            <i class="fas fa-pencil-alt" style="font-size: 10px;"></i>
+                        </div>
+                    </div>
+                </td>`).join('')}
+        </tr>`
+    }).join('');
+
+    document.getElementById('contenedorTabla').style.display = 'block';
+    actualizarAlertasCabecera(diasValidos);
+    calcularStats();
+    setTimeout(cargarAsistenciasGuardadas, 100); 
+}
+
+async function cargarAsistenciasGuardadas() {
+    const equipo = document.getElementById('selectEquipo').value;
+    const mes = document.getElementById('selectMes').value;
+    if (!equipo || !mes) return;
+
+    try {
+        const response = await fetch(`/obtener_asistencias?equipo=${equipo}&mes=${mes}`);
+        const datosGuardados = await response.json();
+
+        const filas = document.querySelectorAll('#cuerpoTabla tr');
+        filas.forEach(fila => {
+            const nombreJugador = fila.querySelector('.sticky-col').innerText.trim();
+            const celdas = fila.querySelectorAll('.td-asistencia');
+
+            celdas.forEach((td, index) => {
+                const thCelda = document.getElementById('cabeceraDias').cells[index + 1];
+                const diaNum = thCelda.querySelector('div:last-child').innerText.trim();
+                const registro = datosGuardados.find(d => d.nombre === nombreJugador && d.dia == diaNum);
+
+                if (registro) {
+                    const el = td.querySelector('.celda-asistencia');
+                    const btnNota = td.querySelector('.btn-nota');
+                    el.innerText = registro.estado;
+                    el.dataset.motivo = registro.motivo || "";
+                    el.className = 'celda-asistencia';
+                    if (registro.estado === 'SI') el.classList.add('estado-si');
+                    else if (registro.estado === 'NO') { el.classList.add('estado-no'); btnNota.style.display = 'flex'; }
+                    else if (registro.estado === 'AV') { el.classList.add('estado-av'); btnNota.style.display = 'flex'; }
+                    else { el.classList.add('estado-vacio'); }
+                    if (registro.motivo) btnNota.classList.add('tiene-motivo');
+                }
+            });
+        });
+        calcularStats();
+    } catch (e) { console.error("Error cargando asistencias:", e); }
+}
+
+function registrarCambioLocal(el) {
+    const nombre = el.closest('tr').querySelector('.sticky-col').innerText.trim();
+    const thCelda = document.getElementById('cabeceraDias').cells[el.closest('td').cellIndex];
+    const dia = thCelda.querySelector('div:last-child').innerText.trim();
+    const equipo = document.getElementById('selectEquipo').value;
+    const estado = el.innerText;
+    
+    // Añadimos clase visual para saber qué se va a guardar
+    el.classList.add('celda-modificada');
+
+    const index = cambiosPendientes.findIndex(c => c.nombre === nombre && c.dia === dia);
+    if (index !== -1) {
+        cambiosPendientes[index].estado = estado;
+    } else {
+        cambiosPendientes.push({ nombre, dia, equipo, estado });
+    }
+}
+
+async function enviarCambiosAlServidor() {
+    if (cambiosPendientes.length === 0) return alert("No hay cambios pendientes para guardar.");
+    
+    const btn = document.getElementById('btnGuardarTodo');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GUARDANDO...';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch('/guardar_asistencia_masiva', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cambios: cambiosPendientes })
+        });
+
+        if (response.ok) {
+            alert("¡Cambios guardados correctamente en el Excel!");
+            cambiosPendientes = [];
+            document.querySelectorAll('.celda-modificada').forEach(c => c.classList.remove('celda-modificada'));
+        } else {
+            alert("Hubo un error al guardar. Revisa la consola.");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Error de conexión con el servidor.");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+function marcarColumna(colIndex) {
+    const filas = document.querySelectorAll('#cuerpoTabla tr');
+    filas.forEach(fila => {
+        const td = fila.querySelectorAll('.td-asistencia')[colIndex];
+        const celda = td.querySelector('.celda-asistencia');
+        const btnNota = td.querySelector('.btn-nota');
+        celda.innerText = 'SI';
+        celda.className = 'celda-asistencia estado-si';
+        btnNota.style.display = 'none';
+        registrarCambioLocal(celda);
+    });
+    actualizarAlertasVisuales();
+    calcularStats();
+}
+
+function ciclarEstado(el) {
+    const wrapper = el.parentElement;
+    const btnNota = wrapper.querySelector('.btn-nota');
+
+    if (el.innerText === '-') { 
+        el.innerText = 'SI'; el.className = 'celda-asistencia estado-si'; 
+        btnNota.style.display = 'none';
+    } else if (el.innerText === 'SI') { 
+        el.innerText = 'NO'; el.className = 'celda-asistencia estado-no'; 
+        btnNota.style.display = 'flex';
+    } else if (el.innerText === 'NO') { 
+        el.innerText = 'AV'; el.className = 'celda-asistencia estado-av'; 
+        btnNota.style.display = 'flex';
+    } else { 
+        el.innerText = '-'; el.className = 'celda-asistencia estado-vacio'; 
+        btnNota.style.display = 'none';
+        btnNota.classList.remove('tiene-motivo');
+        el.dataset.motivo = "";
+    }
+
+    registrarCambioLocal(el);
+    actualizarAlertasVisuales();
+    calcularStats();
+}
+
+function actualizarAlertasCabecera(diasValidos) {
+    diasValidos.forEach((d, colIndex) => {
+        const esPasadoOHoy = d.fechaFull <= hoy;
+        const celdas = document.querySelectorAll(`#cuerpoTabla tr td:nth-child(${colIndex + 2}) .celda-asistencia`);
+        let algunMarcado = Array.from(celdas).some(c => c.innerText !== '-');
+        const th = document.getElementById(`th-col-${colIndex}`);
+        if (esPasadoOHoy && !algunMarcado) th.classList.add('alerta-pendiente');
+        else th.classList.remove('alerta-pendiente');
+    });
+}
+
+function actualizarAlertasVisuales() {
+    const mes = parseInt(document.getElementById('selectMes').value) - 1;
+    const filtroDias = document.getElementById('selectDias').value;
+    const diasValidos = [];
+    for (let d = 1; d <= new Date(2026, mes + 1, 0).getDate(); d++) {
+        const f = new Date(2026, mes, d);
+        const ns = f.getDay();
+        if ((filtroDias === 'LX' && [1,3].includes(ns)) || (filtroDias === 'MJ' && [2,4].includes(ns)) || filtroDias === 'ALL') {
+            diasValidos.push({ fechaFull: f });
+        }
+    }
+    actualizarAlertasCabecera(diasValidos);
+}
+
+function abrirModal(btn) {
+    celdaActiva = btn.closest('.wrapper-asistencia').querySelector('.celda-asistencia');
+    const nombreJugador = btn.closest('tr').querySelector('.sticky-col').innerText.trim();
+    document.getElementById('modalSubtitulo').innerText = "Jugador: " + nombreJugador;
+    document.getElementById('textoMotivo').value = celdaActiva.dataset.motivo || "";
+    document.getElementById('modalMotivo').style.display = 'block';
+}
+
+function cerrarModal() { document.getElementById('modalMotivo').style.display = 'none'; }
+
+function guardarMotivo() {
+    const motivo = document.getElementById('textoMotivo').value;
+    const btnNota = celdaActiva.parentElement.querySelector('.btn-nota');
+    celdaActiva.dataset.motivo = motivo;
+    if (motivo.trim() !== "") btnNota.classList.add('tiene-motivo');
+    else btnNota.classList.remove('tiene-motivo');
+    registrarCambioLocal(celdaActiva);
+    cerrarModal();
+}
+
+function calcularStats() {
+    let totalSi = 0, totalMarcados = 0, listaFaltas = [];
+    const rows = document.querySelectorAll('#cuerpoTabla tr');
+    rows.forEach(fila => {
+        const nombre = fila.querySelector('.sticky-col').innerText;
+        const sis = Array.from(fila.querySelectorAll('.estado-si')).length;
+        const nos = Array.from(fila.querySelectorAll('.estado-no')).length;
+        const avs = Array.from(fila.querySelectorAll('.estado-av')).length;
+        const marcados = sis + nos + avs;
+        if (marcados > 0) {
+            totalSi += sis; totalMarcados += marcados;
+            if (nos > 0 || avs > 0) listaFaltas.push({ nombre, totalFaltas: (nos + avs) });
+        }
+    });
+    const totalJugadores = rows.length;
+    const porc = totalMarcados > 0 ? Math.round((totalSi / totalMarcados) * 100) : 0;
+    document.getElementById('mediaAsistencia').innerText = porc + '%';
+    document.getElementById('detalleMedia').innerText = `${totalMarcados > 0 ? (totalSi / (totalMarcados / totalJugadores)).toFixed(2) : 0} de ${totalJugadores} jugadores de media`;
+    const divFalton = document.getElementById('jugadorFalton');
+    if (listaFaltas.length === 0) divFalton.innerHTML = totalMarcados > 0 ? '<span style="color:#28a745">Todo OK</span>' : "-";
+    else {
+        listaFaltas.sort((a,b) => b.totalFaltas - a.totalFaltas);
+        divFalton.innerHTML = listaFaltas.slice(0, 2).map(f => `${f.nombre} (${f.totalFaltas} faltas)`).join('<br>');
+    }
+}
+
+window.onload = function() {
+    const hoyReal = new Date();
+    const selectorMes = document.getElementById('selectMes');
+    if (selectorMes) selectorMes.value = hoyReal.getMonth() + 1;
+};
+
+</script>
+{% endblock %}

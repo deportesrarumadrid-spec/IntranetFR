@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Intranet Club - Panel Principal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Montserrat', sans-serif; display: flex; height: 100vh; background-color: #f4f7f6; overflow: hidden; }
+
+.sidebar {
+    width: 260px !important;
+    min-width: 260px !important;
+    max-width: 260px !important;
+    flex: 0 0 260px !important; /* ESTO es lo que impide que se mueva */
+    background-color: #E31E24;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    flex-shrink: 0 !important;
+}
+
+.main-content {
+    flex: 1 1 auto !important; /* Esto obliga a la parte blanca a ocupar el resto */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+    background-color: #f4f7f6;
+}
+
+.menu-item.active {
+    background-color: white !important;
+    color: #E31E24 !important;
+    border-radius: 10px 0 0 10px !important; 
+    margin-left: 15px !important;
+    width: calc(100% - 15px) !important; /* Para que el botón blanco no empuje la barra */
+    border-left: none !important;
+    font-weight: 900;
+}
+
+        .sidebar {
+    width: 260px !important;
+    min-width: 260px !important;
+    max-width: 260px !important;
+    background-color: #E31E24;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    flex-shrink: 0; /* Esto impide que el contenido de la derecha lo empuje */
+}
+
+        .logo-area {
+    padding: 30px 25px;
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 1.2rem;
+    text-align: left; /* Alineado igual que en la foto 1 */
+}
+
+        .menu-container { padding-top: 20px; flex-grow: 1; }
+
+        .menu-item {
+            padding: 15px 25px;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            text-transform: uppercase;
+            transition: 0.3s;
+        }
+
+        .menu-item.active {
+    background-color: white !important;
+    color: #E31E24 !important;
+    border-radius: 10px 0 0 10px !important; 
+    margin-left: 15px !important; /* Reducimos de 20 a 15 para que no se vea tan estrecho el botón */
+    border-left: none !important;
+}
+
+        .menu-item:hover { color: white; background-color: rgba(0,0,0,0.1); }
+
+        .tareas-box {
+            background: white;
+            margin: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            color: #333;
+        }
+        .tareas-box h4 { color: #E31E24; font-size: 0.7rem; margin-bottom: 5px; font-family: 'Archivo Black'; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        .top-bar {
+            background: white;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+        }
+
+        .btn-salir { 
+            color: #E31E24; 
+            text-decoration: none; 
+            font-size: 0.75rem;
+            padding: 8px 15px;
+            border: 2px solid #E31E24;
+            border-radius: 6px;
+            font-weight: 900;
+        }
+
+        .render-area { flex: 1; padding: 25px; overflow-y: auto; background-color: #f4f7f6; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+    <div class="logo-area">INTRANET FR</div>
+    
+    <div class="menu-container">
+<a href="/inicio" class="menu-item {{ 'active' if 'inicio' in request.path }}">INICIO</a>
+<a href="/deportivo" class="menu-item {{ 'active' if 'deportivo' in request.path }}">DEPORTIVO</a>
+<a href="/asistencias" class="menu-item {{ 'active' if 'asistencias' in request.path }}">ASISTENCIAS</a>
+    </div>
+</div>
+
+        
+    </div>
+
+    <div class="main-content">
+        <div class="top-bar">
+            <span style="font-size: 0.9rem; color: #666;">Bienvenido, <strong style="color: #333;">{{ usuario }}</strong></span>
+            <a href="/" class="btn-salir">CERRAR SESIÓN</a>
+        </div>
+
+        <div class="render-area">
+            {% block content %}
+            <!-- Esto se sobreescribirá -->
+            {% endblock %}
+        </div>
+    </div>
+
+</body>
+</html>
