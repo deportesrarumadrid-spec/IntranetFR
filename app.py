@@ -223,26 +223,27 @@ def guardar_asistencia_individual():
 @app.route('/obtener_asistencias')
 def obtener_asistencias():
     equipo_filtro = request.args.get('equipo')
-    
     try:
-        # 1. Abrimos la pestaña correcta llamada ASISTENCIAS
         sheet = client.open(NOMBRE_EXCEL).worksheet("ASISTENCIAS")
+        # Usamos get_all_values para evitar errores si hay celdas vacías o duplicadas en la cabecera
+        todo = sheet.get_all_values()
         
-        # 2. Leemos la tabla vertical completa
-        todo = sheet.get_all_records()
-        
+        if not todo:
+            return jsonify([])
+            
         registros = []
-        for fila in todo:
-            # Filtramos solo para el equipo que tienes seleccionado en la web
-            if fila['EQUIPO'] == equipo_filtro:
-                # Convertimos la fecha (ej: "04/05/2026") en solo el número del día ("4")
-                partes_fecha = fila['FECHA'].split('/')
+        # Empezamos desde la segunda fila (todo[1:]) para saltar los títulos
+        for fila in todo[1:]:
+            # Verificamos que la fila tenga datos y coincida con el equipo
+            if len(fila) >= 3 and fila[1] == equipo_filtro:
+                # Extraemos el día de la fecha (ej: "04/05/2026" -> "4")
+                partes_fecha = fila[0].split('/')
                 dia_extraido = str(int(partes_fecha[0])) 
                 
                 registros.append({
-                    "nombre": fila['NOMBRE'],
+                    "nombre": fila[2],
                     "dia": dia_extraido,
-                    "estado": fila['ASISTENCIA']
+                    "estado": fila[4] if len(fila) > 4 else ""
                 })
         
         return jsonify(registros)
@@ -279,6 +280,49 @@ def guardar_observacion_jugador():
         print(f"Error al guardar observacion: {e}")
         return jsonify({"status": "error"}), 500
 
+@app.route('/guardar_asistencia_masiva', methods=['POST'])
+def guardar_asistencia_masiva():
+    try:
+        data = request.get_json()
+        cambios = data.get('cambios', [])
+        # Extraemos el mes y aseguramos dos dígitos (ej: "05")
+        mes_sel = str(data.get('mes', '5')).zfill(2)
+        
+        # IMPORTANTE: Usamos 'client' directamente, que ya lo tienes definido arriba
+        sheet = client.open(NOMBRE_EXCEL).worksheet("ASISTENCIAS")
+        
+        actuales = sheet.get_all_values()
+        
+        for c in cambios:
+            # Formato de fecha DD/MM/YYYY
+            fecha_full = f"{str(c['dia']).zfill(2)}/{mes_sel}/2026"
+            nombre = c['nombre']
+            equipo = c['equipo']
+            estado = c['estado']
+            observacion = c.get('motivo', '') 
 
+            # Buscar si ya existe para actualizar
+            fila_idx = -1
+            for i, fila in enumerate(actuales):
+                if i == 0: continue
+                if len(fila) >= 3 and fila[0] == fecha_full and fila[1] == equipo and fila[2] == nombre:
+                    fila_idx = i + 1
+                    break
+            
+            if fila_idx != -1:
+                # Actualizar: Columna E (5) es Asistencia, Columna F (6) es Observaciones
+                sheet.update_cell(fila_idx, 5, estado)
+                sheet.update_cell(fila_idx, 6, observacion)
+            else:
+                # Crear nueva fila: FECHA, EQUIPO, NOMBRE, APELLIDO, ASISTENCIA, OBSERVACIONES
+                sheet.append_row([fecha_full, equipo, nombre, "", estado, observacion])
+
+        return jsonify({"status": "success"}), 200
+    except Exception as e:
+        print(f"Error crítico al guardar: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+    except Exception as e:
+        print(f"Error al guardar: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
