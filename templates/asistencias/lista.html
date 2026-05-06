@@ -90,10 +90,45 @@
 
 <style>
     .td-asistencia { padding: 8px !important; min-width: 80px; border: 1px solid #f0f0f0; }
-    .wrapper-asistencia { display: flex; align-items: center; justify-content: center; gap: 4px; position: relative; }
-    .celda-asistencia { width: 38px; height: 38px; border-radius: 4px; cursor: pointer; font-weight: 800; font-size: 11px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .wrapper-asistencia { 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 8px; 
+    position: relative;
+    width: 120px; /* Ancho fijo para que la columna no baile */
+    margin: 0 auto;
+}
+    .celda-asistencia { 
+    width: 40px; 
+    height: 38px; 
+    border-radius: 4px; 
+    cursor: pointer; 
+    font-weight: 800; 
+    font-size: 11px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    transition: all 0.2s;
+    flex-shrink: 0; 
+}
     .celda-asistencia:hover { transform: scale(1.1); }
-    .btn-nota { width: 25px; height: 38px; background: #f5f5f5; border-radius: 4px; display: none; align-items: center; justify-content: center; cursor: pointer; color: #bbb; font-size: 12px; }
+    .btn-nota { 
+    width: 25px; 
+    height: 38px; 
+    background: #f5f5f5; 
+    border-radius: 4px; 
+    display: flex !important; /* Siempre en modo flex para ocupar espacio */
+    opacity: 0; /* Invisible por defecto */
+    pointer-events: none; /* No se puede clicar si es invisible */
+    align-items: center; 
+    justify-content: center; 
+    cursor: pointer; 
+    color: #bbb; 
+    font-size: 12px; 
+    flex-shrink: 0;
+}
+.btn-nota[style*="display: flex"], .btn-nota.tiene-motivo { visibility: visible; }
     .btn-nota.tiene-motivo { background: #E31E24; color: white; display: flex; }
     .estado-vacio { background: #fff; color: #eee; border: 1px solid #f0f0f0; }
     .estado-si { background: #28a745; color: white; }
@@ -109,6 +144,31 @@
     .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); }
     .modal-content { background: white; margin: 12% auto; padding: 25px; border-radius: 15px; width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
     .celda-modificada { outline: 2px dashed #28a745; outline-offset: -2px; }
+.btn-val { 
+    width: 35px; 
+    height: 38px; 
+    background: #fdfdfd; 
+    border-radius: 4px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    cursor: pointer; 
+    border: 1px solid #eee; 
+    font-size: 22px; 
+    font-weight: 900; 
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+    .val-normal { color: #1e7e34; font-weight: 900; } 
+.val-mal { color: #dc3545; font-weight: 900; }    
+.val-excelente { color: #b8860b; font-weight: 900; }
+    .btn-todo-val { color: #28a745; font-size: 10px; font-weight: 800; cursor: pointer; text-decoration: none; display: block; margin-top: 2px; }
+.btn-nota.tiene-motivo, 
+.estado-no + .btn-nota, 
+.estado-av + .btn-nota { 
+    opacity: 1 !important; 
+    pointer-events: auto !important; 
+}
 </style>
 
 <script>
@@ -155,10 +215,13 @@ function generarCalendario() {
             </th>`).join('');
 
     document.getElementById('filaMarcarTodo').innerHTML = `<td class="sticky-col fila-todo-si-estilo"></td>` + 
-        diasValidos.map((_, i) => `
-            <td class="fila-todo-si-estilo" style="text-align:center;">
-                <span class="btn-todo-si" onclick="marcarColumna(${i})">TODO SI</span>
-            </td>`).join('');
+diasValidos.map((_, i) => `
+    <td class="fila-todo-si-estilo" style="text-align:center;">
+        <div style="display: flex; justify-content: center; gap: 5px;">
+            <span class="btn-todo-si" onclick="marcarColumna(${i})">TODO SI</span>
+            <span class="btn-todo-val" onclick="marcarValoracionColumna(${i})">TODO OK</span>
+        </div>
+    </td>`).join('');
 
     const filtrados = jugadoresRaw.filter(j => j.EQUIPO === equipo);
     document.getElementById('cuerpoTabla').innerHTML = filtrados.map(j => {
@@ -174,13 +237,14 @@ function generarCalendario() {
             ${diasValidos.map(() => `
                 <td class="td-asistencia">
                     <div class="wrapper-asistencia">
-                        <div class="celda-asistencia estado-vacio" onclick="ciclarEstado(this)">-</div>
-                        <div class="btn-nota" onclick="abrirModal(this)" style="display:none;">
-                            <i class="fas fa-pencil-alt" style="font-size: 10px;"></i>
-                        </div>
-                    </div>
+    <div class="celda-asistencia estado-vacio" onclick="ciclarEstado(this)">-</div>
+    <div class="btn-nota" onclick="abrirModal(this)" style="display:none;">
+        <i class="fas fa-pencil-alt" style="font-size: 10px;"></i>
+    </div>
+    <div class="btn-val" onclick="ciclarValoracion(this)" data-valor="-">-</div>
+</div>
                 </td>`).join('')}
-        </tr>`
+        </tr>`;
     }).join('');
 
     document.getElementById('contenedorTabla').style.display = 'block';
@@ -222,7 +286,10 @@ async function cargarAsistenciasGuardadas() {
                 }
             });
         });
+
         calcularStats();
+        actualizarAlertasVisuales(); // <--- ESTA ES LA LÍNEA QUE QUITA EL ROJO AL CARGAR
+
     } catch (e) { console.error("Error cargando asistencias:", e); }
 }
 
@@ -233,15 +300,38 @@ function registrarCambioLocal(el) {
     const equipo = document.getElementById('selectEquipo').value;
     const estado = el.innerText;
     
+    // CAPTURAMOS LA VALORACIÓN: Buscamos el valor dentro del botón de la flecha
+    const valoracion = el.parentElement.querySelector('.btn-val').dataset.valor || '-';
+
     // Añadimos clase visual para saber qué se va a guardar
     el.classList.add('celda-modificada');
 
     const index = cambiosPendientes.findIndex(c => c.nombre === nombre && c.dia === dia);
     if (index !== -1) {
         cambiosPendientes[index].estado = estado;
+        cambiosPendientes[index].valoracion = valoracion; // Actualizamos valoración
     } else {
-        cambiosPendientes.push({ nombre, dia, equipo, estado });
+        // Añadimos valoración al nuevo objeto
+        cambiosPendientes.push({ nombre, dia, equipo, estado, valoracion });
     }
+    }
+    function ciclarValoracion(el) {
+    const estados = {
+        '-': { prox: 'NORMAL', icon: '→', clase: 'val-normal' },
+        'NORMAL': { prox: 'MAL', icon: '↓', clase: 'val-mal' },
+        'MAL': { prox: 'EXCELENTE', icon: '↑', clase: 'val-excelente' },
+        'EXCELENTE': { prox: '-', icon: '-', clase: '' }
+    };
+    const actual = el.dataset.valor || '-';
+    const info = estados[actual];
+    el.dataset.valor = info.prox;
+    el.innerText = info.icon;
+    el.className = 'btn-val ' + info.clase;
+    
+    // Registra el cambio para que el botón "Guardar" sepa que hay datos nuevos
+    const celdaAsis = el.parentElement.querySelector('.celda-asistencia');
+    registrarCambioLocal(celdaAsis);
+
 }
 
 async function enviarCambiosAlServidor() {
@@ -289,7 +379,24 @@ function marcarColumna(colIndex) {
     actualizarAlertasVisuales();
     calcularStats();
 }
-
+function marcarValoracionColumna(colIndex) {
+    const filas = document.querySelectorAll('#cuerpoTabla tr');
+    filas.forEach(fila => {
+        const celdas = fila.querySelectorAll('.td-asistencia');
+        if (celdas[colIndex]) {
+            const btnVal = celdas[colIndex].querySelector('.btn-val');
+            const celdaAsis = celdas[colIndex].querySelector('.celda-asistencia');
+            
+            // Forzamos el estado a NORMAL (Flecha verde oscuro →)
+            btnVal.dataset.valor = 'NORMAL';
+            btnVal.innerText = '→';
+            btnVal.className = 'btn-val val-normal';
+            
+            // Registramos el cambio para que se guarde en Excel
+            registrarCambioLocal(celdaAsis);
+        }
+    });
+}
 function ciclarEstado(el) {
     const wrapper = el.parentElement;
     const btnNota = wrapper.querySelector('.btn-nota');
@@ -316,13 +423,28 @@ function ciclarEstado(el) {
 }
 
 function actualizarAlertasCabecera(diasValidos) {
+    const hoyNum = new Date().getDate(); 
+    const mesActual = new Date().getMonth() + 1; 
+    const mesSeleccionado = parseInt(document.getElementById('selectMes').value);
+
     diasValidos.forEach((d, colIndex) => {
-        const esPasadoOHoy = d.fechaFull <= hoy;
-        const celdas = document.querySelectorAll(`#cuerpoTabla tr td:nth-child(${colIndex + 2}) .celda-asistencia`);
-        let algunMarcado = Array.from(celdas).some(c => c.innerText !== '-');
+        const diaColumna = d.num;
         const th = document.getElementById(`th-col-${colIndex}`);
-        if (esPasadoOHoy && !algunMarcado) th.classList.add('alerta-pendiente');
-        else th.classList.remove('alerta-pendiente');
+        if (!th) return;
+
+        const celdas = document.querySelectorAll(`#cuerpoTabla tr td:nth-child(${colIndex + 2}) .celda-asistencia`);
+        // Detecta si falta alguien por marcar (si hay algún "-")
+        const incompleto = Array.from(celdas).some(c => c.innerText.trim() === '-');
+
+        if (mesSeleccionado === mesActual && diaColumna <= hoyNum) {
+            if (incompleto) {
+                th.classList.add('alerta-pendiente');
+            } else {
+                th.classList.remove('alerta-pendiente'); // SI ESTÁ COMPLETO, QUITA EL ROJO
+            }
+        } else {
+            th.classList.remove('alerta-pendiente');
+        }
     });
 }
 
@@ -379,7 +501,7 @@ function calcularStats() {
     document.getElementById('mediaAsistencia').innerText = porc + '%';
     document.getElementById('detalleMedia').innerText = `${totalMarcados > 0 ? (totalSi / (totalMarcados / totalJugadores)).toFixed(2) : 0} de ${totalJugadores} jugadores de media`;
     const divFalton = document.getElementById('jugadorFalton');
-    if (listaFaltas.length === 0) divFalton.innerHTML = totalMarcados > 0 ? '<span style="color:#28a745">Todo OK</span>' : "-";
+    if (listaFaltas.length === 0) divFalton.innerHTML = totalMarcados > 0 ? '<span style="color:#1e7e34">Todo BIEN</span>' : "-";
     else {
         listaFaltas.sort((a,b) => b.totalFaltas - a.totalFaltas);
         divFalton.innerHTML = listaFaltas.slice(0, 2).map(f => `${f.nombre} (${f.totalFaltas} faltas)`).join('<br>');

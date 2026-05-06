@@ -299,6 +299,7 @@ def guardar_asistencia_masiva():
             nombre = c['nombre']
             equipo = c['equipo']
             estado = c['estado']
+            valoracion = c.get('valoracion', '-') # Captura la flecha (NORMAL, MAL, etc.)
             observacion = c.get('motivo', '') 
 
             # Buscar si ya existe para actualizar
@@ -310,12 +311,13 @@ def guardar_asistencia_masiva():
                     break
             
             if fila_idx != -1:
-                # Actualizar: Columna E (5) es Asistencia, Columna F (6) es Observaciones
+                # Actualizar: E(5)=Asistencia, F(6)=Valoración, G(7)=Observaciones
                 sheet.update_cell(fila_idx, 5, estado)
-                sheet.update_cell(fila_idx, 6, observacion)
+                sheet.update_cell(fila_idx, 6, valoracion)
+                sheet.update_cell(fila_idx, 7, observacion)
             else:
-                # Crear nueva fila: FECHA, EQUIPO, NOMBRE, APELLIDO, ASISTENCIA, OBSERVACIONES
-                sheet.append_row([fecha_full, equipo, nombre, "", estado, observacion])
+                # Nueva fila: FECHA, EQUIPO, NOMBRE, APELLIDO, ASISTENCIA, VALORACIÓN, OBSERVACIONES
+                sheet.append_row([fecha_full, equipo, nombre, "", estado, valoracion, observacion])
 
         return jsonify({"status": "success"}), 200
     except Exception as e:
