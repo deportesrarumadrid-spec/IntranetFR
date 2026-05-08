@@ -1268,7 +1268,7 @@ function calcularStats() {
     }
 }
 
-window.onload = function() {
+window.onload = async function() {
     const hoyReal = new Date();
     const selectorMes = document.getElementById('selectMes');
     if (selectorMes) selectorMes.value = hoyReal.getMonth() + 1;
@@ -1278,10 +1278,12 @@ window.onload = function() {
     if (ultimoEquipo) {
         const select = document.getElementById('selectEquipo');
         select.value = ultimoEquipo;
-        generarCalendario();
+        await generarCalendario();
         localStorage.removeItem('ultimoEquipoAsistencias'); // Limpiamos para no forzar siempre
+    } else {
+        // Si no hay equipo, ocultamos el loader inmediatamente
+        hideLoader();
     }
 };
-
 </script>
 {% endblock %}
