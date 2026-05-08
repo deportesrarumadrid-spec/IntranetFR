@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Intranet Club - Panel Principal</title>
     <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Montserrat', sans-serif; display: flex; height: 100vh; background-color: #f4f7f6; overflow: hidden; }
@@ -83,6 +84,39 @@
 
         .menu-item:hover { color: white; background-color: rgba(0,0,0,0.1); }
 
+        /* Caja de Avisos en el Sidebar */
+        .avisos-sidebar {
+            background: white;
+            margin: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            color: #333;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: none; /* Se muestra solo si hay pendientes */
+        }
+        .avisos-sidebar h4 {
+            color: #E31E24;
+            font-size: 0.7rem;
+            margin-bottom: 12px;
+            font-family: 'Archivo Black', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 2px solid #f4f7f6;
+            padding-bottom: 8px;
+            text-transform: uppercase;
+        }
+        .aviso-item {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #555;
+            padding: 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .aviso-item i { color: #E31E24; width: 12px; text-align: center; }
+
         .tareas-box {
             background: white;
             margin: 20px;
@@ -125,6 +159,18 @@
 <a href="/inicio" class="menu-item {{ 'active' if 'inicio' in request.path }}">INICIO</a>
 <a href="/deportivo" class="menu-item {{ 'active' if 'deportivo' in request.path }}">DEPORTIVO</a>
 <a href="/asistencias" class="menu-item {{ 'active' if 'asistencias' in request.path }}">ASISTENCIAS</a>
+<a href="/financiero" class="menu-item {{ 'active' if 'financiero' in request.path }}">FINANCIERO</a>
+    </div>
+
+    <div id="sidebarAvisos" class="avisos-sidebar">
+        <div id="seccionAsis" style="display: none;">
+            <h4><i class="fas fa-calendar-times"></i> Asistencias</h4>
+            <div id="listaAsis"></div>
+        </div>
+        <div id="seccionVals" style="display: none; margin-top: 15px; border-top: 1px solid #f4f7f6; padding-top: 10px;">
+            <h4><i class="fas fa-arrow-up"></i> Valoraciones</h4>
+            <div id="listaVals"></div>
+        </div>
     </div>
 </div>
 
@@ -133,7 +179,10 @@
 
     <div class="main-content">
         <div class="top-bar">
-            <span style="font-size: 0.9rem; color: #666;">Bienvenido, <strong style="color: #333;">{{ usuario }}</strong></span>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <img src="{{ url_for('static', filename='ESCUDO SIN FONDO.png') }}" alt="Escudo" style="height: 65px; width: auto;">
+                <span style="font-size: 0.9rem; color: #666;">Bienvenido, <strong id="userId" style="color: #333;">{{ usuario }}</strong></span>
+            </div>
             <a href="/" class="btn-salir">CERRAR SESIÓN</a>
         </div>
 

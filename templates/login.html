@@ -87,11 +87,10 @@
 </head>
 <body>
     <div class="login-box">
-        <!-- El escudo con el nombre de archivo correcto que vimos (.jpg) -->
-        <img src="{{ url_for('static', filename='escudo.jpg') }}" alt="Escudo" style="width: 90px; margin-bottom: 20px;">
+        <img src="{{ url_for('static', filename='ESCUDO SIN FONDO.png') }}" alt="Escudo" style="width: 180px; margin-bottom: 20px;">
         
         <h2>INTRANET CLUB</h2>
-        
+
         <form action="/login" method="POST">
             <input type="text" name="usuario" placeholder="Usuario" required>
             <input type="password" name="password" placeholder="Contraseña" required>

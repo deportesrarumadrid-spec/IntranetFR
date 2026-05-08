@@ -2,9 +2,7 @@
 
 {% block content %}
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <div style="padding: 20px; font-family: 'Montserrat', sans-serif;">
-    <!-- Filtros Superiores -->
     <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: flex-end;">
         <div style="flex: 1; min-width: 200px;">
             <label style="font-size: 10px; font-weight: 900; color: #444;">EQUIPO</label>
@@ -40,15 +38,13 @@
                 <option value="ALL">Todos los días</option>
             </select>
         </div>
-        <!-- BOTÓN DE GUARDADO MASIVO -->
         <div style="flex: 1; min-width: 200px;">
-            <button id="btnGuardarTodo" onclick="enviarCambiosAlServidor()" style="width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);">
-                <i class="fas fa-save" style="margin-right: 8px;"></i> GUARDAR CAMBIOS EN EXCEL
+            <button id="btnGuardarTodo" onclick="enviarCambiosAlServidor()" style="width: 100%; padding: 12px; background: #6c757d; color: white; border: none; border-radius: 8px; font-weight: 900; cursor: pointer; transition: all 0.3s;">
+                <i class="fas fa-cloud" style="margin-right: 8px;"></i> SISTEMA SINCRONIZADO
             </button>
         </div>
     </div>
 
-    <!-- Tabla Principal -->
     <div id="contenedorTabla" style="display: none; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden;">
         <div style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse;">
@@ -60,7 +56,18 @@
             </table>
         </div>
         
-        <!-- Estadísticas Inferiores -->
+        <!-- Opción para añadir jugador -->
+        <div id="areaAnadirJugador" style="display: none; background: #fdfdfd; border-top: 1px solid #eee; align-items: center; gap: 0;">
+            <div style="width: 140px; min-width: 140px; padding: 10px 12px; border-right: 2px solid #f0f0f0; box-sizing: border-box;">
+                <input type="text" id="nuevoJugadorNombre" placeholder="Nombre..." style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-weight: 700; font-family: inherit; font-size: 11px; box-sizing: border-box;">
+            </div>
+            <div style="padding: 10px;">
+                <button onclick="anadirJugador()" style="padding: 8px 15px; background: #333; color: white; border: none; border-radius: 6px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 10px;">
+                    <i class="fas fa-user-plus" style="margin-right: 5px;"></i> AÑADIR AL EQUIPO
+                </button>
+            </div>
+        </div>
+
         <div id="statsAsistencia" style="padding: 25px; background: #fff; border-top: 1px solid #eee; display: flex; justify-content: space-around; text-align: center;">
             <div style="flex: 1;">
                 <p style="font-size: 10px; font-weight: 900; color: #999; margin: 0; letter-spacing: 1px;">% ASISTENCIA MEDIA</p>
@@ -75,7 +82,6 @@
     </div>
 </div>
 
-<!-- MODAL PARA MOTIVOS -->
 <div id="modalMotivo" class="modal">
     <div class="modal-content">
         <h3 style="margin-top: 0; color: #E31E24; font-size: 14px; font-weight: 900;">MOTIVO DE AUSENCIA</h3>
@@ -88,47 +94,205 @@
     </div>
 </div>
 
+<!-- Modal Historial de Observaciones -->
+<div id="modalObservacionesJugador" class="modal">
+    <div class="modal-content" style="width: 500px; max-width: 90%; height: auto; max-height: 80vh; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 style="margin: 0; color: #E31E24; font-size: 14px; font-weight: 900;">HISTORIAL DE OBSERVACIONES</h3>
+            <button onclick="abrirModalBaja()" style="background: #E31E24; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: 900; cursor: pointer;">
+                <i class="fas fa-user-slash"></i> DAR DE BAJA
+            </button>
+            <button onclick="abrirModalAlta()" style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: 900; cursor: pointer; margin-left: 10px;">
+                <i class="fas fa-user-plus"></i> DAR DE ALTA
+            </button>
+        </div>
+        <p id="modalObsJugadorNombre" style="font-size: 13px; font-weight: 700; color: #555; margin-bottom: 10px;"></p>
+        
+        <div id="listaObsContainer" style="flex: 1; overflow-y: auto; margin-bottom: 15px; border: 1px solid #eee; border-radius: 8px; padding: 10px; background: #fafafa; min-height: 100px;">
+            <!-- Las líneas se generan dinámicamente -->
+        </div>
+
+        <div style="border-top: 2px solid #f4f7f6; padding-top: 15px;">
+            <label id="lblNuevaObs" style="font-size: 10px; font-weight: 900; color: #999; display: block; margin-bottom: 5px;">AÑADIR NUEVA OBSERVACIÓN</label>
+            <textarea id="textoObservacionJugador" placeholder="Escribe aquí el comentario..." style="width: 100%; height: 60px; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-family: inherit; font-size: 13px; resize: none; box-sizing: border-box;"></textarea>
+            <div style="margin-top: 10px; display: flex; gap: 10px;">
+                <button onclick="cerrarModalObservaciones()" style="flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; background: #eee;">CERRAR</button>
+                <button id="btnGuardarObs" onclick="agregarOEditarObservacion(this)" style="flex: 2; padding: 10px; background: #E31E24; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 700;">AÑADIR OBSERVACIÓN</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Gestión Jugador (Editar/Eliminar) -->
+<div id="modalGestionJugador" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top: 0; color: #333; font-size: 14px; font-weight: 900;">GESTIÓN JUGADOR</h3>
+        <p id="labelGestionNombre" style="font-size: 11px; color: #999; margin-bottom: 5px;">EDITAR NOMBRE:</p>
+        <input type="text" id="editNombreJugador" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px; font-weight: 700;">
+        <div style="display: flex; gap: 10px;">
+            <button onclick="eliminarJugadorDefinitivo(this)" style="flex: 1; padding: 10px; background: #fff; color: #E31E24; border: 1px solid #E31E24; border-radius: 8px; font-weight: 700; cursor: pointer;">ELIMINAR</button>
+            <button onclick="actualizarNombreJugador(this)" style="flex: 1; padding: 10px; background: #333; color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer;">ACTUALIZAR</button>
+        </div>
+        <button onclick="cerrarModalGestion()" style="width: 100%; margin-top: 10px; padding: 10px; background: #eee; border: none; border-radius: 8px; font-weight: 700; cursor: pointer;">CANCELAR</button>
+    </div>
+</div>
+
+<!-- Modal Baja -->
+<div id="modalBaja" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top: 0; color: #E31E24; font-size: 14px; font-weight: 900;">PROCESAR BAJA</h3>
+        <p style="font-size: 11px; color: #666; margin-bottom: 10px;">Selecciona la fecha a partir de la cual el jugador no estará disponible:</p>
+        <input type="date" id="fechaBajaInput" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px;">
+        <textarea id="motivoBaja" placeholder="Motivo de la baja (Obligatorio)..." style="width: 100%; height: 70px; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-family: inherit; font-size: 13px; resize: none; box-sizing: border-box; margin-bottom: 20px;"></textarea>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="document.getElementById('modalBaja').style.display='none'" style="flex: 1; padding: 12px; border: none; border-radius: 8px; background: #eee; font-weight: 700; cursor: pointer;">CANCELAR</button>
+            <button onclick="guardarBaja(this)" style="flex: 1; padding: 12px; background: #E31E24; color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer;">CONFIRMAR BAJA</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Alta -->
+<div id="modalAlta" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top: 0; color: #28a745; font-size: 14px; font-weight: 900;">PROCESAR ALTA</h3>
+        <p style="font-size: 11px; color: #666; margin-bottom: 10px;">Selecciona la fecha a partir de la cual el jugador volverá a estar activo:</p>
+        <input type="date" id="fechaAltaInput" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px;">
+        <textarea id="motivoAlta" placeholder="Motivo de la alta (Obligatorio)..." style="width: 100%; height: 70px; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-family: inherit; font-size: 13px; resize: none; box-sizing: border-box; margin-bottom: 20px;"></textarea>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="document.getElementById('modalAlta').style.display='none'" style="flex: 1; padding: 12px; border: none; border-radius: 8px; background: #eee; font-weight: 700; cursor: pointer;">CANCELAR</button>
+            <button onclick="guardarAlta(this)" style="flex: 1; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer;">CONFIRMAR ALTA</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CONTROL BALONES -->
+<div id="modalBalones" class="modal">
+    <div class="modal-content" style="width: 350px;">
+        <h3 id="tituloModalBalones" style="margin-top: 0; color: #E31E24; font-size: 14px; font-weight: 900;">CONTROL DE BALONES</h3>
+        <p id="subtituloModalBalones" style="font-size: 11px; font-weight: 700; color: #555; margin-bottom: 15px;"></p>
+        
+        <label style="font-size: 10px; font-weight: 900; color: #999;">CANTIDAD DE BALONES</label>
+        <input type="number" id="cantBalones" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px; font-size: 18px; font-weight: 900; text-align: center;">
+        
+        <label style="font-size: 10px; font-weight: 900; color: #999;">FOTO DE EVIDENCIA</label>
+        <div id="prevImgBalones" style="width: 100%; height: 120px; background: #fafafa; border: 2px dashed #ddd; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer;" onclick="document.getElementById('fileInpBalones').click()">
+            <i class="fas fa-camera" style="font-size: 24px; color: #ccc;"></i>
+        </div>
+        <input type="file" id="fileInpBalones" style="display:none" accept="image/*" onchange="previewImagenBalon(this)">
+
+        <!-- Área para mostrar el último registro -->
+        <div id="infoRegistroBalones" style="font-size: 11px; color: #666; margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; font-weight: 700; min-height: 20px;"></div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button onclick="cerrarModalBalones()" style="flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; background: #eee;">CANCELAR</button>
+            <button id="btnGuardarBalones" onclick="guardarControlBalones()" style="flex: 1; padding: 12px; background: #E31E24; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 700;">GUARDAR</button>
+        </div>
+    </div>
+</div>
+
 <style>
+    .btn-edit-jugador { 
+        color: #ccc; 
+        cursor: pointer; 
+        font-size: 10px; 
+        transition: 0.2s; 
+        padding: 5px;
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+    }
+    .btn-edit-jugador:hover { color: #888; }
+    /* Estilos para el nuevo botón de observaciones */
+    .btn-obs-jugador {
+        background: #f0f0f0; color: #666; border: 1px solid #ccc; padding: 4px 6px; border-radius: 4px; font-size: 10px; font-weight: 900; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 28px;
+    }
+    .btn-obs-jugador:hover { background: #e0e0e0; color: #333; }
+    .btn-obs-jugador.has-obs { background: #333; color: white; border-color: #333; }
+    .btn-obs-jugador.has-obs:hover { background: #000; border-color: #000; }
+
     .td-asistencia { padding: 8px !important; min-width: 80px; border: 1px solid #f0f0f0; }
     .wrapper-asistencia { 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    gap: 8px; 
-    position: relative;
-    width: 120px; /* Ancho fijo para que la columna no baile */
-    margin: 0 auto;
-}
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        gap: 8px; 
+        position: relative;
+        width: 120px; 
+        margin: 0 auto;
+    }
+    /* Botones de Control de Balones Profesionales */
+    .btn-balon-ctrl { 
+        background: #fff; 
+        border: 1px solid #e0e0e0; 
+        padding: 6px 12px; 
+        border-radius: 6px; 
+        font-size: 13px; 
+        color: #555; 
+        cursor: pointer; 
+        display: flex; 
+        align-items: center; 
+        gap: 6px; 
+        font-weight: 800; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+        transition: all 0.2s ease; 
+        min-width: 42px; 
+        justify-content: center; 
+    }
+    .btn-balon-ctrl:hover { 
+        background: #f8f9fa; 
+        transform: translateY(-1px); 
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
+        border-color: #ccc;
+    }
+    .btn-balon-ctrl.ok { 
+        background: #28a745 !important; 
+        color: white !important; 
+        border-color: #1e7e34 !important; 
+        min-width: 58px;
+    }
+    .btn-balon-ctrl.atrasado { 
+        background: #fff5f5 !important; 
+        color: #dc3545 !important; 
+        border-color: #ffcccc !important; 
+        animation: pulse-red 2s infinite;
+    }
+    @keyframes pulse-red {
+        0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+        70% { box-shadow: 0 0 0 5px rgba(220, 53, 69, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+    }
     .celda-asistencia { 
-    width: 40px; 
-    height: 38px; 
-    border-radius: 4px; 
-    cursor: pointer; 
-    font-weight: 800; 
-    font-size: 11px; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    transition: all 0.2s;
-    flex-shrink: 0; 
-}
+        width: 40px; 
+        height: 38px; 
+        border-radius: 4px; 
+        cursor: pointer; 
+        font-weight: 800; 
+        font-size: 11px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        transition: all 0.2s;
+        flex-shrink: 0; 
+    }
     .celda-asistencia:hover { transform: scale(1.1); }
     .btn-nota { 
-    width: 25px; 
-    height: 38px; 
-    background: #f5f5f5; 
-    border-radius: 4px; 
-    display: flex !important; /* Siempre en modo flex para ocupar espacio */
-    opacity: 0; /* Invisible por defecto */
-    pointer-events: none; /* No se puede clicar si es invisible */
-    align-items: center; 
-    justify-content: center; 
-    cursor: pointer; 
-    color: #bbb; 
-    font-size: 12px; 
-    flex-shrink: 0;
-}
-.btn-nota[style*="display: flex"], .btn-nota.tiene-motivo { visibility: visible; }
+        width: 25px; 
+        height: 38px; 
+        background: #f5f5f5; 
+        border-radius: 4px; 
+        display: flex !important;
+        opacity: 0; 
+        pointer-events: none; 
+        align-items: center; 
+        justify-content: center; 
+        cursor: pointer; 
+        color: #bbb; 
+        font-size: 12px; 
+        flex-shrink: 0;
+    }
+    .btn-nota[style*="display: flex"], .btn-nota.tiene-motivo { visibility: visible; }
     .btn-nota.tiene-motivo { background: #E31E24; color: white; display: flex; }
     .estado-vacio { background: #fff; color: #eee; border: 1px solid #f0f0f0; }
     .estado-si { background: #28a745; color: white; }
@@ -138,63 +302,101 @@
     .th-dia { background: #6c757d; color: white; border: 1px solid #eee; text-align: center; }
     .th-dia.alerta-pendiente { background: #E31E24 !important; }
     .fila-todo-si-estilo { background: #fdfdfd; border-bottom: 1px solid #eee; }
-    .btn-todo-si { color: #E31E24; font-size: 10px; font-weight: 800; cursor: pointer; text-decoration: none; }
+    .btn-todo-si { 
+        display: inline-block;
+        padding: 4px 6px;
+        background: #f0f0f0; /* Gris claro */
+        border: 1px solid #ccc; /* Borde gris */
+        color: #666; /* Texto gris oscuro */
+        font-size: 9px; 
+        font-weight: 900; 
+        cursor: pointer; 
+        border-radius: 4px;
+        transition: all 0.2s;
+        text-transform: uppercase;
+    }
+    .btn-todo-si:hover { background: #ccc; color: #333; } /* Hover gris más oscuro */
     .warning-icon { display: none; font-size: 14px; margin-bottom: 2px; }
     .alerta-pendiente .warning-icon { display: block; }
     .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); }
     .modal-content { background: white; margin: 12% auto; padding: 25px; border-radius: 15px; width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
     .celda-modificada { outline: 2px dashed #28a745; outline-offset: -2px; }
-.btn-val { 
-    width: 35px; 
-    height: 38px; 
-    background: #fdfdfd; 
-    border-radius: 4px; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    cursor: pointer; 
-    border: 1px solid #eee; 
-    font-size: 22px; 
-    font-weight: 900; 
-    transition: all 0.2s;
-    flex-shrink: 0;
-}
+    .btn-val { 
+        width: 35px; 
+        height: 38px; 
+        background: #fdfdfd; 
+        border-radius: 4px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        cursor: pointer; 
+        border: 1px solid #eee; 
+        font-size: 22px; 
+        font-weight: 900; 
+        transition: all 0.2s;
+        flex-shrink: 0;
+    }
     .val-normal { color: #1e7e34; font-weight: 900; } 
-.val-mal { color: #dc3545; font-weight: 900; }    
-.val-excelente { color: #b8860b; font-weight: 900; }
-    .btn-todo-val { color: #28a745; font-size: 10px; font-weight: 800; cursor: pointer; text-decoration: none; display: block; margin-top: 2px; }
-.btn-nota.tiene-motivo, 
-.estado-no + .btn-nota, 
-.estado-av + .btn-nota { 
-    opacity: 1 !important; 
-    pointer-events: auto !important; 
-}
+    .val-mal { color: #dc3545; font-weight: 900; }    
+    .val-excelente { color: #b8860b; font-weight: 900; }
+    .btn-todo-val { 
+        display: inline-block;
+        padding: 4px 6px;
+        background: #f0f0f0; /* Gris claro */
+        border: 1px solid #ccc; /* Borde gris */
+        color: #666; /* Texto gris oscuro */
+        font-size: 9px; 
+        font-weight: 900; 
+        cursor: pointer; 
+        border-radius: 4px;
+        transition: all 0.2s;
+        text-transform: uppercase;
+    }
+    .btn-todo-val:hover { background: #ccc; color: #333; } /* Hover gris más oscuro */
+    .btn-nota.tiene-motivo, 
+    .estado-no + .btn-nota, 
+    .estado-av + .btn-nota { 
+        opacity: 1 !important; 
+        pointer-events: auto !important; 
+    }
 </style>
 
 <script>
-let listaObservaciones = {}; 
-let cambiosPendientes = []; // Array para guardar los cambios antes de enviar
-
-async function obtenerObservaciones() {
-    try {
-        const response = await fetch('/obtener_observaciones_jugadores');
-        listaObservaciones = await response.json();
-    } catch (e) { console.error("Error cargando observaciones:", e); }
-} 
-obtenerObservaciones();
-
-const jugadoresRaw = {{ jugadores_raw | tojson }};
+let cambiosPendientes = [];
+let jugadoresRaw = {{ jugadores_raw | tojson }};
 const nombresDias = ['D', 'L', 'M', 'MI', 'J', 'V', 'S'];
-const hoy = new Date(); 
+let isSaving = false;
 let celdaActiva = null;
+let balonesData = {};
+let diaBalonActivo = null;
+let tipoBalonActivo = null;
+let fotoBalonBase64 = null;
 
-function generarCalendario() {
+// Ayudante para parsear fechas locales sin problemas de zona horaria
+function parsearFechaLocal(str) {
+    if (!str) return null;
+    if (str.includes('/')) {
+        const [d, m, y] = str.split('/').map(Number);
+        return new Date(y, m - 1, d);
+    }
+    const [y, m, d] = str.split('-').map(Number);
+    return new Date(y, m - 1, d);
+}
+
+async function generarCalendario() {
     const equipo = document.getElementById('selectEquipo').value;
-    const mes = parseInt(document.getElementById('selectMes').value) - 1;
-    const filtroDias = document.getElementById('selectDias').value;
     if (!equipo) return;
 
-    cambiosPendientes = []; // Reiniciar cambios al cambiar de vista
+    // Sincronizamos observaciones/bajas antes de renderizar para asegurar persistencia
+    await sincronizarTodoDesdeBackend();
+
+    const mes = parseInt(document.getElementById('selectMes').value) - 1;
+    const selectMes = document.getElementById('selectMes');
+    const mesNombre = selectMes.options[selectMes.selectedIndex].text.split(' ')[0];
+
+    const filtroDias = document.getElementById('selectDias').value;
+
+    cambiosPendientes = []; 
     const totalDias = new Date(2026, mes + 1, 0).getDate();
     const diasValidos = [];
 
@@ -208,49 +410,279 @@ function generarCalendario() {
 
     document.getElementById('cabeceraDias').innerHTML = `<th class="sticky-col" style="background:white;"></th>` +
         diasValidos.map((d, i) => `
-            <th class="th-dia" id="th-col-${i}">
+            <th class="th-dia" id="th-col-${i}" style="position: relative; min-width: 105px; height: 100px; padding: 10px 5px;">
                 <div class="warning-icon">⚠️</div>
                 <div style="font-size: 10px; opacity: 0.8;">${d.label}</div>
-                <div style="font-size: 16px; font-weight: 900;">${d.num}</div>
+                <div style="display: flex; align-items: center; justify-content: center; height: 70px; position: relative;">
+                    <div class="day-num-header" style="font-size: 20px; font-weight: 900;">${d.num}</div>
+                    <div class="container-balones" style="position: absolute; right: 2px; display: flex; flex-direction: column; gap: 5px;">
+                        <div class="btn-balon-ctrl" id="balon-i-${d.num}" onclick="event.stopPropagation(); abrirModalBalones(${d.num}, 'inicio')" title="Inicio">
+                            <i class="fas fa-futbol"></i> I
+                        </div>
+                        <div class="btn-balon-ctrl" id="balon-f-${d.num}" onclick="event.stopPropagation(); abrirModalBalones(${d.num}, 'final')" title="Fin">
+                            <i class="fas fa-futbol"></i> F
+                        </div>
+                    </div>
+                </div>
             </th>`).join('');
 
     document.getElementById('filaMarcarTodo').innerHTML = `<td class="sticky-col fila-todo-si-estilo"></td>` + 
-diasValidos.map((_, i) => `
-    <td class="fila-todo-si-estilo" style="text-align:center;">
-        <div style="display: flex; justify-content: center; gap: 5px;">
-            <span class="btn-todo-si" onclick="marcarColumna(${i})">TODO SI</span>
-            <span class="btn-todo-val" onclick="marcarValoracionColumna(${i})">TODO OK</span>
-        </div>
-    </td>`).join('');
+    diasValidos.map((_, i) => `
+        <td class="fila-todo-si-estilo" style="text-align:center;">
+            <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 5px; padding: 5px 0;">
+                <span class="btn-todo-si" onclick="marcarColumna(${i})">TODO SI</span>
+                <span class="btn-todo-val" onclick="marcarValoracionColumna(${i})">TODO OK</span>
+            </div>
+        </td>`).join('');
 
     const filtrados = jugadoresRaw.filter(j => j.EQUIPO === equipo);
+
+    // Pre-calculamos el estado de baja para cada jugador en este mes para el estilo y el orden
+    filtrados.forEach(j => {
+        const fBaja = parsearFechaLocal(j.BAJA_DESDE);
+        const fAlta = parsearFechaLocal(j.ALTA_DESDE);
+        // Un jugador se considera "de baja" en este mes si tiene alguna "X" en los días mostrados
+        j._esBajaEnMes = diasValidos.some(d => {
+            if (!fBaja) return false;
+            const dFull = d.fechaFull;
+            return dFull >= fBaja && (!fAlta || dFull < fAlta);
+        });
+    });
+
+    // ORDENAR: Activos arriba, bajas al final
+    filtrados.sort((a, b) => {
+        return a._esBajaEnMes - b._esBajaEnMes;
+    });
+
     document.getElementById('cuerpoTabla').innerHTML = filtrados.map(j => {
-        const obs = listaObservaciones[j.NOMBRE] || "";
+        const arr = getArrayObservaciones(j.NOMBRE);
+        const hasObs = arr.length > 0;
+        const esBajaStyle = j._esBajaEnMes;
+        const fBajaJug = parsearFechaLocal(j.BAJA_DESDE);
+        const fAltaJug = parsearFechaLocal(j.ALTA_DESDE);
+
+        const nombreEscapado = j.NOMBRE.replace(/'/g, "\\'");
+
         return `
         <tr>
             <td class="sticky-col">
-                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                    <span style="color: #333; font-weight: 700;">${j.NOMBRE}</span>
-                    ${obs.trim() !== "" ? `<div title="${obs}" style="background: #E31E24; color: white; padding: 2px 6px; border-radius: 4px; font-size: 9px; display: flex; align-items: center; gap: 3px; cursor: help; flex-shrink: 0;"><i class="fas fa-sticky-note" style="font-size: 8px;"></i>OBS</div>` : ""}
+                <div style="display: flex; align-items: center; width: 100%;">
+                    <span data-nombre-original="${nombreEscapado}" style="flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; padding-right: 5px; ${esBajaStyle ? 'color: #dc3545; text-decoration: line-through;' : 'color: #333;'}">
+                        ${j.NOMBRE}
+                    </span>
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; margin-right: 12px; line-height: 1.1; min-width: 65px; flex-shrink: 0;">
+                        <div style="display: flex; align-items: baseline; gap: 3px;">
+                            <span class="perc-mes" style="font-size: 13px; color: #28a745; font-weight: 900;">0%</span>
+                            <span style="font-size: 8px; color: #28a745; font-weight: 700; text-transform: uppercase;">%${mesNombre}</span>
+                        </div>
+                        <div style="display: flex; align-items: baseline; gap: 3px;">
+                            <span class="perc-tot" style="font-size: 10px; color: #666; font-weight: 700;">0%</span>
+                            <span style="font-size: 8px; color: #666; font-weight: 500; text-transform: uppercase;">%TEMP</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 2px; flex-shrink: 0; width: 55px; justify-content: flex-end;">
+                        <i class="fas fa-pencil-alt btn-edit-jugador" title="Editar" onclick="abrirModalGestion('${nombreEscapado}')"></i>
+                        <button class="btn-obs-jugador ${hasObs ? 'has-obs' : ''}" onclick="abrirModalObservaciones('${nombreEscapado}')">
+                            <i class="fas fa-comment-dots"></i>
+                        </button>
+                    </div>
                 </div>
             </td>
-            ${diasValidos.map(() => `
-                <td class="td-asistencia">
-                    <div class="wrapper-asistencia">
-    <div class="celda-asistencia estado-vacio" onclick="ciclarEstado(this)">-</div>
-    <div class="btn-nota" onclick="abrirModal(this)" style="display:none;">
-        <i class="fas fa-pencil-alt" style="font-size: 10px;"></i>
-    </div>
-    <div class="btn-val" onclick="ciclarValoracion(this)" data-valor="-">-</div>
-</div>
-                </td>`).join('')}
+            ${diasValidos.map(d => {
+                let estaDeBaja = false;
+                if (fBajaJug) {
+                    const dFull = d.fechaFull;
+                    if (dFull >= fBajaJug) {
+                        if (!fAltaJug || dFull < fAltaJug) {
+                            estaDeBaja = true;
+                        }
+                    }
+                }
+
+                if (estaDeBaja) {
+                    return `<td class="td-asistencia" style="text-align:center;"><span style="color: #dc3545; font-weight: 900; font-size: 18px;">X</span></td>`;
+                }
+                return `
+                    <td class="td-asistencia">
+                        <div class="wrapper-asistencia">
+                            <div class="celda-asistencia estado-vacio" onclick="ciclarEstado(this)">-</div>
+                            <div class="btn-nota" onclick="abrirModal(this)" style="display:none;"><i class="fas fa-pencil-alt"></i></div>
+                            <div class="btn-val" onclick="ciclarValoracion(this)" data-valor="-">-</div>
+                        </div>
+                    </td>`;
+            }).join('')}
         </tr>`;
     }).join('');
 
     document.getElementById('contenedorTabla').style.display = 'block';
+    document.getElementById('areaAnadirJugador').style.display = 'flex';
     actualizarAlertasCabecera(diasValidos);
+    
+    // Cargamos balones sin bloquear el resto de la página
+    cargarControlBalones().catch(e => console.error("Error balones:", e));
+    
     calcularStats();
     setTimeout(cargarAsistenciasGuardadas, 100); 
+}
+
+async function cargarControlBalones() {
+    const equipo = document.getElementById('selectEquipo').value;
+    const mes = document.getElementById('selectMes').value;
+    const res = await fetch(`/api/control_balones?equipo=${equipo}&mes=${mes}`);
+    balonesData = await res.json();
+    
+    const hoy = new Date();
+    const mesActual = hoy.getMonth() + 1;
+    const diaHoy = hoy.getDate();
+    const mesSel = parseInt(document.getElementById('selectMes').value);
+
+    Object.keys(balonesData).forEach(dia => {
+        ['inicio', 'final'].forEach(tipo => {
+            const registros = balonesData[dia][tipo];
+            if (registros && registros.length > 0) {
+                const letra = tipo === 'inicio' ? 'I' : 'F';
+                const btnId = `balon-${tipo === 'inicio' ? 'i' : 'f'}-${dia}`;
+                const btn = document.getElementById(btnId);
+                if (btn) {
+                    btn.classList.add('ok');
+                    const ultimo = registros[registros.length - 1];
+                    btn.innerHTML = `<i class="fas fa-futbol"></i> ${letra} ${ultimo.cantidad}`;
+                }
+            }
+        });
+    });
+
+    // Marcar en rojo los días pasados sin datos
+    document.querySelectorAll('.th-dia').forEach(th => {
+        const dia = parseInt(th.querySelector('div:nth-child(3)').innerText);
+        if (mesSel < mesActual || (mesSel === mesActual && dia < diaHoy)) {
+            const btnI = document.getElementById(`balon-i-${dia}`);
+            const btnF = document.getElementById(`balon-f-${dia}`);
+            if (btnI && !btnI.classList.contains('ok')) btnI.classList.add('atrasado');
+            if (btnF && !btnF.classList.contains('ok')) btnF.classList.add('atrasado');
+        }
+    });
+}
+
+function abrirModalBalones(dia, tipo) {
+    diaBalonActivo = dia;
+    tipoBalonActivo = tipo;
+    fotoBalonBase64 = null;
+
+    const registros = balonesData[dia]?.[tipo] || [];
+    // El último registro es el que está al final del array
+    const ultimo = registros.length > 0 ? registros[registros.length - 1] : null;
+    const infoElt = document.getElementById('infoRegistroBalones');
+    
+    document.getElementById('subtituloModalBalones').innerText = `Día ${dia} - Balones al ${tipo === 'inicio' ? 'INICIO' : 'FINAL'}`;
+    document.getElementById('cantBalones').value = ""; // Limpiamos para nuevo cambio
+    document.getElementById('prevImgBalones').innerHTML = ultimo?.foto_url 
+        ? `<img src="${ultimo.foto_url}" style="width:100%; height:100%; object-fit:cover;">` 
+        : '<i class="fas fa-camera" style="font-size: 24px; color: #ccc;"></i>';
+
+    // Mostrar historial de cambios (de más nuevo a más viejo)
+    infoElt.innerHTML = registros.length > 0 
+        ? registros.slice().reverse().map(r => `
+            <div style="padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                ${r.timestamp} <span style="color:#28a745;">${r.cantidad} balones</span>
+            </div>`).join('')
+        : "Sin registros previos";
+
+    document.getElementById('modalBalones').style.display = 'flex';
+}
+
+function previewImagenBalon(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            fotoBalonBase64 = e.target.result;
+            document.getElementById('prevImgBalones').innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+async function guardarControlBalones() {
+    const cant = document.getElementById('cantBalones').value;
+    if (!cant) return alert("Introduce la cantidad");
+    
+    const data = {
+        dia: diaBalonActivo,
+        tipo: tipoBalonActivo,
+        cantidad: cant,
+        foto: fotoBalonBase64,
+        equipo: document.getElementById('selectEquipo').value,
+        mes: document.getElementById('selectMes').value
+    };
+
+    const res = await fetch('/api/control_balones?' + new URLSearchParams({equipo: data.equipo, mes: data.mes}), {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    });
+    
+    if (res.ok) {
+        cerrarModalBalones();
+        generarCalendario();
+    }
+}
+
+function cerrarModalBalones() { document.getElementById('modalBalones').style.display = 'none'; }
+
+let jugadorGestionado = null;
+function abrirModalGestion(nombre) {
+    jugadorGestionado = nombre;
+    document.getElementById('editNombreJugador').value = nombre;
+    document.getElementById('modalGestionJugador').style.display = 'block';
+}
+function cerrarModalGestion() { document.getElementById('modalGestionJugador').style.display = 'none'; }
+
+async function actualizarNombreJugador(btn) {
+    const nuevo = document.getElementById('editNombreJugador').value.trim();
+    if (!nuevo) return;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+    const res = await fetch('/actualizar_jugador', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ nombre_antiguo: jugadorGestionado, nombre_nuevo: nuevo })
+    });
+    if (res.ok) { location.reload(); } else { alert("Error al actualizar"); btn.innerHTML = originalText; btn.disabled = false; }
+}
+
+async function eliminarJugadorDefinitivo(btn) {
+    if (!confirm("¿Eliminar permanentemente a este jugador?")) return;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+    const res = await fetch('/eliminar_jugador', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ nombre: jugadorGestionado })
+    });
+    if (res.ok) { location.reload(); } else { alert("Error al eliminar"); btn.innerHTML = originalText; btn.disabled = false; }
+}
+
+// Función para sincronizar jugadoresRaw con el backend (ahora se hace al cargar la página)
+async function sincronizarTodoDesdeBackend() {
+    try {
+        const response = await fetch('/obtener_observaciones_jugadores'); // Esta ruta devuelve obs y baja
+        const data = await response.json();
+        
+        // Creamos un mapa con nombres en minúsculas para un matching sin errores
+        const cleanData = {};
+        Object.keys(data).forEach(k => cleanData[k.trim().toLowerCase()] = data[k]);
+
+        jugadoresRaw.forEach(j => {
+            const key = j.NOMBRE.trim().toLowerCase();
+            if (cleanData[key]) {
+                j.OBSERVACIONES = cleanData[key].obs || "[]";
+                j.BAJA_DESDE = cleanData[key].baja || "";
+                j.ALTA_DESDE = cleanData[key].alta || "";
+            }
+        });
+    } catch (e) { console.error("Error sincronizando observaciones/bajas:", e); }
 }
 
 async function cargarAsistenciasGuardadas() {
@@ -262,60 +694,98 @@ async function cargarAsistenciasGuardadas() {
         const response = await fetch(`/obtener_asistencias?equipo=${equipo}&mes=${mes}`);
         const datosGuardados = await response.json();
 
+        // Obtener datos de toda la temporada para el % total (sin filtro de mes)
+        const respTot = await fetch(`/obtener_asistencias?equipo=${equipo}`);
+        const datosTotales = await respTot.json();
+
         const filas = document.querySelectorAll('#cuerpoTabla tr');
         filas.forEach(fila => {
-            const nombreJugador = fila.querySelector('.sticky-col').innerText.trim();
+            const spanNombre = fila.querySelector('.sticky-col span');
+            const nombreJugador = spanNombre.dataset.nombreOriginal || spanNombre.innerText.trim();
+
+            // Actualizar porcentaje temporada (datos históricos del servidor)
+            const recsP = datosTotales.filter(d => d.nombre === nombreJugador);
+            const sisP = recsP.filter(d => d.estado === 'SI').length;
+            const marP = recsP.filter(d => ['SI', 'NO', 'AV'].includes(d.estado)).length;
+            const percP = marP > 0 ? Math.round((sisP / marP) * 100) : 0;
+            const elTot = fila.querySelector('.perc-tot');
+            if (elTot) elTot.innerText = percP + '%';
+
             const celdas = fila.querySelectorAll('.td-asistencia');
 
             celdas.forEach((td, index) => {
                 const thCelda = document.getElementById('cabeceraDias').cells[index + 1];
-                const diaNum = thCelda.querySelector('div:last-child').innerText.trim();
+        const diaNumHeader = thCelda.querySelector('.day-num-header');
+        if (!diaNumHeader) return;
+        const diaNum = diaNumHeader.innerText.trim();
                 const registro = datosGuardados.find(d => d.nombre === nombreJugador && d.dia == diaNum);
 
                 if (registro) {
                     const el = td.querySelector('.celda-asistencia');
+            if (!el) return; // Si el jugador está de baja ("X"), saltamos esta celda para evitar errores
                     const btnNota = td.querySelector('.btn-nota');
+                    const btnVal = td.querySelector('.btn-val');
+                    
                     el.innerText = registro.estado;
                     el.dataset.motivo = registro.motivo || "";
                     el.className = 'celda-asistencia';
+                    
                     if (registro.estado === 'SI') el.classList.add('estado-si');
                     else if (registro.estado === 'NO') { el.classList.add('estado-no'); btnNota.style.display = 'flex'; }
                     else if (registro.estado === 'AV') { el.classList.add('estado-av'); btnNota.style.display = 'flex'; }
                     else { el.classList.add('estado-vacio'); }
+                    
                     if (registro.motivo) btnNota.classList.add('tiene-motivo');
+
+                    // CARGAR VALORACIÓN (LA FLECHA)
+                    if (registro.valoracion) {
+                        const iconos = { 'NORMAL': '→', 'MAL': '↓', 'EXCELENTE': '↑', '-': '-' };
+                        const clases = { 'NORMAL': 'val-normal', 'MAL': 'val-mal', 'EXCELENTE': 'val-excelente', '-': '' };
+                        btnVal.dataset.valor = registro.valoracion;
+                        btnVal.innerText = iconos[registro.valoracion] || '-';
+                        btnVal.className = 'btn-val ' + (clases[registro.valoracion] || '');
+                    }
                 }
             });
         });
 
         calcularStats();
         actualizarAlertasVisuales(); // <--- ESTA ES LA LÍNEA QUE QUITA EL ROJO AL CARGAR
-
     } catch (e) { console.error("Error cargando asistencias:", e); }
 }
 
 function registrarCambioLocal(el) {
-    const nombre = el.closest('tr').querySelector('.sticky-col').innerText.trim();
-    const thCelda = document.getElementById('cabeceraDias').cells[el.closest('td').cellIndex];
-    const dia = thCelda.querySelector('div:last-child').innerText.trim();
+    const td = el.closest('td');
+    const fila = el.closest('tr');
+    const spanNombre = fila.querySelector('.sticky-col span');
+    const nombre = spanNombre.dataset.nombreOriginal || spanNombre.innerText.trim();
+    const thCelda = document.getElementById('cabeceraDias').cells[td.cellIndex];
+    const diaNumHeader = thCelda.querySelector('.day-num-header');
+    if (!diaNumHeader) return;
+    const dia = diaNumHeader.innerText.trim();
     const equipo = document.getElementById('selectEquipo').value;
-    const estado = el.innerText;
     
-    // CAPTURAMOS LA VALORACIÓN: Buscamos el valor dentro del botón de la flecha
-    const valoracion = el.parentElement.querySelector('.btn-val').dataset.valor || '-';
+    const elAsis = td.querySelector('.celda-asistencia');
+    const estado = elAsis.innerText;
+    const motivo = elAsis.dataset.motivo || "";
+    
+    // Capturamos el valor de la flecha
+    const btnVal = td.querySelector('.btn-val');
+    const valoracion = btnVal.dataset.valor || '-';
 
-    // Añadimos clase visual para saber qué se va a guardar
-    el.classList.add('celda-modificada');
+    elAsis.classList.add('celda-modificada');
 
     const index = cambiosPendientes.findIndex(c => c.nombre === nombre && c.dia === dia);
     if (index !== -1) {
         cambiosPendientes[index].estado = estado;
-        cambiosPendientes[index].valoracion = valoracion; // Actualizamos valoración
+        cambiosPendientes[index].valoracion = valoracion;
+        cambiosPendientes[index].motivo = motivo;
     } else {
-        // Añadimos valoración al nuevo objeto
-        cambiosPendientes.push({ nombre, dia, equipo, estado, valoracion });
+        cambiosPendientes.push({ nombre, dia, equipo, estado, valoracion, motivo });
     }
-    }
-    function ciclarValoracion(el) {
+}
+
+function ciclarValoracion(el) {
     const estados = {
         '-': { prox: 'NORMAL', icon: '→', clase: 'val-normal' },
         'NORMAL': { prox: 'MAL', icon: '↓', clase: 'val-mal' },
@@ -328,48 +798,65 @@ function registrarCambioLocal(el) {
     el.innerText = info.icon;
     el.className = 'btn-val ' + info.clase;
     
-    // Registra el cambio para que el botón "Guardar" sepa que hay datos nuevos
     const celdaAsis = el.parentElement.querySelector('.celda-asistencia');
     registrarCambioLocal(celdaAsis);
-
+    actualizarAlertasVisuales();
+    calcularStats(); // Aseguramos que las X no cuenten como faltas
+    enviarCambiosAlServidor();
 }
 
 async function enviarCambiosAlServidor() {
-    if (cambiosPendientes.length === 0) return alert("No hay cambios pendientes para guardar.");
-    
+    if (cambiosPendientes.length === 0 || isSaving) return;
+
+    isSaving = true;
     const btn = document.getElementById('btnGuardarTodo');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GUARDANDO...';
-    btn.disabled = true;
+    const mes = document.getElementById('selectMes').value;
+
+    console.log("Sincronizando cambios:", cambiosPendientes);
+    btn.style.background = "#ffc107";
+    btn.innerHTML = '<i class="fas fa-sync fa-spin"></i> GUARDANDO EN EXCEL...';
+
+    // Extraemos los cambios actuales y limpiamos la cola para nuevos clics
+    const cambiosAEnviar = [...cambiosPendientes];
+    cambiosPendientes = [];
 
     try {
         const response = await fetch('/guardar_asistencia_masiva', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cambios: cambiosPendientes })
+            body: JSON.stringify({ cambios: cambiosAEnviar, mes: mes })
         });
 
         if (response.ok) {
-            alert("¡Cambios guardados correctamente en el Excel!");
-            cambiosPendientes = [];
+            btn.style.background = "#28a745";
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> CAMBIOS GUARDADOS';
             document.querySelectorAll('.celda-modificada').forEach(c => c.classList.remove('celda-modificada'));
         } else {
-            alert("Hubo un error al guardar. Revisa la consola.");
+            throw new Error("Error en servidor");
         }
     } catch (e) {
-        console.error(e);
-        alert("Error de conexión con el servidor.");
+        console.error("Error al autoguardar:", e);
+        btn.style.background = "#dc3545";
+        btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ERROR AL SINCRONIZAR';
+        // Devolvemos los cambios a la cola para reintentar
+        cambiosPendientes = [...cambiosAEnviar, ...cambiosPendientes];
     } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+        isSaving = false;
+        // Si hubo nuevos clics mientras guardábamos, disparamos otra vez
+        if (cambiosPendientes.length > 0) {
+            setTimeout(enviarCambiosAlServidor, 500);
+        }
     }
 }
 
 function marcarColumna(colIndex) {
     const filas = document.querySelectorAll('#cuerpoTabla tr');
     filas.forEach(fila => {
-        const td = fila.querySelectorAll('.td-asistencia')[colIndex];
+        const celdas = fila.querySelectorAll('.td-asistencia');
+        const td = celdas[colIndex];
+        if (!td) return;
         const celda = td.querySelector('.celda-asistencia');
+        if (!celda) return; // Saltar si el jugador está de baja (X)
         const btnNota = td.querySelector('.btn-nota');
         celda.innerText = 'SI';
         celda.className = 'celda-asistencia estado-si';
@@ -378,7 +865,9 @@ function marcarColumna(colIndex) {
     });
     actualizarAlertasVisuales();
     calcularStats();
+    enviarCambiosAlServidor();
 }
+
 function marcarValoracionColumna(colIndex) {
     const filas = document.querySelectorAll('#cuerpoTabla tr');
     filas.forEach(fila => {
@@ -386,17 +875,17 @@ function marcarValoracionColumna(colIndex) {
         if (celdas[colIndex]) {
             const btnVal = celdas[colIndex].querySelector('.btn-val');
             const celdaAsis = celdas[colIndex].querySelector('.celda-asistencia');
-            
-            // Forzamos el estado a NORMAL (Flecha verde oscuro →)
+            if (!celdaAsis || !btnVal) return; // Saltar si el jugador está de baja (X)
             btnVal.dataset.valor = 'NORMAL';
             btnVal.innerText = '→';
             btnVal.className = 'btn-val val-normal';
-            
-            // Registramos el cambio para que se guarde en Excel
             registrarCambioLocal(celdaAsis);
         }
     });
+    actualizarAlertasVisuales();
+    enviarCambiosAlServidor();
 }
+
 function ciclarEstado(el) {
     const wrapper = el.parentElement;
     const btnNota = wrapper.querySelector('.btn-nota');
@@ -404,6 +893,8 @@ function ciclarEstado(el) {
     if (el.innerText === '-') { 
         el.innerText = 'SI'; el.className = 'celda-asistencia estado-si'; 
         btnNota.style.display = 'none';
+        el.dataset.motivo = "";
+        btnNota.classList.remove('tiene-motivo');
     } else if (el.innerText === 'SI') { 
         el.innerText = 'NO'; el.className = 'celda-asistencia estado-no'; 
         btnNota.style.display = 'flex';
@@ -416,36 +907,82 @@ function ciclarEstado(el) {
         btnNota.classList.remove('tiene-motivo');
         el.dataset.motivo = "";
     }
-
     registrarCambioLocal(el);
     actualizarAlertasVisuales();
     calcularStats();
+    enviarCambiosAlServidor();
 }
 
 function actualizarAlertasCabecera(diasValidos) {
     const hoyNum = new Date().getDate(); 
     const mesActual = new Date().getMonth() + 1; 
     const mesSeleccionado = parseInt(document.getElementById('selectMes').value);
+    
+    const boxAvisos = document.getElementById('sidebarAvisos');
+    const listAsis = document.getElementById('listaAsis');
+    const listVals = document.getElementById('listaVals');
+    const secAsis = document.getElementById('seccionAsis');
+    const secVals = document.getElementById('seccionVals');
+
+    let htmlAsis = "";
+    let htmlVals = "";
+    let hayAsis = false;
+    let hayVals = false;
 
     diasValidos.forEach((d, colIndex) => {
         const diaColumna = d.num;
         const th = document.getElementById(`th-col-${colIndex}`);
         if (!th) return;
 
-        const celdas = document.querySelectorAll(`#cuerpoTabla tr td:nth-child(${colIndex + 2}) .celda-asistencia`);
-        // Detecta si falta alguien por marcar (si hay algún "-")
-        const incompleto = Array.from(celdas).some(c => c.innerText.trim() === '-');
+        const filas = document.querySelectorAll('#cuerpoTabla tr');
+        let asisIncompleta = false;
+        let valsIncompletas = false;
 
-        if (mesSeleccionado === mesActual && diaColumna <= hoyNum) {
-            if (incompleto) {
-                th.classList.add('alerta-pendiente');
-            } else {
-                th.classList.remove('alerta-pendiente'); // SI ESTÁ COMPLETO, QUITA EL ROJO
+        filas.forEach(fila => {
+            const td = fila.querySelectorAll('.td-asistencia')[colIndex];
+            if (!td) return;
+            
+            const elAsis = td.querySelector('.celda-asistencia');
+            const elVal = td.querySelector('.btn-val');
+            if (!elAsis || !elVal) return;
+
+            const asis = elAsis.innerText.trim();
+            const val = elVal.dataset.valor || '-';
+
+            if (asis === '-') {
+                asisIncompleta = true;
+                // Si no hay asistencia, por definición también falta la valoración
+                valsIncompletas = true;
             }
+            if (asis === 'SI' && (val === '-' || val.trim() === '')) valsIncompletas = true;
+        });
+        
+        if (mesSeleccionado === mesActual && diaColumna <= hoyNum) {
+            if (asisIncompleta || valsIncompletas) {
+                th.classList.add('alerta-pendiente');
+                const fechaSolo = `${d.num.toString().padStart(2, '0')}/${mesSeleccionado.toString().padStart(2, '0')}`;
+                if (asisIncompleta) {
+                    htmlAsis += `<div class="aviso-item"><i class="fas fa-caret-right" style="font-size: 8px; opacity: 0.5;"></i> FALTA ASISTENCIA ${fechaSolo}</div>`;
+                    hayAsis = true;
+                }
+                if (valsIncompletas) {
+                    htmlVals += `<div class="aviso-item"><i class="fas fa-caret-right" style="font-size: 8px; opacity: 0.5;"></i> FALTA VALORACION ${fechaSolo}</div>`;
+                    hayVals = true;
+                }
+            }
+            else th.classList.remove('alerta-pendiente');
         } else {
             th.classList.remove('alerta-pendiente');
         }
     });
+
+    if (boxAvisos) {
+        boxAvisos.style.display = (hayAsis || hayVals) ? 'block' : 'none';
+        if (secAsis) secAsis.style.display = hayAsis ? 'block' : 'none';
+        if (secVals) secVals.style.display = hayVals ? 'block' : 'none';
+        if (listAsis) listAsis.innerHTML = htmlAsis;
+        if (listVals) listVals.innerHTML = htmlVals;
+    }
 }
 
 function actualizarAlertasVisuales() {
@@ -456,7 +993,7 @@ function actualizarAlertasVisuales() {
         const f = new Date(2026, mes, d);
         const ns = f.getDay();
         if ((filtroDias === 'LX' && [1,3].includes(ns)) || (filtroDias === 'MJ' && [2,4].includes(ns)) || filtroDias === 'ALL') {
-            diasValidos.push({ fechaFull: f });
+            diasValidos.push({ num: d, label: nombresDias[ns], fechaFull: f });
         }
     }
     actualizarAlertasCabecera(diasValidos);
@@ -464,7 +1001,8 @@ function actualizarAlertasVisuales() {
 
 function abrirModal(btn) {
     celdaActiva = btn.closest('.wrapper-asistencia').querySelector('.celda-asistencia');
-    const nombreJugador = btn.closest('tr').querySelector('.sticky-col').innerText.trim();
+    const spanNombre = btn.closest('tr').querySelector('.sticky-col span');
+    const nombreJugador = spanNombre.dataset.nombreOriginal || spanNombre.innerText.trim();
     document.getElementById('modalSubtitulo').innerText = "Jugador: " + nombreJugador;
     document.getElementById('textoMotivo').value = celdaActiva.dataset.motivo || "";
     document.getElementById('modalMotivo').style.display = 'block';
@@ -480,17 +1018,239 @@ function guardarMotivo() {
     else btnNota.classList.remove('tiene-motivo');
     registrarCambioLocal(celdaActiva);
     cerrarModal();
+    enviarCambiosAlServidor();
+}
+
+async function anadirJugador() {
+    const nombre = document.getElementById('nuevoJugadorNombre').value.trim();
+    const equipo = document.getElementById('selectEquipo').value;
+    if (!nombre) return alert("Escribe el nombre del jugador");
+
+    try {
+        const response = await fetch('/anadir_jugador', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre, equipo })
+        });
+        if (response.ok) {
+            jugadoresRaw.push({ NOMBRE: nombre, EQUIPO: equipo });
+            document.getElementById('nuevoJugadorNombre').value = "";
+            generarCalendario();
+            alert("Jugador añadido con éxito.");
+        } else {
+            alert("Error al añadir jugador.");
+        }
+    } catch (e) { console.error(e); alert("Error de conexión."); }
+}
+
+// Funciones para el nuevo modal de observaciones de jugador
+let jugadorObsActivo = null;
+let indiceEdicionObs = -1;
+
+function abrirModalObservaciones(nombreJugador) {
+    jugadorObsActivo = nombreJugador;
+    document.getElementById('modalObsJugadorNombre').innerText = "Jugador: " + nombreJugador;
+    const arr = getArrayObservaciones(nombreJugador);
+    renderizarListaObservaciones(arr);
+    limpiarFormularioObs();
+    document.getElementById('modalObservacionesJugador').style.display = 'block';
+}
+
+function getArrayObservaciones(nombre) {
+    const jug = jugadoresRaw.find(j => j.NOMBRE === nombre);
+    let raw = (jug && jug.OBSERVACIONES) ? jug.OBSERVACIONES : "[]";
+    try {
+        let arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr : (raw && raw !== "[]" ? [raw] : []);
+    } catch(e) { return (raw && raw !== "[]") ? [raw] : []; }
+}
+
+function abrirModalBaja() {
+    document.getElementById('fechaBajaInput').value = new Date().toISOString().split('T')[0];
+    document.getElementById('motivoBaja').value = "";
+    document.getElementById('modalBaja').style.display = 'block';
+}
+
+function abrirModalAlta() {
+    document.getElementById('fechaAltaInput').value = new Date().toISOString().split('T')[0];
+    document.getElementById('motivoAlta').value = "";
+    document.getElementById('modalAlta').style.display = 'block';
+}
+
+async function guardarBaja(btn) {
+    const fecha = document.getElementById('fechaBajaInput').value;
+    const motivo = document.getElementById('motivoBaja').value.trim();
+    if (!fecha || !motivo || !jugadorObsActivo) return alert("Faltan datos obligatorios.");
+
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PROCESANDO...';
+    btn.disabled = true;
+
+    try {
+        // 1. Añadir al historial de observaciones
+        let arr = getArrayObservaciones(jugadorObsActivo);
+        const fechaHoy = new Date().toLocaleDateString('es-ES');
+        arr.push(`${fechaHoy} - BAJA (Efectiva: ${fecha}): ${motivo}`);
+        
+        await fetch('/guardar_observacion_jugador', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre: jugadorObsActivo, observacion: JSON.stringify(arr) })
+        });
+
+        // Guardamos el equipo en localStorage para que no desaparezca la tabla al recargar
+        const equipo = document.getElementById('selectEquipo').value;
+        localStorage.setItem('ultimoEquipoAsistencias', equipo);
+
+        // 2. Marcar estado de baja
+        const res = await fetch('/marcar_baja', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ nombre: jugadorObsActivo, fecha: fecha })
+        });
+
+        if (res.ok) { location.reload(); } 
+        else { alert("Error al procesar baja"); btn.innerHTML = originalText; btn.disabled = false; }
+    } catch (e) { alert("Error de conexión."); btn.innerHTML = originalText; btn.disabled = false; }
+}
+
+async function guardarAlta(btn) {
+    const fecha = document.getElementById('fechaAltaInput').value;
+    const motivo = document.getElementById('motivoAlta').value.trim();
+    if (!fecha || !motivo || !jugadorObsActivo) return alert("Faltan datos obligatorios.");
+
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PROCESANDO...';
+    btn.disabled = true;
+
+    try {
+        // 1. Añadir al historial de observaciones
+        let arr = getArrayObservaciones(jugadorObsActivo);
+        const fechaHoy = new Date().toLocaleDateString('es-ES');
+        arr.push(`${fechaHoy} - ALTA (Efectiva: ${fecha}): ${motivo}`);
+
+        await fetch('/guardar_observacion_jugador', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre: jugadorObsActivo, observacion: JSON.stringify(arr) })
+        });
+
+        // Guardamos el equipo en localStorage
+        const equipo = document.getElementById('selectEquipo').value;
+        localStorage.setItem('ultimoEquipoAsistencias', equipo);
+
+        // 2. Marcar estado de alta
+        const res = await fetch('/marcar_alta', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ nombre: jugadorObsActivo, fecha: fecha })
+        });
+        if (res.ok) { location.reload(); } 
+        else { alert("Error al procesar alta"); btn.innerHTML = originalText; btn.disabled = false; }
+    } catch (e) { alert("Error de conexión."); btn.innerHTML = originalText; btn.disabled = false; }
+}
+
+function renderizarListaObservaciones(arr) {
+    const container = document.getElementById('listaObsContainer');
+    if (!arr || arr.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:#999; font-size:12px; margin-top:20px;">No hay observaciones registradas.</p>';
+        return;
+    }
+    container.innerHTML = arr.map((texto, i) => `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; background: white; padding: 10px; border-radius: 6px; margin-bottom: 8px; border: 1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+            <div style="font-size: 13px; color: #333; line-height: 1.4; flex: 1; padding-right: 10px; white-space: pre-wrap;">${texto}</div>
+            <div style="display: flex; gap: 5px; flex-shrink: 0;">
+                <button onclick="prepararEdicionObs(${i})" style="background: #eee; border: none; border-radius: 4px; padding: 5px 8px; cursor: pointer; color: #666; font-size: 11px;"><i class="fas fa-edit"></i></button>
+                <button onclick="eliminarObs(${i})" style="background: #fff1f1; border: 1px solid #ffcccc; border-radius: 4px; padding: 5px 8px; cursor: pointer; color: #E31E24; font-size: 11px;"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>`).join('');
+}
+
+function limpiarFormularioObs() {
+    document.getElementById('textoObservacionJugador').value = "";
+    document.getElementById('btnGuardarObs').innerText = "AÑADIR OBSERVACIÓN";
+    document.getElementById('lblNuevaObs').innerText = "AÑADIR NUEVA OBSERVACIÓN";
+    indiceEdicionObs = -1;
+}
+
+function prepararEdicionObs(index) {
+    const arr = getArrayObservaciones(jugadorObsActivo);
+    document.getElementById('textoObservacionJugador').value = arr[index];
+    document.getElementById('btnGuardarObs').innerText = "ACTUALIZAR OBSERVACIÓN";
+    document.getElementById('lblNuevaObs').innerText = "EDITANDO OBSERVACIÓN";
+    indiceEdicionObs = index;
+    document.getElementById('textoObservacionJugador').focus();
+}
+
+function cerrarModalObservaciones() {
+    document.getElementById('modalObservacionesJugador').style.display = 'none';
+    jugadorObsActivo = null;
+}
+
+async function agregarOEditarObservacion() {
+    const texto = document.getElementById('textoObservacionJugador').value.trim();
+    if (!texto) return alert("Escribe algo antes de guardar.");
+    let arr = getArrayObservaciones(jugadorObsActivo);
+    if (indiceEdicionObs === -1) arr.push(texto);
+    else arr[indiceEdicionObs] = texto;
+    await sincronizarObservacionesConServidor(arr);
+    limpiarFormularioObs();
+}
+
+async function eliminarObs(index) {
+    if (!confirm("¿Seguro que quieres eliminar esta observación?")) return;
+    let arr = getArrayObservaciones(jugadorObsActivo);
+    arr.splice(index, 1);
+    await sincronizarObservacionesConServidor(arr);
+}
+
+async function sincronizarObservacionesConServidor(nuevoArr) {
+    const jsonStr = JSON.stringify(nuevoArr);
+    const btn = document.getElementById('btnGuardarObs');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+    try {
+        const response = await fetch('/guardar_observacion_jugador', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre: jugadorObsActivo, observacion: jsonStr })
+        });
+        if (response.ok) {
+            const jug = jugadoresRaw.find(j => j.NOMBRE === jugadorObsActivo);
+            if (jug) jug.OBSERVACIONES = jsonStr;
+            renderizarListaObservaciones(nuevoArr);
+            actualizarBotonObsTabla(jugadorObsActivo, nuevoArr);
+        } else alert("Error al guardar.");
+    } catch (e) { alert("Error de conexión."); } finally { btn.innerHTML = originalText; btn.disabled = false; }
+}
+
+function actualizarBotonObsTabla(nombre, arr) {
+    const playerRow = Array.from(document.querySelectorAll('#cuerpoTabla tr')).find(row => row.querySelector('.sticky-col span').innerText.trim() === nombre);
+    if (playerRow) {
+        const btn = playerRow.querySelector('.btn-obs-jugador');
+        if (btn) {
+            if (arr.length > 0) { btn.classList.add('has-obs'); btn.title = arr.join(' | '); }
+            else { btn.classList.remove('has-obs'); btn.title = 'Añadir observación'; }
+        }
+    }
 }
 
 function calcularStats() {
     let totalSi = 0, totalMarcados = 0, listaFaltas = [];
     const rows = document.querySelectorAll('#cuerpoTabla tr');
     rows.forEach(fila => {
-        const nombre = fila.querySelector('.sticky-col').innerText;
+        const nombre = fila.querySelector('.sticky-col span').innerText;
         const sis = Array.from(fila.querySelectorAll('.estado-si')).length;
         const nos = Array.from(fila.querySelectorAll('.estado-no')).length;
         const avs = Array.from(fila.querySelectorAll('.estado-av')).length;
         const marcados = sis + nos + avs;
+
+        // Actualizar porcentaje mensual individual en tiempo real
+        const percMes = marcados > 0 ? Math.round((sis / marcados) * 100) : 0;
+        const elMes = fila.querySelector('.perc-mes');
+        if (elMes) elMes.innerText = percMes + '%';
+
         if (marcados > 0) {
             totalSi += sis; totalMarcados += marcados;
             if (nos > 0 || avs > 0) listaFaltas.push({ nombre, totalFaltas: (nos + avs) });
@@ -512,6 +1272,15 @@ window.onload = function() {
     const hoyReal = new Date();
     const selectorMes = document.getElementById('selectMes');
     if (selectorMes) selectorMes.value = hoyReal.getMonth() + 1;
+
+    // Recuperamos el último equipo si existe tras recargar
+    const ultimoEquipo = localStorage.getItem('ultimoEquipoAsistencias');
+    if (ultimoEquipo) {
+        const select = document.getElementById('selectEquipo');
+        select.value = ultimoEquipo;
+        generarCalendario();
+        localStorage.removeItem('ultimoEquipoAsistencias'); // Limpiamos para no forzar siempre
+    }
 };
 
 </script>

@@ -1,0 +1,687 @@
+{% extends 'dashboard.html' %}
+
+{% block content %}
+<style>
+    .fin-card { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; overflow: hidden; }
+    .fin-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .fin-header h2 { font-size: 14px; font-weight: 900; color: #333; text-transform: uppercase; margin: 0; }
+    .fin-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .fin-table th { background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #eee; color: #666; font-weight: 800; }
+    .fin-table td { padding: 10px; border-bottom: 1px solid #eee; color: #444; }
+    
+    .pago-cell { width: 35px; text-align: center; cursor: pointer; border: 1px solid #f0f0f0; transition: 0.2s; user-select: none; font-size: 9px; font-weight: 700; }
+    .pago-cell:hover { background: #f9f9f9; }
+    .pago-verde { background: #28a745 !important; color: white !important; }
+    .pago-naranja { background: #fd7e14 !important; color: white !important; }
+    .selected-cell { outline: 2px solid #E31E24; z-index: 5; }
+    
+    .form-asiento { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; padding: 20px; background: #fafafa; }
+    .form-asiento input, .form-asiento select { padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-family: inherit; font-size: 12px; }
+    .btn-fin { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 800; font-size: 11px; text-transform: uppercase; }
+    
+    /* Aseguramos que los modales estén ocultos por defecto */
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); align-items: center; justify-content: center; }
+    .modal-content { background: white; padding: 25px; border-radius: 15px; width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    
+    /* Estilos para Estadísticas */
+    .stats-bar-container { background: #eee; border-radius: 10px; height: 12px; width: 100%; margin: 5px 0 15px 0; overflow: hidden; }
+    .stats-bar-fill { height: 100%; transition: width 0.5s ease-in-out; }
+    .filter-row { display: flex; gap: 10px; padding: 10px 20px; background: #fff; border-bottom: 1px solid #eee; }
+    .filter-row input, .filter-row select { padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px; }
+
+    .tabs-container { display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 2px solid #eee; }
+    .tab-item { padding: 12px 25px; cursor: pointer; font-weight: 800; font-size: 11px; color: #999; text-transform: uppercase; transition: 0.3s; border-radius: 8px 8px 0 0; }
+    .tab-item:hover { background: #f0f0f0; }
+    .tab-item.active { background: #E31E24; color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Barra de acciones inferior fija */
+    .pago-action-bar {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(15, 23, 42, 0.96); /* Slate 900: Ultra moderno y profundo */
+        backdrop-filter: blur(10px);
+        color: white;
+        padding: 25px 60px;
+        border-radius: 24px;
+        display: none;
+        align-items: center;
+        gap: 50px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        z-index: 2000;
+        border: 1px solid rgba(255,255,255,0.08);
+        width: auto;
+        min-width: 950px;
+    }
+    .pago-action-bar input {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 8px;
+        width: 80px;
+        font-weight: 900;
+        font-family: inherit;
+        font-size: 14px;
+        text-align: center;
+    }
+    .pago-action-bar label {
+        font-size: 9px;
+        font-weight: 800;
+        color: #999;
+        text-transform: uppercase;
+        display: block;
+        margin-bottom: 4px;
+    }
+    .action-bar-divider {
+        width: 1px;
+        height: 40px;
+        background: rgba(255,255,255,0.1);
+    }
+</style>
+
+<div style="padding: 10px;">
+    <div class="tabs-container">
+        <div class="tab-item active" onclick="switchTab('tab-presupuesto')">PRESUPUESTOS</div>
+        <div class="tab-item" onclick="switchTab('tab-jugadores')">PAGO JUGADORES</div>
+        <div class="tab-item" onclick="switchTab('tab-staff')">PAGO STAFF</div>
+    </div>
+
+    <!-- SECCIÓN: PRESUPUESTO -->
+    <div id="tab-presupuesto" class="tab-content active">
+        <div class="fin-card">
+        <div class="fin-header">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <h2><i class="fas fa-file-invoice-dollar" style="color: #E31E24; margin-right: 10px;"></i> PRESUPUESTO</h2>
+                <button class="btn-fin" style="background: #333; color: white; display: flex; align-items: center; gap: 8px; padding: 8px 15px;" onclick="abrirEstadisticas()">
+                    <i class="fas fa-chart-line"></i> ESTADÍSTICAS
+                </button>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-fin" style="background: #eee; color: #333;" onclick="document.getElementById('excelInput').click()">
+                    <i class="fas fa-file-excel"></i> Carga Masiva
+                </button>
+                <input type="file" id="excelInput" style="display:none" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+            </div>
+        </div>
+        
+        <div class="form-asiento">
+            <input type="date" id="asientoFecha">
+            <select id="asientoDepto">
+                <option value="">Departamento...</option>
+                <option value="Deportivo">Deportivo</option>
+                <option value="Administración">Administración</option>
+                <option value="Eventos">Eventos</option>
+            </select>
+            <input type="text" id="asientoPilar" placeholder="Pilar">
+            <input type="text" id="asientoDesc" placeholder="Descripción">
+            <input type="number" id="asientoImporte" placeholder="Importe €">
+            <button class="btn-fin" style="background: #333; color: white;" onclick="guardarAsientoManual(this)">Guardar asiento</button>
+        </div>
+
+        <div class="filter-row">
+            <div style="font-size: 10px; font-weight: 900; color: #999; display: flex; align-items: center; margin-right: 10px;">FILTRAR POR:</div>
+            <input type="date" id="filtroFecha" onchange="aplicarFiltros()">
+            <select id="filtroDepto" onchange="aplicarFiltros()">
+                <option value="">Todos los Deptos...</option>
+                <option value="Deportivo">Deportivo</option>
+                <option value="Administración">Administración</option>
+                <option value="Eventos">Eventos</option>
+            </select>
+            <input type="text" id="filtroPilar" placeholder="Pilar..." oninput="aplicarFiltros()">
+        </div>
+
+        <div style="padding: 10px 20px; border-top: 1px solid #eee; background: #f8f9fa;">
+            <h3 style="font-size: 11px; font-weight: 900; color: #666; margin: 0; text-transform: uppercase;">Historial de Asientos</h3>
+        </div>
+
+        <div style="max-height: 300px; overflow-y: auto;">
+            <table class="fin-table" id="tablaPresupuesto">
+                <thead>
+                    <tr>
+                        <th>FECHA</th>
+                        <th>Nº ASIENTO</th>
+                        <th>DEPARTAMENTO</th>
+                        <th>PILAR</th>
+                        <th>DESCRIPCIÓN</th>
+                        <th>IMPORTE</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        </div>
+    </div>
+
+    <!-- SECCIÓN: JUGADORES -->
+    <div id="tab-jugadores" class="tab-content">
+        <div class="fin-card">
+        <div class="fin-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <h2><i class="fas fa-users-cog" style="color: #E31E24; margin-right: 10px;"></i> Pagos Jugadores</h2>
+                <select id="selectEquipoFin" onchange="filtrarJugadores()" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-weight: 700; font-family: inherit; font-size: 12px; min-width: 180px;">
+                    <option value="">TODOS LOS EQUIPOS</option>
+                    {% for equipo in equipos %}
+                    <option value="{{ equipo }}">{{ equipo }}</option>
+                    {% endfor %}
+                </select>
+                <input type="text" id="busquedaJugador" oninput="filtrarJugadores()" placeholder="Buscar por nombre o apellido..." style="padding: 8px 15px; border-radius: 6px; border: 1px solid #ddd; font-weight: 700; font-family: inherit; font-size: 12px; min-width: 250px; outline: none;">
+            </div>
+            <div style="font-size: 10px; color: #999;">Usa <b>CTRL + Clic</b> para selección múltiple</div>
+        </div>
+        
+        <div style="overflow-x: auto;">
+            <table class="fin-table">
+                <thead>
+                    <tr>
+                        <th>EQUIPO</th>
+                        <th>JUGADOR</th>
+                        <th>FORMA PAGO</th>
+                        <th>INSCR.</th>
+                        <th>ENE</th><th>FEB</th><th>MAR</th><th>ABR</th><th>MAY</th><th>JUN</th>
+                        <th>JUL</th><th>AGO</th><th>SEP</th><th>OCT</th><th>NOV</th><th>DIC</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpoPagos">
+                    {% for j in jugadores %}
+                    <tr class="fila-jugador" data-equipo="{{ j.EQUIPO }}">
+                        <td style="font-weight: 800;">{{ j.EQUIPO }}</td>
+                        <td>{{ j.NOMBRE }}</td>
+                        <td><span style="background: #eee; padding: 2px 5px; border-radius: 4px;">{{ j.FORMA_PAGO or 'Efectivo' }}</span></td>
+                        <td class="pago-cell" onclick="seleccionarPago(event, this, 'Inscripción')">-</td>
+                        {% for mes in ['01','02','03','04','05','06','07','08','09','10','11','12'] %}
+                        <td class="pago-cell" onclick="seleccionarPago(event, this, '{{ mes }}')">-</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    </div>
+
+    <!-- SECCIÓN: STAFF -->
+    <div id="tab-staff" class="tab-content">
+        <div class="fin-card">
+            <div class="fin-header">
+                <h2><i class="fas fa-user-tie" style="color: #E31E24; margin-right: 10px;"></i> Pagos Staff</h2>
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="fin-table">
+                    <thead>
+                        <tr>
+                            <th>CARGO</th>
+                            <th>NOMBRE</th>
+                            <th>ENE</th><th>FEB</th><th>MAR</th><th>ABR</th><th>MAY</th><th>JUN</th>
+                            <th>JUL</th><th>AGO</th><th>SEP</th><th>OCT</th><th>NOV</th><th>DIC</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in staff %}
+                        <tr>
+                            <td style="font-weight: 800;">{{ s.CARGO }}</td>
+                            <td>{{ s.NOMBRE }}</td>
+                            {% for mes in ['01','02','03','04','05','06','07','08','09','10','11','12'] %}
+                            <td class="pago-cell" onclick="seleccionarPago(event, this, 'Staff-{{ mes }}')">-</td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let celdasSeleccionadas = [];
+let celdaActiva = null;
+let presupuestoData = []; 
+
+function switchTab(id) {
+    document.querySelectorAll('.tab-content').forEach(c => {
+        c.classList.remove('active');
+        c.style.display = 'none';
+    });
+    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+    
+    const target = document.getElementById(id);
+    target.classList.add('active');
+    target.style.display = 'block';
+    
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+}
+
+function filtrarJugadores() {
+    const equipo = document.getElementById('selectEquipoFin').value;
+    const busqueda = document.getElementById('busquedaJugador').value
+        .toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Quita tildes
+
+    const filas = document.querySelectorAll('.fila-jugador');
+    filas.forEach(f => {
+        const nombre = f.cells[1].innerText.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const cumpleEquipo = !equipo || f.dataset.equipo === equipo;
+        const cumpleBusqueda = !busqueda || nombre.includes(busqueda);
+        
+        f.style.display = (cumpleEquipo && cumpleBusqueda) ? '' : 'none';
+    });
+}
+
+function abrirEstadisticas() {
+    const modal = document.getElementById('modalEstadisticas');
+    
+    // Poblar el selector de meses dinámicamente según los datos del historial
+    const selectMeses = document.getElementById('selectorMesesStats');
+    const mesesSet = new Set();
+    presupuestoData.forEach(a => {
+        if (a.FECHA) {
+            let d;
+            if (a.FECHA.includes('/')) {
+                const [day, month, year] = a.FECHA.split('/');
+                d = new Date(year, month - 1, day);
+            } else { d = new Date(a.FECHA); }
+            
+            if (!isNaN(d)) {
+                mesesSet.add(`${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`);
+            }
+        }
+    });
+    const mesesSorted = Array.from(mesesSet).sort().reverse();
+    
+    let optionsHtml = '<option value="all" selected>TODO EL TIEMPO</option>';
+    mesesSorted.forEach(m => {
+        const [año, mes] = m.split('-');
+        const nombreMes = new Date(año, mes - 1).toLocaleString('es-ES', { month: 'long' }).toUpperCase();
+        optionsHtml += `<option value="${m}">${nombreMes} ${año}</option>`;
+    });
+    selectMeses.innerHTML = optionsHtml;
+
+    modal.style.display = 'flex';
+    renderStats(); // Renderiza las estadísticas al abrir el modal
+}
+
+function renderStats() {
+    const selector = document.getElementById('selectorMesesStats'); // Selector de meses
+    const selectedValue = selector.value; // Valor seleccionado (ej. "all" o "2026-05")
+    
+    let datos = presupuestoData; // Usamos la caché de datos del presupuesto
+    // Filtramos los datos si no se ha seleccionado "TODO EL TIEMPO"
+    if (selectedValue !== 'all') {
+        datos = presupuestoData.filter(a => {
+            if (!a.FECHA) return false;
+            let d;
+            if (a.FECHA.includes('/')) {
+                const [day, month, year] = a.FECHA.split('/');
+                d = new Date(year, month - 1, day);
+            } else { d = new Date(a.FECHA); }
+            const mStr = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+            return selectedValue === mStr; // Comparamos con el valor único seleccionado
+        });
+    }
+
+    const gastos = datos.filter(a => parseFloat(a.IMPORTE) < 0);
+    const beneficios = datos.filter(a => parseFloat(a.IMPORTE) > 0);
+    const totalGasto = Math.abs(gastos.reduce((acc, a) => acc + parseFloat(a.IMPORTE), 0));
+    const totalBeneficio = beneficios.reduce((acc, a) => acc + parseFloat(a.IMPORTE), 0);
+    const balance = totalBeneficio - totalGasto; // Calculamos el balance neto
+
+    // Actualizamos las tarjetas de resumen
+    document.getElementById('totalBeneficioTxt').innerText = totalBeneficio.toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' €';
+    document.getElementById('totalGastoTxt').innerText = totalGasto.toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' €';
+    document.getElementById('totalBalanceTxt').innerText = balance.toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' €';
+    document.getElementById('totalBalanceTxt').style.color = balance >= 0 ? '#28a745' : '#dc3545'; // Color dinámico para el balance
+
+    const buildTableRows = (lista, total, color) => {
+        const agrupar = {};
+        lista.forEach(a => { 
+            const pilar = a.PILAR || "OTROS";
+            agrupar[pilar] = (agrupar[pilar] || 0) + Math.abs(parseFloat(a.IMPORTE)); 
+        });
+        if (total === 0) return '<tr><td colspan="4" style="text-align:center; padding:20px; color:#999;">Sin datos</td></tr>';
+        return Object.entries(agrupar).map(([pilar, monto]) => {
+            const perc = ((monto / total) * 100).toFixed(1);
+            return `
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 10px 0; font-weight: 800; font-size: 11px; width: 25%;">${pilar}</td>
+                    <td style="padding: 10px 5px; font-weight: 800; font-size: 11px; width: 20%;">${monto.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€</td>
+                    <td style="padding: 10px 5px; font-weight: 800; font-size: 11px; color:#666; width: 15%;">${perc}%</td>
+                    <td style="padding: 10px 0;">
+                        <div class="stats-bar-container" style="margin:0;"><div class="stats-bar-fill" style="width:${perc}%; background:${color};"></div></div>
+                    </td>
+                </tr>`;
+        }).join('');
+    };
+
+    document.getElementById('statsGasto').innerHTML = buildTableRows(gastos, totalGasto, '#dc3545');
+    document.getElementById('statsBeneficio').innerHTML = buildTableRows(beneficios, totalBeneficio, '#28a745');
+    // Las tarjetas de resumen ya se actualizan en la parte superior
+}
+
+function seleccionarPago(e, el, item) {
+    // Si clicamos en una celda ya pagada y NO estamos usando CTRL, mostramos info de modificación
+    if (!e.ctrlKey && (el.classList.contains('pago-verde') || el.classList.contains('pago-naranja'))) {
+         celdaActiva = el;
+         const nombre = el.closest('tr').cells[1].innerText;
+         const asientoId = el.dataset.asientoId || "N/A";
+         const pagado = el.dataset.importe || "0";
+         const esperado = el.dataset.esperado || "0";
+         const fecha = el.dataset.fecha || "N/A";
+
+         document.getElementById('infoPagoAnterior').innerHTML = `
+             <div style="line-height: 1.5;">
+                 <strong>JUGADOR:</strong> ${nombre}<br>
+                 <strong>FECHA REGISTRO:</strong> ${fecha}<br>
+                 <strong>Nº ASIENTO:</strong> #${asientoId}<br>
+                 <strong>PAGADO:</strong> ${pagado}€ / <strong>ESPERADO:</strong> ${esperado}€
+             </div>
+         `;
+         document.getElementById('modalModificarPago').style.display = 'flex';
+         return;
+    }
+
+    // Lógica de multiselección con CTRL para celdas nuevas
+    if (!e.ctrlKey) {
+        celdasSeleccionadas.forEach(c => c.classList.remove('selected-cell'));
+        celdasSeleccionadas = [];
+    }
+    if (!celdasSeleccionadas.includes(el)) {
+        el.classList.add('selected-cell');
+        el.dataset.tempItem = item;
+        celdasSeleccionadas.push(el);
+    } else {
+        el.classList.remove('selected-cell');
+        delete el.dataset.tempItem;
+        celdasSeleccionadas = celdasSeleccionadas.filter(c => c !== el);
+    }
+
+    celdaActiva = el;
+    actualizarBarraPagos();
+}
+
+function actualizarBarraPagos() {
+    const barra = document.getElementById('barraAccionPagos');
+    const count = celdasSeleccionadas.length;
+    
+    if (count === 0) {
+        barra.style.display = 'none';
+        return;
+    }
+
+    document.getElementById('txtSeleccionados').innerText = `${count} SELECCIONADO${count > 1 ? 'S' : ''}`;
+    
+    // Detalle: Agrupamos por jugador para mostrar qué estamos pagando
+    const agrupado = {};
+    celdasSeleccionadas.forEach(cell => {
+        const nombre = cell.closest('tr').cells[1].innerText.split(' ')[0]; // Usamos primer nombre
+        const item = cell.dataset.tempItem || '';
+        if (!agrupado[nombre]) agrupado[nombre] = [];
+        agrupado[nombre].push(item);
+    });
+    const resumen = Object.entries(agrupado).map(([nom, items]) => `${nom}(${items.join(',')})`).join(' | ');
+    document.getElementById('detalleSeleccion').innerText = "REGISTRO PARA: " + resumen;
+
+    barra.style.display = 'flex';
+}
+
+function cerrarModalsFin() {
+    document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+    celdasSeleccionadas.forEach(c => {
+        c.classList.remove('selected-cell');
+        delete c.dataset.tempItem;
+    });
+    celdasSeleccionadas = [];
+    actualizarBarraPagos();
+}
+
+async function confirmarPago() {
+    const totalPagado = parseFloat(document.getElementById('pagoImporteBar').value);
+    const cuotaMensual = parseFloat(document.getElementById('pagoEsperadoBar').value);
+    const detalle = document.getElementById('detalleSeleccion').innerText;
+
+    if (isNaN(totalPagado)) return alert("Introduce un importe válido");
+
+    const totalEsperado = cuotaMensual * celdasSeleccionadas.length;
+
+    // Validación: Pago superior al total de meses seleccionados
+    if (totalPagado > totalEsperado) {
+        const sobra = totalPagado - totalEsperado;
+        alert(`¡ATENCIÓN! El importe (${totalPagado}€) es SUPERIOR a lo que suman los meses seleccionados (${totalEsperado}€).\n\nTe sobran ${sobra}€. Por favor, selecciona otro mes con CTRL+Clic para asignar esta diferencia antes de guardar.`);
+        return;
+    }
+
+    // Nueva validación de pago parcial
+    if (totalPagado < totalEsperado) {
+        const continuar = confirm(`AVISO: El importe (${totalPagado}€) es INFERIOR al total esperado (${totalEsperado}€).\n\n¿Quieres registrarlo como pago parcial distribuido o prefieres cancelar para seleccionar menos meses?`);
+        if (!continuar) return; // Permite al usuario seguir seleccionando o corregir
+    }
+
+    if (!confirm(`¿Confirmar registro definitivo?\n\n${detalle}\nTotal Pagado: ${totalPagado}€`)) return;
+    
+    const fechaHoy = new Date().toLocaleDateString('es-ES');
+    let saldoARepartir = totalPagado;
+
+    for (let cell of celdasSeleccionadas) {
+        const nombre = cell.closest('tr').cells[1].innerText;
+        // Asignamos el máximo posible a este mes (hasta completar la cuota)
+        const pagoAsignadoEsteMes = Math.min(saldoARepartir, cuotaMensual);
+        saldoARepartir -= (pagoAsignadoEsteMes > 0 ? pagoAsignadoEsteMes : 0);
+        
+        const asiento = {
+            fecha: fechaHoy,
+            departamento: "Administración",
+            pilar: "Cuotas",
+            descripcion: `Pago Cuota: ${nombre}`,
+            importe: pagoAsignadoEsteMes
+        };
+
+        const res = await fetch('/api/presupuesto', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify(asiento) 
+        });
+        const data = await res.json();
+
+        cell.classList.remove('pago-verde', 'pago-naranja');
+        cell.classList.remove('selected-cell');
+        delete cell.dataset.tempItem;
+        cell.dataset.asientoId = data.asiento;
+        cell.dataset.importe = pagoAsignadoEsteMes;
+        cell.dataset.esperado = cuotaMensual;
+        cell.dataset.fecha = fechaHoy;
+
+        cell.innerText = `${pagoAsignadoEsteMes}€`;
+        if (pagoAsignadoEsteMes >= cuotaMensual) {
+            cell.classList.add('pago-verde');
+        } else {
+            cell.classList.add('pago-naranja');
+        }
+    }
+
+    cargarPresupuesto();
+    cerrarModalsFin();
+}
+
+async function guardarAsientoManual(btn) {
+    const asiento = {
+        fecha: document.getElementById('asientoFecha').value,
+        departamento: document.getElementById('asientoDepto').value,
+        pilar: document.getElementById('asientoPilar').value,
+        descripcion: document.getElementById('asientoDesc').value,
+        importe: document.getElementById('asientoImporte').value
+    };
+
+    if (!asiento.fecha || !asiento.importe) return alert("Fecha e Importe son obligatorios");
+
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch('/api/presupuesto', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(asiento)
+        });
+
+        if (response.ok) {
+            await cargarPresupuesto();
+            // Limpiar campos
+            ['asientoFecha', 'asientoPilar', 'asientoDesc', 'asientoImporte'].forEach(id => document.getElementById(id).value = "");
+        } else {
+            alert("Error al guardar en el servidor");
+        }
+    } catch (e) {
+        alert("Error de conexión");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+async function cargarPresupuesto() {
+    const res = await fetch('/api/presupuesto');
+    presupuestoData = await res.json();
+    aplicarFiltros();
+}
+
+function aplicarFiltros() {
+    const fecha = document.getElementById('filtroFecha').value;
+    const depto = document.getElementById('filtroDepto').value;
+    const pilar = document.getElementById('filtroPilar').value.toLowerCase();
+
+    const filtrados = presupuestoData.filter(a => {
+        const matchFecha = !fecha || a.FECHA === fecha;
+        const matchDepto = !depto || a.DEPARTAMENTO === depto;
+        const matchPilar = !pilar || (a.PILAR && a.PILAR.toLowerCase().includes(pilar));
+        return matchFecha && matchDepto && matchPilar;
+    });
+
+    renderizarTablaPresupuesto(filtrados);
+}
+
+function renderizarTablaPresupuesto(datos) {
+    const tbody = document.querySelector('#tablaPresupuesto tbody');
+    tbody.innerHTML = datos.map(a => {
+        const importe = parseFloat(a.IMPORTE) || 0;
+        return `
+            <tr>
+                <td style="white-space: nowrap;">${a.FECHA || '-'}</td>
+                <td style="font-weight:bold; color: #E31E24;">#${a['Nº ASIENTO'] || a.ASIENTO || '0'}</td>
+                <td>${a.DEPARTAMENTO || '-'}</td>
+                <td>${a.PILAR || '-'}</td>
+                <td>${a.DESCRIPCION || '-'}</td>
+                <td style="color: ${importe >= 0 ? '#28a745' : '#dc3545'}; font-weight:bold; text-align: right;">
+                    ${importe.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
+                </td>
+            </tr>
+        `;
+    }).reverse().join('');
+}
+window.onload = cargarPresupuesto;
+</script>
+
+<!-- MODAL ESTADÍSTICAS MEJORADO -->
+<div id="modalEstadisticas" class="modal">
+    <div class="modal-content" style="width: 900px; max-width: 95%; max-height: 90vh; overflow-y: auto; background: #f8f9fa; padding: 0; border-radius: 20px;">
+        <!-- Cabecera Profesional -->
+        <div style="background: white; padding: 25px; border-bottom: 1px solid #eee; border-radius: 20px 20px 0 0; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h3 style="margin: 0; font-size: 20px; font-weight: 900; color: #333;"><i class="fas fa-chart-pie" style="color: #E31E24; margin-right: 10px;"></i> CUADRO DE MANDO FINANCIERO</h3>
+                <p style="font-size: 12px; color: #999; margin-top: 5px;">Análisis detallado de ingresos y gastos por pilar estratégico.</p>
+            </div>
+            <div style="text-align: right;">
+                <label style="display: block; font-size: 10px; font-weight: 900; color: #bbb; margin-bottom: 5px; text-transform: uppercase;">Periodo de Análisis</label>
+                <select id="selectorMesesStats" onchange="renderStats()" style="padding: 10px 15px; border-radius: 8px; border: 2px solid #eee; font-weight: 800; font-family: inherit; font-size: 13px; min-width: 200px; cursor: pointer; outline: none; transition: 0.3s; background: #fff;">
+                </select>
+            </div>
+        </div>
+
+        <div style="padding: 25px; display: flex; flex-direction: column; gap: 20px;">
+            <!-- Resumen de Tarjetas -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                <div style="background: white; padding: 20px; border-radius: 15px; border: 1px solid #eee; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                    <p style="font-size: 10px; font-weight: 900; color: #999; margin: 0; text-transform: uppercase;">Total Ingresos</p>
+                    <div id="totalBeneficioTxt" style="font-size: 22px; font-weight: 900; color: #28a745; margin-top: 5px;">0.00 €</div>
+                </div>
+                <div style="background: white; padding: 20px; border-radius: 15px; border: 1px solid #eee; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                    <p style="font-size: 10px; font-weight: 900; color: #999; margin: 0; text-transform: uppercase;">Total Gastos</p>
+                    <div id="totalGastoTxt" style="font-size: 22px; font-weight: 900; color: #dc3545; margin-top: 5px;">0.00 €</div>
+                </div>
+                <div style="background: white; padding: 20px; border-radius: 15px; border: 1px solid #eee; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                    <p style="font-size: 10px; font-weight: 900; color: #999; margin: 0; text-transform: uppercase;">Balance Neto</p>
+                    <div id="totalBalanceTxt" style="font-size: 22px; font-weight: 900; color: #333; margin-top: 5px;">0.00 €</div>
+                </div>
+            </div>
+
+            <!-- Tablas de Desglose -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+                <!-- GASTOS -->
+                <div style="background: white; padding: 25px; border-radius: 15px; border: 1px solid #eee;">
+                    <h4 style="color: #dc3545; font-size: 13px; font-weight: 900; text-transform: uppercase; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-arrow-down"></i> Distribución de Gastos
+                    </h4>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tbody id="statsGasto"></tbody>
+                    </table>
+                </div>
+                
+                <!-- BENEFICIOS -->
+                <div style="background: white; padding: 25px; border-radius: 15px; border: 1px solid #eee;">
+                    <h4 style="color: #28a745; font-size: 13px; font-weight: 900; text-transform: uppercase; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-arrow-up"></i> Distribución de Beneficios
+                    </h4>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tbody id="statsBeneficio"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pie de Modal -->
+        <div style="padding: 20px 25px; background: white; border-top: 1px solid #eee; text-align: right; border-radius: 0 0 20px 20px;">
+            <button class="btn-fin" style="background: #333; color: white; padding: 12px 30px;" onclick="document.getElementById('modalEstadisticas').style.display='none'">CERRAR ANÁLISIS</button>
+        </div>
+    </div>
+</div>
+
+<!-- BARRA DE ACCIÓN PERMANENTE AL SELECCIONAR -->
+<div id="barraAccionPagos" class="pago-action-bar">
+    <div style="min-width: 150px;">
+        <div id="txtSeleccionados" style="font-weight: 900; font-size: 24px; color: #fff; letter-spacing: 1px;">1 SELECCIONADO</div>
+        <div id="detalleSeleccion" style="font-size: 16px; color: #38bdf8; font-weight: 800; max-width: 500px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px;">Detalle...</div>
+    </div>
+    <div class="action-bar-divider"></div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <div><label style="color: #fff; opacity: 0.6;">PAGADO (€)</label><input type="number" id="pagoImporteBar" value="" placeholder="-" style="border-color: #28a745;" onkeyup="if(event.key === 'Enter') confirmarPago()"></div>
+        <div><label>ESPERADO (€)</label><input type="number" id="pagoEsperadoBar" value="50"></div>
+    </div>
+    <div class="action-bar-divider"></div>
+    <div style="display: flex; gap: 12px;">
+        <button class="btn-fin" style="background: #E31E24; color: white; padding: 12px 25px; box-shadow: 0 4px 10px rgba(227, 30, 36, 0.3);" onclick="confirmarPago()">
+            <i class="fas fa-save" style="margin-right: 8px;"></i> REGISTRAR PAGO
+        </button>
+        <button class="btn-fin" style="background: rgba(255,255,255,0.1); color: #fff; border: none;" onclick="cerrarModalsFin()">CANCELAR</button>
+    </div>
+</div>
+
+<!-- MODAL MODIFICAR PAGO -->
+<div id="modalModificarPago" class="modal">
+    <div class="modal-content" style="width: 350px;">
+        <h3 style="font-size: 14px; margin-bottom: 20px; border-bottom: 2px solid #E31E24; padding-bottom: 10px;">AVISO DE MODIFICACIÓN</h3>
+        <div id="infoPagoAnterior" style="font-size: 11px; background: #fafafa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #eee;">
+            <!-- Se llena dinámicamente -->
+        </div>
+        <input type="text" id="motivoModificacion" placeholder="Indica el motivo del cambio..." style="width:100%; padding:12px; border-radius:8px; border:1px solid #ddd; margin-bottom: 15px;">
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-fin" style="flex:1; background:#dc3545; color:white;" onclick="eliminarPago()">ELIMINAR PAGO</button>
+            <button class="btn-fin" style="flex:1; background:#eee; color:#333;" onclick="cerrarModalsFin()">CANCELAR</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

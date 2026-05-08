@@ -1,28 +1,11 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>CLUB INTRANET</title>
+{% extends 'dashboard.html' %}
+
+{% block content %}
     <style>
-        :root { --red: #e60000; --bg: #f4f4f4; --sidebar: #e60000; --green: #2eb85c; }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; display: flex; background: var(--bg); height: 100vh; overflow: hidden; }
-
-        /* Barra Lateral */
-        .sidebar { width: 220px; background: var(--sidebar); color: white; display: flex; flex-direction: column; z-index: 10; }
-        .sidebar-header { padding: 25px 20px; font-weight: 900; font-size: 18px; }
-        .nav-item { padding: 15px 20px; font-size: 13px; font-weight: bold; cursor: pointer; opacity: 0.8; }
-        .nav-active { 
-    background: white; 
-    color: var(--red); 
-    border-radius: 8px 0 0 8px; /* Cambiado de 25px a 8px para que sea cuadrado redondeado */
-    margin-left: 10px; 
-    opacity: 1; 
-}
-
-        .main { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
+        :root { --red: #E31E24; --bg: #f4f4f4; --sidebar: #E31E24; --green: #2eb85c; }
         
-        /* Header Superior Fijo */
-
+        /* Ajuste para que el contenido ocupe el espacio correctamente dentro del render-area */
+        .calendario-wrapper { display: flex; flex-direction: column; height: 100%; font-family: 'Montserrat', sans-serif; }
 
    /* Objetivos Superiores Estilo Imagen 1 */
 .obj-container { display: flex; align-items: stretch; gap: 10px; margin-bottom: 20px; width: 100%; }
@@ -83,22 +66,86 @@
         #viewPhotoModal .modal-content { width: 90%; max-width: 400px; position: relative; padding: 20px; }
         #viewPhotoModal img { width: 100%; border-radius: 10px; margin-bottom: 15px; border: 1px solid #ddd; }
         .close-view { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 24px; font-weight: bold; color: #666; }
+    
+    /* --- AJUSTES DE FLECHAS Y ALINEACIÓN --- */
+        .wrapper-asistencia { 
+            display: flex !important; 
+            align-items: center !important; 
+            justify-content: center !important; 
+            gap: 8px !important; 
+            width: 100% !important; 
+            margin: 5px 0 !important;
+        }
+
+        .btn-val { 
+            width: 38px !important; 
+            height: 38px !important; 
+            background: #fdfdfd !important; 
+            border-radius: 4px !important; 
+            display: flex !important; 
+            align-items: center !important; 
+            justify-content: center !important; 
+            cursor: pointer; 
+            border: 1px solid #eee !important; 
+            font-size: 24px !important; 
+            font-weight: 900 !important; 
+            transition: all 0.2s; 
+            flex-shrink: 0; 
+        }
+
+        /* Colores potentes para las flechas */
+        .val-normal { color: #28a745 !important; } 
+        .val-mal { color: #dc3545 !important; }    
+        .val-excelente { color: #d4af37 !important; }
+
+        /* El Lápiz invisible que guarda el sitio */
+        .btn-nota { 
+            width: 25px !important; 
+            height: 38px !important; 
+            display: flex !important; 
+            opacity: 0; 
+            pointer-events: none; 
+            flex-shrink: 0;
+        }
+
+        /* Estilo de botones para la cabecera */
+.btn-todo-si, .btn-todo-val {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 800;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(0,0,0,0.05);
+    user-select: none;
+    margin: 2px;
+}
+
+/* Botón TODO SI (Rojizo/Blanco) */
+.btn-todo-si {
+    color: #E31E24;
+    background-color: #fff1f1;
+}
+.btn-todo-si:hover {
+    background-color: #E31E24;
+    color: white;
+}
+
+/* Botón TODO OK (Verdoso/Blanco) */
+.btn-todo-val {
+    color: #1e7e34;
+    background-color: #f1f8f1;
+}
+.btn-todo-val:hover {
+    background-color: #1e7e34;
+    color: white;
+}
+    
     </style>
-</head>
-<body>
 
-    <div class="sidebar">
-        <div class="sidebar-header">INTRANET FR</div>
-        <div class="nav-item">INICIO</div>
-        <div class="nav-item nav-active">DEPORTIVO</div>
-        <div class="nav-item" onclick="location.href='/asistencias'">ASISTENCIAS</div>
-    </div>
-
-    <div class="main">
-        <div class="top-bar">
-            <div class="user-info">USUARIO: <span id="userId">{{ usuario }}</span></div>
-          
-        </div>
+    <div class="calendario-wrapper">
 
      <div class="header-row">
     <select id="monthSelect" style="border:none; background:transparent; font-size:24px; font-weight:900; outline:none; cursor:pointer;" onchange="location.href='?mes=' + this.value">
@@ -134,7 +181,10 @@
                     {% if d %}
                     <div class="day {% if d.es_hoy %}today{% endif %}">
                         {% if d.es_hoy %}<div class="hoy-label">HOY</div>{% endif %}
-                        <span class="day-num">{{ d.numero }}</span>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+    <span class="day-num">{{ d.numero }}</span>
+
+</div>
                         <div class="cat-label">TÁCTICO</div>
                         <div class="item-list list-tac"></div>
                         <div class="cat-label">TÉCNICO</div>
@@ -248,6 +298,22 @@
             updateStats();
             saveAll(); 
         }
+
+        function marcarTodoDia(dia) {
+    const dayDiv = [...document.querySelectorAll('.day')].find(d => d.querySelector('.day-num').innerText == dia);
+    if (!dayDiv) return;
+    
+    const items = dayDiv.querySelectorAll('.item-list div');
+    items.forEach(item => {
+        if (!item.classList.contains('checked')) {
+            item.classList.add('checked');
+            const idUnico = dia + "-" + item.innerText;
+            if (!itemsCompletados.includes(idUnico)) itemsCompletados.push(idUnico);
+        }
+    });
+    updateStats();
+    saveAll();
+}
 
         function updateStats() {
             const conceptos = [
@@ -394,6 +460,32 @@ window.onload = function() {
     syncInputs();
     aplicarResaltadoAutomatico();
 };
+
+function marcarColumnaSi(colIndex) {
+    // Busca todas las filas del cuerpo de la tabla
+    const filas = document.querySelectorAll('tbody tr');
+    filas.forEach(fila => {
+        // Localiza la celda correspondiente al día (sumamos 1 si la primera columna es el nombre)
+        const celda = fila.cells[colIndex + 1];
+        if (celda) {
+            // Busca el botón "SI" (el verde) y le hace clic
+            const btnSi = Array.from(celda.querySelectorAll('button, div, span'))
+                               .find(el => el.innerText.trim() === 'SI');
+            if (btnSi) btnSi.click();
+        }
+    });
+}
+
+function marcarColumnaOk(colIndex) {
+    const filas = document.querySelectorAll('tbody tr');
+    filas.forEach(fila => {
+        const celda = fila.cells[colIndex + 1];
+        if (celda) {
+            // Busca el botón de la flecha o el que confirma la valoración
+            const btnOk = celda.querySelector('.btn-confirmar') || celda.querySelector('button:last-child');
+            if (btnOk) btnOk.click();
+        }
+    });
+}
     </script>
-</body>
-</html>
+{% endblock %}

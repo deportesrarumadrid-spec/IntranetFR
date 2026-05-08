@@ -1,0 +1,227 @@
+{% extends 'dashboard.html' %}
+
+{% block content %}
+<style>
+    .fin-card { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; overflow: hidden; }
+    .fin-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .fin-header h2 { font-size: 14px; font-weight: 900; color: #333; text-transform: uppercase; margin: 0; }
+    .fin-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .fin-table th { background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #eee; color: #666; font-weight: 800; }
+    .fin-table td { padding: 10px; border-bottom: 1px solid #eee; color: #444; }
+    
+    .pago-cell { width: 35px; text-align: center; cursor: pointer; border: 1px solid #f0f0f0; transition: 0.2s; user-select: none; font-size: 9px; font-weight: 700; }
+    .pago-cell:hover { background: #f9f9f9; }
+    .pago-verde { background: #28a745 !important; color: white !important; }
+    .pago-naranja { background: #fd7e14 !important; color: white !important; }
+    .selected-cell { outline: 2px solid #E31E24; z-index: 5; }
+    
+    .form-asiento { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; padding: 20px; background: #fafafa; }
+    .form-asiento input, .form-asiento select { padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-family: inherit; font-size: 12px; }
+    .btn-fin { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 800; font-size: 11px; text-transform: uppercase; }
+</style>
+
+<div style="padding: 10px;">
+    <!-- SECCIÓN PRESUPUESTO -->
+    <div class="fin-card">
+        <div class="fin-header">
+            <h2><i class="fas fa-file-invoice-dollar" style="color: #E31E24; margin-right: 10px;"></i> Presupuesto / Asientos Manuales</h2>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-fin" style="background: #eee; color: #333;" onclick="document.getElementById('excelInput').click()">
+                    <i class="fas fa-file-excel"></i> Carga Masiva
+                </button>
+                <input type="file" id="excelInput" style="display:none" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+            </div>
+        </div>
+        
+        <div class="form-asiento">
+            <input type="date" id="asientoFecha">
+            <select id="asientoDepto">
+                <option value="">Departamento...</option>
+                <option value="Deportivo">Deportivo</option>
+                <option value="Administración">Administración</option>
+                <option value="Eventos">Eventos</option>
+            </select>
+            <input type="text" id="asientoPilar" placeholder="Pilar">
+            <input type="text" id="asientoDesc" placeholder="Descripción">
+            <input type="number" id="asientoImporte" placeholder="Importe €">
+            <button class="btn-fin" style="background: #333; color: white;" onclick="guardarAsientoManual()">Guardar Asiento</button>
+        </div>
+
+        <div style="max-height: 300px; overflow-y: auto;">
+            <table class="fin-table" id="tablaPresupuesto">
+                <thead>
+                    <tr>
+                        <th>FECHA</th>
+                        <th>Nº ASIENTO</th>
+                        <th>DEPARTAMENTO</th>
+                        <th>PILAR</th>
+                        <th>DESCRIPCIÓN</th>
+                        <th>IMPORTE</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SECCIÓN PAGOS JUGADORES -->
+    <div class="fin-card">
+        <div class="fin-header">
+            <h2><i class="fas fa-users-cog" style="color: #E31E24; margin-right: 10px;"></i> Pagos Jugadores</h2>
+            <div style="font-size: 10px; color: #999;">Usa <b>CTRL + Clic</b> para selección múltiple</div>
+        </div>
+        
+        <div style="overflow-x: auto;">
+            <table class="fin-table">
+                <thead>
+                    <tr>
+                        <th>EQUIPO</th>
+                        <th>JUGADOR</th>
+                        <th>FORMA PAGO</th>
+                        <th>INSCR.</th>
+                        <th>ENE</th><th>FEB</th><th>MAR</th><th>ABR</th><th>MAY</th><th>JUN</th>
+                        <th>JUL</th><th>AGO</th><th>SEP</th><th>OCT</th><th>NOV</th><th>DIC</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpoPagos">
+                    {% for j in jugadores %}
+                    <tr>
+                        <td style="font-weight: 800;">{{ j.EQUIPO }}</td>
+                        <td>{{ j.NOMBRE }}</td>
+                        <td><span style="background: #eee; padding: 2px 5px; border-radius: 4px;">{{ j.FORMA_PAGO or 'Efectivo' }}</span></td>
+                        <td class="pago-cell" onclick="seleccionarPago(this, 'Inscripción')">-</td>
+                        {% for mes in ['01','02','03','04','05','06','07','08','09','10','11','12'] %}
+                        <td class="pago-cell" onclick="seleccionarPago(this, '{{ mes }}')">-</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PAGO -->
+<div id="modalFinPago" class="modal">
+    <div class="modal-content" style="width: 350px;">
+        <h3 id="modalFinTitulo" style="font-size: 14px; margin-bottom: 20px; border-bottom: 2px solid #E31E24; padding-bottom: 10px;">REGISTRAR PAGO</h3>
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+            <div>
+                <label style="font-size: 10px; font-weight: 800; color: #999;">IMPORTE PAGADO (€)</label>
+                <input type="number" id="pagoImporte" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+            </div>
+            <div>
+                <label style="font-size: 10px; font-weight: 800; color: #999;">IMPORTE TOTAL ESPERADO (€)</label>
+                <input type="number" id="pagoEsperado" value="50" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+            </div>
+            <div style="display: flex; gap: 5px;">
+                <button class="btn-fin" style="flex:1; background:#eee;" onclick="cerrarModalsFin()"><i class="fas fa-print"></i> RECIBO</button>
+                <button class="btn-fin" style="flex:1; background:#eee;" onclick="cerrarModalsFin()"><i class="fas fa-envelope"></i> EMAIL</button>
+            </div>
+            <button class="btn-fin" style="background:#E31E24; color:white;" onclick="confirmarPago()">GUARDAR PAGO Y GENERAR ASIENTO</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let celdasSeleccionadas = [];
+let celdaActiva = null;
+
+function seleccionarPago(el, item) {
+    if (!window.event.ctrlKey) {
+        celdasSeleccionadas.forEach(c => c.classList.remove('selected-cell'));
+        celdasSeleccionadas = [];
+    }
+    el.classList.add('selected-cell');
+    celdasSeleccionadas.push(el);
+    
+    celdaActiva = el;
+    const nombre = el.closest('tr').cells[1].innerText;
+    document.getElementById('modalFinTitulo').innerText = `PAGO: ${nombre} (${item})`;
+    document.getElementById('modalFinPago').style.display = 'flex';
+}
+
+function cerrarModalsFin() {
+    document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+    celdasSeleccionadas.forEach(c => c.classList.remove('selected-cell'));
+    celdasSeleccionadas = [];
+}
+
+async function confirmarPago() {
+    const pagado = parseFloat(document.getElementById('pagoImporte').value);
+    const esperado = parseFloat(document.getElementById('pagoEsperado').value);
+    
+    if (isNaN(pagado)) return alert("Introduce un importe válido");
+
+    celdasSeleccionadas.forEach(cell => {
+        cell.classList.remove('pago-verde', 'pago-naranja');
+        if (pagado >= esperado) {
+            cell.classList.add('pago-verde');
+            cell.innerText = "OK";
+        } else {
+            cell.classList.add('pago-naranja');
+            cell.innerText = `-${esperado - pagado}`;
+        }
+    });
+
+    // Generar asiento automático en presupuesto
+    const nombre = celdaActiva.closest('tr').cells[1].innerText;
+    const asiento = {
+        fecha: new Date().toISOString().split('T')[0],
+        departamento: "Administración",
+        pilar: "Cuotas Jugadores",
+        descripcion: `Pago cuota: ${nombre}`,
+        importe: pagado
+    };
+
+    await fetch('/api/presupuesto', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(asiento)
+    });
+
+    cargarPresupuesto();
+    cerrarModalsFin();
+}
+
+async function guardarAsientoManual() {
+    const asiento = {
+        fecha: document.getElementById('asientoFecha').value,
+        departamento: document.getElementById('asientoDepto').value,
+        pilar: document.getElementById('asientoPilar').value,
+        descripcion: document.getElementById('asientoDesc').value,
+        importe: document.getElementById('asientoImporte').value
+    };
+
+    if (!asiento.fecha || !asiento.importe) return alert("Fecha e Importe son obligatorios");
+
+    await fetch('/api/presupuesto', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(asiento)
+    });
+
+    cargarPresupuesto();
+    // Limpiar campos
+    ['asientoPilar', 'asientoDesc', 'asientoImporte'].forEach(id => document.getElementById(id).value = "");
+}
+
+async function cargarPresupuesto() {
+    const res = await fetch('/api/presupuesto');
+    const datos = await res.json();
+    const tbody = document.querySelector('#tablaPresupuesto tbody');
+    tbody.innerHTML = datos.map(a => `
+        <tr>
+            <td>${a.FECHA}</td>
+            <td style="font-weight:bold;">#${a['Nº ASIENTO']}</td>
+            <td>${a.DEPARTAMENTO}</td>
+            <td>${a.PILAR}</td>
+            <td>${a.DESCRIPCION}</td>
+            <td style="color: ${a.IMPORTE > 0 ? '#28a745' : '#dc3545'}; font-weight:bold;">${a.IMPORTE}€</td>
+        </tr>
+    `).reverse().join('');
+}
+
+window.onload = cargarPresupuesto;
+</script>
+{% endblock %}
