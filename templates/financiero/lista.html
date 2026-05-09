@@ -107,6 +107,9 @@
                 <button class="btn-fin" style="background: #eee; color: #333;" onclick="document.getElementById('excelInput').click()">
                     <i class="fas fa-file-excel"></i> Carga Masiva
                 </button>
+                <button class="btn-fin" style="background: #fff; border: 1px solid #dc3545; color: #dc3545;" onclick="solicitarLimpiezaHistorial('FINANCIERO')">
+                    <i class="fas fa-trash-alt"></i> ELIMINAR TODO
+                </button>
                 <input type="file" id="excelInput" style="display:none" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
             </div>
         </div>
@@ -151,6 +154,7 @@
                         <th>PILAR</th>
                         <th>DESCRIPCIÓN</th>
                         <th>IMPORTE</th>
+                        <th style="width: 80px;"></th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -166,6 +170,9 @@
             <div style="display: flex; align-items: center; gap: 15px;">
                 <h2 style="font-size: 18px; letter-spacing: -0.5px;"><i class="fas fa-users-cog" style="color: #E31E24; margin-right: 10px;"></i> PAGOS JUGADORES</h2>
                 <div style="display: flex; gap: 8px;">
+                    <button class="btn-fin" style="background: #fff; border: 1px solid #333; color: #333;" onclick="solicitarLimpiezaHistorial('PAGOS JUGADORES')">
+                        <i class="fas fa-eraser"></i> REINICIAR PAGOS
+                    </button>
                     <button class="btn-fin" style="background: #E31E24; color: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(227,30,36,0.2);" onclick="abrirModalAnadirJugadorFin()">
                         <i class="fas fa-user-plus"></i> AÑADIR JUGADOR
                     </button>
@@ -994,19 +1001,123 @@ function aplicarFiltros() {
     renderizarTablaPresupuesto(filtrados);
 }
 
+/* --- LÓGICA DE VERIFICACIÓN Y BORRADO --- */
+let codigoVerificacionActual = "";
+let callbackVerificacion = null;
+
+function solicitarLimpiezaHistorial(tipo) {
+    abrirVerificacionSegura(
+        `¿Eliminar TODO el historial de ${tipo}?`,
+        async () => {
+            const res = await fetch('/api/limpiar_historial', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ tipo })
+            });
+            if (res.ok) location.reload();
+        }
+    );
+}
+
+function abrirVerificacionSegura(titulo, callback) {
+    callbackVerificacion = callback;
+    document.getElementById('modalVerifTitulo').innerText = titulo;
+    document.getElementById('step1Verif').style.display = 'block';
+    document.getElementById('step2Verif').style.display = 'none';
+    document.getElementById('modalVerificacionSegura').style.display = 'flex';
+}
+
+function irAPaso2Verificacion() {
+    // Generar código de 4 letras aleatorias
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    codigoVerificacionActual = "";
+    for(let i=0; i<4; i++) codigoVerificacionActual += chars.charAt(Math.floor(Math.random() * chars.length));
+    
+    document.getElementById('txtCodigoVerif').innerText = codigoVerificacionActual;
+    document.getElementById('inputCodigoVerif').value = "";
+    document.getElementById('step1Verif').style.display = 'none';
+    document.getElementById('step2Verif').style.display = 'block';
+}
+
+function confirmarVerificacionFinal() {
+    const val = document.getElementById('inputCodigoVerif').value.toUpperCase().trim();
+    if (val === codigoVerificacionActual) {
+        document.getElementById('modalVerificacionSegura').style.display = 'none';
+        if (callbackVerificacion) callbackVerificacion();
+    } else {
+        alert("Código incorrecto. Inténtalo de nuevo.");
+        irAPaso2Verificacion();
+    }
+}
+
+async function borrarAsientoIndividual(id) {
+    abrirVerificacionSegura(
+        `¿Eliminar el asiento #${id} definitivamente?`,
+        async () => {
+            const res = await fetch('/api/operacion_asiento', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ accion: 'borrar', id: id })
+            });
+            if (res.ok) cargarPresupuesto();
+        }
+    );
+}
+
+function editarAsientoManual(id) {
+    const asiento = presupuestoData.find(a => (a.Nº_ASIENTO || a['Nº ASIENTO'] || a.ASIENTO) == id);
+    if (!asiento) return;
+
+    // Pre-llenar el formulario superior con los datos para editar
+    document.getElementById('asientoFecha').value = asiento.FECHA;
+    document.getElementById('asientoDepto').value = asiento.DEPARTAMENTO;
+    document.getElementById('asientoPilar').value = asiento.PILAR;
+    document.getElementById('asientoDesc').value = asiento.DESCRIPCION;
+    document.getElementById('asientoImporte').value = Math.abs(parseFloat(asiento.IMPORTE));
+    
+    // Cambiar el botón de guardar por uno de "ACTUALIZAR" temporalmente
+    const btnContainer = document.querySelector('.form-asiento button');
+    const originalText = btnContainer.innerText;
+    const originalOnClick = btnContainer.getAttribute('onclick');
+    
+    btnContainer.innerText = "ACTUALIZAR ASIENTO #" + id;
+    btnContainer.style.background = "#E31E24";
+    btnContainer.onclick = async () => {
+        abrirVerificacionSegura(`¿Guardar cambios en el asiento #${id}?`, async () => {
+            const datos = {
+                accion: 'editar', id: id,
+                fecha: document.getElementById('asientoFecha').value,
+                departamento: document.getElementById('asientoDepto').value,
+                pilar: document.getElementById('asientoPilar').value,
+                descripcion: document.getElementById('asientoDesc').value,
+                importe: document.getElementById('asientoImporte').value
+            };
+            await fetch('/api/operacion_asiento', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(datos) });
+            location.reload(); // Recarga para resetear estado del formulario
+        });
+    };
+}
+
 function renderizarTablaPresupuesto(datos) {
     const tbody = document.querySelector('#tablaPresupuesto tbody');
     tbody.innerHTML = datos.map(a => {
         const importe = parseFloat(a.IMPORTE) || 0;
+        const id = a.Nº_ASIENTO || a['Nº ASIENTO'] || a.ASIENTO || '0';
+        const esPagoJugador = id.toString().startsWith('P-');
+
         return `
             <tr>
                 <td style="white-space: nowrap;">${a.FECHA || '-'}</td>
-                <td style="font-weight:bold; color: #E31E24;">#${a.Nº_ASIENTO || a['Nº ASIENTO'] || a.ASIENTO || '0'}</td>
+                <td style="font-weight:bold; color: #E31E24;">#${id}</td>
                 <td>${a.DEPARTAMENTO || '-'}</td>
                 <td>${a.PILAR || '-'}</td>
                 <td>${a.DESCRIPCION || '-'}</td>
                 <td style="color: ${importe >= 0 ? '#28a745' : '#dc3545'}; font-weight:bold; text-align: right;">
                     ${importe.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
+                </td>
+                <td style="text-align: center; display: flex; gap: 8px; justify-content: center;">
+                    ${!esPagoJugador ? `<i class="fas fa-pencil-alt" style="cursor:pointer; color:#999;" onclick="editarAsientoManual('${id}')"></i>` : ''}
+                    <i class="fas fa-trash-alt" style="cursor:pointer; color:#dc3545; opacity:0.6;" onclick="borrarAsientoIndividual('${id}')"></i>
                 </td>
             </tr>
         `;
@@ -1495,6 +1606,32 @@ function exportarImpagosExcel() {
             <button class="btn-fin" style="background: #eee;" onclick="addExtraRow()">+ AÑADIR FILA</button>
             <button class="btn-fin" style="flex: 1; background: #333; color: white;" onclick="guardarExtraDetalle(this)">GUARDAR TODO</button>
             <button class="btn-fin" style="background: #f4f4f4;" onclick="cerrarModalsFin()">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL VERIFICACIÓN SEGURA (DOBLE PASO) -->
+<div id="modalVerificacionSegura" class="modal">
+    <div class="modal-content" style="width: 400px; text-align: center;">
+        <div id="step1Verif">
+            <i class="fas fa-exclamation-triangle" style="font-size: 40px; color: #ffc107; margin-bottom: 15px;"></i>
+            <h3 id="modalVerifTitulo" style="font-size: 16px; font-weight: 900; margin-bottom: 10px;">¿ESTÁS SEGURO?</h3>
+            <p style="font-size: 13px; color: #666; margin-bottom: 20px;">Esta acción es irreversible y afectará a los datos de Google Sheets.</p>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-fin" style="flex:1; background:#eee;" onclick="document.getElementById('modalVerificacionSegura').style.display='none'">CANCELAR</button>
+                <button class="btn-fin" style="flex:1; background:#333; color:white;" onclick="irAPaso2Verificacion()">SÍ, CONTINUAR</button>
+            </div>
+        </div>
+        
+        <div id="step2Verif" style="display: none;">
+            <h3 style="font-size: 14px; font-weight: 900; margin-bottom: 15px;">VERIFICACIÓN ANTIBOT</h3>
+            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Por seguridad, introduce el siguiente código:</p>
+            <div id="txtCodigoVerif" style="font-size: 24px; font-weight: 900; letter-spacing: 5px; background: #f4f4f4; padding: 10px; border-radius: 8px; margin-bottom: 15px; color: #E31E24;">-</div>
+            <input type="text" id="inputCodigoVerif" placeholder="Escribe el código aquí..." style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #E31E24; text-align: center; font-size: 18px; font-weight: 900; margin-bottom: 20px;">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-fin" style="flex:1; background:#eee;" onclick="document.getElementById('modalVerificacionSegura').style.display='none'">ABORTAR</button>
+                <button class="btn-fin" style="flex:1; background:#E31E24; color:white;" onclick="confirmarVerificacionFinal()">CONFIRMAR ACCIÓN</button>
+            </div>
         </div>
     </div>
 </div>

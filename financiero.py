@@ -223,6 +223,71 @@ def api_actualizar_pago():
         print(f"Error api_actualizar_pago: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@financiero_bp.route('/api/limpiar_historial', methods=['POST'])
+def api_limpiar_historial():
+    from app import client, NOMBRE_EXCEL
+    data = request.json
+    tipo = data.get('tipo') # 'FINANCIERO' o 'PAGOS JUGADORES'
+    try:
+        sheet = client.open(NOMBRE_EXCEL).worksheet(tipo)
+        rows = len(sheet.get_all_values())
+        if rows > 1:
+            # Borramos desde la fila 2 hasta el final para mantener cabeceras
+            sheet.delete_rows(2, rows)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@financiero_bp.route('/api/operacion_asiento', methods=['POST'])
+def api_operacion_asiento():
+    from app import client, NOMBRE_EXCEL
+    data = request.json
+    accion = data.get('accion') # 'borrar' o 'editar'
+    asiento_id = str(data.get('id')) # El Nº Asiento
+    
+    try:
+        # Los asientos P-XXXX están en PAGOS JUGADORES, los numéricos en FINANCIERO
+        es_pago = asiento_id.startswith('P-')
+        nombre_hoja = "PAGOS JUGADORES" if es_pago else "FINANCIERO"
+        sheet = client.open(NOMBRE_EXCEL).worksheet(nombre_hoja)
+        all_v = sheet.get_all_values()
+        
+        fila_idx = -1
+        # Si es pago, el ID se genera dinámicamente por índice, pero para borrar 
+        # buscamos coincidencia en la hoja basándonos en la descripción/nombre que traiga el data
+        if es_pago:
+            # Reutilizamos la lógica de borrar_pago ya existente arriba si es un P-XXXX
+            # o buscamos por índice si el ID P-0005 significa fila 6.
+            fila_idx = int(asiento_id.split('-')[1]) + 1
+        else:
+            # Asientos manuales: el ID está en la columna B (índice 1)
+            for i, row in enumerate(all_v):
+                if i == 0: continue
+                if len(row) > 1 and str(row[1]) == asiento_id:
+                    fila_idx = i + 1
+                    break
+        
+        if fila_idx == -1 or fila_idx > len(all_v):
+            return jsonify({"status": "error", "message": "Asiento no encontrado"}), 404
+
+        if accion == 'borrar':
+            sheet.delete_rows(fila_idx)
+        elif accion == 'editar':
+            # Solo para FINANCIERO (manuales) en este endpoint
+            if not es_pago:
+                # FECHA(1), Nº(2), DEP(3), PILAR(4), DESC(5), IMP(6)
+                sheet.update_cell(fila_idx, 1, data.get('fecha'))
+                sheet.update_cell(fila_idx, 3, data.get('departamento'))
+                sheet.update_cell(fila_idx, 4, data.get('pilar'))
+                sheet.update_cell(fila_idx, 5, data.get('descripcion'))
+                sheet.update_cell(fila_idx, 6, data.get('importe'))
+            else:
+                return jsonify({"status": "error", "message": "Usa la tabla para editar pagos"}), 400
+                
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @financiero_bp.route('/api/anadir_jugador_fin', methods=['POST'])
 def api_anadir_jugador_fin():
     from app import client, NOMBRE_EXCEL
