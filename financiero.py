@@ -8,9 +8,9 @@ financiero_bp = Blueprint('financiero', __name__)
 
 def normalizar_cabeceras(headers):
     """Normaliza las cabeceras del Excel para que coincidan con las claves del sistema."""
-    headers = [h.strip().upper().replace(' ','_').replace('Ó','O').replace('Í','I').replace('É','E').replace('Á','A').replace('Ú','U') for h in headers]
+    headers = [h.strip().upper().replace('Ó','O').replace('Í','I').replace('É','E').replace('Á','A').replace('Ú','U') for h in headers]
     # Mapeo de variantes de nombres de columnas financieras para asegurar persistencia
-    return [h.replace('TIPO_DE_PAGO', 'TIPO_PAGO').replace('FORMA_DE_PAGO', 'FORMA_PAGO').replace('JUGADOR', 'NOMBRE') for h in headers]
+    return [h.replace(' ', '_').replace('TIPO_DE_PAGO', 'TIPO_PAGO').replace('FORMA_DE_PAGO', 'FORMA_PAGO').replace('JUGADOR', 'NOMBRE') for h in headers]
 
 def leer_hoja_limpia(client, nombre_excel, nombre_hoja):
     """Función de utilidad para leer datos de Excel de forma estructurada."""
@@ -132,15 +132,25 @@ def api_borrar_pago():
         all_v = sheet.get_all_values()
         
         idx_to_delete = -1
+        # Normalización extrema para evitar fallos de coincidencia
+        nombre_buscado = str(datos.get('nombre') or "").strip().lower()
+        equipo_buscado = str(datos.get('equipo') or "").strip().lower()
+        c_raw = str(datos.get('concepto') or "").strip().lower()
+        # Si es un número (ej: "1"), lo convertimos a "01" para el Excel
+        concepto_buscado = c_raw.zfill(2) if c_raw.isdigit() else c_raw
+
         for i, row in enumerate(all_v):
             if i == 0: continue
-            # Buscamos coincidencia exacta de Equipo, Jugador y Concepto
-            if (len(row) >= 6 and 
-                str(row[1]).strip().lower() == str(datos.get('equipo', '')).strip().lower() and 
-                str(row[2]).strip().lower() == str(datos.get('nombre', '')).strip().lower() and 
-                str(row[5]).strip().lower() == str(datos.get('concepto', '')).strip().lower()):
-                idx_to_delete = i + 1
-                break
+            if len(row) >= 6:
+                # Leemos columnas 1 (Equipo), 2 (Nombre) y 5 (Concepto)
+                r_equipo = str(row[1]).strip().lower()
+                r_nombre = str(row[2]).strip().lower()
+                r_val_concepto = str(row[5]).strip().lower()
+                r_concepto = r_val_concepto.zfill(2) if r_val_concepto.isdigit() else r_val_concepto
+                
+                if r_equipo == equipo_buscado and r_nombre == nombre_buscado and r_concepto == concepto_buscado:
+                    idx_to_delete = i + 1
+                    break
         
         if idx_to_delete != -1:
             sheet.delete_rows(idx_to_delete)
@@ -229,6 +239,7 @@ def api_config_financiera():
             inscripciones = {}
             formas_pago = []
             cuotas_mes = {}
+            extra_names = {"EXTRA": "EXTRA", "EXTRA2": "EXTRA 2"}
 
             for row in all_configs:
                 if len(row) >= 2:
@@ -243,6 +254,9 @@ def api_config_financiera():
                     elif key == "CUOTAS_MES":
                         try: cuotas_mes = json.loads(value)
                         except json.JSONDecodeError: pass
+                    elif key == "EXTRA_NAMES":
+                        try: extra_names = json.loads(value)
+                        except json.JSONDecodeError: pass
             
             # Valores por defecto si no se encuentran en la hoja
             if not formas_pago:
@@ -252,7 +266,7 @@ def api_config_financiera():
                     {"nombre": "Transferencia", "total": 490, "modalidad": "mensual", "cuota": 49, "meses": 10, "tipo": "Transferencia"}
                 ]
 
-            return jsonify({"inscripciones": inscripciones, "formas_pago": formas_pago, "cuotas_mes": cuotas_mes})
+            return jsonify({"inscripciones": inscripciones, "formas_pago": formas_pago, "cuotas_mes": cuotas_mes, "extra_names": extra_names})
         
         elif request.method == 'POST':
             data = request.json
@@ -260,7 +274,8 @@ def api_config_financiera():
             config_sheet.update('A1', [
                 ['INSCRIPCIONES_EQUIPO', json.dumps(data.get('inscripciones', {}))],
                 ['FORMAS_PAGO', json.dumps(data.get('formas_pago', []))],
-                ['CUOTAS_MES', json.dumps(data.get('cuotas_mes', {}))]
+                ['CUOTAS_MES', json.dumps(data.get('cuotas_mes', {}))],
+                ['EXTRA_NAMES', json.dumps(data.get('extra_names', {}))]
             ], value_input_option='USER_ENTERED')
             return jsonify({"status": "success"})
     except Exception as e:

@@ -9,10 +9,12 @@
     .fin-table th { background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #eee; color: #666; font-weight: 800; }
     .fin-table td { padding: 10px; border-bottom: 1px solid #eee; color: #444; }
     
-    .pago-cell { width: 35px; text-align: center; cursor: pointer; border: 1px solid #f0f0f0; transition: 0.2s; user-select: none; font-size: 9px; font-weight: 700; }
+    .pago-cell { min-width: 50px; text-align: center; cursor: pointer; border: 1px solid #f0f0f0; transition: 0.2s; user-select: none; font-size: 9px; font-weight: 700; }
     .pago-cell:hover { background: #f9f9f9; }
+    .pago-extra-bg { background: #eceef2; }
     .pago-verde { background: #28a745 !important; color: white !important; }
     .pago-naranja { background: #fd7e14 !important; color: white !important; }
+    .pago-exceso { outline: 2px solid #ff0000 !important; outline-offset: -2px; z-index: 10; position: relative; }
     .selected-cell { outline: 2px solid #E31E24; z-index: 5; }
     
     .form-asiento { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; padding: 20px; background: #fafafa; }
@@ -178,7 +180,7 @@
             <table class="fin-table">
                 <thead>
                     <tr>
-                        <th style="min-width: 80px; background: #fdfdfd; padding: 15px 10px;">
+                        <th style="width: 140px; background: #fdfdfd; padding: 15px 5px;">
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <span style="font-size: 10px; color: #94a3b8; font-weight: 800; white-space: nowrap;">EQUIPO</span>
                                 <select id="selectEquipoFin" onchange="filtrarJugadores()" style="padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; font-weight: 700; font-family: inherit; font-size: 11px; width: 100%; background: white;">
@@ -189,13 +191,13 @@
                                 </select>
                             </div>
                         </th>
-                        <th style="min-width: 250px; background: #fdfdfd; padding: 15px;">
+                        <th style="width: 380px; background: #fdfdfd; padding: 15px;">
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <span style="font-size: 10px; color: #94a3b8; font-weight: 800; white-space: nowrap;">JUGADOR</span>
                                 <input type="text" id="busquedaJugador" oninput="filtrarJugadores()" placeholder="Buscar..." style="padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; font-weight: 700; font-family: inherit; font-size: 11px; width: 100%; outline: none; background: white;">
                             </div>
                         </th>
-                        <th style="min-width: 140px; background: #fdfdfd; padding: 15px;">
+                        <th style="width: 110px; background: #fdfdfd; padding: 15px 5px;">
                             <div style="display: flex; flex-direction: column; gap: 5px;">
                                 <div style="display: flex; align-items: center; justify-content: space-between;">
                                     <span style="font-size: 10px; color: #94a3b8; font-weight: 800;">TIPO PAGO</span>
@@ -211,7 +213,7 @@
                                 </select>
                             </div>
                         </th>
-                        <th style="min-width: 180px; background: #fdfdfd; padding: 15px;">
+                        <th style="width: 140px; background: #fdfdfd; padding: 15px 5px;">
                             <div style="display: flex; flex-direction: column; gap: 5px;">
                                 <div style="display: flex; align-items: center; justify-content: space-between;">
                                     <span style="font-size: 10px; color: #94a3b8; font-weight: 800;">FORMA PAGO</span>
@@ -227,20 +229,38 @@
                                 </button>
                             </div>
                         </th>
-                        <th style="padding: 10px 5px; background: #fdfdfd; border-bottom: 2px solid #eee;">
+                        <th style="min-width: 50px; padding: 10px 5px; background: #fdfdfd; border-bottom: 2px solid #eee;">
                             <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
                                 <span style="font-size: 9px; color: #94a3b8; font-weight: 800;">INSCR.</span>
                                 <i class="fas fa-cog" style="cursor: pointer; color: #E31E24; font-size: 11px;" onclick="abrirModalBulkEsperado('Inscripción')"></i>
                             </div>
                         </th>
                         {% for mes, label in [('01','ENE'),('02','FEB'),('03','MAR'),('04','ABR'),('05','MAY'),('06','JUN'),('07','JUL'),('08','AGO'),('09','SEP'),('10','OCT'),('11','NOV'),('12','DIC')] %}
-                        <th style="padding: 10px 5px; background: #fdfdfd; border-bottom: 2px solid #eee;">
+                        <th style="min-width: 50px; padding: 10px 5px; background: #fdfdfd; border-bottom: 2px solid #eee;">
                             <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
                                 <span style="font-size: 9px; color: #94a3b8; font-weight: 800;">{{ label }}</span>
                                 <i class="fas fa-cog" style="cursor: pointer; color: #E31E24; font-size: 11px;" onclick="abrirModalBulkEsperado('{{ mes }}')"></i>
                             </div>
                         </th>
                         {% endfor %}
+                        <th style="min-width: 60px; padding: 10px 5px; background: #eceef2; border-bottom: 2px solid #dee2e6;">
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                                <span id="labelPackRopa" style="font-size: 9px; color: #475569; font-weight: 800;">PACK ROPA</span>
+                                <i class="fas fa-cog" style="cursor: pointer; color: #E31E24; font-size: 11px;" onclick="abrirModalBulkEsperado('PACK_ROPA')"></i>
+                            </div>
+                        </th>
+                        <th style="min-width: 60px; padding: 10px 5px; background: #eceef2; border-bottom: 2px solid #dee2e6;">
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                                <span id="labelExtra" style="font-size: 9px; color: #475569; font-weight: 800;">EXTRA</span>
+                                <i class="fas fa-pencil-alt" style="cursor: pointer; color: #E31E24; font-size: 11px;" onclick="renombrarExtra('EXTRA')"></i>
+                            </div>
+                        </th>
+                        <th style="min-width: 60px; padding: 10px 5px; background: #eceef2; border-bottom: 2px solid #dee2e6;">
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                                <span id="labelExtra2" style="font-size: 9px; color: #475569; font-weight: 800;">EXTRA 2</span>
+                                <i class="fas fa-pencil-alt" style="cursor: pointer; color: #E31E24; font-size: 11px;" onclick="renombrarExtra('EXTRA2')"></i>
+                            </div>
+                        </th>
                     </tr>
                 </thead>
                 <tbody id="cuerpoPagos">
@@ -254,6 +274,9 @@
                         {% for mes in ['01','02','03','04','05','06','07','08','09','10','11','12'] %}
                         <td class="pago-cell" onclick="seleccionarPago(event, this, '{{ mes }}')">-</td>
                         {% endfor %}
+                        <td class="pago-cell pago-extra-bg" onclick="seleccionarPago(event, this, 'PACK_ROPA')">-</td>
+                        <td class="pago-cell pago-extra-bg" onclick="seleccionarPago(event, this, 'EXTRA')">-</td>
+                        <td class="pago-cell pago-extra-bg" onclick="seleccionarPago(event, this, 'EXTRA2')">-</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -302,6 +325,7 @@ let presupuestoData = [];
 let configuracionesPago = [];
 let configInscripciones = {};
 let configCuotasMes = {};
+let extraNames = { "EXTRA": "EXTRA", "EXTRA2": "EXTRA 2" };
 let bulkConceptoActivo = '';
 let isSaving = false;
 
@@ -311,25 +335,63 @@ function abrirModalBulkEsperado(concepto) {
     document.getElementById('bulkTituloConcepto').innerText = (concepto === 'Inscripción' ? 'INSCRIPCIÓN' : 'MES ' + concepto);
 }
 
-async function aplicarBulkEsperado() {
+async function aplicarBulkEsperado(btn) {
     const nuevoVal = parseFloat(document.getElementById('bulkNuevoEsperado').value);
     if (isNaN(nuevoVal)) return alert("Introduce un importe válido");
 
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> APLICANDO...';
+    btn.disabled = true;
+
     const filas = document.querySelectorAll('.fila-jugador');
     let equiposModificados = new Set();
+    let advertencias = [];
 
     filas.forEach(f => {
         if (f.style.display !== 'none') {
+            const forma = f.cells[3].innerText.trim();
+            const configForma = configuracionesPago.find(c => c.nombre === forma);
+            const nPagos = configForma ? (parseInt(configForma.meses) || 12) : 12;
+            const intervalo = 12 / nPagos;
+
+            // Definimos qué columnas son independientes de la modalidad de pago (mensual/bianual/etc)
+            const esColumnaIndependiente = ['Inscripción', 'PACK_ROPA', 'EXTRA', 'EXTRA2'].includes(bulkConceptoActivo);
+
+            // Solo omitimos el cambio si es una columna de MES (01-12) y la celda está combinada (intervalo > 1)
+            if (!esColumnaIndependiente && intervalo > 1) return;
+
             const celdas = f.querySelectorAll('.pago-cell');
-            let colIdx = (bulkConceptoActivo === 'Inscripción') ? 0 : parseInt(bulkConceptoActivo);
+            let colIdx = (bulkConceptoActivo === 'Inscripción') ? 0 : 
+                         (bulkConceptoActivo === 'PACK_ROPA') ? 13 :
+                         (bulkConceptoActivo === 'EXTRA') ? 14 :
+                         (bulkConceptoActivo === 'EXTRA2') ? 15 :
+                         parseInt(bulkConceptoActivo);
 
             if (celdas[colIdx]) {
                 const cell = celdas[colIdx];
+
+                // Verificar si ya hay un importe pagado superior al nuevo esperado
+                const pagado = parseFloat(cell.dataset.importe) || 0;
+                if (pagado > nuevoVal) {
+                    advertencias.push(`${f.cells[1].innerText} (Pagado: ${pagado}€)`);
+                }
+
                 cell.dataset.esperado = nuevoVal;
                 equiposModificados.add(f.dataset.equipo);
             }
         }
     });
+
+    if (advertencias.length > 0) {
+        const confirmMsg = "Los siguientes jugadores ya tienen un pago superior al nuevo valor esperado:\n\n" + 
+                           advertencias.join('\n') + 
+                           "\n\nEsto generará un saldo positivo que deberás ajustar manualmente. ¿Deseas aplicar el cambio de todas formas?";
+        if (!confirm(confirmMsg)) {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            return;
+        }
+    }
 
     // Guardar en la configuración permanente local
     if (bulkConceptoActivo === 'Inscripción') {
@@ -482,7 +544,17 @@ function renderStats() {
     // Las tarjetas de resumen ya se actualizan en la parte superior
 }
 
+let prefixExtraActivo = 'EXTRA-';
 function seleccionarPago(e, el, item) {
+    if (item === 'EXTRA') {
+        abrirModalExtraDetalle(el, 'EXTRA-');
+        return;
+    }
+    if (item === 'EXTRA2') {
+        abrirModalExtraDetalle(el, 'EXTRA2-');
+        return;
+    }
+
     // Si clicamos en una celda ya pagada y NO estamos usando CTRL, mostramos info de modificación
     if (!e.ctrlKey && (el.classList.contains('pago-verde') || el.classList.contains('pago-naranja'))) {
          celdaActiva = el;
@@ -587,101 +659,66 @@ function cerrarModalsFin() {
     actualizarBarraPagos();
 }
 
-async function confirmarPago() {
+async function confirmarPago(btn) {
     const totalPagado = parseFloat(document.getElementById('pagoImporteBar').value);
     const totalEsperado = parseFloat(document.getElementById('pagoEsperadoBar').value);
     const detalle = document.getElementById('detalleSeleccion').innerText;
 
     if (isNaN(totalPagado)) return alert("Introduce un importe válido");
 
-    if (totalPagado > totalEsperado) {
-        alert(`El importe es superior al total esperado. Por favor, revisa la selección.`); return;
-    }
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> REGISTRANDO...';
+    btn.disabled = true;
 
-    if (totalPagado < totalEsperado) {
-        if (!confirm(`El importe es inferior al esperado. ¿Registrar como pago parcial?`)) return;
-    }
-
-    if (!confirm(`¿Confirmar registro definitivo?\n\n${detalle}\nTotal Pagado: ${totalPagado}€`)) return;
-    
-    const fechaHoy = new Date().toLocaleDateString('es-ES');
-    let saldoARepartir = totalPagado;
-
-    for (const cell of celdasSeleccionadas) {
-        const item = cell.dataset.tempItem; // <--- CORRECCIÓN CLAVE: Definir item por celda
-        const nombre = cell.closest('tr').cells[1].innerText;
-        const equipo = cell.closest('tr').dataset.equipo;
-        const forma = cell.closest('tr').cells[3].innerText.trim();
-        const tipo = cell.closest('tr').cells[2].innerText.trim();
-
-        // Cálculo del esperado individual para esta celda específica
-        let esperadoIndividual = parseFloat(cell.dataset.esperado);
-        if (isNaN(esperadoIndividual)) {
-            const keyOverride = `${equipo}-${item}`;
-            if (item === 'Inscripción') {
-                esperadoIndividual = parseFloat(configInscripciones[equipo]) || 50;
-            } else if (configCuotasMes[keyOverride]) {
-                esperadoIndividual = parseFloat(configCuotasMes[keyOverride]);
-            } else {
-                const config = configuracionesPago.find(c => c.nombre === forma);
-                if (config) esperadoIndividual = config.cuota;
-            }
+    try {
+        if (totalPagado > totalEsperado) {
+            alert(`El importe es superior al total esperado.`); return;
         }
-
-        const pagoAsignadoEsteMes = Math.min(saldoARepartir, esperadoIndividual);
-        saldoARepartir -= (pagoAsignadoEsteMes > 0 ? pagoAsignadoEsteMes : 0);
-        
-        const asiento = {
-            fecha: fechaHoy,
-            departamento: "Administración",
-            pilar: "Cuotas",
-            descripcion: `Pago ${item}: ${nombre}`,
-            importe: pagoAsignadoEsteMes,
-            equipo: equipo,
-            nombre: nombre,
-            tipo_pago: tipo,
-            forma_pago: forma,
-            concepto: item,
-            esperado: esperadoIndividual
-        };
-
-        const res = await fetch('/api/presupuesto', { 
-            method: 'POST', 
-            headers: {'Content-Type': 'application/json'}, 
-            body: JSON.stringify(asiento) 
-        });
-        const data = await res.json();
-
-        cell.classList.remove('pago-verde', 'pago-naranja');
-        cell.classList.remove('selected-cell');
-        delete cell.dataset.tempItem;
-        cell.dataset.asientoId = data.asiento;
-        cell.dataset.importe = pagoAsignadoEsteMes;
-        cell.dataset.esperado = esperadoIndividual;
-        cell.dataset.fecha = fechaHoy;
-
-        if (pagoAsignadoEsteMes >= esperadoIndividual) {
-            cell.classList.add('pago-verde');
-            cell.innerText = `${pagoAsignadoEsteMes}€`;
-        } else {
-            cell.classList.add('pago-naranja');
-            cell.innerText = `${pagoAsignadoEsteMes}€/${esperadoIndividual}€`;
+        if (totalPagado < totalEsperado) {
+            if (!confirm(`¿Registrar como pago parcial?`)) return;
         }
-    }
+        if (!confirm(`¿Confirmar registro definitivo?`)) return;
 
-    cargarPresupuesto();
-    cerrarModalsFin();
+        const fechaHoy = new Date().toLocaleDateString('es-ES');
+        let saldoARepartir = totalPagado;
+
+        for (const cell of celdasSeleccionadas) {
+            const item = cell.dataset.tempItem || cell.dataset.concepto;
+            const nombre = cell.closest('tr').cells[1].innerText;
+            const equipo = cell.closest('tr').dataset.equipo;
+            const forma = cell.closest('tr').cells[3].innerText.trim();
+            const tipo = cell.closest('tr').cells[2].innerText.trim();
+
+            let esperadoIndividual = parseFloat(cell.dataset.esperado) || 0;
+            const pagoAsignado = Math.min(saldoARepartir, esperadoIndividual);
+            saldoARepartir -= pagoAsignado;
+
+            const asiento = {
+                fecha: fechaHoy, departamento: "Administración", pilar: "Cuotas",
+                descripcion: `Pago ${item}: ${nombre}`, importe: pagoAsignado,
+                equipo, nombre, tipo_pago: tipo, forma_pago: forma, concepto: item, esperado: esperadoIndividual
+            };
+            await fetch('/api/presupuesto', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(asiento) });
+        }
+        await cargarPresupuesto();
+        cerrarModalsFin();
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
 }
 
 async function eliminarPago(btn) {
+    if (!celdaActiva || !btn) return;
     if (!confirm("¿Seguro que quieres eliminar este registro de pago definitivamente?")) return;
     
     const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ELIMINANDO...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     btn.disabled = true;
 
+    // El concepto debe ser el del anchor (inicio del bloque)
     const datos = {
-        nombre: celdaActiva.closest('tr').cells[1].innerText,
+        nombre: celdaActiva.closest('tr').cells[1].innerText.trim(),
         equipo: celdaActiva.closest('tr').dataset.equipo,
         concepto: celdaActiva.dataset.concepto
     };
@@ -717,7 +754,7 @@ async function actualizarPago(btn) {
     if (isNaN(nuevoImporte)) return alert("Introduce un importe válido");
 
     const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> GUARDANDO...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GUARDANDO...';
     btn.disabled = true;
 
     const datos = {
@@ -738,14 +775,12 @@ async function actualizarPago(btn) {
             const esperado = parseFloat(celdaActiva.dataset.esperado);
             celdaActiva.dataset.importe = nuevoImporte;
             
-            celdaActiva.classList.remove('pago-verde', 'pago-naranja');
-            if (nuevoImporte >= esperado) {
-                celdaActiva.classList.add('pago-verde');
-                celdaActiva.innerText = `${nuevoImporte}€`;
-            } else {
-                celdaActiva.classList.add('pago-naranja');
-                celdaActiva.innerText = `${nuevoImporte}€/${esperado}€`;
-            }
+            celdaActiva.classList.remove('pago-verde', 'pago-naranja', 'pago-exceso');
+            celdaActiva.classList.add(nuevoImporte >= esperado ? 'pago-verde' : 'pago-naranja');
+            if (nuevoImporte > esperado) celdaActiva.classList.add('pago-exceso');
+            
+            celdaActiva.innerText = `${nuevoImporte}€ / ${esperado}€`;
+
             await cargarPresupuesto();
             cerrarModalsFin();
         } else {
@@ -814,25 +849,64 @@ function cargarPagosEnTabla() {
         const equipo = fila.dataset.equipo;
         const forma = fila.cells[3].innerText.trim();
         const configForma = configuracionesPago.find(c => c.nombre === forma);
-        const cuotaBase = configForma ? configForma.cuota : 50;
 
-        fila.querySelectorAll('.pago-cell').forEach((cell, idx) => {
-            let esperado = cuotaBase;
-            const concepto = idx === 0 ? 'Inscripción' : (idx < 10 ? '0' + idx : '' + idx);
+        const nPagos = configForma ? (parseInt(configForma.meses) || 1) : 12;
+        const totalAnual = configForma ? (parseFloat(configForma.total) || 440) : 440;
+        const cuotaRepartida = totalAnual / nPagos;
+        const intervalo = 12 / nPagos; // Ej: 2 pagos -> intervalo 6 meses
 
-            if (idx === 0) {
-                esperado = parseFloat(configInscripciones[equipo]) || cuotaBase;
-            } else if (configCuotasMes[`${equipo}-${concepto}`]) {
-                esperado = parseFloat(configCuotasMes[`${equipo}-${concepto}`]);
-            }
-
-            cell.innerText = `${esperado}€`;
+        const celdas = fila.querySelectorAll('.pago-cell');
+        celdas.forEach((cell, idx) => {
+            // RESET de la celda (por si cambió de modalidad)
+            cell.style.display = '';
+            cell.colSpan = 1;
             cell.className = 'pago-cell';
-            cell.style.color = '#ccc'; // Gris tenue para lo que no está pagado
-            cell.dataset.esperado = esperado;
+            cell.innerText = '-';
             delete cell.dataset.asientoId;
             delete cell.dataset.importe;
-            delete cell.dataset.fecha;
+            if (idx === 14 || idx === 15) { cell.dataset.sumPagado = 0; cell.dataset.sumEsperado = 0; }
+
+            const mesReal = idx; // 0: Inscripción, 1: Ene, 2: Feb...
+            
+            if (mesReal === 0) {
+                // Inscripción
+                const valIns = parseFloat(configInscripciones[equipo]) || 50;
+                cell.innerText = `${Math.round(valIns)}€`;
+                cell.style.color = '#ccc';
+                cell.dataset.esperado = valIns;
+                cell.dataset.concepto = 'Inscripción';
+            } else if (mesReal >= 1 && mesReal <= 12) {
+                // Meses 1 a 12
+                const mIdx = mesReal - 1; // 0 a 11
+                if (mIdx % intervalo === 0) {
+                    // Es inicio de bloque (Anchor)
+                    cell.colSpan = intervalo;
+                    const concepto = (mIdx + 1) < 10 ? '0' + (mIdx + 1) : '' + (mIdx + 1);
+                    
+                    let valEsperado = cuotaRepartida;
+                    // Aplicar override solo si la celda no es combinada (intervalo === 1)
+                    if (intervalo === 1 && configCuotasMes[`${equipo}-${concepto}`]) {
+                        valEsperado = parseFloat(configCuotasMes[`${equipo}-${concepto}`]);
+                    }
+
+                    cell.innerText = `${Math.round(valEsperado)}€`;
+                    cell.style.color = '#ccc';
+                    cell.dataset.esperado = valEsperado;
+                    cell.dataset.concepto = concepto;
+                } else {
+                    // Es una celda "esclava" que debe desaparecer por el colspan del anchor
+                    cell.style.display = 'none';
+                }
+            } else {
+                // PACK ROPA (13), EXTRA (14) y EXTRA 2 (15)
+                const concepto = idx === 13 ? 'PACK_ROPA' : (idx === 14 ? 'EXTRA' : 'EXTRA2');
+                cell.classList.add('pago-extra-bg');
+                let valEsperado = parseFloat(configCuotasMes[`${equipo}-${concepto}`]) || 0;
+                cell.innerText = (valEsperado > 0 || idx === 14 || idx === 15) ? `${Math.round(valEsperado)}€` : '-';
+                cell.style.color = '#ccc';
+                cell.dataset.esperado = valEsperado;
+                cell.dataset.concepto = concepto;
+            }
         });
     });
 
@@ -853,6 +927,8 @@ function cargarPagosEnTabla() {
 
             const item = match[1].trim(); 
             const nombre = match[2].trim().toLowerCase();
+            const esExtra1 = item.startsWith('EXTRA-');
+            const esExtra2 = item.startsWith('EXTRA2-');
 
             // Buscar la fila del jugador
             const filas = document.querySelectorAll('.fila-jugador');
@@ -862,6 +938,9 @@ function cargarPagosEnTabla() {
                     const celdasPago = fila.querySelectorAll('.pago-cell');
                     let cell = null;
                     if (item === 'Inscripción') cell = celdasPago[0];
+                    else if (item === 'PACK_ROPA') cell = celdasPago[13];
+                    else if (esExtra1) cell = celdasPago[14];
+                    else if (esExtra2) cell = celdasPago[15];
                     else {
                         const mesIdx = parseInt(item);
                         if (!isNaN(mesIdx)) cell = celdasPago[mesIdx];
@@ -869,16 +948,27 @@ function cargarPagosEnTabla() {
 
                     if (cell) {
                         const pagado = parseFloat(asiento.IMPORTE) || 0;
-                        // Priorizar el valor configurado actualmente (en dataset) sobre el histórico del asiento
-                        let esperado = parseFloat(cell.dataset.esperado) || parseFloat(asiento.ESPERADO) || 50;
+                        let esperado = parseFloat(asiento.ESPERADO) || 0;
 
-                        cell.innerText = pagado >= esperado ? `${pagado}€` : `${pagado}€/${esperado}€`;
-                        cell.classList.add(pagado >= esperado ? 'pago-verde' : 'pago-naranja');
-                        cell.style.color = ''; // Reset para que el CSS (blanco) tome el mando
-                        cell.dataset.asientoId = asiento.ASIENTO || asiento['Nº_ASIENTO'];
-                        cell.dataset.importe = pagado;
-                        cell.dataset.esperado = esperado;
-                        cell.dataset.fecha = asiento.FECHA;
+                        if (esExtra1 || esExtra2) {
+                            let sP = (parseFloat(cell.dataset.sumPagado) || 0) + pagado;
+                            let sE = (parseFloat(cell.dataset.sumEsperado) || 0) + esperado;
+                            cell.dataset.sumPagado = sP;
+                            cell.dataset.sumEsperado = sE;
+                            cell.innerText = `${Math.round(sP)}€ / ${Math.round(sE)}€`;
+                            cell.classList.add(sP >= sE && sE > 0 ? 'pago-verde' : 'pago-naranja');
+                            cell.style.color = '';
+                        } else {
+                            cell.innerText = `${pagado}€ / ${esperado}€`;
+                            cell.classList.remove('pago-exceso');
+                            cell.classList.add(pagado >= esperado ? 'pago-verde' : 'pago-naranja');
+                            if (pagado > esperado) cell.classList.add('pago-exceso');
+                            cell.style.color = '';
+                            cell.dataset.asientoId = asiento.ASIENTO || asiento['Nº_ASIENTO'];
+                            cell.dataset.importe = pagado;
+                            cell.dataset.esperado = esperado;
+                            cell.dataset.fecha = asiento.FECHA;
+                        }
                         cell.dataset.concepto = item;
                     }
                     break;
@@ -910,7 +1000,7 @@ function renderizarTablaPresupuesto(datos) {
         return `
             <tr>
                 <td style="white-space: nowrap;">${a.FECHA || '-'}</td>
-                <td style="font-weight:bold; color: #E31E24;">#${a['Nº ASIENTO'] || a.ASIENTO || '0'}</td>
+                <td style="font-weight:bold; color: #E31E24;">#${a['Nº ASIENTO'] || a['Nº_ASIENTO'] || a.ASIENTO || '0'}</td>
                 <td>${a.DEPARTAMENTO || '-'}</td>
                 <td>${a.PILAR || '-'}</td>
                 <td>${a.DESCRIPCION || '-'}</td>
@@ -968,41 +1058,28 @@ function abrirModalFormasPago() {
 function renderizarListaFormasPago() {
     const container = document.getElementById('listaFormasPago');
     container.innerHTML = configuracionesPago.map((conf, index) => `
-        <div style="padding: 15px; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <span style="font-weight: 900; font-size: 13px; color: #1e293b; text-transform: uppercase;">${conf.nombre}</span>
-                <button onclick="eliminarFormaPago(${index})" style="background: none; border: none; color: #ef4444; cursor: pointer;"><i class="fas fa-trash-alt"></i></button>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div>
-                    <label style="font-size: 9px; font-weight: 800; color: #94a3b8;">IMPORTE TOTAL</label>
-                    <input type="number" value="${conf.total}" onchange="actualizarDatoPago(${index}, 'total', this.value)" style="width:100%; padding:5px; border-radius:6px; border:1px solid #eee; font-weight: 800;">
-                </div>
-                <div>
-                    <label style="font-size: 9px; font-weight: 800; color: #94a3b8;">MODALIDAD</label>
-                    <select onchange="actualizarDatoPago(${index}, 'modalidad', this.value)" style="width:100%; padding:5px; border-radius:6px; border:1px solid #eee; font-size: 11px; font-weight: 700;">
-                        <option value="mensual" ${conf.modalidad === 'mensual' ? 'selected' : ''}>10 MESES (49€)</option>
-                        <option value="unico" ${conf.modalidad === 'unico' ? 'selected' : ''}>PAGO ÚNICO</option>
-                        <option value="triple" ${conf.modalidad === 'triple' ? 'selected' : ''}>3 PAGOS</option>
-                    </select>
-                </div>
-            </div>
+        <div style="display: grid; grid-template-columns: 2fr 1.2fr 1.2fr 40px; gap: 15px; align-items: center; padding: 12px; border-bottom: 1px solid #eee;">
+            <input type="text" value="${conf.nombre}" onchange="actualizarDatoPago(${index}, 'nombre', this.value)" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-weight: 700; font-size: 12px;">
+            <input type="number" value="${conf.total}" onchange="actualizarDatoPago(${index}, 'total', this.value)" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-weight: 700; font-size: 12px; text-align: center;">
+            <input type="number" value="${conf.meses || 10}" onchange="actualizarDatoPago(${index}, 'meses', this.value)" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-weight: 700; font-size: 12px; text-align: center;">
+            <button onclick="eliminarFormaPago(${index})" style="background: none; border: none; color: #ef4444; cursor: pointer;"><i class="fas fa-trash-alt"></i></button>
         </div>
     `).join('');
 }
 
 function actualizarDatoPago(index, campo, valor) {
     const conf = configuracionesPago[index];
-    if (campo === 'total') conf.total = parseFloat(valor);
-    if (campo === 'modalidad') conf.modalidad = valor;
+    if (campo === 'nombre') conf.nombre = valor;
+    if (campo === 'total') conf.total = parseFloat(valor) || 0;
+    if (campo === 'meses') conf.meses = parseInt(valor) || 1;
     
-    // Lógica de cálculo automático
-    if (conf.modalidad === 'mensual') { conf.meses = 10; conf.cuota = conf.total / 10; }
-    else if (conf.modalidad === 'unico') { conf.meses = 1; conf.cuota = conf.total; }
-    else if (conf.modalidad === 'triple') { conf.meses = 3; conf.cuota = conf.total / 3; }
+    // El cálculo solicitado: total dividido por número de pagos
+    conf.cuota = conf.meses > 0 ? (conf.total / conf.meses) : 0;
     
     renderizarListaFormasPago();
     actualizarSelectsFormasPago();
+    setTimeout(cargarPagosEnTabla, 50); // Pequeño delay para asegurar que los datos están listos
+
     if (celdasSeleccionadas.length > 0) {
         actualizarBarraPagos();
     }
@@ -1013,10 +1090,11 @@ function anadirFormaPago() {
     const valor = input.value.trim();
     if (!valor) return;
     if (configuracionesPago.some(conf => conf.nombre === valor)) return alert("Esta modalidad ya existe");
-    configuracionesPago.push({ nombre: valor, total: 490, modalidad: "mensual", cuota: 49, meses: 10, tipo: "Efectivo" }); // Default
+    configuracionesPago.push({ nombre: valor, total: 440, modalidad: "fraccionado", cuota: 44, meses: 10, tipo: "Efectivo" }); // Default solicitado
     input.value = "";
     renderizarListaFormasPago();
     actualizarSelectsFormasPago();
+    cargarPagosEnTabla();
 }
 
 function eliminarFormaPago(index) {
@@ -1024,6 +1102,7 @@ function eliminarFormaPago(index) {
     configuracionesPago.splice(index, 1);
     renderizarListaFormasPago();
     actualizarSelectsFormasPago();
+    cargarPagosEnTabla();
 }
 
 function bulkApplyUI(tipo, valor) {
@@ -1035,6 +1114,7 @@ function bulkApplyUI(tipo, valor) {
             if (span) span.innerText = valor;
         }
     });
+    cargarPagosEnTabla(); // Recalcular importes esperados al cambiar la forma de pago masivamente
 }
 
 async function bulkSaveColumn(campo, selectId) {
@@ -1079,7 +1159,9 @@ async function cargarConfiguraciones() {
         configInscripciones = data.inscripciones || {};
         configuracionesPago = data.formas_pago || [];
         configCuotasMes = data.cuotas_mes || {};
+        if (data.extra_names) extraNames = data.extra_names;
         actualizarSelectsFormasPago();
+        actualizarLabelsExtra();
     } catch (e) {
         console.error("Error cargando config:", e);
     }
@@ -1089,13 +1171,28 @@ async function guardarConfiguracionesFinancieras() {
     const data = {
         inscripciones: configInscripciones,
         formas_pago: configuracionesPago,
-        cuotas_mes: configCuotasMes
+        cuotas_mes: configCuotasMes,
+        extra_names: extraNames
     };
     await fetch('/api/config_financiera', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
     });
+}
+
+function actualizarLabelsExtra() {
+    if (document.getElementById('labelExtra')) document.getElementById('labelExtra').innerText = extraNames.EXTRA || 'EXTRA';
+    if (document.getElementById('labelExtra2')) document.getElementById('labelExtra2').innerText = extraNames.EXTRA2 || 'EXTRA 2';
+}
+
+async function renombrarExtra(key) {
+    const nuevoNombre = prompt(`Introduce el nuevo nombre para la columna ${key}:`, extraNames[key]);
+    if (nuevoNombre !== null && nuevoNombre.trim() !== "") {
+        extraNames[key] = nuevoNombre.trim().toUpperCase();
+        actualizarLabelsExtra();
+        await guardarConfiguracionesFinancieras();
+    }
 }
 
 function abrirModalConfigInscripcion() {
@@ -1120,10 +1217,18 @@ async function guardarYRefrescarInscripciones() {
     document.getElementById('modalConfigInscripcion').style.display = 'none';
 }
 
-async function cerrarYGuardarFormasPago() {
-    await guardarConfiguracionesFinancieras();
-    cargarPagosEnTabla();
-    document.getElementById('modalFormasPago').style.display = 'none';
+async function cerrarYGuardarFormasPago(btn) {
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GUARDANDO...';
+    btn.disabled = true;
+    try {
+        await guardarConfiguracionesFinancieras();
+        cargarPagosEnTabla();
+        document.getElementById('modalFormasPago').style.display = 'none';
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
 }
 
 function generarReporteImpagos() {
@@ -1304,7 +1409,7 @@ function exportarImpagosExcel() {
     </div>
     <div class="action-bar-divider"></div>
     <div style="display: flex; gap: 12px;">
-        <button class="btn-fin" style="background: #E31E24; color: white; padding: 12px 25px; box-shadow: 0 4px 10px rgba(227, 30, 36, 0.3);" onclick="confirmarPago()">
+        <button class="btn-fin" style="background: #E31E24; color: white; padding: 12px 25px; box-shadow: 0 4px 10px rgba(227, 30, 36, 0.3);" onclick="confirmarPago(this)">
             <i class="fas fa-save" style="margin-right: 8px;"></i> REGISTRAR PAGO
         </button>
         <button class="btn-fin" style="background: rgba(255,255,255,0.1); color: #fff; border: none;" onclick="cerrarModalsFin()">CANCELAR</button>
@@ -1331,6 +1436,141 @@ function exportarImpagosExcel() {
         </div>
     </div>
 </div>
+
+<!-- MODAL CONFIGURAR FORMAS DE PAGO -->
+<div id="modalFormasPago" class="modal">
+    <div class="modal-content" style="width: 1000px; max-width: 98vw; height: auto; max-height: 85vh; overflow-y: auto;">
+        <h3 style="font-size: 14px; margin-bottom: 20px; border-bottom: 2px solid #E31E24; padding-bottom: 10px;">CONFIGURAR FORMAS DE PAGO</h3>
+        
+        <div style="margin-bottom: 20px; display: flex; gap: 15px; background: #f4f4f4; padding: 20px; border-radius: 12px;">
+            <input type="text" id="nuevaFormaPago" placeholder="Nombre (Ej: Bianual)" style="flex: 3; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-weight: 700;">
+            <button class="btn-fin" style="background: #333; color: white; flex: 1; font-size: 12px;" onclick="anadirFormaPago()">+ CREAR MODALIDAD</button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2.5fr 1fr 1fr 50px; gap: 20px; padding: 0 15px 12px 15px; border-bottom: 2px solid #E31E24;">
+            <label style="font-size: 9px; font-weight: 900; color: #333;">NOMBRE</label>
+            <label style="font-size: 9px; font-weight: 900; color: #333; text-align: center;">IMPORTE TOTAL (€)</label>
+            <label style="font-size: 9px; font-weight: 900; color: #333; text-align: center;">MODALIDAD (PAGOS)</label>
+            <div></div>
+        </div>
+
+        <div id="listaFormasPago" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
+            <!-- Se llena dinámicamente -->
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-fin" style="flex: 1; background: #eee;" onclick="document.getElementById('modalFormasPago').style.display='none'">CANCELAR</button>
+            <button class="btn-fin" style="flex: 1; background: #E31E24; color: white;" onclick="cerrarYGuardarFormasPago(this)">GUARDAR CAMBIOS</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CONFIGURACIÓN INSCRIPCIÓN POR EQUIPO -->
+<div id="modalConfigInscripcion" class="modal">
+    <div class="modal-content" style="width: 350px;">
+        <h3 style="font-size: 14px; margin-bottom: 20px; border-bottom: 2px solid #E31E24; padding-bottom: 10px;">PRECIOS INSCRIPCIÓN POR EQUIPO</h3>
+        <div id="listaInscripcionesEquipo" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
+            <!-- Se llena dinámicamente -->
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-fin" style="flex: 1; background: #eee;" onclick="document.getElementById('modalConfigInscripcion').style.display='none'">CANCELAR</button>
+            <button class="btn-fin" style="flex: 1; background: #333; color: white;" onclick="guardarYRefrescarInscripciones()">GUARDAR</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL ESPECÍFICO PARA EXTRAS -->
+<div id="modalExtraDetalle" class="modal">
+    <div class="modal-content" style="width: 600px;">
+        <h3 id="tituloExtra" style="font-size: 14px; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px;">DETALLES PAGOS EXTRA</h3>
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 40px; gap: 10px; margin-bottom: 10px;">
+            <label style="font-size: 9px; font-weight: 900;">CONCEPTO</label>
+            <label style="font-size: 9px; font-weight: 900; text-align: center;">PAGADO (€)</label>
+            <label style="font-size: 9px; font-weight: 900; text-align: center;">ESPERADO (€)</label>
+            <div></div>
+        </div>
+        <div id="containerRowsExtra" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;"></div>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-fin" style="background: #eee;" onclick="addExtraRow()">+ AÑADIR FILA</button>
+            <button class="btn-fin" style="flex: 1; background: #333; color: white;" onclick="guardarExtraDetalle(this)">GUARDAR TODO</button>
+            <button class="btn-fin" style="background: #f4f4f4;" onclick="cerrarModalsFin()">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function abrirModalExtraDetalle(el, prefix = 'EXTRA-') {
+    prefixExtraActivo = prefix;
+    celdaActiva = el;
+    const nombre = el.closest('tr').cells[1].innerText;
+    const label = prefix === 'EXTRA-' ? extraNames.EXTRA : extraNames.EXTRA2;
+    document.getElementById('tituloExtra').innerText = `${label}: ${nombre}`;
+    const container = document.getElementById('containerRowsExtra');
+    container.innerHTML = "";
+
+    // Buscar registros existentes en presupuestoData que sean "EXTRA-..." para este jugador
+    const existentes = presupuestoData.filter(a => {
+        const regex = new RegExp(`^Pago ${prefix}(.*?): (.*)$`);
+        const match = (a.DESCRIPCION || "").match(regex);
+        return match && match[2].trim().toLowerCase() === nombre.trim().toLowerCase();
+    });
+
+    if (existentes.length > 0) {
+        existentes.forEach(a => {
+            const concepto = a.CONCEPTO.replace(prefix, '');
+            addExtraRow(concepto, a.IMPORTE, a.ESPERADO);
+        });
+    } else {
+        for (let i = 0; i < 4; i++) addExtraRow();
+    }
+    document.getElementById('modalExtraDetalle').style.display = 'flex';
+}
+
+function addExtraRow(con = "", pag = "", esp = "") {
+    const div = document.createElement('div');
+    div.className = 'extra-row-item';
+    div.style = "display: grid; grid-template-columns: 2fr 1fr 1fr 40px; gap: 10px; margin-bottom: 8px;";
+    div.innerHTML = `
+        <input type="text" placeholder="Ej: Fisioterapia" value="${con}" class="ex-con" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 11px;">
+        <input type="number" placeholder="0" value="${pag}" class="ex-pag" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 11px; text-align: center;">
+        <input type="number" placeholder="0" value="${esp}" class="ex-esp" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 11px; text-align: center;">
+        <button onclick="this.parentElement.remove()" style="background:none; border:none; color:#dc3545; cursor:pointer;"><i class="fas fa-times"></i></button>
+    `;
+    document.getElementById('containerRowsExtra').appendChild(div);
+}
+
+async function guardarExtraDetalle(btn) {
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+
+    const nombre = celdaActiva.closest('tr').cells[1].innerText;
+    const equipo = celdaActiva.closest('tr').dataset.equipo;
+    const rows = document.querySelectorAll('.extra-row-item');
+    const fechaHoy = new Date().toLocaleDateString('es-ES');
+
+    try {
+        for (let row of rows) {
+            const con = row.querySelector('.ex-con').value.trim();
+            const pag = parseFloat(row.querySelector('.ex-pag').value) || 0;
+            const esp = parseFloat(row.querySelector('.ex-esp').value) || 0;
+            if (!con) continue;
+
+            const asiento = {
+                fecha: fechaHoy, departamento: "Administración", pilar: "Cuotas",
+                descripcion: `Pago ${prefixExtraActivo}${con}: ${nombre}`, importe: pag,
+                equipo, nombre, tipo_pago: "Varios", forma_pago: "Varios", concepto: `${prefixExtraActivo}${con}`, esperado: esp
+            };
+            await fetch('/api/presupuesto', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(asiento) });
+        }
+        await cargarPresupuesto();
+        cerrarModalsFin();
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+</script>
 
 <!-- MODAL MODIFICAR ESPERADO COLUMNA -->
 <div id="modalBulkEsperado" class="modal">
