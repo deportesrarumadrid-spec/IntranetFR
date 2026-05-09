@@ -90,7 +90,7 @@
     <div class="tabs-container">
         <div class="tab-item active" data-tab="tab-presupuesto" onclick="switchTab(event, 'tab-presupuesto')">PRESUPUESTOS</div>
         <div class="tab-item" data-tab="tab-jugadores" onclick="switchTab(event, 'tab-jugadores')">PAGO JUGADORES</div>
-        <div class="tab-item" data-tab="tab-staff" data-tab="tab-staff" onclick="switchTab(event, 'tab-staff')">PAGO STAFF</div>
+        <div class="tab-item" data-tab="tab-staff" onclick="switchTab(event, 'tab-staff')">PAGO STAFF</div>
     </div>
 
     <!-- SECCIÓN: PRESUPUESTO -->
@@ -154,7 +154,6 @@
                         <th>PILAR</th>
                         <th>DESCRIPCIÓN</th>
                         <th>IMPORTE</th>
-                        <th style="width: 80px;"></th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -298,6 +297,9 @@
         <div class="fin-card">
             <div class="fin-header">
                 <h2><i class="fas fa-user-tie" style="color: #E31E24; margin-right: 10px;"></i> Pagos Staff</h2>
+                    <button class="btn-fin" style="background: #E31E24; color: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(227,30,36,0.2);" onclick="abrirModalAnadirStaff()">
+                        <i class="fas fa-user-plus"></i> AÑADIR STAFF
+                    </button>
             </div>
             <div style="overflow-x: auto;">
                 <table class="fin-table">
@@ -305,18 +307,26 @@
                         <tr>
                             <th>CARGO</th>
                             <th>NOMBRE</th>
-                            <th>ENE</th><th>FEB</th><th>MAR</th><th>ABR</th><th>MAY</th><th>JUN</th>
-                            <th>JUL</th><th>AGO</th><th>SEP</th><th>OCT</th><th>NOV</th><th>DIC</th>
+                                {% for mes, label in [('01','ENE'),('02','FEB'),('03','MAR'),('04','ABR'),('05','MAY'),('06','JUN'),('07','JUL'),('08','AGO'),('09','SEP'),('10','OCT'),('11','NOV'),('12','DIC')] %}
+                                <th>{{ label }}</th>
+                                {% endfor %}
+                                <th style="min-width: 60px; padding: 10px 5px; background: #eceef2; border-bottom: 2px solid #dee2e6;">
+                                    <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                                        <span id="labelStaffOtros" style="font-size: 9px; color: #475569; font-weight: 800;">OTROS</span>
+                                        <i class="fas fa-pencil-alt" style="cursor: pointer; color: #E31E24; font-size: 11px;" onclick="renombrarExtra('STAFF_OTROS')"></i>
+                                    </div>
+                                </th>
                         </tr>
                     </thead>
-                    <tbody>
+                        <tbody id="cuerpoPagosStaff">
                         {% for s in staff %}
-                        <tr>
-                            <td style="font-weight: 800;">{{ s.CARGO }}</td>
-                            <td>{{ s.NOMBRE }}</td>
+                            <tr class="fila-staff" data-nombre="{{ s.NOMBRE }}" data-equipo="STAFF">
+                            <td style="font-weight: 800;">{{ s.CARGO }} <i class="fas fa-pencil-alt" style="cursor:pointer; color:#ccc; font-size: 10px; margin-left: 5px;" onclick="abrirModalEditarStaff(event, this, '{{ s.NOMBRE }}', '{{ s.CARGO }}')"></i></td>
+                            <td>{{ s.NOMBRE }} <i class="fas fa-pencil-alt" style="cursor:pointer; color:#ccc; font-size: 10px; margin-left: 5px;" onclick="abrirModalEditarStaff(event, this, '{{ s.NOMBRE }}', '{{ s.CARGO }}')"></i></td>
                             {% for mes in ['01','02','03','04','05','06','07','08','09','10','11','12'] %}
-                            <td class="pago-cell" onclick="seleccionarPago(event, this, 'Staff-{{ mes }}')">-</td>
+                                <td class="pago-cell" onclick="seleccionarPagoStaff(event, this, 'Staff-{{ mes }}')">-</td>
                             {% endfor %}
+                                <td class="pago-cell pago-extra-bg" onclick="seleccionarPagoStaff(event, this, 'S-EXTRA')">-</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -558,6 +568,10 @@ function seleccionarPago(e, el, item) {
         abrirModalExtraDetalle(el, 'EXTRA-');
         return;
     }
+    if (item === 'PACK_ROPA') { // PACK ROPA también tendrá su propio modal si es necesario
+        abrirModalBulkEsperado('PACK_ROPA'); // Por ahora, sigue usando el bulk
+        return;
+    }
     if (item === 'EXTRA2') {
         abrirModalExtraDetalle(el, 'EXTRA2-');
         return;
@@ -625,25 +639,27 @@ function actualizarBarraPagos() {
     // Detalle: Agrupamos por jugador para mostrar qué estamos pagando
     const agrupado = {};
     celdasSeleccionadas.forEach(cell => {
-        const nombre = cell.closest('tr').cells[1].innerText.split(' ')[0]; // Usamos primer nombre
+        const fila = cell.closest('tr');
+        const isStaff = fila.classList.contains('fila-staff');
+        const nombre = isStaff ? fila.dataset.nombre.split(' ')[0] : fila.cells[1].innerText.split(' ')[0];
         const item = cell.dataset.tempItem || cell.dataset.concepto || '';
-        const equipo = cell.closest('tr').dataset.equipo;
-        const forma = cell.closest('tr').cells[3].innerText.trim();
+        const equipo = isStaff ? "STAFF" : fila.dataset.equipo;
+        const forma = isStaff ? "Varios" : fila.cells[3].innerText.trim();
 
         if (!agrupado[nombre]) agrupado[nombre] = [];
         agrupado[nombre].push(item);
 
         // Calcular el esperado para esta celda según la configuración actual
-        let esperadoIndividual = parseFloat(cell.dataset.esperado);
-        if (isNaN(esperadoIndividual)) {
+        let esperadoIndividual = parseFloat(cell.dataset.esperado) || 0;
+        if (esperadoIndividual === 0) {
             // Intentar leer de la configuración guardada
             const keyOverride = `${equipo}-${item}`;
-            if (item === 'Inscripción') {
+            if (!isStaff && item === 'Inscripción') {
                 esperadoIndividual = parseFloat(configInscripciones[equipo]) || 50;
             } else if (configCuotasMes[keyOverride]) {
                 esperadoIndividual = parseFloat(configCuotasMes[keyOverride]);
             } else {
-                const config = configuracionesPago.find(c => c.nombre === forma);
+                const config = !isStaff ? configuracionesPago.find(c => c.nombre === forma) : null;
                 if (config) esperadoIndividual = config.cuota;
             }
         }
@@ -679,10 +695,10 @@ async function confirmarPago(btn) {
     btn.disabled = true;
 
     try {
-        if (totalPagado > totalEsperado) {
+        if (totalEsperado > 0 && totalPagado > totalEsperado) {
             alert(`El importe es superior al total esperado.`); return;
         }
-        if (totalPagado < totalEsperado) {
+        if (totalEsperado > 0 && totalPagado < totalEsperado) {
             if (!confirm(`¿Registrar como pago parcial?`)) return;
         }
         if (!confirm(`¿Confirmar registro definitivo?`)) return;
@@ -690,19 +706,34 @@ async function confirmarPago(btn) {
         const fechaHoy = new Date().toLocaleDateString('es-ES');
         let saldoARepartir = totalPagado;
 
-        for (const cell of celdasSeleccionadas) {
+        for (let i = 0; i < celdasSeleccionadas.length; i++) {
+            const cell = celdasSeleccionadas[i];
             const item = cell.dataset.tempItem || cell.dataset.concepto;
-            const nombre = cell.closest('tr').cells[1].innerText;
-            const equipo = cell.closest('tr').dataset.equipo;
-            const forma = cell.closest('tr').cells[3].innerText.trim();
-            const tipo = cell.closest('tr').cells[2].innerText.trim();
+            const fila = cell.closest('tr');
+            const currentRowIsStaff = fila.classList.contains('fila-staff');
+
+            const nombre = currentRowIsStaff ? fila.dataset.nombre : fila.cells[1].innerText;
+            const equipo = currentRowIsStaff ? "STAFF" : fila.dataset.equipo;
+            const forma = currentRowIsStaff ? "Varios" : fila.cells[3].innerText.trim();
+            const tipo = currentRowIsStaff ? "Varios" : fila.cells[2].innerText.trim();
+            const pilar = currentRowIsStaff ? "Pagos Staff" : "Cuotas";
 
             let esperadoIndividual = parseFloat(cell.dataset.esperado) || 0;
-            const pagoAsignado = Math.min(saldoARepartir, esperadoIndividual);
-            saldoARepartir -= pagoAsignado;
+            let pagoAsignado = 0;
+
+            if (totalEsperado === 0) {
+                // Si no hay esperado previo (Staff), repartimos el pagado equitativamente
+                pagoAsignado = totalPagado / celdasSeleccionadas.length;
+                esperadoIndividual = pagoAsignado; 
+            } else if (i === celdasSeleccionadas.length - 1) {
+                pagoAsignado = saldoARepartir; // El último se lleva el resto
+            } else {
+                pagoAsignado = Math.min(saldoARepartir, esperadoIndividual);
+                saldoARepartir -= pagoAsignado;
+            }
 
             const asiento = {
-                fecha: fechaHoy, departamento: "Administración", pilar: "Cuotas",
+                fecha: fechaHoy, departamento: "Administración", pilar: pilar,
                 descripcion: `Pago ${item}: ${nombre}`, importe: pagoAsignado,
                 equipo, nombre, tipo_pago: tipo, forma_pago: forma, concepto: item, esperado: esperadoIndividual
             };
@@ -716,6 +747,14 @@ async function confirmarPago(btn) {
     }
 }
 
+function seleccionarPagoStaff(e, el, item) {
+    if (item === 'S-EXTRA') {
+        abrirModalExtraDetalle(el, 'S-EXTRA-');
+        return;
+    }
+    seleccionarPago(e, el, item); 
+}
+
 async function eliminarPago(btn) {
     if (!celdaActiva || !btn) return;
     if (!confirm("¿Seguro que quieres eliminar este registro de pago definitivamente?")) return;
@@ -724,23 +763,36 @@ async function eliminarPago(btn) {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     btn.disabled = true;
 
-    // El concepto debe ser el del anchor (inicio del bloque)
-    const datos = {
-        nombre: celdaActiva.closest('tr').cells[1].innerText.trim(),
-        equipo: celdaActiva.closest('tr').dataset.equipo,
-        concepto: celdaActiva.dataset.concepto
-    };
-
+    const asientoId = celdaActiva.dataset.asientoId;
+    
     try {
-        const res = await fetch('/api/borrar_pago', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(datos)
-        });
+        let res;
+        if (asientoId) {
+            // Si hay un ID de asiento (S-XXXX o P-XXXX), usamos el borrado directo por índice
+            res = await fetch('/api/operacion_asiento', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ accion: 'borrar', id: asientoId })
+            });
+        } else {
+            // Fallback por datos si no hay ID cargado
+            const datos = {
+                nombre: celdaActiva.closest('tr').cells[1].innerText.trim(),
+                equipo: celdaActiva.closest('tr').dataset.equipo,
+                concepto: celdaActiva.dataset.concepto
+            };
+            res = await fetch('/api/borrar_pago', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(datos)
+            });
+        }
 
         if (res.ok) {
-            celdaActiva.innerText = '-';
-            celdaActiva.className = 'pago-cell';
+            // Limpiamos visualmente la celda de inmediato
+            celdaActiva.innerText = '-'; 
+            celdaActiva.className = celdaActiva.classList.contains('pago-extra-bg') ? 'pago-cell pago-extra-bg' : 'pago-cell';
+            
             delete celdaActiva.dataset.asientoId;
             delete celdaActiva.dataset.importe;
             await cargarPresupuesto();
@@ -765,15 +817,20 @@ async function actualizarPago(btn) {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GUARDANDO...';
     btn.disabled = true;
 
-    const datos = {
-        nombre: celdaActiva.closest('tr').cells[1].innerText.trim(),
-        equipo: celdaActiva.closest('tr').dataset.equipo,
-        concepto: celdaActiva.dataset.concepto,
-        importe: nuevoImporte
-    };
+    const isStaffPayment = celdaActiva.closest('tr').classList.contains('fila-staff');
+    let datos = {};
+    if (isStaffPayment) {
+        datos = { nombre: celdaActiva.closest('tr').dataset.nombre, concepto: celdaActiva.dataset.concepto, importe: nuevoImporte, pilar: "Pagos Staff", fecha: new Date().toLocaleDateString('es-ES'), esperado: parseFloat(celdaActiva.dataset.esperado) || 0 };
+    } else {
+        datos = { nombre: celdaActiva.closest('tr').cells[1].innerText.trim(), equipo: celdaActiva.closest('tr').dataset.equipo, concepto: celdaActiva.dataset.concepto, importe: nuevoImporte };
+    }
 
+    const endpoint = isStaffPayment ? '/api/presupuesto' : '/api/actualizar_pago';
+
+    // Si es staff, el concepto ya viene como 'Staff-01', no necesitamos equipo ni tipo/forma
+    // Si es jugador, necesitamos todos los datos
     try {
-        const res = await fetch('/api/actualizar_pago', {
+        const res = await fetch(endpoint, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(datos)
@@ -818,11 +875,24 @@ async function guardarAsientoManual(btn) {
     btn.disabled = true;
 
     try {
-        const response = await fetch('/api/presupuesto', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(asiento)
-        });
+        const asientoId = celdaActiva.dataset.asientoId;
+        let res;
+
+        if (asientoId) {
+            // Si tenemos ID de asiento (S-XXXX o P-XXXX), usamos el endpoint de operación por asiento
+            res = await fetch('/api/operacion_asiento', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ accion: 'borrar', id: asientoId })
+            });
+        } else {
+            // Fallback para pagos agrupados o sin ID cargado
+            res = await fetch('/api/borrar_pago', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(datos)
+            });
+        }
 
         if (response.ok) {
             await cargarPresupuesto();
@@ -852,7 +922,18 @@ async function cargarPresupuesto() {
 }
 
 function cargarPagosEnTabla() {
-    // 1. Limpiar y establecer importes esperados por defecto (Solo Jugadores)
+    // 1. Limpiar y establecer importes esperados por defecto
+    // Primero reseteamos las filas de Staff para que no queden importes fantasma al borrar
+    document.querySelectorAll('.fila-staff').forEach(fila => {
+        fila.querySelectorAll('.pago-cell').forEach(cell => {
+            const esExtra = cell.classList.contains('pago-extra-bg');
+            cell.className = esExtra ? 'pago-cell pago-extra-bg' : 'pago-cell';
+            cell.innerText = '-';
+            delete cell.dataset.asientoId;
+            delete cell.dataset.importe;
+        });
+    });
+
     document.querySelectorAll('.fila-jugador').forEach(fila => {
         const equipo = fila.dataset.equipo;
         const forma = fila.cells[3].innerText.trim();
@@ -918,17 +999,9 @@ function cargarPagosEnTabla() {
         });
     });
 
-    // Celdas de staff (limpieza simple)
-    document.querySelectorAll('#tab-staff .pago-cell').forEach(c => {
-        c.innerText = '-';
-        c.className = 'pago-cell';
-        c.style.color = '#ccc';
-        delete c.dataset.asientoId;
-    });
-
     // 2. Mapear historial de pagos
     presupuestoData.forEach(asiento => {
-        if (asiento.PILAR === "Cuotas Jugadores" || asiento.PILAR === "Cuotas") {
+        if (asiento.PILAR === "Cuotas" || asiento.PILAR === "Pagos Staff") {
             const desc = asiento.DESCRIPCION || "";
             const match = desc.match(/^Pago (.*?): (.*)$/);
             if (!match) return;
@@ -937,28 +1010,59 @@ function cargarPagosEnTabla() {
             const nombre = match[2].trim().toLowerCase();
             const esExtra1 = item.startsWith('EXTRA-');
             const esExtra2 = item.startsWith('EXTRA2-');
+            const esStaff = item.startsWith('Staff-');
+            const esStaffExtra = item.startsWith('S-EXTRA-');
 
             // Buscar la fila del jugador
-            const filas = document.querySelectorAll('.fila-jugador');
+            const filas = document.querySelectorAll('.fila-jugador, .fila-staff');
             for (let fila of filas) {
-                const nombreTabla = fila.cells[1].innerText.trim().toLowerCase();
-                if (nombreTabla === nombre) {
+                let nombreTabla;
+                let isCurrentRowStaff = fila.classList.contains('fila-staff');
+
+                if (isCurrentRowStaff) {
+                    nombreTabla = fila.dataset.nombre.trim().toLowerCase();
+                } else {
+                    nombreTabla = fila.cells[1].innerText.trim().toLowerCase();
+                }
+
+                if (nombreTabla === nombre && ((isCurrentRowStaff && esStaff) || (!isCurrentRowStaff && !esStaff))) {
                     const celdasPago = fila.querySelectorAll('.pago-cell');
                     let cell = null;
-                    if (item === 'Inscripción') cell = celdasPago[0];
-                    else if (item === 'PACK_ROPA') cell = celdasPago[13];
-                    else if (esExtra1) cell = celdasPago[14];
-                    else if (esExtra2) cell = celdasPago[15];
-                    else {
-                        const mesIdx = parseInt(item);
-                        if (!isNaN(mesIdx)) cell = celdasPago[mesIdx];
+
+                    if (isCurrentRowStaff) {
+                        if (esStaffExtra) {
+                            cell = celdasPago[12]; // La celda 13 (index 12) es OTROS
+                        } else {
+                            const mesIdx = parseInt(item.replace('Staff-', ''));
+                            if (!isNaN(mesIdx)) cell = celdasPago[mesIdx - 1];
+                        }
+                    } else { // Jugadores
+                        if (item === 'Inscripción') cell = celdasPago[0];
+                        else if (item === 'PACK_ROPA') cell = celdasPago[13];
+                        else if (esExtra1) cell = celdasPago[14];
+                        else if (esExtra2) cell = celdasPago[15];
+                        else {
+                            const mesIdx = parseInt(item);
+                            if (!isNaN(mesIdx)) cell = celdasPago[mesIdx];
+                        }
                     }
 
                     if (cell) {
                         const pagado = parseFloat(asiento.IMPORTE) || 0;
-                        let esperado = parseFloat(asiento.ESPERADO) || 0;
+                        // Para staff, el esperado puede venir del asiento o ser 0 si no hay config
+                        let esperado = parseFloat(asiento.ESPERADO) || parseFloat(cell.dataset.esperado) || 0;
 
-                        if (esExtra1 || esExtra2) {
+                        if (isCurrentRowStaff) { // Staff no tiene colspan, siempre individual
+                            cell.innerHTML = `<span class="paid-amount-large">${Math.round(pagado)}€</span><span style="font-size: 8px; opacity: 0.9;"> / ${Math.round(esperado)}€</span>`;
+                            cell.classList.remove('pago-exceso');
+                            cell.classList.add(pagado >= esperado ? 'pago-verde' : 'pago-naranja');
+                            if (pagado > esperado) cell.classList.add('pago-exceso');
+                            cell.style.color = '';
+                            cell.dataset.asientoId = asiento.ASIENTO || asiento['Nº_ASIENTO'];
+                            cell.dataset.importe = pagado;
+                            cell.dataset.esperado = esperado;
+                            cell.dataset.fecha = asiento.FECHA;
+                        } else if (esExtra1 || esExtra2 || esStaffExtra) {
                             let sP = (parseFloat(cell.dataset.sumPagado) || 0) + pagado;
                             let sE = (parseFloat(cell.dataset.sumEsperado) || 0) + esperado;
                             cell.dataset.sumPagado = sP;
@@ -1115,10 +1219,6 @@ function renderizarTablaPresupuesto(datos) {
                 <td style="color: ${importe >= 0 ? '#28a745' : '#dc3545'}; font-weight:bold; text-align: right;">
                     ${importe.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
                 </td>
-                <td style="text-align: center; display: flex; gap: 8px; justify-content: center;">
-                    ${!esPagoJugador ? `<i class="fas fa-pencil-alt" style="cursor:pointer; color:#999;" onclick="editarAsientoManual('${id}')"></i>` : ''}
-                    <i class="fas fa-trash-alt" style="cursor:pointer; color:#dc3545; opacity:0.6;" onclick="borrarAsientoIndividual('${id}')"></i>
-                </td>
             </tr>
         `;
     }).reverse().join('');
@@ -1126,6 +1226,110 @@ function renderizarTablaPresupuesto(datos) {
 
 function abrirModalAnadirJugadorFin() {
     document.getElementById('modalAnadirJugadorFin').style.display = 'flex';
+}
+
+function abrirModalAnadirStaff() {
+    document.getElementById('modalAnadirStaff').style.display = 'flex';
+}
+
+async function guardarNuevoStaff(btn) {
+    const datos = {
+        nombre: document.getElementById('newStaffNombre').value.trim(),
+        cargo: document.getElementById('newStaffCargo').value
+    };
+
+    if (!datos.nombre || !datos.cargo) return alert("Nombre y Cargo son obligatorios");
+
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch('/api/anadir_staff', { // Necesitarás crear esta ruta en el backend
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(datos)
+        });
+        if (res.ok) {
+            alert("Miembro del Staff añadido correctamente");
+            location.reload();
+        } else {
+            alert("Error al añadir miembro del Staff");
+        }
+    } catch (e) {
+        alert("Error de conexión");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+let staffOriginalNombre = "";
+function abrirModalEditarStaff(e, btn, nombre, cargo) {
+    staffOriginalNombre = nombre;
+    document.getElementById('modalEditarStaffTitulo').innerText = `EDITAR STAFF: ${nombre}`;
+    document.getElementById('editStaffNombre').value = nombre;
+    document.getElementById('editStaffCargo').value = cargo;
+    document.getElementById('modalEditarStaff').style.display = 'flex';
+}
+
+async function eliminarPagoStaff(btn) {
+    if (!staffOriginalNombre) return;
+    if (!confirm(`¿Seguro que quieres eliminar a ${staffOriginalNombre} de la plantilla del staff?`)) return;
+
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch('/api/eliminar_staff', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ nombre: staffOriginalNombre })
+        });
+        if (res.ok) {
+            location.reload();
+        } else {
+            alert("Error al eliminar miembro del staff");
+        }
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+async function actualizarPagoStaff(btn) {
+    const nuevoNombre = document.getElementById('editStaffNombre').value.trim();
+    const nuevoCargo = document.getElementById('editStaffCargo').value;
+
+    if (!nuevoNombre || !nuevoCargo) return alert("Nombre y Cargo son obligatorios");
+
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GUARDANDO...';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch('/api/actualizar_staff', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ 
+                nombre_antiguo: staffOriginalNombre, 
+                nombre_nuevo: nuevoNombre, 
+                cargo_nuevo: nuevoCargo 
+            })
+        });
+
+        if (res.ok) {
+            location.reload();
+        } else {
+            alert("Error al actualizar los datos");
+        }
+    } catch (e) {
+        alert("Error de conexión");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
 }
 
 async function guardarNuevoJugadorFin(btn) {
@@ -1296,6 +1500,7 @@ async function guardarConfiguracionesFinancieras() {
 function actualizarLabelsExtra() {
     if (document.getElementById('labelExtra')) document.getElementById('labelExtra').innerText = extraNames.EXTRA || 'EXTRA';
     if (document.getElementById('labelExtra2')) document.getElementById('labelExtra2').innerText = extraNames.EXTRA2 || 'EXTRA 2';
+    if (document.getElementById('labelStaffOtros')) document.getElementById('labelStaffOtros').innerText = extraNames.STAFF_OTROS || 'OTROS';
 }
 
 async function renombrarExtra(key) {
@@ -1528,6 +1733,63 @@ function exportarImpagosExcel() {
     </div>
 </div>
 
+<!-- MODAL AÑADIR STAFF -->
+<div id="modalAnadirStaff" class="modal">
+    <div class="modal-content" style="width: 350px;">
+        <h3 style="font-size: 14px; margin-bottom: 20px; border-bottom: 2px solid #E31E24; padding-bottom: 10px;">AÑADIR NUEVO MIEMBRO STAFF</h3>
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+            <div>
+                <label style="font-size: 10px; font-weight: 800; color: #999;">NOMBRE COMPLETO</label>
+                <input type="text" id="newStaffNombre" placeholder="Ej: Ana García" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+            </div>
+            <div>
+                <label style="font-size: 10px; font-weight: 800; color: #999;">CARGO</label>
+                <select id="newStaffCargo" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                    <option value="Entrenador">Entrenador</option>
+                    <option value="Fisioterapeuta">Fisioterapeuta</option>
+                    <option value="Coordinador">Coordinador</option>
+                    <option value="Delegado">Delegado</option>
+                    <option value="Otros">Otros</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="btn-fin" style="flex:1; background:#eee;" onclick="document.getElementById('modalAnadirStaff').style.display='none'">CANCELAR</button>
+                <button class="btn-fin" style="flex:1; background:#E31E24; color:white;" onclick="guardarNuevoStaff(this)">AÑADIR STAFF</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EDITAR STAFF (Reutilizamos el de modificar pago) -->
+<div id="modalEditarStaff" class="modal">
+    <div class="modal-content" style="width: 350px;">
+        <h3 id="modalEditarStaffTitulo" style="font-size: 14px; margin-bottom: 20px; border-bottom: 2px solid #E31E24; padding-bottom: 10px;">EDITAR DATOS STAFF</h3>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 5px;">NOMBRE COMPLETO</label>
+            <input type="text" id="editStaffNombre" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; font-weight: 700;">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 5px;">CARGO</label>
+            <select id="editStaffCargo" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; font-weight: 700;">
+                <option value="Entrenador">Entrenador</option>
+                <option value="Fisioterapeuta">Fisioterapeuta</option>
+                <option value="Coordinador">Coordinador</option>
+                <option value="Delegado">Delegado</option>
+                <option value="Otros">Otros</option>
+            </select>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button class="btn-fin" style="background:#333; color:white;" onclick="actualizarPagoStaff(this)">GUARDAR CAMBIOS</button>
+            <button class="btn-fin" style="background:#dc3545; color:white; padding: 6px 12px; font-size: 9px; align-self: center;" onclick="eliminarPagoStaff(this)">
+                <i class="fas fa-trash-alt"></i> ELIMINAR REGISTRO
+            </button>
+            <button class="btn-fin" style="flex:1; background:#eee; color:#333;" onclick="cerrarModalsFin()">CANCELAR</button>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL MODIFICAR PAGO -->
 <div id="modalModificarPago" class="modal">
     <div class="modal-content" style="width: 350px;">
@@ -1641,7 +1903,10 @@ function abrirModalExtraDetalle(el, prefix = 'EXTRA-') {
     prefixExtraActivo = prefix;
     celdaActiva = el;
     const nombre = el.closest('tr').cells[1].innerText;
-    const label = prefix === 'EXTRA-' ? extraNames.EXTRA : extraNames.EXTRA2;
+    let label = extraNames.EXTRA;
+    if (prefix === 'EXTRA2-') label = extraNames.EXTRA2;
+    else if (prefix === 'S-EXTRA-') label = extraNames.STAFF_OTROS;
+
     document.getElementById('tituloExtra').innerText = `${label}: ${nombre}`;
     const container = document.getElementById('containerRowsExtra');
     container.innerHTML = "";

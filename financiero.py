@@ -71,10 +71,12 @@ def api_presupuesto():
             # Leer asientos manuales del libro diario general
             asientos = leer_hoja_limpia(client, NOMBRE_EXCEL, "FINANCIERO")
             # Leer pagos detallados de la nueva pestaña de jugadores
-            pagos = leer_hoja_limpia(client, NOMBRE_EXCEL, "PAGOS JUGADORES")
+            pagos_jugadores = leer_hoja_limpia(client, NOMBRE_EXCEL, "PAGOS JUGADORES")
+            # Leer pagos detallados de la nueva pestaña de staff
+            pagos_staff = leer_hoja_limpia(client, NOMBRE_EXCEL, "PAGOS STAFF")
             
             # Normalizar los pagos de jugadores para el historial
-            for i, p in enumerate(pagos):
+            for i, p in enumerate(pagos_jugadores):
                 p['PILAR'] = 'Cuotas'
                 p['DESCRIPCION'] = f"Pago {p.get('CONCEPTO')}: {p.get('NOMBRE')}"
                 p['IMPORTE'] = p.get('PAGADO')
@@ -82,8 +84,17 @@ def api_presupuesto():
                 # Identificador único basado en la fila para el Nº Asiento
                 p['Nº_ASIENTO'] = f"P-{str(i+1).zfill(4)}"
                 if 'FECHA' not in p: p['FECHA'] = '-'
+
+            # Normalizar los pagos de staff para el historial
+            for i, s_pago in enumerate(pagos_staff):
+                s_pago['PILAR'] = 'Pagos Staff'
+                s_pago['DESCRIPCION'] = f"Pago {s_pago.get('CONCEPTO')}: {s_pago.get('NOMBRE')}"
+                s_pago['IMPORTE'] = s_pago.get('PAGADO')
+                s_pago['ESPERADO'] = s_pago.get('ESPERADO')
+                s_pago['Nº_ASIENTO'] = f"S-{str(i+1).zfill(4)}"
+                if 'FECHA' not in s_pago: s_pago['FECHA'] = '-'
             
-            return jsonify(asientos + pagos)
+            return jsonify(asientos + pagos_jugadores + pagos_staff)
         
         datos = request.json
         pilar = datos.get('pilar')
@@ -97,7 +108,7 @@ def api_presupuesto():
                 sheet = client.open(NOMBRE_EXCEL).add_worksheet(title="PAGOS JUGADORES", rows="100", cols="20")
                 sheet.append_row(["FECHA", "EQUIPO", "NOMBRE", "TIPO PAGO", "FORMA PAGO", "CONCEPTO", "PAGADO", "ESPERADO"])
             
-            if not sheet.get_all_values(): # Si está vacía, ponemos cabeceras
+            if not sheet.get_all_values(): # Si está vacía, ponemos cabeceras si no se hizo al crear
                 sheet.append_row(["FECHA", "EQUIPO", "NOMBRE", "TIPO PAGO", "FORMA PAGO", "CONCEPTO", "PAGADO", "ESPERADO"])
 
             # Búsqueda de registro existente para evitar duplicados en el presupuesto
@@ -142,6 +153,53 @@ def api_presupuesto():
                 sheet.append_row(nueva_fila)
                 return jsonify({"status": "success", "asiento": f"P-{str(len(all_v)).zfill(4)}"})
         else:
+            # Guardado específico en la nueva pestaña PAGOS STAFF
+            if pilar == "Pagos Staff":
+                try:
+                    sheet = client.open(NOMBRE_EXCEL).worksheet("PAGOS STAFF")
+                except:
+                    # Si no existe, la creamos con cabeceras
+                    sheet = client.open(NOMBRE_EXCEL).add_worksheet(title="PAGOS STAFF", rows="100", cols="20")
+                    sheet.append_row(["FECHA", "NOMBRE", "CONCEPTO", "PAGADO", "ESPERADO"])
+                
+                if not sheet.get_all_values(): # Si está vacía, ponemos cabeceras si no se hizo al crear
+                    sheet.append_row(["FECHA", "NOMBRE", "CONCEPTO", "PAGADO", "ESPERADO"])
+
+                # Búsqueda de registro existente para evitar duplicados en el presupuesto
+                all_v = sheet.get_all_values()
+                idx_existente = -1
+                if all_v:
+                    nom_b = str(datos.get('nombre')).strip().lower()
+                    con_b = str(datos.get('concepto')).strip().lower()
+                    
+                    for i, row in enumerate(all_v):
+                        if i == 0: continue
+                        if len(row) >= 3: # NOMBRE, CONCEPTO
+                            r_nom = row[1].strip().lower()
+                            r_con = row[2].strip().lower()
+                            
+                            if r_nom == nom_b and r_con == con_b:
+                                idx_existente = i + 1
+                                break
+
+                if idx_existente != -1:
+                    # ACTUALIZAR: Evitamos duplicar la línea modificando la existente
+                    sheet.update_cell(idx_existente, 1, datos.get('fecha')) # FECHA
+                    sheet.update_cell(idx_existente, 4, datos.get('importe')) # PAGADO
+                    sheet.update_cell(idx_existente, 5, datos.get('esperado')) # ESPERADO
+                    return jsonify({"status": "success", "asiento": f"S-{str(idx_existente-1).zfill(4)}"})
+                else:
+                    # INSERTAR NUEVO: FECHA, NOMBRE, CONCEPTO, PAGADO, ESPERADO
+                    nueva_fila = [
+                        datos.get('fecha'),
+                        datos.get('nombre'),
+                        datos.get('concepto'),
+                        datos.get('importe'),
+                        datos.get('esperado')
+                    ]
+                    sheet.append_row(nueva_fila)
+                    return jsonify({"status": "success", "asiento": f"S-{str(len(all_v)).zfill(4)}"})
+            
             # Guardado en el libro diario general FINANCIERO
             sheet = client.open(NOMBRE_EXCEL).worksheet("FINANCIERO")
             # El número de asiento es el siguiente índice disponible
@@ -158,29 +216,39 @@ def api_borrar_pago():
     from app import client, NOMBRE_EXCEL
     datos = request.json
     try:
-        sheet = client.open(NOMBRE_EXCEL).worksheet("PAGOS JUGADORES")
+        equipo_buscado = str(datos.get('equipo') or "").strip().lower()
+        is_staff = equipo_buscado == "staff"
+        sheet_name = "PAGOS STAFF" if is_staff else "PAGOS JUGADORES"
+        sheet = client.open(NOMBRE_EXCEL).worksheet(sheet_name)
         all_v = sheet.get_all_values()
         
         idx_to_delete = -1
         # Normalización extrema para evitar fallos de coincidencia
         nombre_buscado = str(datos.get('nombre') or "").strip().lower()
-        equipo_buscado = str(datos.get('equipo') or "").strip().lower()
         c_raw = str(datos.get('concepto') or "").strip().lower()
         # Si es un número (ej: "1"), lo convertimos a "01" para el Excel
         concepto_buscado = c_raw.zfill(2) if c_raw.isdigit() else c_raw
 
         for i, row in enumerate(all_v):
             if i == 0: continue
-            if len(row) >= 6:
-                # Leemos columnas 1 (Equipo), 2 (Nombre) y 5 (Concepto)
-                r_equipo = str(row[1]).strip().lower()
-                r_nombre = str(row[2]).strip().lower()
-                r_val_concepto = str(row[5]).strip().lower()
-                r_concepto = r_val_concepto.zfill(2) if r_val_concepto.isdigit() else r_val_concepto
-                
-                if r_equipo == equipo_buscado and r_nombre == nombre_buscado and r_concepto == concepto_buscado:
-                    idx_to_delete = i + 1
-                    break
+            if is_staff:
+                if len(row) >= 3:
+                    r_nombre = str(row[1]).strip().lower()
+                    r_concepto = str(row[2]).strip().lower()
+                    if r_nombre == nombre_buscado and r_concepto == concepto_buscado:
+                        idx_to_delete = i + 1
+                        break
+            else:
+                if len(row) >= 6:
+                    # Leemos columnas 1 (Equipo), 2 (Nombre) y 5 (Concepto)
+                    r_equipo = str(row[1]).strip().lower()
+                    r_nombre = str(row[2]).strip().lower()
+                    r_val_concepto = str(row[5]).strip().lower()
+                    r_concepto = r_val_concepto.zfill(2) if r_val_concepto.isdigit() else r_val_concepto
+                    
+                    if r_equipo == equipo_buscado and r_nombre == nombre_buscado and r_concepto == concepto_buscado:
+                        idx_to_delete = i + 1
+                        break
         
         if idx_to_delete != -1:
             sheet.delete_rows(idx_to_delete)
@@ -223,6 +291,70 @@ def api_actualizar_pago():
         print(f"Error api_actualizar_pago: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@financiero_bp.route('/api/anadir_staff', methods=['POST'])
+def api_anadir_staff():
+    from app import client, NOMBRE_EXCEL
+    datos = request.json
+    try:
+        sheet = client.open(NOMBRE_EXCEL).worksheet("STAFF")
+        # Estructura: CARGO, NOMBRE
+        sheet.append_row([datos.get('cargo'), datos.get('nombre')])
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error api_anadir_staff: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@financiero_bp.route('/api/eliminar_staff', methods=['POST'])
+def api_eliminar_staff():
+    from app import client, NOMBRE_EXCEL
+    nombre = request.json.get('nombre')
+    try:
+        sheet = client.open(NOMBRE_EXCEL).worksheet("STAFF")
+        # Buscamos en la columna B (Nombre)
+        celda = sheet.find(nombre.strip(), in_column=2)
+        sheet.delete_rows(celda.row)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error api_eliminar_staff: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@financiero_bp.route('/api/actualizar_staff', methods=['POST'])
+def api_actualizar_staff():
+    from app import client, NOMBRE_EXCEL
+    datos = request.json
+    nombre_antiguo = str(datos.get('nombre_antiguo', '')).strip()
+    nombre_nuevo = str(datos.get('nombre_nuevo', '')).strip()
+    cargo_nuevo = str(datos.get('cargo_nuevo', '')).strip()
+    
+    try:
+        # 1. Actualizar en la pestaña STAFF
+        sheet_staff = client.open(NOMBRE_EXCEL).worksheet("STAFF")
+        celda = sheet_staff.find(nombre_antiguo, in_column=2)
+        if celda:
+            sheet_staff.update_cell(celda.row, 1, cargo_nuevo)
+            sheet_staff.update_cell(celda.row, 2, nombre_nuevo)
+            
+            # 2. Si el nombre cambió, actualizar en PAGOS STAFF para mantener integridad de los registros
+            if nombre_antiguo.lower() != nombre_nuevo.lower():
+                sheet_pagos = client.open(NOMBRE_EXCEL).worksheet("PAGOS STAFF")
+                all_v = sheet_pagos.get_all_values()
+                updates = []
+                for i, row in enumerate(all_v):
+                    if i == 0: continue
+                    if len(row) > 1 and row[1].strip().lower() == nombre_antiguo.lower():
+                        updates.append({
+                            'range': f"'PAGOS STAFF'!B{i+1}",
+                            'values': [[nombre_nuevo]]
+                        })
+                if updates:
+                    sheet_pagos.spreadsheet.values_batch_update({'valueInputOption': 'USER_ENTERED', 'data': updates})
+            
+            return jsonify({"status": "success"})
+        return jsonify({"status": "error", "message": "No se encontró el staff"}), 404
+    except Exception as e:
+        print(f"Error api_actualizar_staff: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @financiero_bp.route('/api/limpiar_historial', methods=['POST'])
 def api_limpiar_historial():
     from app import client, NOMBRE_EXCEL
@@ -246,20 +378,23 @@ def api_operacion_asiento():
     asiento_id = str(data.get('id')) # El Nº Asiento
     
     try:
-        # Los asientos P-XXXX están en PAGOS JUGADORES, los numéricos en FINANCIERO
-        es_pago = asiento_id.startswith('P-')
-        nombre_hoja = "PAGOS JUGADORES" if es_pago else "FINANCIERO"
+        # Los asientos P-XXXX están en PAGOS JUGADORES, S-XXXX en PAGOS STAFF, los numéricos en FINANCIERO
+        es_pago_jug = asiento_id.startswith('P-')
+        es_pago_staff = asiento_id.startswith('S-')
+        
+        if es_pago_jug: nombre_hoja = "PAGOS JUGADORES"
+        elif es_pago_staff: nombre_hoja = "PAGOS STAFF"
+        else: nombre_hoja = "FINANCIERO"
+        
         sheet = client.open(NOMBRE_EXCEL).worksheet(nombre_hoja)
         all_v = sheet.get_all_values()
         
         fila_idx = -1
         # Si es pago, el ID se genera dinámicamente por índice, pero para borrar 
         # buscamos coincidencia en la hoja basándonos en la descripción/nombre que traiga el data
-        if es_pago:
-            # Reutilizamos la lógica de borrar_pago ya existente arriba si es un P-XXXX
-            # o buscamos por índice si el ID P-0005 significa fila 6.
+        if es_pago_jug or es_pago_staff: # P-XXXX o S-XXXX
             fila_idx = int(asiento_id.split('-')[1]) + 1
-        else:
+        else: # Asientos manuales (numéricos)
             # Asientos manuales: el ID está en la columna B (índice 1)
             for i, row in enumerate(all_v):
                 if i == 0: continue
@@ -334,7 +469,7 @@ def api_config_financiera():
             inscripciones = {}
             formas_pago = []
             cuotas_mes = {}
-            extra_names = {"EXTRA": "EXTRA", "EXTRA2": "EXTRA 2"}
+            extra_names = {"EXTRA": "EXTRA", "EXTRA2": "EXTRA 2", "STAFF_OTROS": "OTROS"}
 
             for row in all_configs:
                 if len(row) >= 2:
