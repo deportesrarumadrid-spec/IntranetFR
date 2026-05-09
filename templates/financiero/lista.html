@@ -14,6 +14,7 @@
     .pago-extra-bg { background: #eceef2; }
     .pago-verde { background: #28a745 !important; color: white !important; }
     .pago-naranja { background: #fd7e14 !important; color: white !important; }
+    .paid-amount-large { font-size: 13px; font-weight: 700; letter-spacing: -0.3px; }
     .pago-exceso { outline: 2px solid #ff0000 !important; outline-offset: -2px; z-index: 10; position: relative; }
     .selected-cell { outline: 2px solid #E31E24; z-index: 5; }
     
@@ -779,7 +780,7 @@ async function actualizarPago(btn) {
             celdaActiva.classList.add(nuevoImporte >= esperado ? 'pago-verde' : 'pago-naranja');
             if (nuevoImporte > esperado) celdaActiva.classList.add('pago-exceso');
             
-            celdaActiva.innerText = `${nuevoImporte}€ / ${esperado}€`;
+            celdaActiva.innerHTML = `<span class="paid-amount-large">${nuevoImporte}€</span><span style="font-size: 8px; opacity: 0.9;"> / ${esperado}€</span>`;
 
             await cargarPresupuesto();
             cerrarModalsFin();
@@ -959,7 +960,7 @@ function cargarPagosEnTabla() {
                             cell.classList.add(sP >= sE && sE > 0 ? 'pago-verde' : 'pago-naranja');
                             cell.style.color = '';
                         } else {
-                            cell.innerText = `${pagado}€ / ${esperado}€`;
+                            cell.innerHTML = `<span class="paid-amount-large">${Math.round(pagado)}€</span><span style="font-size: 8px; opacity: 0.9;"> / ${Math.round(esperado)}€</span>`;
                             cell.classList.remove('pago-exceso');
                             cell.classList.add(pagado >= esperado ? 'pago-verde' : 'pago-naranja');
                             if (pagado > esperado) cell.classList.add('pago-exceso');
@@ -1000,7 +1001,7 @@ function renderizarTablaPresupuesto(datos) {
         return `
             <tr>
                 <td style="white-space: nowrap;">${a.FECHA || '-'}</td>
-                <td style="font-weight:bold; color: #E31E24;">#${a['Nº ASIENTO'] || a['Nº_ASIENTO'] || a.ASIENTO || '0'}</td>
+                <td style="font-weight:bold; color: #E31E24;">#${a.Nº_ASIENTO || a['Nº ASIENTO'] || a.ASIENTO || '0'}</td>
                 <td>${a.DEPARTAMENTO || '-'}</td>
                 <td>${a.PILAR || '-'}</td>
                 <td>${a.DESCRIPCION || '-'}</td>

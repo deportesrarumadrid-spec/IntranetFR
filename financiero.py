@@ -73,13 +73,14 @@ def api_presupuesto():
             # Leer pagos detallados de la nueva pestaña de jugadores
             pagos = leer_hoja_limpia(client, NOMBRE_EXCEL, "PAGOS JUGADORES")
             
-            # Normalizar los pagos de jugadores para el historial y el buscador de celdas
-            for p in pagos:
+            # Normalizar los pagos de jugadores para el historial
+            for i, p in enumerate(pagos):
                 p['PILAR'] = 'Cuotas'
                 p['DESCRIPCION'] = f"Pago {p.get('CONCEPTO')}: {p.get('NOMBRE')}"
                 p['IMPORTE'] = p.get('PAGADO')
                 p['ESPERADO'] = p.get('ESPERADO')
-                p['ASIENTO'] = 'PAG'
+                # Identificador único basado en la fila para el Nº Asiento
+                p['Nº_ASIENTO'] = f"P-{str(i+1).zfill(4)}"
                 if 'FECHA' not in p: p['FECHA'] = '-'
             
             return jsonify(asientos + pagos)
@@ -99,23 +100,52 @@ def api_presupuesto():
             if not sheet.get_all_values(): # Si está vacía, ponemos cabeceras
                 sheet.append_row(["FECHA", "EQUIPO", "NOMBRE", "TIPO PAGO", "FORMA PAGO", "CONCEPTO", "PAGADO", "ESPERADO"])
 
-            # Estructura: FECHA, EQUIPO, JUGADOR, TIPO PAGO, FORMA PAGO, CONCEPTO, PAGADO, ESPERADO
-            nueva_fila = [
-                datos.get('fecha'),
-                datos.get('equipo'),
-                datos.get('nombre'),
-                datos.get('tipo_pago'),
-                datos.get('forma_pago'),
-                datos.get('concepto'),
-                datos.get('importe'),
-                datos.get('esperado')
-            ]
-            sheet.append_row(nueva_fila)
-            return jsonify({"status": "success", "asiento": "PAG"})
+            # Búsqueda de registro existente para evitar duplicados en el presupuesto
+            all_v = sheet.get_all_values()
+            idx_existente = -1
+            if all_v:
+                nom_b = str(datos.get('nombre')).strip().lower()
+                eq_b = str(datos.get('equipo')).strip().lower()
+                con_b = str(datos.get('concepto')).strip().lower()
+                con_norm = con_b.zfill(2) if con_b.isdigit() else con_b
+                
+                for i, row in enumerate(all_v):
+                    if i == 0: continue
+                    if len(row) >= 6:
+                        r_eq = row[1].strip().lower()
+                        r_nom = row[2].strip().lower()
+                        r_con = row[5].strip().lower()
+                        r_con_norm = r_con.zfill(2) if r_con.isdigit() else r_con
+                        
+                        if r_eq == eq_b and r_nom == nom_b and r_con_norm == con_norm:
+                            idx_existente = i + 1
+                            break
+
+            if idx_existente != -1:
+                # ACTUALIZAR: Evitamos duplicar la línea modificando la existente
+                sheet.update_cell(idx_existente, 1, datos.get('fecha'))
+                sheet.update_cell(idx_existente, 7, datos.get('importe'))
+                sheet.update_cell(idx_existente, 8, datos.get('esperado'))
+                return jsonify({"status": "success", "asiento": f"P-{str(idx_existente-1).zfill(4)}"})
+            else:
+                # INSERTAR NUEVO: FECHA, EQUIPO, JUGADOR, TIPO PAGO, FORMA PAGO, CONCEPTO, PAGADO, ESPERADO
+                nueva_fila = [
+                    datos.get('fecha'),
+                    datos.get('equipo'),
+                    datos.get('nombre'),
+                    datos.get('tipo_pago'),
+                    datos.get('forma_pago'),
+                    datos.get('concepto'),
+                    datos.get('importe'),
+                    datos.get('esperado')
+                ]
+                sheet.append_row(nueva_fila)
+                return jsonify({"status": "success", "asiento": f"P-{str(len(all_v)).zfill(4)}"})
         else:
             # Guardado en el libro diario general FINANCIERO
             sheet = client.open(NOMBRE_EXCEL).worksheet("FINANCIERO")
-            num_asiento = len(sheet.get_all_values())
+            # El número de asiento es el siguiente índice disponible
+            num_asiento = len(sheet.get_all_values()) 
             nueva_fila = [datos.get('fecha'), num_asiento, datos.get('departamento'), pilar, datos.get('descripcion'), datos.get('importe')]
             sheet.append_row(nueva_fila)
             return jsonify({"status": "success", "asiento": num_asiento})
