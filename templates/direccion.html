@@ -1,0 +1,520 @@
+{% extends 'dashboard.html' %}
+
+{% block content %}
+<style>
+    .tabs-container { display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 2px solid #eee; }
+    .tab-item { padding: 12px 25px; cursor: pointer; font-weight: 800; font-size: 11px; color: #999; text-transform: uppercase; transition: 0.3s; border-radius: 8px 8px 0 0; }
+    .tab-item.active { background: #E31E24; color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .coordinacion-layout { display: grid; grid-template-columns: 280px 1fr; gap: 20px; align-items: start; }
+    .card-coord { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    
+    .table-coord { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .table-coord th { text-align: left; padding: 12px; background: #f8f9fa; color: #666; font-weight: 900; border-bottom: 2px solid #eee; }
+    .table-coord td { padding: 10px; border-bottom: 1px solid #eee; }
+
+    .input-coord { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; font-size: 12px; }
+    .check-coord { width: 18px; height: 18px; cursor: pointer; }
+
+    /* Full Calendar Styles */
+    #fullCalendarContainer {
+        font-family: 'Montserrat', sans-serif;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        padding: 15px;
+    }
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    .month-year-display {
+        font-size: 16px;
+        font-weight: 900;
+        color: #333;
+        text-transform: uppercase;
+    }
+    .nav-button {
+        background: none;
+        border: none;
+        font-size: 18px;
+        color: #E31E24;
+        cursor: pointer;
+        padding: 5px 10px;
+        border-radius: 5px;
+        transition: background 0.2s;
+    }
+    .nav-button:hover {
+        background: #f0f0f0;
+    }
+    .calendar-weekdays {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        text-align: center;
+        font-size: 10px;
+        font-weight: 800;
+        color: #999;
+        margin-bottom: 10px;
+    }
+    .calendar-days-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 5px;
+    }
+    .calendar-day {
+        padding: 8px 0;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 700;
+        color: #555;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: background 0.2s, color 0.2s;
+        min-height: 30px; /* Ensure consistent height */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .calendar-day.empty {
+        background: #f8f8f8;
+        cursor: default;
+        color: #ccc;
+    }
+    .calendar-day:not(.empty):hover {
+        background: #f0f0f0;
+    }
+    .calendar-day.selected {
+        background: #E31E24;
+        color: white;
+        font-weight: 900;
+    }
+    .calendar-day.today {
+        border: 2px solid #E31E24;
+        background: #ffebeb;
+        color: #E31E24;
+    }
+
+    /* Estilos para el calendario de Tecnificaciones */
+    .tecnificaciones-container { margin-top: 30px; border-top: 3px solid #E31E24; padding-top: 20px; }
+    .tec-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-top: 15px; }
+    .tec-day { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 10px; min-height: 100px; position: relative; }
+    .tec-day.today { border: 2px solid #E31E24; }
+    .tec-hoy-label { position: absolute; top: -8px; right: 10px; background: #E31E24; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; z-index: 20; }
+    .tec-day-num { font-weight: 900; color: #E31E24; margin-bottom: 8px; border-bottom: 1px solid #eee; display: block; }
+    .tec-select { width: 100%; padding: 4px; font-size: 10px; font-weight: 700; border-radius: 4px; border: 1px solid #eee; margin-bottom: 4px; background: #fafafa; }
+</style>
+
+<div style="padding: 10px;">
+    <div class="tabs-container">
+        <div class="tab-item active" onclick="switchTab(event, 'tab-coordinacion')">COORDINACIÓN</div>
+        <div class="tab-item" onclick="switchTab(event, 'tab-d-deportiva')">D. DEPORTIVA</div>
+        <div class="tab-item" onclick="switchTab(event, 'tab-otros')">INFORMES</div>
+    </div>
+
+    <!-- SUBPESTAÑA: COORDINACIÓN -->
+    <div id="tab-coordinacion" class="tab-content active">
+        <div style="margin-bottom: 25px; display: flex; gap: 20px; align-items: center;">
+            <div style="flex: 1; max-width: 300px;">
+                <label style="font-size: 10px; font-weight: 900; color: #444; display: block; margin-bottom: 5px;">SELECCIONAR EQUIPO</label>
+                <select id="selectEquipoCoord" onchange="actualizarVistaCoordinacion()" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-weight: 700;">
+                    <option value="">Seleccionar...</option>
+                    {% for eq in equipos %}
+                    <option value="{{ eq }}">{{ eq }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="flex: 1; max-width: 250px;" id="containerBusquedaJug" style="display: none;">
+                <label style="font-size: 10px; font-weight: 900; color: #999; display: block; margin-bottom: 5px;">FILTRAR JUGADOR</label>
+                <div style="position: relative;">
+                    <input type="text" id="busquedaJugadorCoord" oninput="filtrarJugadoresCoord()" placeholder="Buscar..." style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-weight: 700; outline: none;">
+                </div>
+            </div>
+            <h2 id="tituloEquipoCoord" style="margin: 0; font-size: 24px; font-weight: 900; color: #E31E24; text-transform: uppercase; display: none;"></h2>
+        </div>
+
+        <div class="coordinacion-layout">
+            <!-- Calendario Pequeño -->
+            <div class="card-coord">
+                <label style="font-size: 10px; font-weight: 900; color: #999; display: block; margin-bottom: 10px;">FECHA DE SEGUIMIENTO</label>
+                <div id="fullCalendarContainer">
+                    <div class="calendar-header">
+                        <button class="nav-button" onclick="goToPrevMonth()"><i class="fas fa-chevron-left"></i></button>
+                        <span id="currentMonthYear" class="month-year-display"></span>
+                        <button class="nav-button" onclick="goToNextMonth()"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <div class="calendar-weekdays">
+                        <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+                    </div>
+                    <div id="calendarDaysGrid" class="calendar-days-grid">
+                        <!-- Days will be rendered here -->
+                    </div>
+                </div>
+                <p style="font-size: 11px; color: #777; margin-top: 15px; line-height: 1.4;">Selecciona un día para gestionar las reuniones y observaciones individuales.</p>
+            </div>
+
+            <!-- Cuadrante de Jugadores -->
+            <div class="card-coord">
+                <table class="table-coord">
+                    <thead>
+                        <tr>
+                            <th>JUGADOR</th>
+                            <th style="text-align: center; width: 100px;">REUNIÓN</th>
+                            <th style="width: 130px;">TIPO</th>
+                            <th>OBSERVACIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cuerpoCoordinacion">
+                        <tr><td colspan="3" style="text-align: center; padding: 40px; color: #999; font-weight: 700;">Selecciona un equipo para comenzar</td></tr>
+                    </tbody>
+                </table>
+                <div style="margin-top: 20px; text-align: right;">
+                    <button id="btnGuardarSeguimiento" onclick="guardarSeguimiento(this)" style="padding: 12px 25px; background: #333; color: white; border: none; border-radius: 8px; font-weight: 900; cursor: pointer; transition: 0.3s;">GUARDAR SEGUIMIENTO</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calendario de Tecnificaciones -->
+        <div class="tecnificaciones-container">
+            <h3 style="font-weight: 900; text-transform: uppercase; color: #333; margin-bottom: 5px;">Tecnificaciones</h3>
+            <div class="calendar-weekdays" style="max-width: none; margin-bottom: 5px;">
+                <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+            </div>
+            <div id="tecGrid" class="tec-grid">
+                <!-- Se genera por JS -->
+            </div>
+            <div style="margin-top: 15px; text-align: center; font-size: 11px; color: #999; font-weight: 800;">
+                * Los cambios en Tecnificaciones se guardan automáticamente al seleccionar las opciones.
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-d-deportiva" class="tab-content">
+        <div class="card-coord" style="text-align: center; padding: 50px; color: #999;">Módulo de Dirección Deportiva Avanzada</div>
+    </div>
+    <div id="tab-otros" class="tab-content">
+        <div class="card-coord" style="text-align: center; padding: 50px; color: #999;">Módulo de Informes Técnicos</div>
+    </div>
+</div>
+
+<script>
+    const jugadoresRaw = {{ jugadores_raw | tojson }};
+
+    // Tab switching logic
+    function switchTab(e, tabId) {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+    }
+
+    // Full Calendar Logic
+    let currentCalendarDate = new Date(); // Tracks the month/year of the calendar
+    let selectedCoordinationDate = null; // Tracks the specifically selected day
+
+    function renderFullCalendar() {
+        const monthYearDisplay = document.getElementById('currentMonthYear');
+        const daysGrid = document.getElementById('calendarDaysGrid');
+
+        const year = currentCalendarDate.getFullYear();
+        const month = currentCalendarDate.getMonth(); // 0-indexed
+
+        monthYearDisplay.innerText = new Date(year, month).toLocaleString('es-ES', { month: 'long', year: 'numeric' }).toUpperCase();
+        daysGrid.innerHTML = '';
+
+        const firstDayOfMonth = new Date(year, month, 1);
+        const lastDayOfMonth = new Date(year, month + 1, 0);
+        const numDaysInMonth = lastDayOfMonth.getDate();
+
+        // Get the day of the week for the first day (0=Sunday, 1=Monday, ..., 6=Saturday)
+        // Adjust to make Monday the first day (0=Monday)
+        let startDay = firstDayOfMonth.getDay();
+        if (startDay === 0) startDay = 6; // Sunday becomes 6
+        else startDay--; // Monday becomes 0, Tuesday 1, etc.
+
+        // Fill leading empty days
+        for (let i = 0; i < startDay; i++) {
+            const emptyDay = document.createElement('div');
+            emptyDay.classList.add('calendar-day', 'empty');
+            daysGrid.appendChild(emptyDay);
+        }
+
+        // Fill actual days
+        const today = new Date();
+        for (let day = 1; day <= numDaysInMonth; day++) {
+            const dayElement = document.createElement('div');
+            dayElement.classList.add('calendar-day');
+            dayElement.innerText = day;
+            dayElement.dataset.date = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+
+            // Check for today
+            if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
+                dayElement.classList.add('today');
+            }
+
+            // Check for selected date
+            if (selectedCoordinationDate &&
+                year === selectedCoordinationDate.getFullYear() &&
+                month === selectedCoordinationDate.getMonth() &&
+                day === selectedCoordinationDate.getDate()) {
+                dayElement.classList.add('selected');
+            }
+
+            dayElement.addEventListener('click', (e) => {
+                // Remove previous selection
+                const prevSelected = daysGrid.querySelector('.calendar-day.selected');
+                if (prevSelected) prevSelected.classList.remove('selected');
+                
+                e.currentTarget.classList.add('selected');
+                selectedCoordinationDate = new Date(year, month, day);
+                cargarDatosDia(selectedCoordinationDate);
+            });
+            daysGrid.appendChild(dayElement);
+        }
+    }
+
+    function goToPrevMonth() {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+        renderFullCalendar();
+    }
+
+    function goToNextMonth() {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+        renderFullCalendar();
+    }
+
+    async function cargarDatosDia(date) {
+        if (!date) date = selectedCoordinationDate;
+        const equipo = document.getElementById('selectEquipoCoord').value;
+        if (!equipo || !date) return;
+
+        // Forzamos formato DD/MM/YYYY para evitar fallos de guardado
+        const fechaStr = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+        
+        const res = await fetch(`/api/seguimiento_coordinacion?equipo=${equipo}&fecha=${fechaStr}`);
+        const data = await res.json();
+
+        // Resetear todos los campos primero
+        document.querySelectorAll('.check-coord').forEach(cb => cb.checked = false);
+        document.querySelectorAll('.select-tipo-coord').forEach(sel => sel.value = "");
+        document.querySelectorAll('.input-coord').forEach(inp => inp.value = "");
+        document.querySelectorAll('.historial-mini').forEach(div => div.innerText = "");
+
+        // Aplicar datos actuales
+        data.actual.forEach(s => {
+            const fila = Array.from(document.querySelectorAll('#cuerpoCoordinacion tr')).find(tr => tr.dataset.jugador === s.jugador);
+            if (fila) {
+                fila.querySelector('.check-coord').checked = s.reunion;
+                fila.querySelector('.select-tipo-coord').value = s.tipo || "";
+                fila.querySelector('.input-coord').value = s.obs;
+            }
+        });
+
+        // Aplicar historial (último comentario)
+        Object.keys(data.historial).forEach(jugador => {
+            const fila = Array.from(document.querySelectorAll('#cuerpoCoordinacion tr')).find(tr => tr.dataset.jugador === jugador);
+            if (fila) {
+                const histDiv = fila.querySelector('.historial-mini');
+                if (histDiv) {
+                    const h = data.historial[jugador];
+                    histDiv.innerText = `${h.tipo} : ${h.obs}`;
+                }
+            }
+        });
+    }
+
+    function filtrarJugadoresCoord() {
+        const query = document.getElementById('busquedaJugadorCoord').value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const filas = document.querySelectorAll('#cuerpoCoordinacion tr');
+        filas.forEach(tr => {
+            const nombre = tr.cells[0].innerText.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            tr.style.display = nombre.includes(query) ? '' : 'none';
+        });
+    }
+
+    function actualizarVistaCoordinacion() {
+        const equipo = document.getElementById('selectEquipoCoord').value;
+        const titulo = document.getElementById('tituloEquipoCoord');
+        const cuerpo = document.getElementById('cuerpoCoordinacion');
+
+        if (!equipo) {
+            titulo.style.display = 'none';
+            cuerpo.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 40px; color: #999; font-weight: 700;">Selecciona un equipo para comenzar</td></tr>';
+            return;
+        }
+
+        titulo.innerText = equipo;
+        titulo.style.display = 'block';
+
+        const filtrados = jugadoresRaw.filter(j => j.EQUIPO === equipo);
+        cuerpo.innerHTML = filtrados.map(j => `
+            <tr data-jugador="${j.NOMBRE}">
+                <td style="font-weight: 800; color: #333; line-height: 1.2;">
+                    ${j.NOMBRE}
+                    <div class="historial-mini" style="font-size: 11px; color: #E31E24; font-weight: 600; margin-top: 4px; font-style: italic; max-width: 250px;"></div>
+                </td>
+                <td style="text-align: center;"><input type="checkbox" class="check-coord"></td>
+                <td>
+                    <select class="input-coord select-tipo-coord">
+                        <option value="">Seleccionar...</option>
+                        <option value="ASP. MICRO">ASP. MICRO</option>
+                        <option value="SEGUIM INDIVI">SEGUIM INDIVI</option>
+                        <option value="OTRA">OTRA</option>
+                    </select>
+                </td>
+                <td><input type="text" class="input-coord" placeholder="Añadir nota de la reunión..."></td>
+            </tr>
+        `).join('');
+        
+        cargarDatosDia();
+    }
+
+    async function guardarSeguimiento(btn) {
+        const equipo = document.getElementById('selectEquipoCoord').value;
+        if (!equipo || !selectedCoordinationDate) return alert("Selecciona equipo y fecha");
+
+        const filas = document.querySelectorAll('#cuerpoCoordinacion tr');
+        const registros = Array.from(filas).map(tr => ({
+            jugador: tr.dataset.jugador,
+            reunion: tr.querySelector('.check-coord').checked,
+            tipo: tr.querySelector('.select-tipo-coord').value,
+            obs: tr.querySelector('.input-coord').value
+        }));
+        
+        const fechaStr = `${selectedCoordinationDate.getDate().toString().padStart(2, '0')}/${(selectedCoordinationDate.getMonth() + 1).toString().padStart(2, '0')}/${selectedCoordinationDate.getFullYear()}`;
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GUARDANDO...';
+
+        const res = await fetch('/api/seguimiento_coordinacion', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                fecha: fechaStr,
+                equipo,
+                registros
+            })
+        });
+
+        if (res.ok) {
+            btn.style.background = "#28a745";
+            btn.innerHTML = '¡GUARDADO!';
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.style.background = "#333";
+                btn.innerHTML = 'GUARDAR SEGUIMIENTO';
+            }, 2000);
+        } else {
+            alert("Error al guardar");
+            btn.disabled = false;
+            btn.innerHTML = 'GUARDAR SEGUIMIENTO';
+        }
+    }
+
+    // Lógica Calendario Tecnificaciones
+    async function renderTecCalendar() {
+        const grid = document.getElementById('tecGrid');
+        grid.innerHTML = '';
+        const year = currentCalendarDate.getFullYear();
+        const month = currentCalendarDate.getMonth();
+        const mesAnio = `${(month + 1).toString().padStart(2, '0')}/${year}`;
+
+        // Cargar datos existentes
+        const res = await fetch(`/api/tecnificaciones?mes_anio=${mesAnio}`);
+        const tecData = await res.json();
+
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0).getDate();
+        let startDay = firstDay.getDay();
+        if (startDay === 0) startDay = 6; else startDay--;
+
+        const today = new Date();
+        const isThisMonth = year === today.getFullYear() && month === today.getMonth();
+
+        for (let i = 0; i < startDay; i++) {
+            grid.innerHTML += '<div class="tec-day" style="background:#f8f8f8"></div>';
+        }
+
+        const listaEquipos = Array.from(document.getElementById('selectEquipoCoord').options)
+                             .filter(opt => opt.value !== "")
+                             .map(opt => opt.value);
+
+        for (let day = 1; day <= lastDay; day++) {
+            const fechaStr = `${day.toString().padStart(2, '0')}/${mesAnio}`;
+            const actual = tecData[fechaStr] || { equipo: "", grupo: "" };
+            
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'tec-day';
+
+            if (isThisMonth && day === today.getDate()) {
+                dayDiv.classList.add('today');
+                dayDiv.innerHTML = '<div class="tec-hoy-label">HOY</div>';
+            }
+
+            dayDiv.innerHTML += `
+                <span class="tec-day-num">${day}</span>
+                <select class="tec-select" onchange="guardarTec('${fechaStr}', this.value, 'equipo')">
+                    <option value="">EQUIPO...</option>
+                    ${listaEquipos.map(e => `<option value="${e}" ${actual.equipo === e ? 'selected' : ''}>${e}</option>`).join('')}
+                </select>
+                <select class="tec-select" onchange="guardarTec('${fechaStr}', this.value, 'grupo')">
+                    <option value="">GRUPO...</option>
+                    <option value="DEFENSAS" ${actual.grupo === 'DEFENSAS' ? 'selected' : ''}>DEFENSAS</option>
+                    <option value="MEDIOS" ${actual.grupo === 'MEDIOS' ? 'selected' : ''}>MEDIOS</option>
+                    <option value="EXTREMOS" ${actual.grupo === 'EXTREMOS' ? 'selected' : ''}>EXTREMOS</option>
+                    <option value="DELANTEROS" ${actual.grupo === 'DELANTEROS' ? 'selected' : ''}>DELANTEROS</option>
+                </select>
+            `;
+            grid.appendChild(dayDiv);
+        }
+    }
+
+    async function guardarTec(fecha, valor, tipo) {
+        const grid = document.getElementById('tecGrid');
+        const dayDiv = Array.from(grid.children).find(d => d.querySelector('.tec-day-num')?.innerText == parseInt(fecha.split('/')[0]));
+        if (!dayDiv) return;
+
+        const equipo = dayDiv.querySelectorAll('.tec-select')[0].value;
+        const grupo = dayDiv.querySelectorAll('.tec-select')[1].value;
+
+        // Solo guardamos si ambos están seleccionados o ambos vacíos (limpieza)
+        await fetch('/api/tecnificaciones', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ fecha, equipo, grupo })
+        });
+    }
+
+    // Sobreescribimos las funciones de navegación para actualizar ambos calendarios
+    const oldGoPrev = goToPrevMonth;
+    goToPrevMonth = () => {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+        renderFullCalendar();
+        renderTecCalendar();
+    };
+    const oldGoNext = goToNextMonth;
+    goToNextMonth = () => {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+        renderFullCalendar();
+        renderTecCalendar();
+    };
+
+    window.onload = () => {
+        renderFullCalendar();
+        renderTecCalendar();
+
+        // Seleccionar el día de hoy automáticamente al cargar
+        const today = new Date();
+        const y = today.getFullYear();
+        const m = (today.getMonth() + 1).toString().padStart(2, '0');
+        const d = today.getDate().toString().padStart(2, '0');
+        const todayEl = document.querySelector(`.calendar-day[data-date="${y}-${m}-${d}"]`);
+        if (todayEl) todayEl.click();
+
+        hideLoader();
+    };
+</script>
+{% endblock %}

@@ -875,26 +875,13 @@ async function guardarAsientoManual(btn) {
     btn.disabled = true;
 
     try {
-        const asientoId = celdaActiva.dataset.asientoId;
-        let res;
+        const res = await fetch('/api/presupuesto', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(asiento)
+        });
 
-        if (asientoId) {
-            // Si tenemos ID de asiento (S-XXXX o P-XXXX), usamos el endpoint de operación por asiento
-            res = await fetch('/api/operacion_asiento', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ accion: 'borrar', id: asientoId })
-            });
-        } else {
-            // Fallback para pagos agrupados o sin ID cargado
-            res = await fetch('/api/borrar_pago', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(datos)
-            });
-        }
-
-        if (response.ok) {
+        if (res.ok) {
             await cargarPresupuesto();
             // Limpiar campos
             ['asientoFecha', 'asientoPilar', 'asientoDesc', 'asientoImporte'].forEach(id => document.getElementById(id).value = "");

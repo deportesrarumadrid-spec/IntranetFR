@@ -409,7 +409,7 @@ def api_operacion_asiento():
             sheet.delete_rows(fila_idx)
         elif accion == 'editar':
             # Solo para FINANCIERO (manuales) en este endpoint
-            if not es_pago:
+            if not (es_pago_jug or es_pago_staff):
                 # FECHA(1), Nº(2), DEP(3), PILAR(4), DESC(5), IMP(6)
                 sheet.update_cell(fila_idx, 1, data.get('fecha'))
                 sheet.update_cell(fila_idx, 3, data.get('departamento'))

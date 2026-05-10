@@ -27,85 +27,6 @@ for p in [UPLOAD_FOLDER, DATA_FOLDER]: os.makedirs(p, exist_ok=True)
 def index():
     return render_template('login.html')
 
-@app.route('/login', methods=['POST'])
-def login():
-    usuario_ingresado = request.form.get('usuario')
-    session['usuario'] = usuario_ingresado # Guardamos el usuario en la sesión
-    return redirect(url_for('deportivo', usuario=usuario_ingresado))
-
-@app.route('/deportivo')
-def deportivo():
-    usuario = request.args.get('usuario', 'admin')
-    # Capturamos el mes actual (por defecto Mayo 2026 según tu captura)
-    mes_actual = request.args.get('mes', '2026-05')
-    
-    # Fecha real del sistema
-    hoy = datetime.now()
-    
-    # 1. Cargar objetivos
-    obj_path = os.path.join(DATA_FOLDER, f'obj_{usuario}_{mes_actual}.json')
-    objetivos = {"tactico": "TIRO, CENTRO", "tecnico": "", "completados": []}
-    if os.path.exists(obj_path):
-        with open(obj_path, 'r', encoding='utf-8') as f:
-            objetivos = json.load(f)
-
-    # 2. Lógica del Calendario Dinámico
-    try:
-        anio, mes = map(int, mes_actual.split('-'))
-    except:
-        anio, mes = hoy.year, hoy.month
-
-    cal = calendar.Calendar(firstweekday=0)
-    semanas_raw = cal.monthdayscalendar(anio, mes)
-    
-    semanas = []
-    # Determinar si estamos viendo el mes y año actuales
-    es_mes_actual = (anio == hoy.year and mes == hoy.month)
-    
-    # Lógica para resaltar fin de semana (Sábado=5, Domingo=6)
-    wd_hoy = hoy.weekday()
-    dias_a_resaltar = []
-    if es_mes_actual:
-        dias_a_resaltar.append(hoy.day)
-        if wd_hoy == 5: # Si hoy es Sábado, resaltamos también el Domingo (mañana)
-            dias_a_resaltar.append(hoy.day + 1)
-        elif wd_hoy == 6: # Si hoy es Domingo, resaltamos también el Sábado (ayer)
-            dias_a_resaltar.append(hoy.day - 1)
-
-    for s in semanas_raw:
-        semana_formateada = []
-        # Revisamos si en esta semana cae algún día de los "dias_a_resaltar" (hoy/finde)
-        es_fin_de_semana_hoy = any(d in dias_a_resaltar for d in s if d != 0) if es_mes_actual else False
-        
-        for d in s:
-            if d == 0:
-                semana_formateada.append(None)
-            else:
-                # El día individual solo se marca si es HOY exactamente
-                es_hoy_exacto = (es_mes_actual and d == hoy.day)
-                semana_formateada.append({
-                    'numero': d, 
-                    'es_hoy': es_hoy_exacto,
-                    'resaltar_finde': es_fin_de_semana_hoy # Nueva marca para el bloque del finde
-                })
-        semanas.append(semana_formateada)
-
-    # 3. Contar archivos y obtener lista de días con foto
-    archivos_reales = [f for f in os.listdir(UPLOAD_FOLDER) if f.startswith(f"entreno_{usuario}_")]
-    
-    # Creamos la lista de números de día que ya tienen foto
-    fotos_subidas = [f.split('_')[-1].split('.')[0] for f in archivos_reales]
-
-    # 4. Return
-    return render_template('deportivo/calendario.html',
-                           usuario=usuario,
-                           mes_actual=mes_actual,
-                           objetivos=objetivos,
-                           semanas=semanas,
-                           archivos_subidos=len(archivos_reales),
-                           fotos_subidas=fotos_subidas,
-                           dias_transcurridos=hoy.day if es_mes_actual else (30 if (anio < hoy.year or (anio == hoy.year and mes < hoy.month)) else 0))
-    
 @app.route('/save_all', methods=['POST'])
 def save_all():
     data = request.json
@@ -129,7 +50,13 @@ def upload_foto():
         return jsonify({"status": "success"})
     except:
         return jsonify({"status": "error"}), 500
-@app.route('/delete_foto', methods=['POST'])
+@app.route('/login', methods=['POST'])
+def login():
+    usuario_ingresado = request.form.get('usuario')
+    session['usuario'] = usuario_ingresado # Guardamos el usuario en la sesión
+    return redirect(url_for('deportivo_bp.direccion_deportiva'))
+
+@app.route('/delete_foto', methods=['POST']) # Esta ruta estaba duplicada, la he dejado solo una vez
 def delete_foto():
     data = request.json
     usuario = data.get('usuario')
@@ -550,7 +477,9 @@ def marcar_alta():
 
 # --- REGISTRO DE BLUEPRINTS ---
 from financiero import financiero_bp
+from deportivo import deportivo_bp
 app.register_blueprint(financiero_bp)
+app.register_blueprint(deportivo_bp)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
