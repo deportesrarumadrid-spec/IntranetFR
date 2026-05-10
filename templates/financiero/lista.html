@@ -18,7 +18,10 @@
     .pago-exceso { outline: 2px solid #ff0000 !important; outline-offset: -2px; z-index: 10; position: relative; }
     .selected-cell { outline: 2px solid #E31E24; z-index: 5; }
     
-    .form-asiento { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; padding: 20px; background: #fafafa; }
+    .section-grabar { background: #f1f5f9; padding: 20px; margin: 15px; border-radius: 12px; border: 1px solid #e2e8f0; }
+    .section-grabar h3 { color: #334155; font-size: 11px; font-weight: 900; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; }
+    
+    .form-asiento { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
     .form-asiento input, .form-asiento select { padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-family: inherit; font-size: 12px; }
     .btn-fin { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 800; font-size: 11px; text-transform: uppercase; }
     
@@ -114,23 +117,27 @@
             </div>
         </div>
         
-        <div class="form-asiento">
-            <input type="date" id="asientoFecha">
-            <select id="asientoDepto">
-                <option value="">Departamento...</option>
-                <option value="Deportivo">Deportivo</option>
-                <option value="Administración">Administración</option>
-                <option value="Eventos">Eventos</option>
-            </select>
-            <input type="text" id="asientoPilar" placeholder="Pilar">
-            <input type="text" id="asientoDesc" placeholder="Descripción">
-            <input type="number" id="asientoImporte" placeholder="Importe €">
-            <button class="btn-fin" style="background: #333; color: white;" onclick="guardarAsientoManual(this)">Guardar asiento</button>
+        <div class="section-grabar">
+            <h3><i class="fas fa-plus-circle" style="color: #E31E24;"></i> Registrar Nuevo Asiento Manual</h3>
+            <div class="form-asiento">
+                <input type="date" id="asientoFecha">
+                <select id="asientoDepto">
+                    <option value="">Departamento...</option>
+                    <option value="Deportivo">Deportivo</option>
+                    <option value="Administración">Administración</option>
+                    <option value="Eventos">Eventos</option>
+                </select>
+                <input type="text" id="asientoPilar" placeholder="Pilar">
+                <input type="text" id="asientoDesc" placeholder="Descripción">
+                <input type="number" id="asientoImporte" placeholder="Importe €">
+                <button class="btn-fin" style="background: #E31E24; color: white;" onclick="guardarAsientoManual(this)">Guardar asiento</button>
+            </div>
         </div>
 
         <div class="filter-row">
             <div style="font-size: 10px; font-weight: 900; color: #999; display: flex; align-items: center; margin-right: 10px;">FILTRAR POR:</div>
             <input type="date" id="filtroFecha" onchange="aplicarFiltros()">
+            <input type="text" id="filtroDesc" placeholder="Buscar descripción..." oninput="aplicarFiltros()" style="flex: 1;">
             <select id="filtroDepto" onchange="aplicarFiltros()">
                 <option value="">Todos los Deptos...</option>
                 <option value="Deportivo">Deportivo</option>
@@ -149,7 +156,7 @@
                 <thead>
                     <tr>
                         <th>FECHA</th>
-                        <th>Nº ASIENTO</th>
+                        <th onclick="toggleSortAsiento()" style="cursor: pointer; background: #f1f5f9;">Nº ASIENTO <i id="iconSortAsi" class="fas fa-sort" style="margin-left: 5px; opacity: 0.5;"></i></th>
                         <th>DEPARTAMENTO</th>
                         <th>PILAR</th>
                         <th>DESCRIPCIÓN</th>
@@ -402,6 +409,37 @@ let extraNames = { "EXTRA": "EXTRA", "EXTRA2": "EXTRA 2" };
 let bulkConceptoActivo = '';
 let asientoSeleccionado = null;
 let isSaving = false;
+
+function getLabelConcepto(item, forma, isStaff) {
+    const mesesNombres = {
+        '01': 'Ene', '02': 'Feb', '03': 'Mar', '04': 'Abr', '05': 'May', '06': 'Jun',
+        '07': 'Jul', '08': 'Ago', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dic',
+        'Inscripción': 'Inscrp', 'PACK_ROPA': 'Ropa', 'EXTRA': 'Extra', 'EXTRA2': 'Extra2'
+    };
+
+    let itemKey = item;
+    if (typeof item === 'string' && item.startsWith('Staff-')) itemKey = item.replace('Staff-', '');
+    
+    let label = mesesNombres[itemKey] || item;
+
+    // Lógica para meses agrupados (Bianual, etc.)
+    if (!isStaff && typeof item === 'string' && item.match(/^\d+$/)) {
+        const configForma = configuracionesPago.find(c => c.nombre === forma);
+        const nPagos = configForma ? (parseInt(configForma.meses) || 12) : 12;
+        const intervalo = Math.floor(12 / nPagos);
+        
+        if (intervalo > 1) {
+            let mesesArr = [];
+            const startMonth = parseInt(item);
+            for (let m = 0; m < intervalo; m++) {
+                const mesNum = (startMonth + m).toString().padStart(2, '0');
+                if (mesesNombres[mesNum]) mesesArr.push(mesesNombres[mesNum]);
+            }
+            label = mesesArr.join('+');
+        }
+    }
+    return label;
+}
 
 function abrirAccionAsiento(id_global, real_id, tipo_origen, nombreOrig, conceptoOrig, fechaOrig) {
     asientoSeleccionado = { id_global, real_id, tipo_origen, nombreOrig, conceptoOrig, fechaOrig };
@@ -924,12 +962,6 @@ async function confirmarPago(btn) {
     showLoader();
 
     try {
-        const mesesNombres = {
-            '01': 'Ene', '02': 'Feb', '03': 'Mar', '04': 'Abr', '05': 'May', '06': 'Jun',
-            '07': 'Jul', '08': 'Ago', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dic',
-            'Inscripción': 'Inscrp', 'PACK_ROPA': 'Ropa', 'EXTRA': 'Extra', 'EXTRA2': 'Extra2'
-        };
-
         const fechaHoy = new Date().toLocaleDateString('es-ES');
         let saldoARepartir = totalPagado;
 
@@ -945,23 +977,8 @@ async function confirmarPago(btn) {
             const tipo = currentRowIsStaff ? "Varios" : fila.cells[2].innerText.trim();
             const pilar = currentRowIsStaff ? "Pagos Staff" : "Cuotas";
 
-            // Calcular descripción de concepto dinámica (Ene+Feb...)
-            let labelConcepto = mesesNombres[item] || item;
-            if (!currentRowIsStaff && item.match(/^\d+$/)) {
-                const configForma = configuracionesPago.find(c => c.nombre === forma);
-                const nPagos = configForma ? (parseInt(configForma.meses) || 12) : 12;
-                const intervalo = 12 / nPagos;
-                
-                if (intervalo > 1) {
-                    let mesesArr = [];
-                    const startMonth = parseInt(item);
-                    for (let m = 0; m < intervalo; m++) {
-                        const mesNum = (startMonth + m).toString().padStart(2, '0');
-                        if (mesesNombres[mesNum]) mesesArr.push(mesesNombres[mesNum]);
-                    }
-                    labelConcepto = mesesArr.join('+');
-                }
-            }
+            const labelConcepto = getLabelConcepto(item, forma, currentRowIsStaff);
+            const prefixDesc = currentRowIsStaff ? "Pago Staff" : "Cuota";
 
             let esperadoIndividual = parseFloat(cell.dataset.esperado) || 0;
             let pagoAsignado = 0;
@@ -979,7 +996,7 @@ async function confirmarPago(btn) {
 
             const asiento = {
                 fecha: fechaHoy, departamento: "Administración", pilar: pilar,
-                descripcion: `Cuota ${labelConcepto}: ${nombre}`, importe: pagoAsignado,
+                descripcion: `${prefixDesc} ${labelConcepto}: ${nombre}`, importe: pagoAsignado,
                 equipo, nombre, tipo_pago: tipo, forma_pago: forma, concepto: item, esperado: esperadoIndividual
             };
             await fetch('/api/presupuesto', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(asiento) });
@@ -1355,16 +1372,36 @@ function cargarPagosEnTabla() {
     });
 }
 
+let currentSortOrder = 'desc'; // Por defecto los últimos arriba
+function toggleSortAsiento() {
+    currentSortOrder = (currentSortOrder === 'desc') ? 'asc' : 'desc';
+    const icon = document.getElementById('iconSortAsi');
+    if (icon) {
+        icon.className = currentSortOrder === 'desc' ? 'fas fa-sort-numeric-down-alt' : 'fas fa-sort-numeric-up';
+        icon.style.opacity = "1";
+    }
+    aplicarFiltros();
+}
+
 function aplicarFiltros() {
     const fecha = document.getElementById('filtroFecha').value;
     const depto = document.getElementById('filtroDepto').value;
     const pilar = document.getElementById('filtroPilar').value.toLowerCase();
+    const desc = document.getElementById('filtroDesc').value ? document.getElementById('filtroDesc').value.toLowerCase() : "";
 
-    const filtrados = presupuestoData.filter(a => {
+    let filtrados = presupuestoData.filter(a => {
         const matchFecha = !fecha || a.FECHA === fecha;
         const matchDepto = !depto || a.DEPARTAMENTO === depto;
         const matchPilar = !pilar || (a.PILAR && a.PILAR.toLowerCase().includes(pilar));
-        return matchFecha && matchDepto && matchPilar;
+        const matchDesc = !desc || (a.DESCRIPCION && a.DESCRIPCION.toLowerCase().includes(desc));
+        return matchFecha && matchDepto && matchPilar && matchDesc;
+    });
+
+    // Aplicar ordenación por el número de asiento global
+    filtrados.sort((a, b) => {
+        const valA = parseInt(a.Nº_ASIENTO_GLOBAL) || 0;
+        const valB = parseInt(b.Nº_ASIENTO_GLOBAL) || 0;
+        return currentSortOrder === 'desc' ? valB - valA : valA - valB;
     });
 
     renderizarTablaPresupuesto(filtrados);

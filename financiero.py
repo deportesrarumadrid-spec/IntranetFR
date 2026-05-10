@@ -65,6 +65,20 @@ def parse_date_for_sort(date_str):
             continue
     return datetime.min
 
+def get_friendly_concepto(concepto):
+    """Mapea conceptos técnicos a nombres legibles para el historial."""
+    meses_map = {
+        '01': 'Ene', '02': 'Feb', '03': 'Mar', '04': 'Abr', '05': 'May', '06': 'Jun',
+        '07': 'Jul', '08': 'Ago', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dic',
+        'INSCRIPCION': 'Inscrp', 'PACK_ROPA': 'Ropa', 'EXTRA': 'Extra', 'EXTRA2': 'Extra2'
+    }
+    c_clean = str(concepto).strip().upper().replace('Ó', 'O').replace('Í', 'I')
+    lookup = c_clean.replace('STAFF-', '') if c_clean.startswith('STAFF-') else c_clean
+    prefix = "Staff-" if c_clean.startswith('STAFF-') else ""
+    if lookup in meses_map:
+        return f"{prefix}{meses_map[lookup]}"
+    return str(concepto)
+
 
 @financiero_bp.route('/financiero')
 def financiero():
@@ -180,7 +194,8 @@ def api_presupuesto():
 
             # Preparamos los metadatos para el registro maestro en FINANCIERO
             if not datos.get('descripcion'):
-                datos['descripcion'] = f"Cuota {datos.get('concepto')}: {datos.get('nombre')}"
+                friendly = get_friendly_concepto(datos.get('concepto'))
+                datos['descripcion'] = f"Cuota {friendly}: {datos.get('nombre')}"
             datos['departamento'] = "Administración"
 
         elif pilar == "Pagos Staff":
@@ -221,7 +236,8 @@ def api_presupuesto():
 
             # Preparamos los metadatos para el registro maestro en FINANCIERO
             if not datos.get('descripcion'):
-                datos['descripcion'] = f"Pago Staff {datos.get('concepto')}: {datos.get('nombre')}"
+                friendly = get_friendly_concepto(datos.get('concepto'))
+                datos['descripcion'] = f"Pago Staff {friendly}: {datos.get('nombre')}"
             datos['departamento'] = "Administración"
 
         # REGISTRO MAESTRO EN PESTAÑA FINANCIERO (Homólogo)
@@ -424,6 +440,7 @@ def api_actualizar_pago():
                 idx_n = headers.index('NOMBRE') if 'NOMBRE' in headers else -1
                 idx_c = headers.index('CONCEPTO') if 'CONCEPTO' in headers else -1
                 idx_i = headers.index('IMPORTE') if 'IMPORTE' in headers else -1
+                idx_d = headers.index('DESCRIPCION') if 'DESCRIPCION' in headers else -1
                 
                 if idx_n != -1 and idx_c != -1 and idx_i != -1:
                     for i, row in enumerate(all_fin):
@@ -431,6 +448,8 @@ def api_actualizar_pago():
                             r_con = normalizar_concepto_interno(row[idx_c])
                             if row[idx_n].strip().lower() == nombre_buscado and r_con == concepto_buscado:
                                 sheet_fin.update_cell(i + 1, idx_i + 1, datos.get('importe'))
+                                if idx_d != -1 and datos.get('descripcion'):
+                                    sheet_fin.update_cell(i + 1, idx_d + 1, datos['descripcion'])
                                 break
             except Exception as e:
                 print(f"Aviso: No se pudo actualizar el homólogo en FINANCIERO: {e}")
