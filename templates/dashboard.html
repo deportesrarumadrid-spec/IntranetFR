@@ -236,6 +236,13 @@
 
     <script>
         // Función global para ocultar el cargador
+        function showLoader() {
+            const loader = document.getElementById('loader-wrapper');
+            if (loader) {
+                loader.classList.remove('loader-hidden');
+            }
+        }
+
         function hideLoader() {
             const loader = document.getElementById('loader-wrapper');
             if (loader && !loader.classList.contains('loader-hidden')) {

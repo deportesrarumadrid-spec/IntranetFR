@@ -107,7 +107,7 @@
                 <button class="btn-fin" style="background: #eee; color: #333;" onclick="document.getElementById('excelInput').click()">
                     <i class="fas fa-file-excel"></i> Carga Masiva
                 </button>
-                <button class="btn-fin" style="background: #fff; border: 1px solid #dc3545; color: #dc3545;" onclick="solicitarLimpiezaHistorial('FINANCIERO')">
+                <button class="btn-fin" style="background: #fff; border: 1px solid #dc3545; color: #dc3545;" onclick="solicitarLimpiezaHistorial('HISTORIAL_UNIFICADO')">
                     <i class="fas fa-trash-alt"></i> ELIMINAR TODO
                 </button>
                 <input type="file" id="excelInput" style="display:none" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
@@ -154,6 +154,7 @@
                         <th>PILAR</th>
                         <th>DESCRIPCIÓN</th>
                         <th>IMPORTE</th>
+                        <th style="text-align: center;">ACCIONES</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -169,9 +170,6 @@
             <div style="display: flex; align-items: center; gap: 15px;">
                 <h2 style="font-size: 18px; letter-spacing: -0.5px;"><i class="fas fa-users-cog" style="color: #E31E24; margin-right: 10px;"></i> PAGOS JUGADORES</h2>
                 <div style="display: flex; gap: 8px;">
-                    <button class="btn-fin" style="background: #fff; border: 1px solid #333; color: #333;" onclick="solicitarLimpiezaHistorial('PAGOS JUGADORES')">
-                        <i class="fas fa-eraser"></i> REINICIAR PAGOS
-                    </button>
                     <button class="btn-fin" style="background: #E31E24; color: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(227,30,36,0.2);" onclick="abrirModalAnadirJugadorFin()">
                         <i class="fas fa-user-plus"></i> AÑADIR JUGADOR
                     </button>
@@ -217,6 +215,8 @@
                                     <option value="Efectivo">Efectivo</option>
                                     <option value="Domiciliación">Domiciliación</option>
                                     <option value="Transferencia">Transferencia</option>
+                                    <option value="Tarjeta">Tarjeta</option>
+                                    <option value="Beca">Beca</option>
                                 </select>
                             </div>
                         </th>
@@ -336,6 +336,61 @@
     </div>
 </div>
 
+<!-- MODAL ACCIONES ASIENTO -->
+<div id="modalAccionAsiento" class="modal">
+    <div class="modal-content" style="width: 320px; text-align: center;">
+        <h3 id="txtAccionAsientoTitulo" style="font-size: 14px; font-weight: 900; margin-bottom: 20px; border-bottom: 2px solid #E31E24; padding-bottom: 10px;">ACCIONES ASIENTO</h3>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button class="btn-fin" style="background: #333; color: white;" onclick="abrirEdicionCompletaAsiento()">
+                <i class="fas fa-edit"></i> EDITAR ASIENTO
+            </button>
+            <button class="btn-fin" style="background: #dc3545; color: white;" onclick="confirmarBorradoDesdeAccion()">
+                <i class="fas fa-trash-alt"></i> ELIMINAR ASIENTO
+            </button>
+            <button class="btn-fin" style="background: #eee; color: #333;" onclick="document.getElementById('modalAccionAsiento').style.display='none'">CANCELAR</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EDICIÓN COMPLETA ASIENTO -->
+<div id="modalEdicionAsiento" class="modal">
+    <div class="modal-content" style="width: 400px;">
+        <h3 id="txtEdicionAsientoTitulo" style="font-size: 14px; font-weight: 900; margin-bottom: 20px; border-bottom: 2px solid #E31E24; padding-bottom: 10px;">EDITAR ASIENTO</h3>
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+            <div>
+                <label style="font-size: 9px; font-weight: 800; color: #999; display: block; margin-bottom: 4px;">FECHA</label>
+                <input type="date" id="editAsiFecha" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;">
+            </div>
+            <div id="groupDeptoPilar">
+                <div style="margin-bottom: 15px;">
+                    <label style="font-size: 9px; font-weight: 800; color: #999; display: block; margin-bottom: 4px;">DEPARTAMENTO</label>
+                    <select id="editAsiDepto" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;">
+                        <option value="Deportivo">Deportivo</option>
+                        <option value="Administración">Administración</option>
+                        <option value="Eventos">Eventos</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 9px; font-weight: 800; color: #999; display: block; margin-bottom: 4px;">PILAR</label>
+                    <input type="text" id="editAsiPilar" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;">
+                </div>
+            </div>
+            <div>
+                <label style="font-size: 9px; font-weight: 800; color: #999; display: block; margin-bottom: 4px;">DESCRIPCIÓN</label>
+                <input type="text" id="editAsiDesc" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;">
+            </div>
+            <div>
+                <label style="font-size: 9px; font-weight: 800; color: #999; display: block; margin-bottom: 4px;">IMPORTE (€)</label>
+                <input type="number" id="editAsiImporte" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="btn-fin" style="flex:1; background:#eee;" onclick="document.getElementById('modalEdicionAsiento').style.display='none'">CANCELAR</button>
+                <button class="btn-fin" style="flex:1; background:#E31E24; color:white;" onclick="procesarEdicionFinalAsiento(this)">GUARDAR CAMBIOS</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 let celdasSeleccionadas = [];
 let celdaActiva = null;
@@ -345,7 +400,167 @@ let configInscripciones = {};
 let configCuotasMes = {};
 let extraNames = { "EXTRA": "EXTRA", "EXTRA2": "EXTRA 2" };
 let bulkConceptoActivo = '';
+let asientoSeleccionado = null;
 let isSaving = false;
+
+function abrirAccionAsiento(id_global, real_id, tipo_origen, nombreOrig, conceptoOrig, fechaOrig) {
+    asientoSeleccionado = { id_global, real_id, tipo_origen, nombreOrig, conceptoOrig, fechaOrig };
+    document.getElementById('txtAccionAsientoTitulo').innerText = `ACCIONES ASIENTO #${id_global}`;
+    document.getElementById('modalAccionAsiento').style.display = 'flex';
+}
+
+function abrirEdicionCompletaAsiento() {
+    if (!asientoSeleccionado) return;
+    const data = presupuestoData.find(a => a.Nº_ASIENTO_GLOBAL === asientoSeleccionado.id_global);
+    if (!data) return alert("Datos no encontrados");
+
+    document.getElementById('modalAccionAsiento').style.display = 'none';
+    document.getElementById('txtEdicionAsientoTitulo').innerText = `EDITAR #${asientoSeleccionado.id_global}`;
+    
+    let fecha = data.FECHA;
+    if (fecha && fecha.includes('/')) {
+        const [d, m, y] = fecha.split('/');
+        fecha = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+    document.getElementById('editAsiFecha').value = fecha;
+    document.getElementById('editAsiDesc').value = data.DESCRIPCION || '';
+    
+    // Normalizar importe para el input (cambiar coma por punto si existe)
+    const importeLimpio = data.IMPORTE ? data.IMPORTE.toString().replace(',', '.') : '0';
+    document.getElementById('editAsiImporte').value = parseFloat(importeLimpio);
+
+    const groupDP = document.getElementById('groupDeptoPilar');
+    groupDP.style.display = 'block';
+    document.getElementById('editAsiDepto').value = data.DEPARTAMENTO || '';
+    document.getElementById('editAsiPilar').value = data.PILAR || '';
+
+    // FUERZA BRUTA PARA DESBLOQUEAR: Eliminamos disabled y readOnly de todos los campos
+    const campos = ['editAsiDepto', 'editAsiPilar', 'editAsiDesc', 'editAsiFecha', 'editAsiImporte'];
+    campos.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.disabled = false;
+            el.readOnly = false;
+            el.style.backgroundColor = 'white'; // Asegurar feedback visual de que es editable
+        }
+    });
+
+    document.getElementById('modalEdicionAsiento').style.display = 'flex';
+}
+
+async function confirmarBorradoDesdeAccion() {
+    if (!asientoSeleccionado) return;
+    if (!confirm(`¿Borrar asiento #${asientoSeleccionado.id_global}?`)) return;
+    showLoader();
+    try {
+        const res = await fetch('/api/operacion_asiento', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                accion: 'borrar', id: asientoSeleccionado.real_id, tipo_origen: asientoSeleccionado.tipo_origen,
+                nombre_orig: asientoSeleccionado.nombreOrig, concepto_orig: asientoSeleccionado.conceptoOrig, fecha_orig: asientoSeleccionado.fechaOrig
+            })
+        });
+        if (res.ok) { 
+            document.getElementById('modalAccionAsiento').style.display = 'none'; 
+            await cargarPresupuesto(); 
+        }
+        else {
+            alert("Error al borrar");
+            hideLoader();
+        }
+    } catch (e) { 
+        alert("Error de conexión"); 
+        hideLoader();
+    }
+}
+
+async function procesarEdicionFinalAsiento(btn) {
+    if (!asientoSeleccionado || isSaving) return;
+    
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GUARDANDO...';
+    btn.disabled = true;
+    isSaving = true;
+    showLoader();
+
+    const payload = {
+        accion: 'editar', id: asientoSeleccionado.real_id, tipo_origen: asientoSeleccionado.tipo_origen,
+        nombre_orig: asientoSeleccionado.nombreOrig, concepto_orig: asientoSeleccionado.conceptoOrig, fecha_orig: asientoSeleccionado.fechaOrig,
+        fecha: document.getElementById('editAsiFecha').value, descripcion: document.getElementById('editAsiDesc').value, importe: document.getElementById('editAsiImporte').value
+    };
+
+    // Enviamos siempre departamento y pilar al servidor para asegurar la persistencia
+    // (El backend los procesará si el tipo de origen es MANUAL)
+    payload.departamento = document.getElementById('editAsiDepto').value;
+    payload.pilar = document.getElementById('editAsiPilar').value;
+
+    try {
+        const res = await fetch('/api/operacion_asiento', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+        if (res.ok) {
+            document.getElementById('modalEdicionAsiento').style.display = 'none';
+            await cargarPresupuesto();
+        } else {
+            alert("Error al actualizar");
+            hideLoader();
+        }
+    } catch (e) {
+        alert("Error de conexión");
+        hideLoader();
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        isSaving = false;
+    }
+}
+
+// Funciones para la limpieza del historial con doble verificación
+function solicitarLimpiezaHistorial(tipo) {
+    callbackVerificacion = async () => {
+        showLoader();
+        const res = await fetch('/api/limpiar_historial', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ tipo: tipo })
+        });
+        if (res.ok) {
+            alert("Limpieza completada correctamente");
+            await cargarPresupuesto();
+        } else {
+            alert("Error al limpiar el historial");
+            hideLoader();
+        }
+    };
+    abrirVerificacionSegura();
+}
+
+function abrirVerificacionSegura() {
+    codigoVerificacionActual = Math.floor(1000 + Math.random() * 9000).toString();
+    document.getElementById('txtCodigoVerif').innerText = codigoVerificacionActual;
+    document.getElementById('inputCodigoVerif').value = "";
+    document.getElementById('step1Verif').style.display = 'block';
+    document.getElementById('step2Verif').style.display = 'none';
+    document.getElementById('modalVerificacionSegura').style.display = 'flex';
+}
+
+function irAPaso2Verificacion() {
+    document.getElementById('step1Verif').style.display = 'none';
+    document.getElementById('step2Verif').style.display = 'block';
+}
+
+function confirmarVerificacionFinal() {
+    const input = document.getElementById('inputCodigoVerif').value;
+    if (input === codigoVerificacionActual) {
+        document.getElementById('modalVerificacionSegura').style.display = 'none';
+        if (callbackVerificacion) callbackVerificacion();
+    } else {
+        alert("Código de verificación incorrecto. Inténtalo de nuevo.");
+    }
+}
+
+// Variables para el sistema de doble verificación
+let codigoVerificacionActual = "";
+let callbackVerificacion = null;
 
 function abrirModalBulkEsperado(concepto) {
     bulkConceptoActivo = concepto;
@@ -360,6 +575,7 @@ async function aplicarBulkEsperado(btn) {
     const originalText = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> APLICANDO...';
     btn.disabled = true;
+    showLoader();
 
     const filas = document.querySelectorAll('.fila-jugador');
     let equiposModificados = new Set();
@@ -431,6 +647,7 @@ async function aplicarBulkEsperado(btn) {
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
+        hideLoader();
     }
 }
 
@@ -690,18 +907,28 @@ async function confirmarPago(btn) {
 
     if (isNaN(totalPagado)) return alert("Introduce un importe válido");
 
+    if (totalEsperado > 0 && totalPagado > totalEsperado) {
+        alert(`El importe es superior al total esperado.`);
+        return;
+    }
+    if (totalEsperado > 0 && totalPagado < totalEsperado) {
+        if (!confirm(`¿Registrar como pago parcial?`)) return;
+    }
+    if (!confirm(`¿Confirmar registro definitivo?`)) return;
+
+    // Solo activamos el estado de guardado tras pasar todas las confirmaciones
     const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> REGISTRANDO...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     btn.disabled = true;
+    isSaving = true;
+    showLoader();
 
     try {
-        if (totalEsperado > 0 && totalPagado > totalEsperado) {
-            alert(`El importe es superior al total esperado.`); return;
-        }
-        if (totalEsperado > 0 && totalPagado < totalEsperado) {
-            if (!confirm(`¿Registrar como pago parcial?`)) return;
-        }
-        if (!confirm(`¿Confirmar registro definitivo?`)) return;
+        const mesesNombres = {
+            '01': 'Ene', '02': 'Feb', '03': 'Mar', '04': 'Abr', '05': 'May', '06': 'Jun',
+            '07': 'Jul', '08': 'Ago', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dic',
+            'Inscripción': 'Inscrp', 'PACK_ROPA': 'Ropa', 'EXTRA': 'Extra', 'EXTRA2': 'Extra2'
+        };
 
         const fechaHoy = new Date().toLocaleDateString('es-ES');
         let saldoARepartir = totalPagado;
@@ -717,6 +944,24 @@ async function confirmarPago(btn) {
             const forma = currentRowIsStaff ? "Varios" : fila.cells[3].innerText.trim();
             const tipo = currentRowIsStaff ? "Varios" : fila.cells[2].innerText.trim();
             const pilar = currentRowIsStaff ? "Pagos Staff" : "Cuotas";
+
+            // Calcular descripción de concepto dinámica (Ene+Feb...)
+            let labelConcepto = mesesNombres[item] || item;
+            if (!currentRowIsStaff && item.match(/^\d+$/)) {
+                const configForma = configuracionesPago.find(c => c.nombre === forma);
+                const nPagos = configForma ? (parseInt(configForma.meses) || 12) : 12;
+                const intervalo = 12 / nPagos;
+                
+                if (intervalo > 1) {
+                    let mesesArr = [];
+                    const startMonth = parseInt(item);
+                    for (let m = 0; m < intervalo; m++) {
+                        const mesNum = (startMonth + m).toString().padStart(2, '0');
+                        if (mesesNombres[mesNum]) mesesArr.push(mesesNombres[mesNum]);
+                    }
+                    labelConcepto = mesesArr.join('+');
+                }
+            }
 
             let esperadoIndividual = parseFloat(cell.dataset.esperado) || 0;
             let pagoAsignado = 0;
@@ -734,16 +979,20 @@ async function confirmarPago(btn) {
 
             const asiento = {
                 fecha: fechaHoy, departamento: "Administración", pilar: pilar,
-                descripcion: `Pago ${item}: ${nombre}`, importe: pagoAsignado,
+                descripcion: `Cuota ${labelConcepto}: ${nombre}`, importe: pagoAsignado,
                 equipo, nombre, tipo_pago: tipo, forma_pago: forma, concepto: item, esperado: esperadoIndividual
             };
             await fetch('/api/presupuesto', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(asiento) });
         }
         await cargarPresupuesto();
         cerrarModalsFin();
+    } catch (e) {
+        console.error(e);
+        hideLoader();
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
+        isSaving = false;
     }
 }
 
@@ -758,6 +1007,7 @@ function seleccionarPagoStaff(e, el, item) {
 async function eliminarPago(btn) {
     if (!celdaActiva || !btn) return;
     if (!confirm("¿Seguro que quieres eliminar este registro de pago definitivamente?")) return;
+    showLoader();
     
     const originalText = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -799,9 +1049,11 @@ async function eliminarPago(btn) {
             cerrarModalsFin();
         } else {
             alert("Error al eliminar el pago");
+            hideLoader();
         }
     } catch (e) {
         alert("Error de conexión");
+        hideLoader();
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
@@ -809,20 +1061,35 @@ async function eliminarPago(btn) {
 }
 
 async function actualizarPago(btn) {
-    if (!celdaActiva || !btn) return;
+    if (!celdaActiva || !btn || isSaving) return;
     const nuevoImporte = parseFloat(document.getElementById('modPagoImporte').value);
     if (isNaN(nuevoImporte)) return alert("Introduce un importe válido");
+    showLoader();
 
     const originalText = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GUARDANDO...';
     btn.disabled = true;
+    isSaving = true;
 
     const isStaffPayment = celdaActiva.closest('tr').classList.contains('fila-staff');
     let datos = {};
     if (isStaffPayment) {
-        datos = { nombre: celdaActiva.closest('tr').dataset.nombre, concepto: celdaActiva.dataset.concepto, importe: nuevoImporte, pilar: "Pagos Staff", fecha: new Date().toLocaleDateString('es-ES'), esperado: parseFloat(celdaActiva.dataset.esperado) || 0 };
+        datos = { 
+            nombre: celdaActiva.closest('tr').dataset.nombre, 
+            concepto: celdaActiva.dataset.concepto, 
+            importe: nuevoImporte, 
+            pilar: "Pagos Staff", 
+            fecha: new Date().toLocaleDateString('es-ES'), 
+            esperado: parseFloat(celdaActiva.dataset.esperado) || 0 
+        };
     } else {
-        datos = { nombre: celdaActiva.closest('tr').cells[1].innerText.trim(), equipo: celdaActiva.closest('tr').dataset.equipo, concepto: celdaActiva.dataset.concepto, importe: nuevoImporte };
+        datos = { 
+            nombre: celdaActiva.closest('tr').cells[1].innerText.trim(), 
+            equipo: celdaActiva.closest('tr').dataset.equipo, 
+            concepto: celdaActiva.dataset.concepto, 
+            importe: nuevoImporte,
+            esperado: parseFloat(celdaActiva.dataset.esperado) || 0
+        };
     }
 
     const endpoint = isStaffPayment ? '/api/presupuesto' : '/api/actualizar_pago';
@@ -850,29 +1117,36 @@ async function actualizarPago(btn) {
             cerrarModalsFin();
         } else {
             alert("Error al actualizar el pago");
+            hideLoader();
         }
     } catch (e) {
         alert("Error de conexión");
+        hideLoader();
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
+        isSaving = false;
     }
 }
 
 async function guardarAsientoManual(btn) {
+    if (isSaving) return;
     const asiento = {
         fecha: document.getElementById('asientoFecha').value,
         departamento: document.getElementById('asientoDepto').value,
         pilar: document.getElementById('asientoPilar').value,
         descripcion: document.getElementById('asientoDesc').value,
-        importe: document.getElementById('asientoImporte').value
+        importe: document.getElementById('asientoImporte').value,
+        tipo_origen: 'MANUAL'
     };
 
     if (!asiento.fecha || !asiento.importe) return alert("Fecha e Importe son obligatorios");
+    showLoader();
 
     const originalText = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     btn.disabled = true;
+    isSaving = true;
 
     try {
         const res = await fetch('/api/presupuesto', {
@@ -887,24 +1161,30 @@ async function guardarAsientoManual(btn) {
             ['asientoFecha', 'asientoPilar', 'asientoDesc', 'asientoImporte'].forEach(id => document.getElementById(id).value = "");
         } else {
             alert("Error al guardar en el servidor");
+            hideLoader();
         }
     } catch (e) {
         alert("Error de conexión");
+        hideLoader();
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
+        isSaving = false;
     }
 }
 
 async function cargarPresupuesto() {
     try {
         const res = await fetch('/api/presupuesto');
-        presupuestoData = await res.json();
+        const data = await res.json();
+        presupuestoData = Array.isArray(data) ? data : [];
         aplicarFiltros();
         cargarPagosEnTabla();
     } catch (e) {
         console.error("Error cargando presupuesto:", e);
         presupuestoData = []; // Aseguramos que sea un array vacío para evitar errores posteriores
+    } finally {
+        hideLoader();
     }
 }
 
@@ -926,10 +1206,13 @@ function cargarPagosEnTabla() {
         const forma = fila.cells[3].innerText.trim();
         const configForma = configuracionesPago.find(c => c.nombre === forma);
 
-        const nPagos = configForma ? (parseInt(configForma.meses) || 1) : 12;
+        const nPagos = configForma ? (parseInt(configForma.meses) || 12) : 12;
         const totalAnual = configForma ? (parseFloat(configForma.total) || 440) : 440;
-        const cuotaRepartida = totalAnual / nPagos;
-        const intervalo = 12 / nPagos; // Ej: 2 pagos -> intervalo 6 meses
+        const cuotaRepartida = nPagos > 0 ? totalAnual / nPagos : 0;
+
+        // Solo agrupamos columnas si nPagos es divisor exacto de 12
+        const esDivisor = [1, 2, 3, 4, 6, 12].includes(nPagos);
+        const intervalo = esDivisor ? (12 / nPagos) : 1;
 
         const celdas = fila.querySelectorAll('.pago-cell');
         celdas.forEach((cell, idx) => {
@@ -939,13 +1222,14 @@ function cargarPagosEnTabla() {
             cell.className = 'pago-cell';
             cell.innerText = '-';
             delete cell.dataset.asientoId;
-            delete cell.dataset.importe;
+            cell.dataset.importe = "0";
             if (idx === 14 || idx === 15) { cell.dataset.sumPagado = 0; cell.dataset.sumEsperado = 0; }
 
             const mesReal = idx; // 0: Inscripción, 1: Ene, 2: Feb...
             
             if (mesReal === 0) {
-                // Inscripción
+                cell.style.display = '';
+                cell.colSpan = 1;
                 const valIns = parseFloat(configInscripciones[equipo]) || 50;
                 cell.innerText = `${Math.round(valIns)}€`;
                 cell.style.color = '#ccc';
@@ -954,7 +1238,7 @@ function cargarPagosEnTabla() {
             } else if (mesReal >= 1 && mesReal <= 12) {
                 // Meses 1 a 12
                 const mIdx = mesReal - 1; // 0 a 11
-                if (mIdx % intervalo === 0) {
+                if (mIdx % intervalo === 0 && (mIdx / intervalo) < nPagos) {
                     // Es inicio de bloque (Anchor)
                     cell.colSpan = intervalo;
                     const concepto = (mIdx + 1) < 10 ? '0' + (mIdx + 1) : '' + (mIdx + 1);
@@ -969,6 +1253,11 @@ function cargarPagosEnTabla() {
                     cell.style.color = '#ccc';
                     cell.dataset.esperado = valEsperado;
                     cell.dataset.concepto = concepto;
+                } else if (mIdx % intervalo === 0) {
+                    cell.colSpan = intervalo;
+                    cell.innerText = '-';
+                    cell.style.color = '#ccc';
+                    cell.dataset.esperado = 0;
                 } else {
                     // Es una celda "esclava" que debe desaparecer por el colspan del anchor
                     cell.style.display = 'none';
@@ -988,91 +1277,80 @@ function cargarPagosEnTabla() {
 
     // 2. Mapear historial de pagos
     presupuestoData.forEach(asiento => {
-        if (asiento.PILAR === "Cuotas" || asiento.PILAR === "Pagos Staff") {
-            const desc = asiento.DESCRIPCION || "";
-            const match = desc.match(/^Pago (.*?): (.*)$/);
-            if (!match) return;
-
-            const item = match[1].trim(); 
-            const nombre = match[2].trim().toLowerCase();
-            const esExtra1 = item.startsWith('EXTRA-');
-            const esExtra2 = item.startsWith('EXTRA2-');
-            const esStaff = item.startsWith('Staff-');
-            const esStaffExtra = item.startsWith('S-EXTRA-');
-
-            // Buscar la fila del jugador
-            const filas = document.querySelectorAll('.fila-jugador, .fila-staff');
-            for (let fila of filas) {
-                let nombreTabla;
-                let isCurrentRowStaff = fila.classList.contains('fila-staff');
-
-                if (isCurrentRowStaff) {
-                    nombreTabla = fila.dataset.nombre.trim().toLowerCase();
-                } else {
-                    nombreTabla = fila.cells[1].innerText.trim().toLowerCase();
-                }
-
-                if (nombreTabla === nombre && ((isCurrentRowStaff && esStaff) || (!isCurrentRowStaff && !esStaff))) {
-                    const celdasPago = fila.querySelectorAll('.pago-cell');
+        if (asiento.TIPO_ORIGEN === 'JUGADOR' || asiento.TIPO_ORIGEN === 'STAFF') {
+            const nombre = (asiento.NOMBRE || "").trim().toLowerCase();
+            const item = (asiento.CONCEPTO || "").trim();
+            const esStaff = (asiento.TIPO_ORIGEN === 'STAFF');
+            
+            const filas = document.querySelectorAll(esStaff ? '.fila-staff' : '.fila-jugador');
+            filas.forEach(fila => {
+                const nombreFila = esStaff ? (fila.dataset.nombre || "").trim().toLowerCase() : fila.cells[1].innerText.trim().toLowerCase();
+                
+                if (nombreFila === nombre) {
+                    const celdas = fila.querySelectorAll('.pago-cell');
                     let cell = null;
-
-                    if (isCurrentRowStaff) {
-                        if (esStaffExtra) {
-                            cell = celdasPago[12]; // La celda 13 (index 12) es OTROS
-                        } else {
-                            const mesIdx = parseInt(item.replace('Staff-', ''));
-                            if (!isNaN(mesIdx)) cell = celdasPago[mesIdx - 1];
-                        }
-                    } else { // Jugadores
-                        if (item === 'Inscripción') cell = celdasPago[0];
-                        else if (item === 'PACK_ROPA') cell = celdasPago[13];
-                        else if (esExtra1) cell = celdasPago[14];
-                        else if (esExtra2) cell = celdasPago[15];
+                    
+                    if (esStaff) {
+                        if (item.startsWith('S-EXTRA')) cell = celdas[12];
                         else {
-                            const mesIdx = parseInt(item);
-                            if (!isNaN(mesIdx)) cell = celdasPago[mesIdx];
+                            const m = parseInt(item.replace('Staff-', ''));
+                            if (!isNaN(m)) cell = celdas[m - 1];
+                        }
+                    } else {
+                        if (item === 'Inscripción') cell = celdas[0];
+                        else if (item === 'PACK_ROPA') cell = celdas[13];
+                        else if (item.startsWith('EXTRA-')) cell = celdas[14];
+                        else if (item.startsWith('EXTRA2-')) cell = celdas[15];
+                        else {
+                            const m = parseInt(item);
+                            if (isNaN(m)) return;
+                            const forma = fila.cells[3].innerText.trim();
+                            const configForma = configuracionesPago.find(c => c.nombre === forma);
+                            const nPagos = configForma ? (parseInt(configForma.meses) || 12) : 12;
+                            const esDivisor = [1, 2, 3, 4, 6, 12].includes(nPagos);
+                            const localIntervalo = esDivisor ? (12 / nPagos) : 1;
+                            
+                            const anchorIdx = 1 + (Math.floor((m - 1) / localIntervalo) * localIntervalo);
+                            cell = celdas[anchorIdx];
                         }
                     }
 
                     if (cell) {
-                        const pagado = parseFloat(asiento.IMPORTE) || 0;
-                        // Para staff, el esperado puede venir del asiento o ser 0 si no hay config
-                        let esperado = parseFloat(asiento.ESPERADO) || parseFloat(cell.dataset.esperado) || 0;
-
-                        if (isCurrentRowStaff) { // Staff no tiene colspan, siempre individual
-                            cell.innerHTML = `<span class="paid-amount-large">${Math.round(pagado)}€</span><span style="font-size: 8px; opacity: 0.9;"> / ${Math.round(esperado)}€</span>`;
-                            cell.classList.remove('pago-exceso');
-                            cell.classList.add(pagado >= esperado ? 'pago-verde' : 'pago-naranja');
-                            if (pagado > esperado) cell.classList.add('pago-exceso');
-                            cell.style.color = '';
-                            cell.dataset.asientoId = asiento.ASIENTO || asiento['Nº_ASIENTO'];
-                            cell.dataset.importe = pagado;
-                            cell.dataset.esperado = esperado;
-                            cell.dataset.fecha = asiento.FECHA;
-                        } else if (esExtra1 || esExtra2 || esStaffExtra) {
+                        // Limpieza de formato para asegurar que parseFloat funcione con comas y puntos
+                        const cleanImporte = (asiento.IMPORTE || "0").toString().replace(',', '.');
+                        const cleanEsperado = (asiento.ESPERADO || "0").toString().replace(',', '.');
+                        
+                        const pagado = parseFloat(cleanImporte) || 0;
+                        // Acumular pago para celdas agrupadas o normales
+                        const actualPagado = (parseFloat(cell.dataset.importe) || 0) + pagado;
+                        // El esperado es el de la celda (configuración de la modalidad para ese bloque)
+                        const valEsperadoCelda = parseFloat(cell.dataset.esperado) || 0;
+                        
+                        if (item.includes('EXTRA')) {
                             let sP = (parseFloat(cell.dataset.sumPagado) || 0) + pagado;
-                            let sE = (parseFloat(cell.dataset.sumEsperado) || 0) + esperado;
+                            let sE = (parseFloat(cell.dataset.sumEsperado) || 0) + (parseFloat(asiento.ESPERADO) || 0);
                             cell.dataset.sumPagado = sP;
                             cell.dataset.sumEsperado = sE;
-                            cell.innerText = `${Math.round(sP)}€ / ${Math.round(sE)}€`;
+                            cell.dataset.importe = sP;
+                            cell.innerHTML = `<span class="paid-amount-large">${Math.round(sP)}€</span><span style="font-size: 8px; opacity: 0.7;"> / ${Math.round(sE)}€</span>`;
                             cell.classList.add(sP >= sE && sE > 0 ? 'pago-verde' : 'pago-naranja');
                             cell.style.color = '';
                         } else {
-                            cell.innerHTML = `<span class="paid-amount-large">${Math.round(pagado)}€</span><span style="font-size: 8px; opacity: 0.9;"> / ${Math.round(esperado)}€</span>`;
-                            cell.classList.remove('pago-exceso');
-                            cell.classList.add(pagado >= esperado ? 'pago-verde' : 'pago-naranja');
-                            if (pagado > esperado) cell.classList.add('pago-exceso');
+                            const p = Math.round(actualPagado);
+                            const e = Math.round(valEsperadoCelda);
+                            cell.innerHTML = `<span class="paid-amount-large">${p}€</span><span style="font-size: 8px; opacity: 0.7;"> / ${e}€</span>`;
+                            cell.classList.remove('pago-verde', 'pago-naranja', 'pago-exceso');
+                            cell.classList.add(p >= e ? 'pago-verde' : 'pago-naranja');
+                            if (p > e) cell.classList.add('pago-exceso');
                             cell.style.color = '';
-                            cell.dataset.asientoId = asiento.ASIENTO || asiento['Nº_ASIENTO'];
-                            cell.dataset.importe = pagado;
-                            cell.dataset.esperado = esperado;
+                            cell.dataset.importe = actualPagado;
+                            cell.dataset.asientoId = asiento.REAL_ID;
                             cell.dataset.fecha = asiento.FECHA;
                         }
                         cell.dataset.concepto = item;
                     }
-                    break;
                 }
-            }
+            });
         }
     });
 }
@@ -1092,123 +1370,37 @@ function aplicarFiltros() {
     renderizarTablaPresupuesto(filtrados);
 }
 
-/* --- LÓGICA DE VERIFICACIÓN Y BORRADO --- */
-let codigoVerificacionActual = "";
-let callbackVerificacion = null;
-
-function solicitarLimpiezaHistorial(tipo) {
-    abrirVerificacionSegura(
-        `¿Eliminar TODO el historial de ${tipo}?`,
-        async () => {
-            const res = await fetch('/api/limpiar_historial', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ tipo })
-            });
-            if (res.ok) location.reload();
-        }
-    );
-}
-
-function abrirVerificacionSegura(titulo, callback) {
-    callbackVerificacion = callback;
-    document.getElementById('modalVerifTitulo').innerText = titulo;
-    document.getElementById('step1Verif').style.display = 'block';
-    document.getElementById('step2Verif').style.display = 'none';
-    document.getElementById('modalVerificacionSegura').style.display = 'flex';
-}
-
-function irAPaso2Verificacion() {
-    // Generar código de 4 letras aleatorias
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    codigoVerificacionActual = "";
-    for(let i=0; i<4; i++) codigoVerificacionActual += chars.charAt(Math.floor(Math.random() * chars.length));
-    
-    document.getElementById('txtCodigoVerif').innerText = codigoVerificacionActual;
-    document.getElementById('inputCodigoVerif').value = "";
-    document.getElementById('step1Verif').style.display = 'none';
-    document.getElementById('step2Verif').style.display = 'block';
-}
-
-function confirmarVerificacionFinal() {
-    const val = document.getElementById('inputCodigoVerif').value.toUpperCase().trim();
-    if (val === codigoVerificacionActual) {
-        document.getElementById('modalVerificacionSegura').style.display = 'none';
-        if (callbackVerificacion) callbackVerificacion();
-    } else {
-        alert("Código incorrecto. Inténtalo de nuevo.");
-        irAPaso2Verificacion();
-    }
-}
-
-async function borrarAsientoIndividual(id) {
-    abrirVerificacionSegura(
-        `¿Eliminar el asiento #${id} definitivamente?`,
-        async () => {
-            const res = await fetch('/api/operacion_asiento', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ accion: 'borrar', id: id })
-            });
-            if (res.ok) cargarPresupuesto();
-        }
-    );
-}
-
-function editarAsientoManual(id) {
-    const asiento = presupuestoData.find(a => (a.Nº_ASIENTO || a['Nº ASIENTO'] || a.ASIENTO) == id);
-    if (!asiento) return;
-
-    // Pre-llenar el formulario superior con los datos para editar
-    document.getElementById('asientoFecha').value = asiento.FECHA;
-    document.getElementById('asientoDepto').value = asiento.DEPARTAMENTO;
-    document.getElementById('asientoPilar').value = asiento.PILAR;
-    document.getElementById('asientoDesc').value = asiento.DESCRIPCION;
-    document.getElementById('asientoImporte').value = Math.abs(parseFloat(asiento.IMPORTE));
-    
-    // Cambiar el botón de guardar por uno de "ACTUALIZAR" temporalmente
-    const btnContainer = document.querySelector('.form-asiento button');
-    const originalText = btnContainer.innerText;
-    const originalOnClick = btnContainer.getAttribute('onclick');
-    
-    btnContainer.innerText = "ACTUALIZAR ASIENTO #" + id;
-    btnContainer.style.background = "#E31E24";
-    btnContainer.onclick = async () => {
-        abrirVerificacionSegura(`¿Guardar cambios en el asiento #${id}?`, async () => {
-            const datos = {
-                accion: 'editar', id: id,
-                fecha: document.getElementById('asientoFecha').value,
-                departamento: document.getElementById('asientoDepto').value,
-                pilar: document.getElementById('asientoPilar').value,
-                descripcion: document.getElementById('asientoDesc').value,
-                importe: document.getElementById('asientoImporte').value
-            };
-            await fetch('/api/operacion_asiento', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(datos) });
-            location.reload(); // Recarga para resetear estado del formulario
-        });
-    };
-}
-
 function renderizarTablaPresupuesto(datos) {
     const tbody = document.querySelector('#tablaPresupuesto tbody');
     tbody.innerHTML = datos.map(a => {
         const importe = parseFloat(a.IMPORTE) || 0;
-        const id = a.Nº_ASIENTO || a['Nº ASIENTO'] || a.ASIENTO || '0';
-        const esPagoJugador = id.toString().startsWith('P-');
+        // Use Nº_ASIENTO_GLOBAL for display
+        const id_global = a.Nº_ASIENTO_GLOBAL || '0';
+        const real_id = a.REAL_ID || '0'; // The actual ID in its sheet
+        const tipo_origen = a.TIPO_ORIGEN || 'MANUAL'; // Type of entry
+
+        // Datos de identificación para pagos (para búsqueda robusta en backend)
+        const nombreOrig = a.NOMBRE || '';
+        const conceptoOrig = a.CONCEPTO || '';
+        const fechaOrig = a.FECHA || '';
 
         return `
             <tr>
                 <td style="white-space: nowrap;">${a.FECHA || '-'}</td>
-                <td style="font-weight:bold; color: #E31E24;">#${id}</td>
+                <td style="font-weight:bold; color: #E31E24;">#${id_global}</td>
                 <td>${a.DEPARTAMENTO || '-'}</td>
                 <td>${a.PILAR || '-'}</td>
                 <td>${a.DESCRIPCION || '-'}</td>
                 <td style="color: ${importe >= 0 ? '#28a745' : '#dc3545'}; font-weight:bold; text-align: right;">
                     ${importe.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
                 </td>
+                <td style="text-align: center;">
+                    <i class="fas fa-pencil-alt" style="cursor:pointer; color:#333; font-size: 14px;" 
+                       onclick="abrirAccionAsiento('${id_global}', '${real_id}', '${tipo_origen}', '${nombreOrig}', '${conceptoOrig}', '${fechaOrig}')"></i>
+                </td>
             </tr>
         `;
-    }).reverse().join('');
+    }).join(''); // Removed .reverse() here as sorting is done in backend
 }
 
 function abrirModalAnadirJugadorFin() {
@@ -1372,20 +1564,25 @@ function renderizarListaFormasPago() {
 
 function actualizarDatoPago(index, campo, valor) {
     const conf = configuracionesPago[index];
-    if (campo === 'nombre') conf.nombre = valor;
+    const viejoNombre = conf.nombre;
+
+    if (campo === 'nombre') {
+        conf.nombre = valor;
+        // Propagar el cambio a los jugadores que tengan este nombre en la tabla para mantener sincronía visual
+        document.querySelectorAll('.fila-jugador').forEach(f => {
+            const span = f.querySelector('.span-forma-pago');
+            if (span && span.innerText.trim() === viejoNombre) {
+                span.innerText = valor;
+            }
+        });
+    }
     if (campo === 'total') conf.total = parseFloat(valor) || 0;
-    if (campo === 'meses') conf.meses = parseInt(valor) || 1;
+    if (campo === 'meses') conf.meses = Math.min(12, Math.max(1, parseInt(valor) || 1));
     
-    // El cálculo solicitado: total dividido por número de pagos
     conf.cuota = conf.meses > 0 ? (conf.total / conf.meses) : 0;
-    
     renderizarListaFormasPago();
     actualizarSelectsFormasPago();
-    setTimeout(cargarPagosEnTabla, 50); // Pequeño delay para asegurar que los datos están listos
-
-    if (celdasSeleccionadas.length > 0) {
-        actualizarBarraPagos();
-    }
+    cargarPagosEnTabla();
 }
 
 function anadirFormaPago() {
@@ -1557,23 +1754,33 @@ function generarReporteImpagos() {
         const configFormaPago = configuracionesPago.find(c => c.nombre === formaPagoJugador);
         if (configFormaPago) cuotaMensualBase = configFormaPago.cuota;
 
-        // 1. Revisar Inscripción (Columna 4)
-        let inscripcionEsperada = parseFloat(configInscripciones[equipoJugador]) || 50; // Valor dinámico de inscripción
-        if (cells[4].innerText === '-' || cells[4].classList.contains('pago-naranja')) {
-            const val = parseFloat(cells[4].innerText.replace('-', '')) || 0;
-            const deudaMes = (cells[4].innerText === '-') ? inscripcionEsperada : val;
-            deudaTotal += deudaMes;
-            detalleArr.push(`INSCR (${deudaMes}€)`);
+        const celdasPago = f.querySelectorAll('.pago-cell');
+
+        // 1. Revisar Inscripción (Index 0 en celdasPago)
+        const cellInscrip = celdasPago[0];
+        let inscripcionEsperada = parseFloat(cellInscrip.dataset.esperado) || parseFloat(configInscripciones[equipoJugador]) || 50;
+        if (cellInscrip.innerText === '-' || cellInscrip.classList.contains('pago-naranja')) {
+            const pagado = parseFloat(cellInscrip.dataset.importe) || 0;
+            const deuda = Math.max(0, inscripcionEsperada - pagado);
+            if (deuda > 0) {
+                deudaTotal += deuda;
+                detalleArr.push(`INSCR (${deuda}€)`);
+            }
         }
 
-        for (let m = 1; m < mesActual; m++) { // Enero es el primer mes (m=1), su columna es 5
-            const colIdx = m + 4; // Columna 4 es Inscripción, 5 es Enero
-            const cell = cells[colIdx];
-            if (cell.innerText === '-' || cell.classList.contains('pago-naranja')) { // Columna 4 es Inscripción, 5 es Enero
-                const val = parseFloat(cell.innerText.replace('-', '')) || 0;
-                const deudaMes = (cell.innerText === '-') ? cuotaMensualBase : val;
-                deudaTotal += deudaMes;
-                detalleArr.push(`${nombresMesesCortos[m-1]} (${deudaMes}€)`);
+        // 2. Revisar Meses (Index 1 al mes actual en celdasPago)
+        for (let m = 1; m <= mesActual; m++) {
+            const cell = celdasPago[m];
+            if (!cell || cell.style.display === 'none' || parseFloat(cell.dataset.esperado) === 0) continue; 
+            
+            if (cell.innerText === '-' || cell.classList.contains('pago-naranja')) {
+                const esperado = cell.dataset.esperado !== undefined ? parseFloat(cell.dataset.esperado) : cuotaMensualBase;
+                const pagado = parseFloat(cell.dataset.importe) || 0;
+                const deuda = Math.max(0, esperado - pagado);
+                if (deuda > 0) {
+                    deudaTotal += deuda;
+                    detalleArr.push(`${nombresMesesCortos[m-1]} (${deuda}€)`);
+                }
             }
         }
 
@@ -1634,6 +1841,17 @@ function exportarImpagosExcel() {
     link.click();
     document.body.removeChild(link);
 }
+
+window.onload = async function() {
+    await cargarConfiguraciones();
+    await cargarPresupuesto();
+    actualizarSelectsFormasPago();
+    
+    const lastTab = localStorage.getItem('activeFinTab');
+    if (lastTab) switchTab(null, lastTab);
+    
+    hideLoader();
+};
 </script>
 
 <!-- MODAL ESTADÍSTICAS MEJORADO -->
@@ -1938,6 +2156,7 @@ async function guardarExtraDetalle(btn) {
     const equipo = celdaActiva.closest('tr').dataset.equipo;
     const rows = document.querySelectorAll('.extra-row-item');
     const fechaHoy = new Date().toLocaleDateString('es-ES');
+    showLoader();
 
     try {
         for (let row of rows) {
@@ -1960,6 +2179,7 @@ async function guardarExtraDetalle(btn) {
         btn.disabled = false;
     }
 }
+
 </script>
 
 <!-- MODAL MODIFICAR ESPERADO COLUMNA -->
@@ -2003,6 +2223,8 @@ async function guardarExtraDetalle(btn) {
                     <option value="Efectivo">Efectivo</option>
                     <option value="Domiciliación">Domiciliación</option>
                     <option value="Transferencia">Transferencia</option>
+                    <option value="Tarjeta">Tarjeta</option>
+                    <option value="Beca">Beca</option>
                 </select>
             </div>
             <div>
@@ -2069,19 +2291,4 @@ async function guardarExtraDetalle(btn) {
     </div>
 </div>
 
-<script>
-window.onload = async function() {
-    await cargarConfiguraciones(); // Cargamos los precios personalizados primero
-    await cargarPresupuesto();     // Luego cargamos los pagos y el historial
-    actualizarSelectsFormasPago(); // Sincronizamos los desplegables
-
-    // Restaurar pestaña activa desde el almacenamiento local
-    const lastTab = localStorage.getItem('activeFinTab');
-    if (lastTab) {
-        switchTab(null, lastTab);
-    }
-    // Solo ocultamos el loader cuando TODOS los awaits han terminado
-    hideLoader();
-};
-</script>
 {% endblock %}
