@@ -212,14 +212,14 @@
     .btn-obs-jugador.has-obs { background: #333; color: white; border-color: #333; }
     .btn-obs-jugador.has-obs:hover { background: #000; border-color: #000; }
 
-    .td-asistencia { padding: 8px !important; min-width: 80px; border: 1px solid #f0f0f0; }
+    .td-asistencia { padding: 8px !important; min-width: 165px; border: 1px solid #f0f0f0; }
     .wrapper-asistencia { 
         display: flex; 
         align-items: center; 
         justify-content: center; 
-        gap: 8px; 
+        gap: 11px; 
         position: relative;
-        width: 120px; 
+        width: 100%; 
         margin: 0 auto;
     }
     /* Botones de Control de Balones Profesionales */
@@ -359,6 +359,26 @@
         opacity: 1 !important; 
         pointer-events: auto !important; 
     }
+    .btn-charla {
+        width: 30px;
+        height: 38px;
+        background: #fdfdfd;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: 1px solid #eee;
+        font-size: 14px;
+        color: #ccc;
+        transition: all 0.2s;
+        flex-shrink: 0;
+    }
+    .btn-charla.active {
+        background: #38bdf8;
+        color: white;
+        border-color: #0ea5e9;
+    }
 </style>
 
 <script>
@@ -387,6 +407,8 @@ async function generarCalendario() {
     const equipo = document.getElementById('selectEquipo').value;
     if (!equipo) return;
 
+    showLoader();
+
     // Sincronizamos observaciones/bajas antes de renderizar para asegurar persistencia
     await sincronizarTodoDesdeBackend();
 
@@ -410,7 +432,7 @@ async function generarCalendario() {
 
     document.getElementById('cabeceraDias').innerHTML = `<th class="sticky-col" style="background:white;"></th>` +
         diasValidos.map((d, i) => `
-            <th class="th-dia" id="th-col-${i}" style="position: relative; min-width: 105px; height: 100px; padding: 10px 5px;">
+            <th class="th-dia" id="th-col-${i}" style="position: relative; min-width: 165px; height: 100px; padding: 10px 5px;">
                 <div class="warning-icon">⚠️</div>
                 <div style="font-size: 10px; opacity: 0.8;">${d.label}</div>
                 <div style="display: flex; align-items: center; justify-content: center; height: 70px; position: relative;">
@@ -428,10 +450,22 @@ async function generarCalendario() {
 
     document.getElementById('filaMarcarTodo').innerHTML = `<td class="sticky-col fila-todo-si-estilo"></td>` + 
     diasValidos.map((_, i) => `
-        <td class="fila-todo-si-estilo" style="text-align:center;">
-            <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 5px; padding: 5px 0;">
-                <span class="btn-todo-si" onclick="marcarColumna(${i})">TODO SI</span>
-                <span class="btn-todo-val" onclick="marcarValoracionColumna(${i})">TODO OK</span>
+        <td class="fila-todo-si-estilo" style="text-align:center; min-width: 165px; border: 1px solid #f0f0f0;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 11px; width: 100%; padding: 10px 0;">
+                <!-- Contenedor alineado con SI/NO (40px) -->
+                <div style="width: 40px; display: flex; justify-content: center; flex-shrink: 0;">
+                    <span class="btn-todo-si" style="white-space: nowrap; font-size: 8px; padding: 4px 2px;" onclick="marcarColumna(${i})">TODO SI</span>
+                </div>
+                <!-- Hueco alineado con el Lápiz (25px) -->
+                <div style="width: 25px; flex-shrink: 0;"></div>
+                <!-- Contenedor alineado con la Flecha (35px) -->
+                <div style="width: 35px; display: flex; justify-content: center; flex-shrink: 0;">
+                    <span class="btn-todo-val" style="white-space: nowrap; font-size: 8px; padding: 4px 2px; letter-spacing: -0.3px;" onclick="marcarValoracionColumna(${i})">TODO OK</span>
+                </div>
+                <!-- Contenedor alineado con la Charla (30px) -->
+                <div style="width: 30px; display: flex; justify-content: center; flex-shrink: 0;">
+                    <span class="btn-todo-val" style="white-space: nowrap; font-size: 8px; padding: 4px 2px; letter-spacing: -0.3px;" onclick="marcarCharlaColumna(${i})">CHARLA</span>
+                </div>
             </div>
         </td>`).join('');
 
@@ -479,6 +513,10 @@ async function generarCalendario() {
                             <span class="perc-tot" style="font-size: 10px; color: #666; font-weight: 700;">0%</span>
                             <span style="font-size: 8px; color: #666; font-weight: 500; text-transform: uppercase;">%TEMP</span>
                         </div>
+                        <div style="display: flex; align-items: baseline; gap: 3px;">
+                            <span class="charlas-tot" style="font-size: 10px; color: #38bdf8; font-weight: 900;">0</span>
+                            <span style="font-size: 8px; color: #38bdf8; font-weight: 700; text-transform: uppercase;">CHARLAS</span>
+                        </div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 2px; flex-shrink: 0; width: 55px; justify-content: flex-end;">
                         <i class="fas fa-pencil-alt btn-edit-jugador" title="Editar" onclick="abrirModalGestion('${nombreEscapado}')"></i>
@@ -508,6 +546,7 @@ async function generarCalendario() {
                             <div class="celda-asistencia estado-vacio" onclick="ciclarEstado(this)">-</div>
                             <div class="btn-nota" onclick="abrirModal(this)" style="display:none;"><i class="fas fa-pencil-alt"></i></div>
                             <div class="btn-val" onclick="ciclarValoracion(this)" data-valor="-">-</div>
+                            <div class="btn-charla" onclick="toggleCharla(this)" data-valor="NO" title="Charla Individual"><i class="fas fa-comments"></i></div>
                         </div>
                     </td>`;
             }).join('')}
@@ -711,6 +750,11 @@ async function cargarAsistenciasGuardadas() {
             const elTot = fila.querySelector('.perc-tot');
             if (elTot) elTot.innerText = percP + '%';
 
+            // Actualizar contador de charlas totales (Toda la temporada)
+            const charlasTot = recsP.filter(d => d.charla === 'SI').length;
+            const elChar = fila.querySelector('.charlas-tot');
+            if (elChar) elChar.innerText = charlasTot;
+
             const celdas = fila.querySelectorAll('.td-asistencia');
 
             celdas.forEach((td, index) => {
@@ -725,6 +769,7 @@ async function cargarAsistenciasGuardadas() {
             if (!el) return; // Si el jugador está de baja ("X"), saltamos esta celda para evitar errores
                     const btnNota = td.querySelector('.btn-nota');
                     const btnVal = td.querySelector('.btn-val');
+                    const btnCharla = td.querySelector('.btn-charla');
                     
                     el.innerText = registro.estado;
                     el.dataset.motivo = registro.motivo || "";
@@ -745,6 +790,15 @@ async function cargarAsistenciasGuardadas() {
                         btnVal.innerText = iconos[registro.valoracion] || '-';
                         btnVal.className = 'btn-val ' + (clases[registro.valoracion] || '');
                     }
+
+                    // CARGAR CHARLA
+                    if (registro.charla === 'SI') {
+                        btnCharla.dataset.valor = 'SI';
+                        btnCharla.classList.add('active');
+                    } else {
+                        btnCharla.dataset.valor = 'NO';
+                        btnCharla.classList.remove('active');
+                    }
                 }
             });
         });
@@ -752,6 +806,7 @@ async function cargarAsistenciasGuardadas() {
         calcularStats();
         actualizarAlertasVisuales(); // <--- ESTA ES LA LÍNEA QUE QUITA EL ROJO AL CARGAR
     } catch (e) { console.error("Error cargando asistencias:", e); }
+    finally { hideLoader(); }
 }
 
 function registrarCambioLocal(el) {
@@ -772,6 +827,10 @@ function registrarCambioLocal(el) {
     // Capturamos el valor de la flecha
     const btnVal = td.querySelector('.btn-val');
     const valoracion = btnVal.dataset.valor || '-';
+    
+    // Capturamos el valor de la charla
+    const btnCharla = td.querySelector('.btn-charla');
+    const charla = btnCharla ? btnCharla.dataset.valor : 'NO';
 
     elAsis.classList.add('celda-modificada');
 
@@ -780,8 +839,9 @@ function registrarCambioLocal(el) {
         cambiosPendientes[index].estado = estado;
         cambiosPendientes[index].valoracion = valoracion;
         cambiosPendientes[index].motivo = motivo;
+        cambiosPendientes[index].charla = charla;
     } else {
-        cambiosPendientes.push({ nombre, dia, equipo, estado, valoracion, motivo });
+        cambiosPendientes.push({ nombre, dia, equipo, estado, valoracion, motivo, charla });
     }
 }
 
@@ -802,6 +862,18 @@ function ciclarValoracion(el) {
     registrarCambioLocal(celdaAsis);
     actualizarAlertasVisuales();
     calcularStats(); // Aseguramos que las X no cuenten como faltas
+    enviarCambiosAlServidor();
+}
+
+function toggleCharla(el) {
+    const actual = el.dataset.valor || 'NO';
+    const nuevo = (actual === 'NO') ? 'SI' : 'NO';
+    el.dataset.valor = nuevo;
+    if (nuevo === 'SI') el.classList.add('active');
+    else el.classList.remove('active');
+    
+    const celdaAsis = el.parentElement.querySelector('.celda-asistencia');
+    registrarCambioLocal(celdaAsis);
     enviarCambiosAlServidor();
 }
 
@@ -879,6 +951,23 @@ function marcarValoracionColumna(colIndex) {
             btnVal.dataset.valor = 'NORMAL';
             btnVal.innerText = '→';
             btnVal.className = 'btn-val val-normal';
+            registrarCambioLocal(celdaAsis);
+        }
+    });
+    actualizarAlertasVisuales();
+    enviarCambiosAlServidor();
+}
+
+function marcarCharlaColumna(colIndex) {
+    const filas = document.querySelectorAll('#cuerpoTabla tr');
+    filas.forEach(fila => {
+        const celdas = fila.querySelectorAll('.td-asistencia');
+        if (celdas[colIndex]) {
+            const btnCharla = celdas[colIndex].querySelector('.btn-charla');
+            const celdaAsis = celdas[colIndex].querySelector('.celda-asistencia');
+            if (!celdaAsis || !btnCharla) return;
+            btnCharla.dataset.valor = 'SI';
+            btnCharla.classList.add('active');
             registrarCambioLocal(celdaAsis);
         }
     });

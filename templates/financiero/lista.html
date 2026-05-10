@@ -18,11 +18,11 @@
     .pago-exceso { outline: 2px solid #ff0000 !important; outline-offset: -2px; z-index: 10; position: relative; }
     .selected-cell { outline: 2px solid #E31E24; z-index: 5; }
     
-    .section-grabar { background: #f1f5f9; padding: 20px; margin: 15px; border-radius: 12px; border: 1px solid #e2e8f0; }
-    .section-grabar h3 { color: #334155; font-size: 11px; font-weight: 900; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; }
+    .section-grabar { background: #475569; padding: 20px; margin: 15px; border-radius: 12px; border: 1px solid #334155; }
+    .section-grabar h3 { color: #fff; font-size: 11px; font-weight: 900; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; }
     
     .form-asiento { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
-    .form-asiento input, .form-asiento select { padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-family: inherit; font-size: 12px; }
+    .form-asiento input, .form-asiento select { padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-family: inherit; font-size: 12px; background: white; }
     .btn-fin { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 800; font-size: 11px; text-transform: uppercase; }
     
     /* Aseguramos que los modales estén ocultos por defecto */
@@ -1389,7 +1389,7 @@ function aplicarFiltros() {
     const pilar = document.getElementById('filtroPilar').value.toLowerCase();
     const desc = document.getElementById('filtroDesc').value ? document.getElementById('filtroDesc').value.toLowerCase() : "";
 
-    let filtrados = presupuestoData.filter(a => {
+    let filtrados = [...presupuestoData].filter(a => {
         const matchFecha = !fecha || a.FECHA === fecha;
         const matchDepto = !depto || a.DEPARTAMENTO === depto;
         const matchPilar = !pilar || (a.PILAR && a.PILAR.toLowerCase().includes(pilar));
@@ -1397,11 +1397,10 @@ function aplicarFiltros() {
         return matchFecha && matchDepto && matchPilar && matchDesc;
     });
 
-    // Aplicar ordenación por el número de asiento global
     filtrados.sort((a, b) => {
-        const valA = parseInt(a.Nº_ASIENTO_GLOBAL) || 0;
-        const valB = parseInt(b.Nº_ASIENTO_GLOBAL) || 0;
-        return currentSortOrder === 'desc' ? valB - valA : valA - valB;
+        const valA = parseInt(a.Nº_ASIENTO_GLOBAL);
+        const valB = parseInt(b.Nº_ASIENTO_GLOBAL);
+        return (currentSortOrder === 'desc') ? (valB - valA) : (valA - valB);
     });
 
     renderizarTablaPresupuesto(filtrados);

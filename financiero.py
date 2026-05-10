@@ -124,12 +124,15 @@ def api_presupuesto():
             # Filtrar por si acaso hay algún registro totalmente vacío que haya pasado los filtros previos
             historial_completo = [h for h in historial_completo if any(str(v).strip() for v in h.values() if v)]
 
-            # Sort by date (most recent first)
-            historial_completo.sort(key=lambda x: parse_date_for_sort(x.get('FECHA')), reverse=True)
+            # Ordenamos por fecha ascendente para asignar IDs secuenciales correctos (el más viejo es el 1)
+            historial_completo.sort(key=lambda x: parse_date_for_sort(x.get('FECHA')))
 
             # Asignar Nº ASIENTO secuencial global (000001...)
             for i, item in enumerate(historial_completo):
                 item['Nº_ASIENTO_GLOBAL'] = str(i + 1).zfill(6)
+            
+            # Invertimos para que por defecto el GET devuelva los más nuevos arriba
+            historial_completo.reverse()
 
             # Evitar cache de navegador
             resp = jsonify(historial_completo)

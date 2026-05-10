@@ -7,6 +7,10 @@ from flask import Blueprint, render_template, session, request, jsonify
 # Creamos el Blueprint para Dirección Deportiva
 deportivo_bp = Blueprint('deportivo_bp', __name__)
 
+def normalizar_cabeceras_dep(headers):
+    """Limpia las cabeceras para que la búsqueda de columnas sea robusta."""
+    return [h.strip().upper().replace('Ó','O').replace('Í','I').replace('É','E').replace('Á','A').replace('Ú','U').replace(' ','_') for h in headers]
+
 @deportivo_bp.route('/deportivo')
 def deportivo():
     # Importamos las rutas de carpetas desde la app principal
@@ -185,16 +189,20 @@ def direccion_deportiva():
         if not all_v: 
             return render_template('direccion.html', usuario=usuario, equipos=[], jugadores_raw=[])
         
-        headers = [h.strip().upper() for h in all_v[0]]
-        idx_eq = headers.index("EQUIPO") if "EQUIPO" in headers else -1
-        idx_nom = headers.index("NOMBRE") if "NOMBRE" in headers else -1
+        headers = normalizar_cabeceras_dep(all_v[0])
+        # Buscamos índices con nombres normalizados
+        idx_eq = headers.index("EQUIPO") if "EQUIPO" in headers else 1
+        idx_nom = headers.index("NOMBRE") if "NOMBRE" in headers else 0
         
         jugadores = []
         for row in all_v[1:]:
-            if len(row) > max(idx_eq, idx_nom):
-                jugadores.append({"NOMBRE": row[idx_nom], "EQUIPO": row[idx_eq]})
+            if len(row) > max(idx_eq, idx_nom) and row[idx_nom].strip():
+                jugadores.append({
+                    "NOMBRE": row[idx_nom].strip(), 
+                    "EQUIPO": row[idx_eq].strip() if idx_eq < len(row) else "SIN EQUIPO"
+                })
         
-        equipos = sorted(list(set(j['EQUIPO'] for j in jugadores)))
+        equipos = sorted(list(set(j['EQUIPO'] for j in jugadores if j['EQUIPO'])))
         return render_template('direccion.html', usuario=usuario, equipos=equipos, jugadores_raw=jugadores)
     except Exception as e:
         print(f"Error en direccion_deportiva: {e}")

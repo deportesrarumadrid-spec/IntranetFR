@@ -225,7 +225,8 @@ def obtener_asistencias():
                     "dia": dia_extraido,
                     "estado": fila[4] if len(fila) > 4 else "",
                     "valoracion": fila[5] if len(fila) > 5 else "-",
-                    "motivo": fila[6] if len(fila) > 6 else ""
+                    "motivo": fila[6] if len(fila) > 6 else "",
+                    "charla": fila[7] if len(fila) > 7 else "NO"
                 })
         
         return jsonify(registros)
@@ -320,6 +321,7 @@ def guardar_asistencia_masiva():
             valoracion = c.get('valoracion', '-') # Captura la flecha (NORMAL, MAL, etc.)
             if not valoracion: valoracion = "-"
             observacion = c.get('motivo', '') 
+            charla = c.get('charla', 'NO')
 
             # Búsqueda robusta: comparamos números de día y mes, no strings exactos
             fila_idx = -1
@@ -338,10 +340,10 @@ def guardar_asistencia_masiva():
             
             if fila_idx != -1:
                 # Actualización masiva de la fila (Columnas E, F, G) para mayor velocidad y fiabilidad
-                sheet.update(f'E{fila_idx}:G{fila_idx}', [[estado, valoracion, observacion]], value_input_option='USER_ENTERED')
+                sheet.update(f'E{fila_idx}:H{fila_idx}', [[estado, valoracion, observacion, charla]], value_input_option='USER_ENTERED')
             else:
-                # Nueva fila: FECHA, EQUIPO, NOMBRE, APELLIDO, ASISTENCIA, VALORACIÓN, OBSERVACIONES
-                sheet.append_row([fecha_full, equipo, nombre, "", estado, valoracion, observacion])
+                # Nueva fila: FECHA, EQUIPO, NOMBRE, APELLIDO, ASISTENCIA, VALORACIÓN, OBSERVACIONES, CHARLA
+                sheet.append_row([fecha_full, equipo, nombre, "", estado, valoracion, observacion, charla])
 
         return jsonify({"status": "success"}), 200
     except Exception as e:
