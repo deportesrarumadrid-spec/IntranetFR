@@ -1,6 +1,16 @@
+import csv
+from io import StringIO
 import json
 import gspread
 from gspread.utils import rowcol_to_a1
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
+try:
+    import pdfplumber
+except ImportError:
+    pdfplumber = None
 from flask import Blueprint, render_template, request, session, jsonify
 from datetime import datetime # Import datetime for sorting
 
@@ -9,8 +19,10 @@ financiero_bp = Blueprint('financiero', __name__)
 
 def normalizar_cabeceras(headers):
     """Normaliza las cabeceras del Excel para que coincidan con las claves del sistema."""
+    # Aseguramos que todos los elementos sean strings y manejamos posibles valores nulos
+    headers = [str(h).strip() if h is not None else "" for h in headers]
     # Limpieza profunda: quitamos tildes, símbolos especiales y espacios
-    headers = [h.strip().upper().replace('Ó','O').replace('Í','I').replace('É','E').replace('Á','A').replace('Ú','U').replace('º','') for h in headers]
+    headers = [h.upper().replace('Ó','O').replace('Í','I').replace('É','E').replace('Á','A').replace('Ú','U').replace('º','') for h in headers]
     # Mapeo de variantes de nombres de columnas financieras para asegurar persistencia
     return [h.replace(' ', '_').replace('Nº', 'N').replace('TIPO_DE_PAGO', 'TIPO_PAGO').replace('FORMA_DE_PAGO', 'FORMA_PAGO').replace('JUGADOR', 'NOMBRE') for h in headers]
 
@@ -64,6 +76,43 @@ def parse_date_for_sort(date_str):
         except ValueError:
             continue
     return datetime.min
+
+# Helper function to parse and format dates
+def format_date_for_frontend(date_value):
+    if not date_value:
+        return ''
+    try:
+        # Try parsing common date formats
+        if isinstance(date_value, datetime):
+            return date_value.strftime('%d/%m/%Y')
+        s_date = str(date_value).strip()
+        for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y'):
+            try:
+                dt_obj = datetime.strptime(s_date, fmt)
+                return dt_obj.strftime('%d/%m/%Y')
+            except ValueError:
+                pass
+        # Try to clean up common Excel date string artifacts
+        if ' 00:00:00' in s_date:
+            s_date = s_date.replace(' 00:00:00', '')
+        return s_date
+    except Exception:
+        return str(date_value) # Fallback to original string if parsing fails
+
+# Helper function to parse and format amounts
+def parse_amount(amount_raw):
+    if not amount_raw:
+        return 0.0
+    s_amount = str(amount_raw).replace('€', '').replace(' ', '').strip()
+    # Manejo de separadores europeos (1.234,56)
+    if ',' in s_amount and '.' in s_amount:
+        s_amount = s_amount.replace('.', '').replace(',', '.')
+    else:
+        s_amount = s_amount.replace(',', '.')
+    try:
+        return float(s_amount)
+    except ValueError:
+        return 0.0 # Default to 0.0 if not a valid number
 
 def get_friendly_concepto(concepto):
     """Mapea conceptos técnicos a nombres legibles para el historial."""
@@ -307,15 +356,31 @@ def api_presupuesto():
             idx_asi_col = headers_fin_norm.index('N_ASIENTO') if 'N_ASIENTO' in headers_fin_norm else 1
             return jsonify({"status": "success", "asiento": all_fin[idx_fin_existente-1][idx_asi_col]})
 
-        max_asi = 0
-        idx_asi = headers_fin_norm.index('N_ASIENTO') if 'N_ASIENTO' in headers_fin_norm else -1
-        if idx_asi == -1: idx_asi = 1 # Fallback B
+        # Intentamos usar el número de asiento proporcionado (de la carga masiva o manual)
+        num_asiento = datos.get('n_asiento')
+        if not num_asiento or str(num_asiento).strip() == "":
+            max_asi = 0
+            # Buscamos la columna de asiento de forma más flexible
+            idx_asi = -1
+            for variant in ['N_ASIENTO', 'Nº_ASIENTO', 'ASIENTO']:
+                if variant in headers_fin_norm:
+                    idx_asi = headers_fin_norm.index(variant)
+                    break
+            
+            for row in all_fin[1:]:
+                if idx_asi != -1 and len(row) > idx_asi and row[idx_asi]:
+                    try:
+                        val_limpio = str(row[idx_asi]).strip().replace('#','')
+                        if val_limpio.isdigit():
+                            max_asi = max(max_asi, int(val_limpio))
+                    except: continue
+            num_asiento = max_asi + 1
+        else:
+            try: 
+                num_asiento = int(num_asiento)
+            except: 
+                num_asiento = datos.get('n_asiento') # Mantener como string si no es numérico
 
-        for row in all_fin[1:]:
-            if len(row) > idx_asi and str(row[idx_asi]).isdigit():
-                max_asi = max(max_asi, int(row[idx_asi]))
-        
-        num_asiento = max_asi + 1
         mapeo_fila = {
             "FECHA": datos.get('fecha'),
             "N_ASIENTO": num_asiento,
@@ -605,13 +670,22 @@ def api_operacion_asiento():
         sheet_fin = client.open(NOMBRE_EXCEL).worksheet("FINANCIERO")
         all_fin = sheet_fin.get_all_values()
         headers_fin = normalizar_cabeceras(all_fin[0])
-        idx_asi = headers_fin.index('Nº_ASIENTO') if 'Nº_ASIENTO' in headers_fin else headers_fin.index('N_ASIENTO')
+        
+        idx_asi = -1
+        for v in ['Nº_ASIENTO', 'N_ASIENTO', 'ASIENTO']:
+            if v in headers_fin:
+                idx_asi = headers_fin.index(v)
+                break
         
         fila_fin_idx = -1
         for i, row in enumerate(all_fin):
-            if i > 0 and len(row) > idx_asi and str(row[idx_asi]).strip() == asiento_id:
-                fila_fin_idx = i + 1
-                break
+            if i > 0 and len(row) > idx_asi:
+                # Comparación flexible de IDs (ignora símbolos y ceros a la izquierda)
+                val_row = str(row[idx_asi]).strip().replace('#','')
+                val_target = str(asiento_id).strip().replace('#','')
+                if val_row == val_target or (val_row.isdigit() and val_target.isdigit() and int(val_row) == int(val_target)):
+                    fila_fin_idx = i + 1
+                    break
 
         if fila_fin_idx == -1:
             return jsonify({"status": "error", "message": "Asiento no encontrado en el historial"}), 404
@@ -798,4 +872,104 @@ def api_bulk_update_jugadores():
             sheet.spreadsheet.values_batch_update({'valueInputOption': 'USER_ENTERED', 'data': updates})
         return jsonify({"status": "success"})
     except Exception as e:
+        print(f"Error en bulk_update_jugadores: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@financiero_bp.route('/api/carga_masiva_presupuesto', methods=['POST'])
+def api_carga_masiva_presupuesto():
+    """Endpoint para cargar múltiples movimientos financieros desde un CSV."""
+    try:
+        if 'file' not in request.files:
+            return jsonify({"status": "error", "message": "No se recibió ningún archivo"}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"status": "error", "message": "Archivo no seleccionado"}), 400
+
+        file.seek(0)
+        datos_leidos = []
+        filename = file.filename.lower()
+
+        if filename.endswith('.csv'):
+            raw_data = file.stream.read()
+            try:
+                content = raw_data.decode("UTF-8-SIG")
+            except UnicodeDecodeError:
+                content = raw_data.decode("latin-1")
+
+            lines = content.splitlines()
+            if not lines:
+                return jsonify({"status": "error", "message": "El archivo está vacío"}), 400
+
+            delimiter = ';' if ';' in lines[0] else ','
+            reader = csv.DictReader(lines, delimiter=delimiter)
+
+            for row in reader:
+                # Limpieza de claves para evitar fallos si hay columnas vacías en CSV
+                keys = [str(k).strip() for k in row.keys() if k]
+                norm_keys = normalizar_cabeceras(keys)
+                mapping = {norm_keys[i]: row[keys[i]] for i in range(len(keys))}
+
+                asiento_val = mapping.get('ASIENTO', mapping.get('N_ASIENTO', mapping.get('Nº_ASIENTO', '')))
+                datos_leidos.append({
+                    "FECHA": format_date_for_frontend(mapping.get('FECHA', '')),
+                    "ASIENTO": str(asiento_val),
+                    "DESCRIPCION": str(mapping.get('CONCEPTO', mapping.get('DESCRIPCION', 'Importación Masiva'))),
+                    "IMPORTE": parse_amount(mapping.get('IMPORTE', '0')),
+                    "NOMBRE": str(mapping.get('NOMBRE', '')),
+                    "EQUIPO": str(mapping.get('EQUIPO', '')),
+                    "CONCEPTO": str(mapping.get('CONCEPTO', ''))
+                })
+
+        elif filename.endswith(('.xls', '.xlsx', '.xlsm')):
+            try:
+                import pandas as pd
+                file.seek(0)
+                df = pd.read_excel(file).fillna("") 
+                df.columns = normalizar_cabeceras(df.columns.tolist())
+                
+                for _, row in df.iterrows():
+                    imp = parse_amount(row.get('IMPORTE', '0'))
+                    asiento_val = row.get('ASIENTO', row.get('N_ASIENTO', row.get('Nº_ASIENTO', '')))
+                    datos_leidos.append({
+                        "FECHA": format_date_for_frontend(row.get('FECHA', '')),
+                        "ASIENTO": str(asiento_val),
+                        "DESCRIPCION": str(row.get('CONCEPTO', row.get('DESCRIPCION', 'Importación Excel'))).strip(),
+                        "IMPORTE": imp,
+                        "NOMBRE": str(row.get('NOMBRE', '')),
+                        "EQUIPO": str(row.get('EQUIPO', '')),
+                        "CONCEPTO": str(row.get('CONCEPTO', ''))
+                    })
+            except Exception as e:
+                if "openpyxl" in str(e) or "xlrd" in str(e):
+                    return jsonify({"status": "error", "message": "El servidor necesita las librerías 'pandas', 'openpyxl' y 'xlrd' para procesar archivos Excel."}), 500
+                return jsonify({"status": "error", "message": f"Error al leer el archivo Excel: {str(e)}"}), 500
+            except ImportError:
+                return jsonify({"status": "error", "message": "El servidor necesita la librería 'pandas' y 'openpyxl' para procesar archivos Excel."}), 500
+
+        elif filename.endswith('.pdf'):
+            # Para PDF intentamos una extracción genérica de texto
+            # Nota: Requiere pdfplumber o similar. Si no está, devolvemos error informativo.
+            try:
+                import pdfplumber
+                try:
+                    with pdfplumber.open(file) as pdf:
+                        for page in pdf.pages:
+                            table = page.extract_table()
+                            if table:
+                                for row in table[1:]: # Saltamos cabecera del PDF
+                                    if any(row):
+                                        datos_leidos.append({
+                                            "FECHA": format_date_for_frontend(row[0] if len(row) > 0 else ''),
+                                            "DESCRIPCION": row[1] if len(row) > 1 else 'Importación PDF',
+                                            "IMPORTE": parse_amount(row[-1] if len(row) > 0 else '0')
+                                        })
+                except Exception as pdf_e:
+                    return jsonify({"status": "error", "message": f"Error al procesar el archivo PDF: {str(pdf_e)}. Asegúrate de que el PDF es válido y no está protegido."}), 500
+            except ImportError:
+                return jsonify({"status": "error", "message": "El servidor no tiene instalada la librería para procesar PDFs (pdfplumber)."}), 500
+
+        return jsonify({"status": "success", "data": datos_leidos})
+    except Exception as e:
+        print(f"Error fatal en carga_masiva: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
