@@ -2021,10 +2021,10 @@ let revisionIndexActivo = -1; // Variable para mantener el índice de la fila ac
 function asignarA(idx) { // Función renombrada de vincularJugadorRevision
     revisionIndexActivo = idx;
     const fila = document.querySelector(`#tablaRevision tr[data-idx="${idx}"]`);
-    const importeLinea = fila.querySelector('.rev-importe').value;
+    const importeLinea = parseFloat(fila.querySelector('.rev-importe').value) || 0;
     
     document.getElementById('searchVinc').value = "";
-    document.getElementById('vincImporte').value = importeLinea;
+    document.getElementById('vincImporte').value = importeLinea.toFixed(2);
     document.getElementById('vincEsperado').value = "50"; // Default
     
     const select = document.getElementById('selectVinc');
@@ -2039,6 +2039,9 @@ function asignarA(idx) { // Función renombrada de vincularJugadorRevision
         opt.innerText = `${item.nombre} (${item.equipo})`;
         select.appendChild(opt);
     });
+    document.getElementById('playerPaymentGridContainer').style.display = 'none'; // Hide grid initially
+    document.getElementById('selectedConceptDisplay').value = '';
+    document.getElementById('hiddenConceptValue').value = '';
     document.getElementById('modalVinculacionRevision').style.display = 'flex';
 }
 
@@ -2052,7 +2055,15 @@ function confirmarAsignacion() { // Función renombrada de confirmarVinculacion
     const select = document.getElementById('selectVinc');
     if (select.selectedIndex === -1) return alert("Selecciona un jugador o miembro del staff");
     const data = JSON.parse(select.value);
-    const concepto = document.getElementById('selectConceptVinc').value;
+    
+    // Intentamos obtener el concepto de la selección visual (cuadrante)
+    let concepto = document.getElementById('hiddenConceptValue').value;
+    
+    // Si no hay concepto seleccionado visualmente, avisamos
+    if (!concepto) {
+        return alert("Por favor, selecciona una casilla de pago (Ene, Feb, Inscripción...) en el cuadro inferior.");
+    }
+
     const pagado = document.getElementById('vincImporte').value;
     const esperado = document.getElementById('vincEsperado').value;
     
@@ -2061,14 +2072,72 @@ function confirmarAsignacion() { // Función renombrada de confirmarVinculacion
     fila.querySelector('.rev-nombre').value = data.nombre;
     fila.querySelector('.rev-equipo').value = data.equipo;
     fila.querySelector('.rev-pilar').value = (data.tipo === 'STAFF' ? 'Pagos Staff' : 'Cuotas');
-    fila.querySelector('.rev-depto').value = 'Administración';
-    fila.querySelector('.rev-concepto').value = concepto;
+    fila.querySelector('.rev-depto').value = 'Administración'; // Default para pagos
+    fila.querySelector('.rev-concepto').value = concepto; // Concepto real (ej: "01", "Inscripción", "EXTRA-Fisioterapia")
     fila.querySelector('.rev-importe').value = pagado; // Actualizamos importe por si se editó en el modal
     
     const labelConcepto = getLabelConcepto(concepto, "Varios", data.tipo === 'STAFF');
     fila.querySelector('.rev-desc').value = `${data.tipo === 'STAFF' ? 'Pago Staff' : 'Cuota'} ${labelConcepto}: ${data.nombre}`;
-    fila.querySelector('.rev-vinculo-info').innerHTML = `<i class="fas fa-check"></i> Asignado a: ${data.nombre} (${concepto})`;
+    fila.querySelector('.rev-vinculo-info').innerHTML = `<i class="fas fa-check"></i> Asignado a: ${data.nombre} (${labelConcepto})`;
+    
     document.getElementById('modalVinculacionRevision').style.display = 'none';
+}
+
+function displaySelectedPlayerPayment() {
+    const select = document.getElementById('selectVinc');
+    if (select.selectedIndex === -1) return;
+    const playerData = JSON.parse(select.value);
+    renderPlayerPaymentGrid(playerData);
+}
+
+function renderPlayerPaymentGrid(playerData) {
+    const container = document.getElementById('playerPaymentGridContainer');
+    const thead = document.getElementById('playerPaymentGridHeader');
+    const tbody = document.getElementById('playerPaymentGridBody');
+    
+    container.style.display = 'block';
+    thead.innerHTML = '';
+    tbody.innerHTML = '';
+
+    const isStaff = playerData.tipo === 'STAFF';
+    const meses = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+    const items = [];
+    
+    if (!isStaff) {
+        items.push({ id: 'Inscripción', label: 'INSCR.' });
+        meses.forEach(m => items.push({ id: m, label: getLabelConcepto(m, 'Mensual', false).toUpperCase() }));
+        items.push({ id: 'PACK_ROPA', label: 'ROPA' }, { id: 'EXTRA', label: 'EX1' }, { id: 'EXTRA2', label: 'EX2' });
+    } else {
+        meses.forEach(m => items.push({ id: `Staff-${m}`, label: getLabelConcepto(m, 'Varios', true).toUpperCase() }));
+        items.push({ id: 'S-EXTRA', label: 'OTROS' });
+    }
+
+    thead.innerHTML = `<tr>${items.map(it => `<th style="padding:5px; font-size:8px;">${it.label}</th>`).join('')}</tr>`;
+    
+    // Calculamos los importes esperados según la config
+    let rowHtml = '<tr>';
+    items.forEach(it => {
+        let esp = 0;
+        if (!isStaff) {
+            if (it.id === 'Inscripción') esp = configInscripciones[playerData.equipo] || 50;
+            else if (meses.includes(it.id)) esp = configCuotasMes[`${playerData.equipo}-${it.id}`] || 49;
+            else esp = configCuotasMes[`${playerData.equipo}-${it.id}`] || 0;
+        } else {
+            esp = configCuotasMes[`STAFF-${it.id}`] || 0;
+        }
+        rowHtml += `<td class="pago-cell" style="padding:8px 2px; font-size:9px;" onclick="selectConceptFromGrid(this, '${it.id}', ${esp}, '${it.label}')">${Math.round(esp)}€</td>`;
+    });
+    rowHtml += '</tr>';
+    tbody.innerHTML = rowHtml;
+}
+
+function selectConceptFromGrid(el, id, esp, label) {
+    document.querySelectorAll('#playerPaymentGridBody td').forEach(td => td.classList.remove('selected-cell'));
+    el.classList.add('selected-cell');
+    
+    document.getElementById('hiddenConceptValue').value = id;
+    document.getElementById('selectedConceptDisplay').value = label;
+    document.getElementById('vincEsperado').value = esp;
 }
 
 function actualizarContadorRevision() {
@@ -2571,39 +2640,43 @@ async function guardarExtraDetalle(btn) {
 
 <!-- Modal Vinculación en Revisión -->
 <div id="modalVinculacionRevision" class="modal">
-    <div class="modal-content" style="width: 380px; border: 3px solid #1e3a8a;">
+    <div class="modal-content" style="width: 700px; max-width: 95%; border: 3px solid #1e3a8a;">
         <h3 style="font-size: 14px; margin-bottom: 20px; border-bottom: 2px solid #E31E24; padding-bottom: 10px; font-weight: 900; color: #1e3a8a; text-transform: uppercase;">REGISTRAR PAGO Y ASIGNAR</h3>
         <div style="display: flex; flex-direction: column; gap: 15px;">
-            <div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
                 <label style="font-size: 10px; font-weight: 800; color: #444; text-transform: uppercase;">JUGADOR / MIEMBRO STAFF</label>
                 <input type="text" id="searchVinc" oninput="filtrarVinculacion()" placeholder="Escribe nombre..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
-                <select id="selectVinc" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; margin-top:5px; height:120px; font-weight: 700; font-size: 12px;" size="5"></select>
-            </div>
-            <div>
-                <label style="font-size: 10px; font-weight: 800; color: #444; text-transform: uppercase;">CONCEPTO DE PAGO</label>
-                <select id="selectConceptVinc" style="width:100%; padding:12px; border-radius:8px; border:1px solid #ddd; font-weight: 800; background: #f8f9fa;">
-                    <option value="Inscripción">Inscripción</option>
-                    {% for m, n in [('01','Enero'),('02','Febrero'),('03','Marzo'),('04','Abril'),('05','Mayo'),('06','Junio'),('07','Julio'),('08','Agosto'),('09','Septiembre'),('10','Octubre'),('11','Noviembre'),('12','Diciembre')] %}
-                    <option value="{{ m }}">{{ n }}</option>
-                    {% endfor %}
-                    <option value="PACK_ROPA">Pack Ropa</option><option value="EXTRA">Extra</option><option value="EXTRA2">Extra 2</option>
-                </select>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #444;">IMPORTE PAGADO (€)</label>
-                    <input type="number" id="vincImporte" style="width:100%; padding:12px; border-radius:8px; border:2px solid #28a745; font-weight: 900; text-align: center; font-size: 16px;">
+                    <select id="selectVinc" onchange="displaySelectedPlayerPayment()" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; margin-top:5px; height:120px; font-weight: 700; font-size: 12px;" size="5"></select>
                 </div>
                 <div>
-                    <label style="font-size: 10px; font-weight: 800; color: #444;">ESPERADO (€)</label>
-                    <input type="number" id="vincEsperado" style="width:100%; padding:12px; border-radius:8px; border:1px solid #ddd; font-weight: 900; text-align: center; font-size: 16px;">
+                    <label style="font-size: 10px; font-weight: 800; color: #444; text-transform: uppercase;">CONCEPTO SELECCIONADO</label>
+                    <input type="text" id="selectedConceptDisplay" readonly style="width:100%; padding:12px; border-radius:8px; border:1px solid #ddd; font-weight: 800; background: #f8f9fa; color: #1e3a8a; text-align: center;" placeholder="Haz clic en el cuadrante ↓">
+                    <input type="hidden" id="hiddenConceptValue">
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                        <div>
+                            <label style="font-size: 10px; font-weight: 800; color: #444;">PAGADO (€)</label>
+                            <input type="number" id="vincImporte" style="width:100%; padding:10px; border-radius:8px; border:2px solid #28a745; font-weight: 900; text-align: center;">
+                        </div>
+                        <div>
+                            <label style="font-size: 10px; font-weight: 800; color: #444;">ESPERADO (€)</label>
+                            <input type="number" id="vincEsperado" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; font-weight: 900; text-align: center;">
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div style="display: flex; gap: 8px;">
-                <button class="btn-fin" style="flex:1; background:#f1f5f9; border: 1px solid #cbd5e1;"><i class="fas fa-print"></i> RECIBO</button>
-                <button class="btn-fin" style="flex:1; background:#f1f5f9; border: 1px solid #cbd5e1;"><i class="fas fa-envelope"></i> EMAIL</button>
+
+            <!-- Cuadrante de pago dinámico -->
+            <div id="playerPaymentGridContainer" style="border: 1px solid #dbeafe; border-radius: 8px; padding: 10px; background: #f8faff; display: none;">
+                <p style="font-size: 9px; font-weight: 800; color: #666; margin-bottom: 5px; text-transform: uppercase;">Selecciona el destino del cobro:</p>
+                <div style="overflow-x: auto;">
+                    <table class="fin-table" style="width: 100%; background: white;">
+                        <thead id="playerPaymentGridHeader"></thead>
+                        <tbody id="playerPaymentGridBody"></tbody>
+                    </table>
+                </div>
             </div>
-            <div style="display: flex; gap: 10px;">
                 <button class="btn-fin" style="flex:1; background:#eee; font-weight: 900;" onclick="document.getElementById('modalVinculacionRevision').style.display='none'">CANCELAR</button>
                 <button class="btn-fin" style="flex:2; background:#E31E24; color:white; font-weight: 900; box-shadow: 0 4px 10px rgba(227,30,36,0.3);" onclick="confirmarAsignacion()">
                     <i class="fas fa-save"></i> GUARDAR Y ASIGNAR
