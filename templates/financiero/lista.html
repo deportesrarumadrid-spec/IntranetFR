@@ -2204,7 +2204,8 @@ function selectConceptFromGrid(el, id, esp, label) {
     } else {
         const totalEsp = conceptsSeleccionadosVinc.reduce((acc, curr) => acc + curr.esp, 0);
         document.getElementById('hiddenConceptValue').value = conceptsSeleccionadosVinc.map(x => x.id).join(',');
-        document.getElementById('selectedConceptDisplay').value = "MULTIPLE SELECCIÓN";
+        const labelsCombinados = conceptsSeleccionadosVinc.map(x => x.label).join('+');
+        document.getElementById('selectedConceptDisplay').value = labelsCombinados;
         document.getElementById('vincEsperado').value = totalEsp;
     }
 }
