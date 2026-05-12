@@ -94,6 +94,7 @@
         <div class="tab-item active" data-tab="tab-presupuesto" onclick="switchTab(event, 'tab-presupuesto')">PRESUPUESTOS</div>
         <div class="tab-item" data-tab="tab-jugadores" onclick="switchTab(event, 'tab-jugadores')">PAGO JUGADORES</div>
         <div class="tab-item" data-tab="tab-staff" onclick="switchTab(event, 'tab-staff')">PAGO STAFF</div>
+        <div class="tab-item" data-tab="tab-datos-jugadores" onclick="switchTab(event, 'tab-datos-jugadores')">DATOS JUGADORES</div>
     </div>
 
     <!-- SECCIÓN: PRESUPUESTO -->
@@ -320,7 +321,51 @@
             </table>
         </div>
     </div>
+</div>
+
+    <!-- SECCIÓN: DATOS COMPLETOS JUGADORES -->
+    <div id="tab-datos-jugadores" class="tab-content">
+        <div class="fin-card">
+            <div class="fin-header">
+                <h2><i class="fas fa-id-card" style="color: #E31E24; margin-right: 10px;"></i> FICHAS TÉCNICAS Y DATOS BANCARIOS</h2>
+                <div style="display: flex; gap: 10px;">
+                    <select id="filtroEquipoDatos" onchange="filtrarTablaDatos()" style="padding: 8px; border-radius: 8px; border: 1px solid #ddd; font-weight: 800; font-size: 11px;">
+                        <option value="">TODOS LOS EQUIPOS</option>
+                        {% for eq in equipos %}
+                        <option value="{{ eq }}">{{ eq }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn-fin" style="background: #28a745; color: white;" onclick="document.getElementById('inputFichaIA').click()">
+                        <i class="fas fa-robot"></i> ESCANEAR FICHA IA
+                    </button>
+                    <input type="file" id="inputFichaIA" style="display:none" accept="image/*, .pdf" onchange="procesarFichaConIA(this)">
+                </div>
+            </div>
+
+            <!-- ZONA DE REVISIÓN PROVISIONAL IA -->
+            <div id="zonaRevisionFicha" style="display: none; background: #fdf2f2; padding: 25px; border: 2px solid #E31E24; margin: 15px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="fin-table" id="tablaDatosJugadores">
+                    <thead>
+                        <tr>
+                            <th>EQUIPO</th>
+                            <th>NOMBRE JUGADOR</th>
+                            <th>COLEGIO</th>
+                            <th>EMAIL / TELÉFONO</th>
+                            <th>PADRE / MADRE</th>
+                            <th>FORMA PAGO</th>
+                            <th>IBAN / SEPA</th>
+                            <th style="text-align:center;">FICHA</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
     </div>
+</div>
 
     <!-- SECCIÓN: STAFF -->
     <div id="tab-staff" class="tab-content">
@@ -364,7 +409,6 @@
             </div>
         </div>
     </div>
-</div>
 
 <!-- MODAL ACCIONES ASIENTO -->
 <div id="modalAccionAsiento" class="modal">
@@ -421,6 +465,8 @@
     </div>
 </div>
 
+</div> <!-- CIERRE DEL CONTENEDOR PRINCIPAL (padding: 10px) -->
+
 <script>
 let celdasSeleccionadas = [];
 let celdaActiva = null;
@@ -434,6 +480,35 @@ let extraNames = { "EXTRA": "EXTRA", "EXTRA2": "EXTRA 2" };
 let bulkConceptoActivo = '';
 let asientoSeleccionado = null;
 let isSaving = false;
+
+// --- FUNCIÓN DE NAVEGACIÓN CORREGIDA ---
+function switchTab(event, id) {
+    // 1. Ocultar todos los contenidos
+    document.querySelectorAll('.tab-content').forEach(c => {
+        c.style.display = 'none';
+        c.classList.remove('active');
+    });
+
+    // 2. Desactivar todos los botones
+    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+    
+    // 3. Activar el botón actual
+    const btn = event ? event.currentTarget : document.querySelector(`.tab-item[data-tab="${id}"]`);
+    if (btn) btn.classList.add('active');
+
+    // 4. Mostrar el contenido destino
+    const target = document.getElementById(id);
+    if (target) {
+        target.style.display = 'block';
+        target.classList.add('active');
+        
+        // Carga de datos específica según la pestaña
+        if (id === 'tab-datos-jugadores') cargarTablaDatosJugadores();
+        if (id === 'tab-presupuesto') cargarPresupuesto();
+    }
+    
+    localStorage.setItem('activeFinTab', id);
+}
 
 function getLabelConcepto(item, forma, isStaff) {
     const mesesNombres = {
@@ -733,7 +808,127 @@ function switchTab(event, id) {
     if (target) {
         target.classList.add('active');
         target.style.display = 'block';
+        if (id === 'tab-datos-jugadores') cargarTablaDatosJugadores();
     }
+}
+
+// Lógica para Fichas de Jugadores e IA
+async function procesarFichaConIA(input) {
+    if (!input.files.length) return;
+    showLoader();
+    const formData = new FormData();
+    formData.append('file', input.files[0]);
+
+    try {
+        const res = await fetch('/api/jugadores_datos/upload', { method: 'POST', body: formData });
+        const result = await res.json().catch(() => ({ status: 'error', message: 'Error de respuesta del servidor' }));
+        
+        if (result.status === 'success') {
+            mostrarRevisionFicha(result.data);
+        } else {
+            alert("ERROR IA: " + (result.message || "Error desconocido"));
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Error crítico al conectar con el servicio de IA");
+    } finally {
+        hideLoader();
+        input.value = '';
+    }
+}
+
+function mostrarRevisionFicha(datos) {
+    const zona = document.getElementById('zonaRevisionFicha');
+    zona.style.display = 'block';
+    zona.style.background = '#fffbeb';
+    zona.style.border = '2px solid #f59e0b';
+
+    // Agrupación solicitada por el usuario
+    const grupos = {
+        "1. DATOS DEL JUGADOR": ["JUGADOR_NOMBRE", "JUGADOR_APELLIDOS", "JUGADOR_COLEGIO", "JUGADOR_FECHA_NACIMIENTO", "JUGADOR_EQUIPO_LETRA", "JUGADOR_DOMICILIO_CP", "JUGADOR_TELEFONO_MOVIL", "JUGADOR_EMAIL"],
+        "2. DATOS FAMILIARES": ["FAMILIA_NOMBRE_PADRE", "FAMILIA_NOMBRE_MADRE"],
+        "3. FORMA DE PAGO / SEPA": ["PAGO_MODALIDAD", "SEPA_NOMBRE_DEUDOR", "SEPA_DIRECCION_DEUDOR", "SEPA_SWIFT_BIC", "SEPA_IBAN", "SEPA_TIPO_PAGO"],
+        "4. AUTORIZACIONES": ["AUTORIZA_TUTOR_NOMBRE", "AUTORIZA_JUGADOR_NOMBRE", "AUTORIZA_JUGADOR_DNI"],
+        "5. FIRMAS Y CIERRE": ["CIERRE_FECHA_LOCALIDAD", "CIERRE_FIRMA_TUTOR"]
+    };
+    
+    let html = `<h3 style="margin-top:0; color:#92400e; font-size:16px; text-transform:uppercase; margin-bottom:20px; border-bottom: 2px solid #f59e0b; padding-bottom:10px;">
+                <i class="fas fa-robot"></i> GESTIÓN PROVISIONAL DE CARGA (REVISIÓN)</h3>`;
+    
+    for (const [titulo, campos] of Object.entries(grupos)) {
+        html += `<div style="margin-bottom: 15px;">
+                    <h4 style="font-size: 11px; color: #b45309; margin-bottom: 8px; border-left: 3px solid #f59e0b; padding-left: 8px;">${titulo}</h4>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">`;
+        campos.forEach(key => {
+            html += `<div>
+                        <label style="font-size:8px; font-weight:900; color:#999; display:block; margin-bottom:2px;">${key.replace('_', ' ')}</label>
+                        <input type="text" class="input-rev-ficha" data-key="${key}" value="${datos[key] || ''}" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:6px; font-size:11px; font-weight:700;">
+                     </div>`;
+        });
+        html += `</div></div>`;
+    }
+
+    html += `<div style="text-align:right; display:flex; gap:10px; justify-content:flex-end; margin-top:20px; border-top: 1px solid #fcd34d; padding-top:15px;">
+                <button class="btn-fin" style="background:#fff; color:#666; border:1px solid #ddd;" onclick="document.getElementById('zonaRevisionFicha').style.display='none'">DESCARTAR</button>
+                <button class="btn-fin" style="background:#28a745; color:white;" onclick="confirmarFichaDefinitiva(this)">CONFIRMAR Y GRABAR FICHA DEFINITIVA</button>
+             </div>`;
+    
+    zona.innerHTML = html;
+    zona.scrollIntoView({ behavior: 'smooth' });
+}
+
+async function confirmarFichaDefinitiva(btn) {
+    const inputs = document.querySelectorAll('.input-rev-ficha');
+    const datos = {};
+    inputs.forEach(inp => datos[inp.dataset.key] = inp.value);
+
+    showLoader();
+    try {
+        const res = await fetch('/api/jugadores_datos/confirmar', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(datos)
+        });
+        if (res.ok) {
+            alert("¡Ficha grabada con éxito!");
+            document.getElementById('zonaRevisionFicha').style.display = 'none';
+            cargarTablaDatosJugadores();
+        }
+    } finally {
+        hideLoader();
+    }
+}
+
+async function cargarTablaDatosJugadores() {
+    const res = await fetch('/api/jugadores_datos');
+    const data = await res.json();
+    const tbody = document.querySelector('#tablaDatosJugadores tbody');
+    tbody.innerHTML = data.map(j => `
+        <tr>
+            <td style="font-weight:900; color:#E31E24;">${j.JUGADOR_EQUIPO_LETRA || '-'}</td>
+            <td>
+                <div style="font-weight:900;">${j.JUGADOR_NOMBRE || ''} ${j.JUGADOR_APELLIDOS || ''}</div>
+                <div style="font-size:10px; color:#666;">DNI: ${j.AUTORIZA_JUGADOR_DNI || '-'} | Nac: ${j.JUGADOR_FECHA_NACIMIENTO || '-'}</div>
+            </td>
+            <td style="font-size:10px;">${j.JUGADOR_COLEGIO || '-'}</td>
+            <td>
+                <div style="font-size:11px; font-weight:700;">${j.JUGADOR_TELEFONO_MOVIL || '-'}</div>
+                <div style="font-size:10px; color:#1e40af;">${j.JUGADOR_EMAIL || '-'}</div>
+            </td>
+            <td style="font-size:10px;">
+                <div>P: ${j.FAMILIA_NOMBRE_PADRE || '-'}</div>
+                <div>M: ${j.FAMILIA_NOMBRE_MADRE || '-'}</div>
+            </td>
+            <td><span style="background:#f1f5f9; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:800;">${j.PAGO_MODALIDAD || '-'}</span></td>
+            <td>
+                <div style="font-family:monospace; font-size:10px; font-weight:800;">${j.SEPA_IBAN || '-'}</div>
+                <div style="font-size:9px; color:#666;">${j.SEPA_TIPO_PAGO || '-'}</div>
+            </td>
+            <td style="text-align:center;">
+                <button class="btn-fin" style="padding:5px 10px; background:#333; color:white; font-size:9px;">VER FICHA</button>
+            </td>
+        </tr>
+    `).join('');
 }
 
 function filtrarJugadores() {
