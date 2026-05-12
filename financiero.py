@@ -24,7 +24,7 @@ def normalizar_cabeceras(headers):
     # Limpieza profunda: quitamos tildes, símbolos especiales y espacios
     headers = [h.upper().replace('Ó','O').replace('Í','I').replace('É','E').replace('Á','A').replace('Ú','U').replace('º','') for h in headers]
     # Mapeo de variantes de nombres de columnas financieras para asegurar persistencia
-    return [h.replace(' ', '_').replace('Nº', 'N').replace('TIPO_DE_PAGO', 'TIPO_PAGO').replace('FORMA_DE_PAGO', 'FORMA_PAGO').replace('JUGADOR', 'NOMBRE') for h in headers]
+    return [h.replace(' ', '_').replace('Nº', 'N').replace('TIPO_DE_PAGO', 'TIPO_PAGO').replace('FORMA_DE_PAGO', 'FORMA_PAGO').replace('JUGADOR', 'NOMBRE').replace('CANTIDAD', 'IMPORTE').replace('MONTO', 'IMPORTE') for h in headers]
 
 def es_fila_vacia(row):
     """Verifica si una fila está realmente vacía (ignora espacios)."""
@@ -878,6 +878,22 @@ def api_bulk_update_jugadores():
 @financiero_bp.route('/api/carga_masiva_presupuesto', methods=['POST'])
 def api_carga_masiva_presupuesto():
     """Endpoint para cargar múltiples movimientos financieros desde un CSV."""
+    def detectar_importe(fila_dict):
+        """Busca el importe en múltiples variantes de nombres de columna."""
+        # Prioridad de búsqueda de columnas de dinero (incluye términos bancarios comunes)
+        variantes = ['IMPORTE', 'VALOR', 'MONTO', 'TOTAL', 'DEBE', 'CARGO', 'HABER', 'ABONO', 'CUANTIA', 'SUMA', 'SALDO']
+        
+        for v in variantes:
+            val = fila_dict.get(v)
+            if val is not None and str(val).strip() not in ['', '0', '0.0', '0,00']:
+                num = parse_amount(val)
+                if num != 0:
+                    # Si viene de una columna de 'gasto' (Debe/Cargo) y es positivo, lo convertimos en negativo
+                    if v in ['DEBE', 'CARGO'] and num > 0:
+                        return -num
+                    return num
+        return 0.0
+
     try:
         if 'file' not in request.files:
             return jsonify({"status": "error", "message": "No se recibió ningún archivo"}), 400
@@ -910,12 +926,13 @@ def api_carga_masiva_presupuesto():
                 norm_keys = normalizar_cabeceras(keys)
                 mapping = {norm_keys[i]: row[keys[i]] for i in range(len(keys))}
 
+                imp = detectar_importe(mapping)
                 asiento_val = mapping.get('ASIENTO', mapping.get('N_ASIENTO', mapping.get('Nº_ASIENTO', '')))
                 datos_leidos.append({
                     "FECHA": format_date_for_frontend(mapping.get('FECHA', '')),
                     "ASIENTO": str(asiento_val),
                     "DESCRIPCION": str(mapping.get('CONCEPTO', mapping.get('DESCRIPCION', 'Importación Masiva'))),
-                    "IMPORTE": parse_amount(mapping.get('IMPORTE', '0')),
+                    "IMPORTE": imp,
                     "NOMBRE": str(mapping.get('NOMBRE', '')),
                     "EQUIPO": str(mapping.get('EQUIPO', '')),
                     "CONCEPTO": str(mapping.get('CONCEPTO', ''))
@@ -930,8 +947,9 @@ def api_carga_masiva_presupuesto():
                 df.columns = normalizar_cabeceras(df.columns.tolist())
                 
                 for _, row in df.iterrows():
-                    imp = parse_amount(row.get('IMPORTE', '0'))
-                    asiento_val = row.get('ASIENTO') or row.get('N_ASIENTO') or row.get('Nº_ASIENTO') or ''
+                    row_dict = row.to_dict()
+                    imp = detectar_importe(row_dict)
+                    asiento_val = row_dict.get('ASIENTO') or row_dict.get('N_ASIENTO') or row_dict.get('Nº_ASIENTO') or ''
                     datos_leidos.append({
                         "FECHA": format_date_for_frontend(row.get('FECHA', '')),
                         "ASIENTO": str(asiento_val),

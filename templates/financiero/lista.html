@@ -2029,8 +2029,8 @@ function mostrarZonaRevision(lineas) { // Renombrada de mostrarZonaRevision
             </td>
             <td>
                 <input type="text" class="rev-importe" value="${l.IMPORTE}" 
-                oninput="this.style.color = this.value.startsWith('-') ? '#dc3545' : '#1e40af'"
-                style="width:80px; font-weight:900; text-align:right; border: 1px solid #dbeafe; padding: 6px; border-radius: 6px; color: ${l.IMPORTE.toString().startsWith('-') ? '#dc3545' : '#1e40af'};">
+                oninput="this.style.color = (parseFloat(this.value) < 0) ? '#dc3545' : '#28a745'"
+                style="width:80px; font-weight:900; text-align:right; border: 1px solid #dbeafe; padding: 6px; border-radius: 6px; color: ${parseFloat(l.IMPORTE) < 0 ? '#dc3545' : '#28a745'};">
             </td>
             <td style="text-align:center;"><i class="fas fa-trash-alt" style="color:#1e40af; cursor:pointer;" onclick="this.closest('tr').remove(); actualizarContadorRevision();"></i></td>
         </tr>
