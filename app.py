@@ -9,6 +9,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 
 app = Flask(__name__)
 app.secret_key = "club_intranet_secret_key_2024" # Necesario para las sesiones
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Límite de 16MB para subidas
 
 # --- CONFIGURACIÓN GOOGLE SHEETS ---
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -484,4 +485,4 @@ app.register_blueprint(financiero_bp)
 app.register_blueprint(deportivo_bp)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5001, use_reloader=False)

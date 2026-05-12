@@ -966,16 +966,39 @@ function cerrarModalsFin() {
 async function confirmarPago(btn) {
     const totalPagado = parseFloat(document.getElementById('pagoImporteBar').value);
     const totalEsperado = parseFloat(document.getElementById('pagoEsperadoBar').value);
-    const detalle = document.getElementById('detalleSeleccion').innerText;
 
     if (isNaN(totalPagado)) return alert("Introduce un importe válido");
 
-    if (totalEsperado > 0 && totalPagado > totalEsperado) {
-        alert(`El importe es superior al total esperado.`);
+    // 1. Validación de sobrepago
+    if (totalPagado > totalEsperado && totalEsperado > 0) {
+        alert("El importe pagado es mayor que el total esperado. Por favor, ajusta el importe o selecciona más conceptos para que todo cuadre.");
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        isSaving = false;
+        hideLoader();
         return;
     }
-    if (totalEsperado > 0 && totalPagado < totalEsperado) {
-        if (!confirm(`¿Registrar como pago parcial?`)) return;
+
+    // 2. Confirmación de subpago
+    if (totalPagado < totalEsperado && totalEsperado > 0) {
+        if (!confirm(`El importe pagado (${totalPagado}€) es inferior al total esperado (${totalEsperado}€). La diferencia se asignará al último concepto seleccionado. ¿Deseas continuar?`)) {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            isSaving = false;
+            hideLoader();
+            return;
+        }
+    }
+
+    // 3. Confirmación para pagos sin esperado (ej. Staff) si hay múltiples conceptos
+    if (totalEsperado === 0 && totalPagado > 0 && celdasSeleccionadas.length > 1) {
+        if (!confirm(`No hay importe esperado definido para los conceptos seleccionados. El importe total pagado (${totalPagado}€) se asignará al último concepto. ¿Deseas continuar?`)) {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            isSaving = false;
+            hideLoader();
+            return;
+        }
     }
     if (!confirm(`¿Confirmar registro definitivo?`)) return;
 
@@ -1009,9 +1032,9 @@ async function confirmarPago(btn) {
             let pagoAsignado = 0;
 
             if (totalEsperado === 0) {
-                // Si no hay esperado previo (Staff), repartimos el pagado equitativamente
-                pagoAsignado = totalPagado / celdasSeleccionadas.length;
-                esperadoIndividual = pagoAsignado; 
+                    // Si no hay esperado, todo el importe va al último concepto
+                    pagoAsignado = (i === celdasSeleccionadas.length - 1) ? saldoPendienteDePago : 0;
+                    esperadoIndividual = pagoAsignado; // El esperado se iguala a lo pagado en este caso
             } else if (i === celdasSeleccionadas.length - 1) {
                 pagoAsignado = saldoARepartir; // El último se lleva el resto
             } else {
@@ -2046,9 +2069,15 @@ function asignarA(idx) { // Función renombrada de vincularJugadorRevision
 }
 
 function filtrarVinculacion() { // Función para filtrar en el modal de asignación
+    const eq = document.getElementById('filterEquipoVinc').value.toLowerCase();
     const query = document.getElementById('searchVinc').value.toLowerCase();
     const opts = document.getElementById('selectVinc').options;
-    for (let opt of opts) opt.style.display = opt.innerText.toLowerCase().includes(query) ? '' : 'none';
+    for (let opt of opts) {
+        const data = JSON.parse(opt.value);
+        const matchEq = !eq || (data.equipo || "").toLowerCase() === eq || (eq === 'staff' && data.tipo === 'STAFF');
+        const matchName = !query || opt.innerText.toLowerCase().includes(query);
+        opt.style.display = (matchEq && matchName) ? '' : 'none';
+    }
 }
 
 function confirmarAsignacion() { // Función renombrada de confirmarVinculacion
@@ -2064,8 +2093,20 @@ function confirmarAsignacion() { // Función renombrada de confirmarVinculacion
         return alert("Por favor, selecciona una casilla de pago (Ene, Feb, Inscripción...) en el cuadro inferior.");
     }
 
-    const pagado = document.getElementById('vincImporte').value;
-    const esperado = document.getElementById('vincEsperado').value;
+    const pagado = parseFloat(document.getElementById('vincImporte').value) || 0;
+    const esperado = parseFloat(document.getElementById('vincEsperado').value) || 0;
+
+    // VALIDACIÓN DE IMPORTES: No permitir asignar más de lo que se debe
+    if (esperado > 0 && pagado > esperado) {
+        return alert(`ERROR: El importe asignado (${pagado}€) es superior al total esperado (${esperado}€). Por favor, ajusta los conceptos o el importe para que el balance sea exacto.`);
+    }
+
+    // AVISO DE DIFERENCIA: Avisar si el importe es inferior
+    if (esperado > 0 && pagado < esperado) {
+        if (!confirm(`AVISO: El importe asignado (${pagado}€) es inferior al total esperado (${esperado}€). La diferencia se reflejará como pendiente en el historial del último concepto seleccionado. ¿Deseas continuar?`)) {
+            return;
+        }
+    }
     
     const fila = document.querySelector(`#tablaRevision tr[data-idx="${revisionIndexActivo}"]`);
     
@@ -2074,11 +2115,14 @@ function confirmarAsignacion() { // Función renombrada de confirmarVinculacion
     fila.querySelector('.rev-pilar').value = (data.tipo === 'STAFF' ? 'Pagos Staff' : 'Cuotas');
     fila.querySelector('.rev-depto').value = 'Administración'; // Default para pagos
     fila.querySelector('.rev-concepto').value = concepto; // Concepto real (ej: "01", "Inscripción", "EXTRA-Fisioterapia")
-    fila.querySelector('.rev-importe').value = pagado; // Actualizamos importe por si se editó en el modal
+    fila.querySelector('.rev-importe').value = pagado; 
+
+    // Guardamos los metadatos de los conceptos seleccionados para el desglose final
+    fila.dataset.metaConceptos = JSON.stringify(conceptsSeleccionadosVinc.map(x => ({ id: x.id, esp: x.esp })));
     
-    const labelConcepto = getLabelConcepto(concepto, "Varios", data.tipo === 'STAFF');
-    fila.querySelector('.rev-desc').value = `${data.tipo === 'STAFF' ? 'Pago Staff' : 'Cuota'} ${labelConcepto}: ${data.nombre}`;
-    fila.querySelector('.rev-vinculo-info').innerHTML = `<i class="fas fa-check"></i> Asignado a: ${data.nombre} (${labelConcepto})`;
+    const labelConceptoDisplay = document.getElementById('selectedConceptDisplay').value;
+    fila.querySelector('.rev-desc').value = `${data.tipo === 'STAFF' ? 'Pago Staff' : 'Cuota'} ${labelConceptoDisplay}: ${data.nombre}`;
+    fila.querySelector('.rev-vinculo-info').innerHTML = `<i class="fas fa-check"></i> Asignado a: ${data.nombre} (${labelConceptoDisplay})`;
     
     document.getElementById('modalVinculacionRevision').style.display = 'none';
 }
@@ -2090,6 +2134,8 @@ function displaySelectedPlayerPayment() {
     renderPlayerPaymentGrid(playerData);
 }
 
+let conceptsSeleccionadosVinc = [];
+
 function renderPlayerPaymentGrid(playerData) {
     const container = document.getElementById('playerPaymentGridContainer');
     const thead = document.getElementById('playerPaymentGridHeader');
@@ -2098,6 +2144,7 @@ function renderPlayerPaymentGrid(playerData) {
     container.style.display = 'block';
     thead.innerHTML = '';
     tbody.innerHTML = '';
+    conceptsSeleccionadosVinc = [];
 
     const isStaff = playerData.tipo === 'STAFF';
     const meses = ['01','02','03','04','05','06','07','08','09','10','11','12'];
@@ -2132,12 +2179,34 @@ function renderPlayerPaymentGrid(playerData) {
 }
 
 function selectConceptFromGrid(el, id, esp, label) {
-    document.querySelectorAll('#playerPaymentGridBody td').forEach(td => td.classList.remove('selected-cell'));
-    el.classList.add('selected-cell');
+    if (!event.ctrlKey) {
+        document.querySelectorAll('#playerPaymentGridBody td').forEach(td => td.classList.remove('selected-cell'));
+        conceptsSeleccionadosVinc = [];
+    }
     
-    document.getElementById('hiddenConceptValue').value = id;
-    document.getElementById('selectedConceptDisplay').value = label;
-    document.getElementById('vincEsperado').value = esp;
+    const exists = conceptsSeleccionadosVinc.find(x => x.el === el);
+    if (exists) {
+        el.classList.remove('selected-cell');
+        conceptsSeleccionadosVinc = conceptsSeleccionadosVinc.filter(x => x.el !== el);
+    } else {
+        el.classList.add('selected-cell');
+        conceptsSeleccionadosVinc.push({ el, id, esp, label });
+    }
+    
+    if (conceptsSeleccionadosVinc.length === 0) {
+        document.getElementById('hiddenConceptValue').value = "";
+        document.getElementById('selectedConceptDisplay').value = "";
+        document.getElementById('vincEsperado').value = "0";
+    } else if (conceptsSeleccionadosVinc.length === 1) {
+        document.getElementById('hiddenConceptValue').value = conceptsSeleccionadosVinc[0].id;
+        document.getElementById('selectedConceptDisplay').value = conceptsSeleccionadosVinc[0].label;
+        document.getElementById('vincEsperado').value = conceptsSeleccionadosVinc[0].esp;
+    } else {
+        const totalEsp = conceptsSeleccionadosVinc.reduce((acc, curr) => acc + curr.esp, 0);
+        document.getElementById('hiddenConceptValue').value = conceptsSeleccionadosVinc.map(x => x.id).join(',');
+        document.getElementById('selectedConceptDisplay').value = "MULTIPLE SELECCIÓN";
+        document.getElementById('vincEsperado').value = totalEsp;
+    }
 }
 
 function actualizarContadorRevision() {
@@ -2168,25 +2237,57 @@ async function guardarSeleccionadosRevision() {
         if (pilarVal === 'Cuotas') tOrig = 'JUGADOR';
         else if (pilarVal === 'Pagos Staff') tOrig = 'STAFF';
 
-        const payload = {
-            fecha: f.querySelector('.rev-fecha').value,
-            n_asiento: f.querySelector('.rev-asiento').value,
-            departamento: f.querySelector('.rev-depto').value || 'Administración',
-            pilar: pilarVal,
-            descripcion: f.querySelector('.rev-desc').value,
-            importe: f.querySelector('.rev-importe').value,
-            nombre: f.querySelector('.rev-nombre').value,
-            equipo: f.querySelector('.rev-equipo').value,
-            concepto: f.querySelector('.rev-concepto').value,
-            tipo_origen: tOrig
-        };
-        
-        const res = await fetch('/api/presupuesto', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        });
-        if (res.ok) {
+        const totalPagado = parseFloat(f.querySelector('.rev-importe').value) || 0;
+        const metaJson = f.dataset.metaConceptos;
+        let rowSuccess = true;
+
+        if (metaJson && (pilarVal === 'Cuotas' || pilarVal === 'Pagos Staff')) {
+            const meta = JSON.parse(metaJson);
+            let saldoRestante = totalPagado;
+
+            for (let i = 0; i < meta.length; i++) {
+                let pagoAsignado = 0;
+                if (i === meta.length - 1) {
+                    pagoAsignado = saldoRestante; // El último concepto absorbe la diferencia
+                } else {
+                    pagoAsignado = Math.min(saldoRestante, parseFloat(meta[i].esp) || 0);
+                    saldoRestante -= pagoAsignado;
+                }
+
+                const payload = {
+                    fecha: f.querySelector('.rev-fecha').value,
+                    n_asiento: f.querySelector('.rev-asiento').value,
+                    departamento: f.querySelector('.rev-depto').value || 'Administración',
+                    pilar: pilarVal,
+                    descripcion: f.querySelector('.rev-desc').value,
+                    importe: pagoAsignado,
+                    nombre: f.querySelector('.rev-nombre').value,
+                    equipo: f.querySelector('.rev-equipo').value,
+                    concepto: meta[i].id,
+                    esperado: meta[i].esp,
+                    tipo_origen: tOrig
+                };
+                const res = await fetch('/api/presupuesto', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+                if (!res.ok) rowSuccess = false;
+            }
+        } else {
+            const payload = {
+                fecha: f.querySelector('.rev-fecha').value,
+                n_asiento: f.querySelector('.rev-asiento').value,
+                departamento: f.querySelector('.rev-depto').value || 'Administración',
+                pilar: pilarVal,
+                descripcion: f.querySelector('.rev-desc').value,
+                importe: totalPagado,
+                nombre: f.querySelector('.rev-nombre').value,
+                equipo: f.querySelector('.rev-equipo').value,
+                concepto: f.querySelector('.rev-concepto').value,
+                tipo_origen: tOrig
+            };
+            const res = await fetch('/api/presupuesto', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            if (!res.ok) rowSuccess = false;
+        }
+
+        if (rowSuccess) {
             f.remove();
             procesados++;
         }
@@ -2640,14 +2741,23 @@ async function guardarExtraDetalle(btn) {
 
 <!-- Modal Vinculación en Revisión -->
 <div id="modalVinculacionRevision" class="modal">
-    <div class="modal-content" style="width: 700px; max-width: 95%; border: 3px solid #1e3a8a;">
-        <h3 style="font-size: 14px; margin-bottom: 20px; border-bottom: 2px solid #E31E24; padding-bottom: 10px; font-weight: 900; color: #1e3a8a; text-transform: uppercase;">REGISTRAR PAGO Y ASIGNAR</h3>
+    <div class="modal-content" style="width: 900px; max-width: 95%; border: 3px solid #1e40af;">
+        <h3 style="font-size: 14px; margin-bottom: 20px; border-bottom: 2px solid #1e40af; padding-bottom: 10px; font-weight: 900; color: #1e40af; text-transform: uppercase;">REGISTRAR PAGO Y ASIGNAR</h3>
         <div style="display: flex; flex-direction: column; gap: 15px;">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                 <div>
-                <label style="font-size: 10px; font-weight: 800; color: #444; text-transform: uppercase;">JUGADOR / MIEMBRO STAFF</label>
-                <input type="text" id="searchVinc" oninput="filtrarVinculacion()" placeholder="Escribe nombre..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
-                    <select id="selectVinc" onchange="displaySelectedPlayerPayment()" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; margin-top:5px; height:120px; font-weight: 700; font-size: 12px;" size="5"></select>
+                    <label style="font-size: 10px; font-weight: 800; color: #444; text-transform: uppercase;">JUGADOR / MIEMBRO STAFF</label>
+                    <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+                        <select id="filterEquipoVinc" onchange="filtrarVinculacion()" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-weight: 700; font-size: 11px;">
+                            <option value="">EQUIPO...</option>
+                            {% for eq in equipos %}
+                            <option value="{{ eq }}">{{ eq }}</option>
+                            {% endfor %}
+                            <option value="STAFF">STAFF</option>
+                        </select>
+                        <input type="text" id="searchVinc" oninput="filtrarVinculacion()" placeholder="Nombre..." style="flex: 2; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-weight: 700; font-size: 11px;">
+                    </div>
+                    <select id="selectVinc" onchange="displaySelectedPlayerPayment()" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; height:120px; font-weight: 700; font-size: 12px;" size="5"></select>
                 </div>
                 <div>
                     <label style="font-size: 10px; font-weight: 800; color: #444; text-transform: uppercase;">CONCEPTO SELECCIONADO</label>
@@ -2657,7 +2767,7 @@ async function guardarExtraDetalle(btn) {
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
                         <div>
                             <label style="font-size: 10px; font-weight: 800; color: #444;">PAGADO (€)</label>
-                            <input type="number" id="vincImporte" style="width:100%; padding:10px; border-radius:8px; border:2px solid #28a745; font-weight: 900; text-align: center;">
+                            <input type="number" id="vincImporte" style="width:100%; padding:10px; border-radius:8px; border:2px solid #1e40af; font-weight: 900; text-align: center;">
                         </div>
                         <div>
                             <label style="font-size: 10px; font-weight: 800; color: #444;">ESPERADO (€)</label>
@@ -2677,8 +2787,8 @@ async function guardarExtraDetalle(btn) {
                     </table>
                 </div>
             </div>
-                <button class="btn-fin" style="flex:1; background:#eee; font-weight: 900;" onclick="document.getElementById('modalVinculacionRevision').style.display='none'">CANCELAR</button>
-                <button class="btn-fin" style="flex:2; background:#E31E24; color:white; font-weight: 900; box-shadow: 0 4px 10px rgba(227,30,36,0.3);" onclick="confirmarAsignacion()">
+                <button class="btn-fin" style="flex:1; background:#e0e7ff; color:#1e40af; font-weight: 900;" onclick="document.getElementById('modalVinculacionRevision').style.display='none'">CANCELAR</button>
+                <button class="btn-fin" style="flex:2; background:#1e40af; color:white; font-weight: 900; box-shadow: 0 4px 10px rgba(30,64,154,0.3);" onclick="confirmarAsignacion()">
                     <i class="fas fa-save"></i> GUARDAR Y ASIGNAR
                 </button>
             </div>

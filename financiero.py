@@ -891,7 +891,7 @@ def api_carga_masiva_presupuesto():
         filename = file.filename.lower()
 
         if filename.endswith('.csv'):
-            raw_data = file.stream.read()
+            raw_data = file.read()
             try:
                 content = raw_data.decode("UTF-8-SIG")
             except UnicodeDecodeError:
@@ -922,15 +922,16 @@ def api_carga_masiva_presupuesto():
                 })
 
         elif filename.endswith(('.xls', '.xlsx', '.xlsm')):
+            if pd is None:
+                return jsonify({"status": "error", "message": "El servidor no tiene instalada la librería 'pandas'. Ejecuta: pip install pandas openpyxl"}), 500
             try:
-                import pandas as pd
                 file.seek(0)
                 df = pd.read_excel(file).fillna("") 
                 df.columns = normalizar_cabeceras(df.columns.tolist())
                 
                 for _, row in df.iterrows():
                     imp = parse_amount(row.get('IMPORTE', '0'))
-                    asiento_val = row.get('ASIENTO', row.get('N_ASIENTO', row.get('Nº_ASIENTO', '')))
+                    asiento_val = row.get('ASIENTO') or row.get('N_ASIENTO') or row.get('Nº_ASIENTO') or ''
                     datos_leidos.append({
                         "FECHA": format_date_for_frontend(row.get('FECHA', '')),
                         "ASIENTO": str(asiento_val),
@@ -940,12 +941,12 @@ def api_carga_masiva_presupuesto():
                         "EQUIPO": str(row.get('EQUIPO', '')),
                         "CONCEPTO": str(row.get('CONCEPTO', ''))
                     })
+            except ImportError:
+                return jsonify({"status": "error", "message": "El servidor necesita la librería 'pandas' y 'openpyxl' para procesar archivos Excel."}), 500
             except Exception as e:
                 if "openpyxl" in str(e) or "xlrd" in str(e):
                     return jsonify({"status": "error", "message": "El servidor necesita las librerías 'pandas', 'openpyxl' y 'xlrd' para procesar archivos Excel."}), 500
                 return jsonify({"status": "error", "message": f"Error al leer el archivo Excel: {str(e)}"}), 500
-            except ImportError:
-                return jsonify({"status": "error", "message": "El servidor necesita la librería 'pandas' y 'openpyxl' para procesar archivos Excel."}), 500
 
         elif filename.endswith('.pdf'):
             # Para PDF intentamos una extracción genérica de texto
