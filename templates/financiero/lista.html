@@ -381,6 +381,7 @@
                     <thead>
                         <tr>
                             <th>CARGO</th>
+                            <th>EQUIPO</th>
                             <th>NOMBRE</th>
                                 {% for mes, label in [('01','ENE'),('02','FEB'),('03','MAR'),('04','ABR'),('05','MAY'),('06','JUN'),('07','JUL'),('08','AGO'),('09','SEP'),('10','OCT'),('11','NOV'),('12','DIC')] %}
                                 <th>{{ label }}</th>
@@ -395,9 +396,14 @@
                     </thead>
                         <tbody id="cuerpoPagosStaff">
                         {% for s in staff %}
-                            <tr class="fila-staff" data-nombre="{{ s.NOMBRE }}" data-equipo="STAFF">
-                            <td style="font-weight: 800;">{{ s.CARGO }} <i class="fas fa-pencil-alt" style="cursor:pointer; color:#ccc; font-size: 10px; margin-left: 5px;" onclick="abrirModalEditarStaff(event, this, '{{ s.NOMBRE }}', '{{ s.CARGO }}')"></i></td>
-                            <td>{{ s.NOMBRE }} <i class="fas fa-pencil-alt" style="cursor:pointer; color:#ccc; font-size: 10px; margin-left: 5px;" onclick="abrirModalEditarStaff(event, this, '{{ s.NOMBRE }}', '{{ s.CARGO }}')"></i></td>
+                            <tr class="fila-staff" 
+                                data-nombre="{{ s.NOMBRE }}" 
+                                data-equipo="{{ s.EQUIPO }}" 
+                                data-telefono="{{ s.TELEFONO }}" 
+                                data-dias="{{ s['DIAS ENTRENAMIENTO'] }}">
+                            <td style="font-weight: 800;">{{ s.CARGO }}</td>
+                            <td>{{ s.EQUIPO }}</td>
+                            <td>{{ s.NOMBRE }} <i class="fas fa-pencil-alt" style="cursor:pointer; color:#ccc; font-size: 10px; margin-left: 5px;" onclick="abrirModalEditarStaff(event, this)"></i></td>
                             {% for mes in ['01','02','03','04','05','06','07','08','09','10','11','12'] %}
                                 <td class="pago-cell" onclick="seleccionarPagoStaff(event, this, 'Staff-{{ mes }}')">-</td>
                             {% endfor %}
@@ -1697,7 +1703,10 @@ function abrirModalAnadirStaff() {
 async function guardarNuevoStaff(btn) {
     const datos = {
         nombre: document.getElementById('newStaffNombre').value.trim(),
-        cargo: document.getElementById('newStaffCargo').value
+        cargo: document.getElementById('newStaffCargo').value,
+        telefono: document.getElementById('newStaffTelefono').value.trim(),
+        equipo: document.getElementById('newStaffEquipo').value.trim(),
+        dias_entrenamiento: document.getElementById('newStaffDias').value.trim()
     };
 
     if (!datos.nombre || !datos.cargo) return alert("Nombre y Cargo son obligatorios");
@@ -1727,10 +1736,20 @@ async function guardarNuevoStaff(btn) {
 }
 
 let staffOriginalNombre = "";
-function abrirModalEditarStaff(e, btn, nombre, cargo) {
+function abrirModalEditarStaff(e, iconElement) {
+    const row = iconElement.closest('tr');
+    const nombre = row.dataset.nombre;
+    const cargo = row.querySelector('td:first-child').innerText.trim(); // Get cargo from the first td
+    const telefono = row.dataset.telefono;
+    const equipo = row.dataset.equipo;
+    const dias = row.dataset.dias;
+
     staffOriginalNombre = nombre;
     document.getElementById('modalEditarStaffTitulo').innerText = `EDITAR STAFF: ${nombre}`;
     document.getElementById('editStaffNombre').value = nombre;
+    document.getElementById('editStaffTelefono').value = telefono || "";
+    document.getElementById('editStaffEquipo').value = equipo || "";
+    document.getElementById('editStaffDias').value = dias || "";
     document.getElementById('editStaffCargo').value = cargo;
     document.getElementById('modalEditarStaff').style.display = 'flex';
 }
@@ -1763,6 +1782,9 @@ async function eliminarPagoStaff(btn) {
 async function actualizarPagoStaff(btn) {
     const nuevoNombre = document.getElementById('editStaffNombre').value.trim();
     const nuevoCargo = document.getElementById('editStaffCargo').value;
+    const nuevoTel = document.getElementById('editStaffTelefono').value.trim();
+    const nuevoEquipo = document.getElementById('editStaffEquipo').value.trim();
+    const nuevoDias = document.getElementById('editStaffDias').value.trim();
 
     if (!nuevoNombre || !nuevoCargo) return alert("Nombre y Cargo son obligatorios");
 
@@ -1777,7 +1799,10 @@ async function actualizarPagoStaff(btn) {
             body: JSON.stringify({ 
                 nombre_antiguo: staffOriginalNombre, 
                 nombre_nuevo: nuevoNombre, 
-                cargo_nuevo: nuevoCargo 
+                cargo_nuevo: nuevoCargo,
+                telefono: nuevoTel,
+                equipo: nuevoEquipo,
+                dias_entrenamiento: nuevoDias
             })
         });
 
@@ -2592,6 +2617,18 @@ async function guardarSeleccionadosRevision() {
                 <input type="text" id="newStaffNombre" placeholder="Ej: Ana García" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
             </div>
             <div>
+                <label style="font-size: 10px; font-weight: 800; color: #999;">TELÉFONO (WhatsApp)</label>
+                <input type="text" id="newStaffTelefono" placeholder="34600000000" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+            </div>
+            <div>
+                <label style="font-size: 10px; font-weight: 800; color: #999;">EQUIPO ASIGNADO</label>
+                <input type="text" id="newStaffEquipo" placeholder="Ej: ALEVIN A" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+            </div>
+            <div>
+                <label style="font-size: 10px; font-weight: 800; color: #999;">DÍAS ENTRENAMIENTO (Ej: L,X,V)</label>
+                <input type="text" id="newStaffDias" placeholder="L,X,V" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+            </div>
+            <div>
                 <label style="font-size: 10px; font-weight: 800; color: #999;">CARGO</label>
                 <select id="newStaffCargo" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
                     <option value="Entrenador">Entrenador</option>
@@ -2617,6 +2654,18 @@ async function guardarSeleccionadosRevision() {
         <div style="margin-bottom: 15px;">
             <label style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 5px;">NOMBRE COMPLETO</label>
             <input type="text" id="editStaffNombre" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; font-weight: 700;">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 5px;">TELÉFONO</label>
+            <input type="text" id="editStaffTelefono" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; font-weight: 700;">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 5px;">EQUIPO</label>
+            <input type="text" id="editStaffEquipo" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; font-weight: 700;">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 5px;">DÍAS (L,M,X,J,V,S,D)</label>
+            <input type="text" id="editStaffDias" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; font-weight: 700;">
         </div>
         <div style="margin-bottom: 15px;">
             <label style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 5px;">CARGO</label>

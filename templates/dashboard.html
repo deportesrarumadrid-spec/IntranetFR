@@ -5,6 +5,32 @@
     <title>Intranet Club - Panel Principal</title>
     <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- OneSignal SDK -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "3fb3580a-20d1-4c62-b850-a88c47a80dec", // <-- ID de OneSignal proporcionado
+          allowLocalhostAsSecureOrigin: true, // Para poder probarlo en local si es necesario
+        });
+
+        OneSignal.Notifications.addEventListener("permissionChange", async (permission) => {
+            if (permission) {
+                const usuario = "{{ usuario }}";
+                if (usuario && usuario !== 'Invitado') {
+                    const idNormalizado = usuario.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    console.log("OneSignal: Vinculando usuario como", idNormalizado);
+                    await OneSignal.login(idNormalizado);
+                }
+            }
+        });
+
+        if (!OneSignal.Notifications.permission) {
+            await OneSignal.Notifications.requestPermission();
+        }
+      });
+    </script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Montserrat', sans-serif; display: flex; height: 100vh; background-color: #f4f7f6; overflow: hidden; }

@@ -38,6 +38,15 @@
                 <option value="ALL">Todos los días</option>
             </select>
         </div>
+        <div id="infoCoachContainer" style="flex: 1; min-width: 200px; display: none; background: #f8f9fa; padding: 8px 15px; border-radius: 8px; border: 1px solid #eee; align-items: center; justify-content: space-between;">
+            <div>
+                <label style="font-size: 9px; font-weight: 900; color: #999; display: block; text-transform: uppercase;">Entrenador Responsable</label>
+                <span id="txtNombreCoach" style="font-weight: 800; color: #333; font-size: 13px;">-</span>
+            </div>
+            <button id="btnNotificarCoach" onclick="enviarAvisoManualCoach()" style="background: #333; color: white; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-weight: 800; font-size: 11px;" title="Enviar recordatorio Push al móvil">
+                <i class="fas fa-bell" style="font-size: 16px;"></i> ENVIAR PUSH
+            </button>
+        </div>
         <div style="flex: 1; min-width: 200px;">
             <button id="btnGuardarTodo" onclick="enviarCambiosAlServidor()" style="width: 100%; padding: 12px; background: #6c757d; color: white; border: none; border-radius: 8px; font-weight: 900; cursor: pointer; transition: all 0.3s;">
                 <i class="fas fa-cloud" style="margin-right: 8px;"></i> SISTEMA SINCRONIZADO
@@ -383,7 +392,8 @@
 
 <script>
 let cambiosPendientes = [];
-let jugadoresRaw = {{ jugadores_raw | tojson }};
+let jugadoresRaw = {{ jugadores_raw | tojson | safe }};
+let staffRaw = {{ staff_raw | tojson | safe }}; // Aseguramos que siempre sea un array y se escape correctamente
 const nombresDias = ['D', 'L', 'M', 'MI', 'J', 'V', 'S'];
 let isSaving = false;
 let celdaActiva = null;
@@ -406,6 +416,24 @@ function parsearFechaLocal(str) {
 async function generarCalendario() {
     const equipo = document.getElementById('selectEquipo').value;
     if (!equipo) return;
+
+    console.log("Equipo seleccionado:", equipo);
+    console.log("Datos de staff cargados (staffRaw):", staffRaw);
+
+    // Buscar entrenador del equipo
+    const coach = staffRaw.find(s => s.EQUIPO === equipo.toUpperCase());
+    const infoDiv = document.getElementById('infoCoachContainer');
+    if (coach) {
+        console.log("Entrenador encontrado:", coach.NOMBRE, "para el equipo:", coach.EQUIPO);
+        document.getElementById('txtNombreCoach').innerText = coach.NOMBRE;
+        infoDiv.style.display = 'flex';
+        document.getElementById('btnNotificarCoach').style.display = 'flex'; // Aseguramos que el botón se muestre
+    } else {
+        infoDiv.style.display = 'none';
+        document.getElementById('txtNombreCoach').innerText = "No asignado"; // Feedback claro
+        document.getElementById('btnNotificarCoach').style.display = 'none'; // Ocultamos el botón si no hay coach
+        console.log("No se encontró entrenador para el equipo:", equipo.toUpperCase(), "en la lista de staff.");
+    }
 
     showLoader();
 
@@ -1367,12 +1395,58 @@ window.onload = async function() {
     if (ultimoEquipo) {
         const select = document.getElementById('selectEquipo');
         select.value = ultimoEquipo;
-        await generarCalendario();
+        try {
+            await generarCalendario();
+        } catch (e) {
+            console.error("Error al generar calendario en onload:", e);
+            hideLoader(); // Asegurarse de ocultar el loader incluso si hay un error
+        }
         localStorage.removeItem('ultimoEquipoAsistencias'); // Limpiamos para no forzar siempre
-    } else {
-        // Si no hay equipo, ocultamos el loader inmediatamente
+    } else if (document.getElementById('selectEquipo').options.length > 1) { // If there are teams, select the first one and generate
+        document.getElementById('selectEquipo').selectedIndex = 1; // Select the first actual team
+        await generarCalendario();
+    } else { // If no team is selected and no teams are available, hide the loader
         hideLoader();
     }
 };
+
+async function enviarAvisoManualCoach() {
+    const equipo = document.getElementById('selectEquipo').value;
+    const btn = document.getElementById('btnNotificarCoach');
+    const originalContent = btn.innerHTML;
+
+    if (!confirm(`¿Enviar notificación PUSH al móvil del entrenador de ${equipo}?`)) return;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.style.background = "#666";
+
+    try {
+        const res = await fetch('/api/notificaciones/recordatorio_individual', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ equipo: equipo })
+        });
+        const result = await res.json();
+        
+        if (res.ok) {
+            alert(result.message);
+            btn.style.background = "#28a745";
+            btn.innerHTML = '<i class="fas fa-check"></i>';
+        } else {
+            alert("Error: " + result.message);
+            btn.style.background = "#E31E24";
+            btn.innerHTML = '<i class="fas fa-times"></i>';
+        }
+    } catch (e) {
+        alert("Error de conexión");
+    } finally {
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+            btn.style.background = "#333";
+        }, 3000);
+    }
+}
 </script>
 {% endblock %}

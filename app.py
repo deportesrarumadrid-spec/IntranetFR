@@ -3,13 +3,108 @@ import json
 import base64
 from datetime import datetime, timedelta
 import calendar
+import unicodedata
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import requests # ¡IMPORTANTE! Añadir esta línea
+try:
+    from dotenv import load_dotenv
+    load_dotenv() # Carga las variables desde un archivo .env si existe
+except ImportError:
+    pass
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 
 app = Flask(__name__)
 app.secret_key = "club_intranet_secret_key_2024" # Necesario para las sesiones
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Límite de 16MB para subidas
+
+# --- UTILIDADES DE NOTIFICACIÓN ---
+def normalizar_id(texto):
+    if not texto: return ""
+    # Convierte a minúsculas, quita tildes y limpia espacios
+    s = "".join(c for c in unicodedata.normalize('NFD', str(texto)) if unicodedata.category(c) != 'Mn')
+    return s.lower().strip()
+
+def enviar_whatsapp(numero, mensaje):
+    """
+    Integración real con Whapi.cloud.
+    Requiere WHAPI_API_TOKEN en las variables de entorno.
+    """
+    api_token = os.environ.get("WHAPI_API_TOKEN")
+    if not api_token:
+        print("ERROR: WHAPI_API_TOKEN no configurado en las variables de entorno.")
+        return
+
+    # Limpiamos el número para que solo tenga dígitos (Whapi prefiere formato sin +)
+    numero_limpio = "".join(filter(str.isdigit, str(numero)))
+    url = "https://gate.whapi.cloud/messages/text"
+    payload = {
+        "typing_time": 0,
+        "to": f"{numero_limpio}@s.whatsapp.net",
+        "body": mensaje
+    }
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "authorization": f"Bearer {api_token}"
+    }
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        print(f"WHATSAPP ENVIADO a {numero}. Respuesta: {response.json()}")
+    except requests.exceptions.RequestException as e:
+        print(f"Error al enviar WhatsApp a {numero}: {e}")
+        if hasattr(e, 'response') and e.response is not None:
+            print(f"Whapi API Response: {e.response.text}")
+
+def enviar_push(usuario, mensaje):
+    """
+    Integración real con OneSignal.
+    Requiere ONE_SIGNAL_APP_ID y ONE_SIGNAL_REST_API_KEY en las variables de entorno.
+    Asume que el 'usuario' (nombre del coach) se usa como external_user_id en OneSignal.
+    """
+    app_id = os.environ.get("ONE_SIGNAL_APP_ID")
+    rest_api_key = os.environ.get("ONE_SIGNAL_REST_API_KEY")
+
+    if not app_id or not rest_api_key:
+        print("ERROR: ONE_SIGNAL_APP_ID o ONE_SIGNAL_REST_API_KEY no configurados en las variables de entorno.")
+        return
+
+    url = "https://onesignal.com/api/v1/notifications"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Basic {rest_api_key}"
+    }
+    
+    payload = {
+        "app_id": app_id,
+        "contents": {"es": mensaje, "en": mensaje},
+        "headings": {"es": "Intranet Club", "en": "Intranet Club"},
+        "include_external_user_ids": [normalizar_id(usuario)], # Usamos el ID normalizado
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        response.raise_for_status()
+        res_json = response.json()
+        # OneSignal devuelve 'id' si tuvo éxito. Verificamos si hubo destinatarios
+        recipients = res_json.get('recipients', 0)
+        print(f">>> RESULTADO PUSH ({usuario}): {recipients} dispositivos alcanzados. ID: {res_json.get('id')}")
+        if recipients == 0:
+            print(f"⚠️ AVISO: El entrenador '{usuario}' (ID: {normalizar_id(usuario)}) aún no ha aceptado notificaciones en su móvil.")
+    except requests.exceptions.RequestException as e:
+        print(f"Error al enviar Push a {usuario}: {e}")
+        if hasattr(e, 'response') and e.response is not None:
+            print(f"OneSignal API Response: {e.response.text}")
+
+def parse_dias_entreno(texto):
+    """Convierte 'L,X,V' en lista de números [0, 2, 4]"""
+    mapping = {'L':0, 'M':1, 'X':2, 'J':3, 'V':4, 'S':5, 'D':6}
+    res = []
+    if not texto: return res
+    for d in texto.upper().replace(' ', '').split(','):
+        if d in mapping: res.append(mapping[d])
+    return res
 
 # --- CONFIGURACIÓN GOOGLE SHEETS ---
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -21,12 +116,18 @@ NOMBRE_EXCEL = "Control Asistencia Club"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
 DATA_FOLDER = os.path.join(BASE_DIR, 'static', 'data')
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 for p in [UPLOAD_FOLDER, DATA_FOLDER]: os.makedirs(p, exist_ok=True)
 
 @app.route('/')
 def index():
     return render_template('login.html')
+
+@app.route('/OneSignalSDKWorker.js')
+def onesignal_worker():
+    # Necesario para que OneSignal funcione. El archivo debe estar en la carpeta /static/
+    return app.send_static_file('OneSignalSDKWorker.js')
 
 @app.route('/save_all', methods=['POST'])
 def save_all():
@@ -81,8 +182,8 @@ def asistencias():
     
 
     
-    # Abre tu Excel y la pestaña de jugadores
-    sheet = client.open("Control Asistencia Club").worksheet("JUGADORES")
+    # Abre tu Excel y la pestaña de jugadores usando la constante global
+    sheet = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
     # Leemos todos los valores de la hoja
     all_values = sheet.get_all_values()
     
@@ -103,11 +204,28 @@ def asistencias():
     equipos = sorted(list(set(row['EQUIPO'] for row in datos)))
     meses = ["Enero 2026", "Febrero 2026", "Marzo 2026", "Abril 2026", "Mayo 2026", "Junio 2026"]
     
+    # También cargamos el Staff para saber quiénes son los entrenadores
+    try:
+        staff_sheet = client.open(NOMBRE_EXCEL).worksheet("STAFF")
+        staff_all = staff_sheet.get_all_records()
+        # Normalizamos las llaves por si acaso
+        staff_datos = []
+        for s in staff_all:
+            staff_datos.append({
+                "NOMBRE": s.get("NOMBRE", ""),
+                "EQUIPO": s.get("EQUIPO", "").strip().upper(),
+                "TELEFONO": str(s.get("TELEFONO", "")),
+                "DIAS ENTRENAMIENTO": s.get("DIAS ENTRENAMIENTO", "") # Changed key to match Google Sheet header
+            })
+    except:
+        staff_datos = []
+
     return render_template('asistencias/lista.html', 
                            usuario=usuario, 
                            equipos=equipos, 
                            meses=meses, 
-                           jugadores_raw=datos)
+                           jugadores_raw=datos,
+                           staff_raw=staff_datos)
 
 @app.route('/api/control_balones', methods=['GET', 'POST'])
 def api_control_balones():
@@ -476,6 +594,143 @@ def marcar_alta():
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error en marcar_alta: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/notificaciones/asistencias_pendientes')
+def verificar_asistencias_pendientes():
+    try:
+        hoy = datetime.now()
+        mes_actual = hoy.month
+        anio_actual = hoy.year
+        
+        # 1. Obtener Staff
+        staff_sheet = client.open(NOMBRE_EXCEL).worksheet("STAFF")
+        staff_data = staff_sheet.get_all_records()
+        
+        # 2. Obtener Asistencias registradas este mes
+        asis_sheet = client.open(NOMBRE_EXCEL).worksheet("ASISTENCIAS")
+        asis_records = asis_sheet.get_all_values()[1:]
+        
+        # Crear un set para búsqueda rápida: "05/05/2026-ALEVIN A"
+        registros_hechos = set()
+        for r in asis_records:
+            if len(r) >= 2:
+                registros_hechos.add(f"{r[0]}-{r[1].strip().upper()}")
+
+        notificaciones_enviadas = 0
+        
+        for coach in staff_data:
+            nombre = coach.get('NOMBRE')
+            tel = str(coach.get('TELEFONO', '')).strip()
+            equipo = str(coach.get('EQUIPO', '')).strip().upper()
+            dias_raw = coach.get('DIAS ENTRENAMIENTO', '')
+            
+            if not tel or not equipo or not dias_raw: continue
+            
+            dias_validos = parse_dias_entreno(dias_raw)
+            faltas = []
+            
+            # Revisar desde el día 1 hasta hoy
+            for d in range(1, hoy.day + 1):
+                fecha_check = datetime(anio_actual, mes_actual, d)
+                if fecha_check.weekday() in dias_validos:
+                    fecha_str = fecha_check.strftime("%d/%m/%Y")
+                    key = f"{fecha_str}-{equipo}"
+                    
+                    if key not in registros_hechos:
+                        faltas.append(fecha_str)
+            
+            if faltas:
+                es_hoy = hoy.strftime("%d/%m/%Y") in faltas
+                total_faltas = len(faltas)
+                
+                msg = f"Hola {nombre}, recordatorio de Intranet Club. ⚠️\n\n"
+                
+                if es_hoy:
+                    msg += f"Hoy tienes entrenamiento con el {equipo} y aún no has pasado lista."
+                
+                if total_faltas > 1 or (total_faltas == 1 and not es_hoy):
+                    dias_anteriores = [f for f in faltas if f != hoy.strftime("%d/%m/%Y")]
+                    if dias_anteriores:
+                        msg += f"\nTambién tienes pendientes los siguientes días de este mes: {', '.join(dias_anteriores)}."
+                
+                msg += "\n\nPor favor, complétalas lo antes posible para mantener el control del club actualizado. ¡Gracias!"
+                
+                enviar_whatsapp(tel, msg)
+                enviar_push(nombre, msg)
+                notificaciones_enviadas += 1
+                
+        return jsonify({
+            "status": "success", 
+            "mensaje": f"Proceso completado. Se enviaron {notificaciones_enviadas} avisos."
+        })
+        
+    except Exception as e:
+        print(f"Error en notificaciones: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/notificaciones/recordatorio_individual', methods=['POST'])
+def recordatorio_individual():
+    data = request.json
+    equipo_target = data.get('equipo', '').strip().upper()
+    
+    try:
+        hoy = datetime.now()
+        mes_actual = hoy.month
+        anio_actual = hoy.year
+        hoy_str = hoy.strftime("%d/%m/%Y")
+        
+        # 1. Buscar al entrenador de ese equipo
+        staff_sheet = client.open(NOMBRE_EXCEL).worksheet("STAFF")
+        coaches = staff_sheet.get_all_records()
+        coach = next((c for c in coaches if str(c.get('EQUIPO', '')).strip().upper() == equipo_target), None)
+        
+        if not coach or not coach.get('TELEFONO'):
+            return jsonify({"status": "error", "message": "No se encontró entrenador o teléfono para este equipo"}), 404
+
+        # 2. Calcular qué días le faltan
+        asis_sheet = client.open(NOMBRE_EXCEL).worksheet("ASISTENCIAS")
+        asis_records = asis_sheet.get_all_values()[1:]
+        registros_hechos = set(f"{r[0]}-{r[1].strip().upper()}" for r in asis_records if len(r) >= 2)
+
+        dias_validos = parse_dias_entreno(coach.get('DIAS ENTRENAMIENTO', ''))
+        faltas = []
+        for d in range(1, hoy.day + 1):
+            fecha_check = datetime(anio_actual, mes_actual, d)
+            if fecha_check.weekday() in dias_validos:
+                f_str = fecha_check.strftime("%d/%m/%Y")
+                if f"{f_str}-{equipo_target}" not in registros_hechos:
+                    faltas.append(f_str)
+
+        # 3. Construir mensaje personalizado y muy preciso
+        es_dia_entreno_hoy = hoy.weekday() in dias_validos
+        asis_hoy_hecha = f"{hoy_str}-{equipo_target}" in registros_hechos
+        
+        msg = f"Hola {coach['NOMBRE']}, recordatorio de Intranet Club para el equipo {equipo_target}. ⚠️\n\n"
+        
+        if es_dia_entreno_hoy:
+            if asis_hoy_hecha:
+                msg += f"✅ Hoy ({hoy_str}) ya has registrado la asistencia correctamente."
+            else:
+                msg += f"❌ Hoy ({hoy_str}) tienes entrenamiento y AÚN NO has registrado la asistencia."
+        else:
+            msg += f"ℹ️ Hoy ({hoy_str}) no es día de entrenamiento programado para tu equipo."
+
+        anteriores = [f for f in faltas if f != hoy_str]
+        if anteriores:
+            msg += f"\n\n⚠️ Además, tienes pendientes estos días de este mes: {', '.join(anteriores)}."
+        
+        if not asis_hoy_hecha or anteriores:
+            msg += "\n\nPor favor, complétalas lo antes posible a través de la intranet. ¡Gracias!"
+        else:
+            msg += "\n\n¡Felicidades! Estás al día con todas tus asistencias del mes. Buen trabajo. ✅"
+
+        # Hemos desactivado WhatsApp para centrarnos únicamente en OneSignal (Push)
+        enviar_push(coach['NOMBRE'].lower().strip(), msg) # Enviamos al ID en minúsculas
+        
+        return jsonify({"status": "success", "message": f"Aviso enviado a {coach['NOMBRE']}"})
+    except Exception as e:
+        print(f"Error recordatorio_individual: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 # --- REGISTRO DE BLUEPRINTS ---

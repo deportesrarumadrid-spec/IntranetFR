@@ -534,8 +534,27 @@ def api_anadir_staff():
     datos = request.json
     try:
         sheet = client.open(NOMBRE_EXCEL).worksheet("STAFF")
-        # Estructura: CARGO, NOMBRE
-        sheet.append_row([datos.get('cargo'), datos.get('nombre')])
+        all_v = sheet.get_all_values()
+        if not all_v:
+            headers = ["CARGO", "NOMBRE", "TELEFONO", "EQUIPO", "DIAS ENTRENAMIENTO"]
+            sheet.append_row(headers)
+            all_v = [headers]
+        
+        headers_norm = normalizar_cabeceras(all_v[0])
+        fila = [""] * len(headers_norm)
+        mapping = {
+            'CARGO': datos.get('cargo'),
+            'NOMBRE': datos.get('nombre'),
+            'TELEFONO': datos.get('telefono'),
+            'EQUIPO': datos.get('equipo'),
+            'DIAS_ENTRENAMIENTO': datos.get('dias_entrenamiento')
+        }
+        
+        for i, h in enumerate(headers_norm):
+            if h in mapping:
+                fila[i] = mapping[h]
+        
+        sheet.append_row(fila)
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error api_anadir_staff: {e}")
@@ -562,14 +581,34 @@ def api_actualizar_staff():
     nombre_antiguo = str(datos.get('nombre_antiguo', '')).strip()
     nombre_nuevo = str(datos.get('nombre_nuevo', '')).strip()
     cargo_nuevo = str(datos.get('cargo_nuevo', '')).strip()
+    tel_nuevo = str(datos.get('telefono', '')).strip()
+    equipo_nuevo = str(datos.get('equipo', '')).strip()
+    dias_nuevo = str(datos.get('dias_entrenamiento', '')).strip()
     
     try:
         # 1. Actualizar en la pestaña STAFF
         sheet_staff = client.open(NOMBRE_EXCEL).worksheet("STAFF")
-        celda = sheet_staff.find(nombre_antiguo, in_column=2)
+        all_v = sheet_staff.get_all_values()
+        if not all_v: return jsonify({"status": "error", "message": "Hoja vacía"}), 404
+        
+        headers_norm = normalizar_cabeceras(all_v[0])
+        def get_col_idx(name):
+            try: return headers_norm.index(name) + 1
+            except: return None
+
+        idx_nom = get_col_idx('NOMBRE') or 2
+        idx_car = get_col_idx('CARGO') or 1
+        idx_tel = get_col_idx('TELEFONO') or 3
+        idx_equ = get_col_idx('EQUIPO') or 4
+        idx_dia = get_col_idx('DIAS_ENTRENAMIENTO') or 5
+
+        celda = sheet_staff.find(nombre_antiguo, in_column=idx_nom)
         if celda:
-            sheet_staff.update_cell(celda.row, 1, cargo_nuevo)
-            sheet_staff.update_cell(celda.row, 2, nombre_nuevo)
+            if idx_car: sheet_staff.update_cell(celda.row, idx_car, cargo_nuevo)
+            if idx_nom: sheet_staff.update_cell(celda.row, idx_nom, nombre_nuevo)
+            if idx_tel: sheet_staff.update_cell(celda.row, idx_tel, tel_nuevo)
+            if idx_equ: sheet_staff.update_cell(celda.row, idx_equ, equipo_nuevo)
+            if idx_dia: sheet_staff.update_cell(celda.row, idx_dia, dias_nuevo)
             
             # 2. Si el nombre cambió, actualizar en PAGOS STAFF para mantener integridad de los registros
             if nombre_antiguo.lower() != nombre_nuevo.lower():
