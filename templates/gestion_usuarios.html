@@ -1,0 +1,200 @@
+<div class="card-coord">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h3 style="margin: 0; font-weight: 900; color: #333; text-transform: uppercase;">
+            <i class="fas fa-user-lock" style="color: #E31E24; margin-right: 10px;"></i> Gestión de Usuarios y Accesos
+        </h3>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="toggleFormularioNuevo()" style="padding: 10px 20px; background: #333; color: white; border: none; border-radius: 8px; font-weight: 900; cursor: pointer; font-size: 11px; text-transform: uppercase;">
+                <i class="fas fa-plus"></i> CREAR NUEVO PERFIL
+            </button>
+            <button class="nav-button" onclick="cargarPerfiles()" title="Recargar"><i class="fas fa-sync"></i></button>
+        </div>
+    </div>
+
+    <!-- Formulario Moderno (4 Rectángulos Verticales) -->
+    <div id="formNuevoUsuario" style="display: none; margin-bottom: 40px; animation: fadeIn 0.3s ease;">
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+            
+            <!-- Bloque 1: Usuario -->
+            <div style="background: white; border: 2px solid #eee; border-radius: 15px; padding: 20px; text-align: center; transition: 0.3s;" onmouseover="this.style.borderColor='#E31E24'">
+                <div style="width: 50px; height: 50px; background: #ffebeb; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; color: #E31E24;">
+                    <i class="fas fa-user"></i>
+                </div>
+                <label style="font-size: 10px; font-weight: 900; color: #999; display: block; margin-bottom: 10px; text-transform: uppercase;">Identidad</label>
+                <input type="text" id="newUsername" class="input-coord" placeholder="Usuario..." style="text-align: center; font-weight: 800; font-size: 14px; border-color: #eee;">
+            </div>
+
+            <!-- Bloque 2: Contraseña -->
+            <div style="background: white; border: 2px solid #eee; border-radius: 15px; padding: 20px; text-align: center; transition: 0.3s;" onmouseover="this.style.borderColor='#E31E24'">
+                <div style="width: 50px; height: 50px; background: #ffebeb; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; color: #E31E24;">
+                    <i class="fas fa-key"></i>
+                </div>
+                <label style="font-size: 10px; font-weight: 900; color: #999; display: block; margin-bottom: 10px; text-transform: uppercase;">Seguridad</label>
+                <input type="text" id="newPassword" class="input-coord" placeholder="Contraseña..." style="text-align: center; font-weight: 800; font-size: 14px; border-color: #eee;">
+            </div>
+
+            <!-- Bloque 3: Permisos -->
+            <div style="background: white; border: 2px solid #eee; border-radius: 15px; padding: 20px; transition: 0.3s;" onmouseover="this.style.borderColor='#E31E24'">
+                <div style="width: 50px; height: 50px; background: #ffebeb; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; color: #E31E24;">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <label style="font-size: 10px; font-weight: 900; color: #999; display: block; margin-bottom: 15px; text-transform: uppercase; text-align: center;">Accesos Permitidos</label>
+                
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 700; cursor: pointer;">
+                        ENTRENAMIENTOS <input type="checkbox" id="checkEntreno" class="check-coord">
+                    </label>
+                    <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 700; cursor: pointer;">
+                        ASISTENCIAS <input type="checkbox" id="checkAsist" class="check-coord">
+                    </label>
+                    <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 700; cursor: pointer;">
+                        FINANCIERO <input type="checkbox" id="checkFinanc" class="check-coord">
+                    </label>
+                    <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 700; cursor: pointer;">
+                        D. DEPORTIVA <input type="checkbox" id="checkDepor" class="check-coord">
+                    </label>
+                </div>
+            </div>
+
+            <!-- Bloque 4: Acción -->
+            <div style="background: #f8f9fa; border: 2px dashed #ddd; border-radius: 15px; padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                <button onclick="crearPerfil()" style="width: 100%; height: 100%; background: #E31E24; color: white; border: none; border-radius: 12px; font-weight: 900; cursor: pointer; transition: 0.3s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;">
+                    <i class="fas fa-cloud-upload-alt" style="font-size: 24px;"></i>
+                    <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Guardar Nuevo Acceso</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <style>
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .check-coord { 
+            appearance: none; width: 34px; height: 18px; background: #ddd; border-radius: 20px; position: relative; cursor: pointer; transition: 0.3s; 
+        }
+        .check-coord:checked { background: #28a745; }
+        .check-coord::before {
+            content: ''; position: absolute; width: 14px; height: 14px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: 0.3s;
+        }
+        .check-coord:checked::before { left: 18px; }
+    </style>
+
+    <!-- Tabla de Perfiles -->
+    <div style="margin-top: 20px; margin-bottom: 10px;">
+        <h4 style="font-size: 10px; font-weight: 900; color: #999; text-transform: uppercase;">
+            <i class="fas fa-list-ul"></i> Perfiles Activos en el Sistema
+        </h4>
+    </div>
+    <div style="overflow-x: auto;">
+        <table class="table-coord" id="tablaPerfiles">
+            <thead>
+                <tr>
+                    <th style="width: 150px;">USUARIO</th>
+                    <th style="width: 150px;">CONTRASEÑA</th>
+                    <th style="text-align: center; font-size: 9px;">ENTRENO</th>
+                    <th style="text-align: center; font-size: 9px;">ASIST.</th>
+                    <th style="text-align: center; font-size: 9px;">FINANC.</th>
+                    <th style="text-align: center; font-size: 9px;">D.DEP.</th>
+                    <th style="text-align: center; width: 80px;">ELIMINAR</th>
+                </tr>
+            </thead>
+            <tbody id="tbodyPerfiles">
+                <!-- Cargado por JS -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function toggleFormularioNuevo() {
+    const f = document.getElementById('formNuevoUsuario');
+    f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+async function cargarPerfiles() {
+    try {
+        const res = await fetch('/api/perfiles');
+        const data = await res.json();
+        const tbody = document.getElementById('tbodyPerfiles');
+        
+        tbody.innerHTML = data.map(u => `
+            <tr>
+                <td style="font-weight: 900; color: #333;">${u.USUARIO}</td>
+                <td><input type="text" value="${u.CONTRASEÑA}" class="input-coord" style="width: 100px; font-weight: 700;" onchange="actualizarDatoPerfil('${u.USUARIO}', 'CONTRASEÑA', this.value)"></td>
+                <td style="text-align: center;"><input type="checkbox" class="check-coord" ${u.ENTRENAMIENTOS === 'SI' ? 'checked' : ''} onchange="actualizarDatoPerfil('${u.USUARIO}', 'ENTRENAMIENTOS', this.checked ? 'SI' : 'NO')"></td>
+                <td style="text-align: center;"><input type="checkbox" class="check-coord" ${u.ASISTENCIAS === 'SI' ? 'checked' : ''} onchange="actualizarDatoPerfil('${u.USUARIO}', 'ASISTENCIAS', this.checked ? 'SI' : 'NO')"></td>
+                <td style="text-align: center;"><input type="checkbox" class="check-coord" ${u.FINANCIERO === 'SI' ? 'checked' : ''} onchange="actualizarDatoPerfil('${u.USUARIO}', 'FINANCIERO', this.checked ? 'SI' : 'NO')"></td>
+                <td style="text-align: center;"><input type="checkbox" class="check-coord" ${u['D.DEPORTIVA'] === 'SI' ? 'checked' : ''} onchange="actualizarDatoPerfil('${u.USUARIO}', 'D.DEPORTIVA', this.checked ? 'SI' : 'NO')"></td>
+                <td style="text-align: center;">
+                    ${u.USUARIO === 'admin' ? '-' : `<button onclick="eliminarPerfil('${u.USUARIO}')" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 16px;"><i class="fas fa-trash-alt"></i></button>`}
+                </td>
+            </tr>
+        `).join('');
+    } catch (e) { 
+        console.error("Error al cargar perfiles:", e); 
+    }
+}
+
+async function crearPerfil() {
+    const user = document.getElementById('newUsername').value.trim();
+    const pass = document.getElementById('newPassword').value.trim();
+    
+    if (!user || !pass) return alert("El nombre de usuario y la contraseña son obligatorios.");
+    
+    const body = {
+        USUARIO: user,
+        CONTRASEÑA: pass,
+        ENTRENAMIENTOS: document.getElementById('checkEntreno').checked ? 'SI' : 'NO',
+        ASISTENCIAS: document.getElementById('checkAsist').checked ? 'SI' : 'NO',
+        FINANCIERO: document.getElementById('checkFinanc').checked ? 'SI' : 'NO',
+        'D.DEPORTIVA': document.getElementById('checkDepor').checked ? 'SI' : 'NO'
+    };
+
+    try {
+        const res = await fetch('/api/perfiles', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body)
+        });
+        
+        let result;
+        try {
+            const text = await res.text();
+            try {
+                result = JSON.parse(text);
+            } catch (e) {
+                throw new Error("El servidor devolvió un error (HTML). Mira la terminal de Python para ver el fallo exacto.");
+            }
+        } catch (error) {
+            throw error;
+        }
+
+        if (res.ok) {
+            // Limpiar y cerrar
+            document.getElementById('newUsername').value = "";
+            document.getElementById('newPassword').value = "";
+            document.querySelectorAll('#formNuevoUsuario input[type="checkbox"]').forEach(c => c.checked = false);
+            toggleFormularioNuevo();
+            
+            cargarPerfiles();
+        } else { alert(result.message); }
+    } catch (e) { 
+        console.error(e);
+        alert("Error: " + e.message); 
+    }
+}
+
+async function actualizarDatoPerfil(username, campo, valor) {
+    await fetch(`/api/perfiles/${username}`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ [campo]: valor })
+    });
+}
+
+async function eliminarPerfil(username) {
+    if (!confirm(`¿Estás seguro de que quieres eliminar el acceso de ${username}?`)) return;
+    await fetch(`/api/perfiles/${username}`, { method: 'DELETE' });
+    cargarPerfiles();
+}
+</script>

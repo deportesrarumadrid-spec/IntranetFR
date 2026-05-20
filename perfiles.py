@@ -1,6 +1,5 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import gspread
-from app import client, NOMBRE_EXCEL # Importamos la conexión a Google Sheets desde app.py
 
 perfiles_bp = Blueprint('perfiles_bp', __name__)
 
@@ -13,27 +12,19 @@ def get_perfiles_sheet():
     Si no existe, la crea con las cabeceras predefinidas.
     """
     try:
+        client = getattr(current_app, 'gs_client', None)
+        NOMBRE_EXCEL = getattr(current_app, 'gs_name', "Control Asistencia Club")
+
+        if not client:
+            raise Exception("No se pudo localizar el cliente de Google Sheets (client).")
+
         sheet = client.open(NOMBRE_EXCEL).worksheet("PERFILES")
-        # Opcional: Verificar y corregir cabeceras si no coinciden
-        current_headers = sheet.row_values(1)
-        if current_headers != PERFILES_HEADERS:
-            print("Advertencia: Las cabeceras de la hoja 'PERFILES' no coinciden. Intentando corregir.")
-            # Una estrategia simple: si faltan, las añadimos. Si sobran, las ignoramos por ahora.
-            # Para una gestión más robusta, se podría reordenar o pedir confirmación.
-            if not current_headers or len(current_headers) < len(PERFILES_HEADERS):
-                sheet.clear() # Limpiar y reescribir si está muy desordenado o vacío
-                sheet.append_row(PERFILES_HEADERS)
-            else:
-                # Intentar actualizar solo las celdas de cabecera que no coincidan
-                for i, header in enumerate(PERFILES_HEADERS):
-                    if i < len(current_headers) and current_headers[i] != header:
-                        sheet.update_cell(1, i + 1, header)
-                    elif i >= len(current_headers): # Si hay nuevas cabeceras que no existían
-                        sheet.update_cell(1, i + 1, header)
         return sheet
     except gspread.exceptions.WorksheetNotFound:
-        print("Creando hoja 'PERFILES' en Google Sheets...")
-        sheet = client.open(NOMBRE_EXCEL).add_worksheet(title="PERFILES", rows="100", cols=len(PERFILES_HEADERS))
+        client = getattr(current_app, 'gs_client')
+        NOMBRE_EXCEL = getattr(current_app, 'gs_name')
+        spreadsheet = client.open(NOMBRE_EXCEL)
+        sheet = spreadsheet.add_worksheet(title="PERFILES", rows="100", cols=len(PERFILES_HEADERS))
         sheet.append_row(PERFILES_HEADERS)
         return sheet
 
@@ -51,14 +42,17 @@ def get_perfiles():
 @perfiles_bp.route('/api/perfiles', methods=['POST'])
 def add_perfil():
     """Añade un nuevo perfil de usuario."""
-    data = request.json
-    usuario = data.get('USUARIO', '').strip()
-    contrasena = data.get('CONTRASEÑA', '')
-    
-    if not usuario or not contrasena:
-        return jsonify({"status": "error", "message": "Usuario y Contraseña son obligatorios."}), 400
-
     try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "No se han recibido datos válidos."}), 400
+
+        usuario = data.get('USUARIO', '').strip()
+        contrasena = data.get('CONTRASEÑA', '')
+        
+        if not usuario or not contrasena:
+            return jsonify({"status": "error", "message": "Usuario y Contraseña son obligatorios."}), 400
+
         sheet = get_perfiles_sheet()
         # Verificar si el usuario ya existe
         existing_users = sheet.col_values(1) # Columna de USUARIO
@@ -87,19 +81,28 @@ def update_perfil(username):
     
     try:
         sheet = get_perfiles_sheet()
-        cell = sheet.find(username, in_column=1) # Buscar por USUARIO en la primera columna
-        if not cell:
+        all_values = sheet.get_all_values()
+        row_index = -1
+        target_user = username.strip().upper()
+
+        for i, row in enumerate(all_values):
+            if row and row[0].strip().upper() == target_user:
+                row_index = i + 1
+                break
+
+        if row_index == -1:
             return jsonify({"status": "error", "message": "Usuario no encontrado."}), 404
-        
-        row_index = cell.row
         
         # Actualizar solo los campos proporcionados en la solicitud
         updates = []
+        # Normalizamos las llaves del JSON recibido para comparar correctamente
+        data_norm = {str(k).upper(): v for k, v in data.items()}
+
         for i, header in enumerate(PERFILES_HEADERS):
-            if header in data:
+            if header in data_norm:
                 updates.append({
                     'range': gspread.utils.rowcol_to_a1(row_index, i + 1),
-                    'values': [[data[header]]]
+                    'values': [[data_norm[header]]]
                 })
         
         if updates:

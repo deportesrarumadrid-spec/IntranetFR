@@ -2,7 +2,7 @@ import os
 import json
 import calendar
 from datetime import datetime
-from flask import Blueprint, render_template, session, request, jsonify
+from flask import Blueprint, render_template, session, request, jsonify, redirect
 
 # Creamos el Blueprint para Dirección Deportiva
 deportivo_bp = Blueprint('deportivo_bp', __name__)
@@ -15,7 +15,13 @@ def normalizar_cabeceras_dep(headers):
 def deportivo():
     # Importamos las rutas de carpetas desde la app principal
     from app import DATA_FOLDER, UPLOAD_FOLDER
-    usuario = session.get('usuario', 'admin')
+    usuario = session.get('usuario')
+    if not usuario:
+        return redirect('/')
+    
+    if session.get('permisos', {}).get('ENTRENAMIENTOS') != 'SI':
+        return "Acceso denegado", 403
+
     mes_actual = request.args.get('mes', '2026-05')
     hoy = datetime.now()
     
@@ -180,7 +186,12 @@ def api_tecnificaciones():
 def direccion_deportiva():
     # Importamos la conexión desde la app principal
     from app import client, NOMBRE_EXCEL
-    usuario = session.get('usuario', 'admin')
+    usuario = session.get('usuario')
+    if not usuario:
+        return redirect('/')
+
+    if session.get('permisos', {}).get('D.DEPORTIVA') != 'SI':
+        return "Acceso denegado", 403
     
     try:
         # Cargamos los jugadores para el selector de coordinación

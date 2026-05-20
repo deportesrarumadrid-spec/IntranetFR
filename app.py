@@ -14,6 +14,7 @@ except ImportError:
     pass
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 
+from perfiles import get_perfiles_sheet # Importamos la función para obtener la hoja de perfiles
 app = Flask(__name__)
 app.secret_key = "club_intranet_secret_key_2024" # Necesario para las sesiones
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Límite de 16MB para subidas
@@ -111,6 +112,8 @@ scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/au
 creds = ServiceAccountCredentials.from_json_keyfile_name("secretos.json", scope)
 client = gspread.authorize(creds)
 NOMBRE_EXCEL = "Control Asistencia Club" 
+app.gs_client = client
+app.gs_name = NOMBRE_EXCEL
 # ----------------------------------
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -123,6 +126,12 @@ for p in [UPLOAD_FOLDER, DATA_FOLDER]: os.makedirs(p, exist_ok=True)
 @app.route('/')
 def index():
     return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    """Limpia la sesión por completo y redirige al login."""
+    session.clear()
+    return redirect(url_for('index'))
 
 @app.route('/OneSignalSDKWorker.js')
 def onesignal_worker():
@@ -154,9 +163,66 @@ def upload_foto():
         return jsonify({"status": "error"}), 500
 @app.route('/login', methods=['POST'])
 def login():
-    usuario_ingresado = request.form.get('usuario')
-    session['usuario'] = usuario_ingresado # Guardamos el usuario en la sesión
-    return redirect(url_for('deportivo_bp.direccion_deportiva'))
+    usuario_ingresado = (request.form.get('usuario') or "").strip()
+    password_ingresado = (request.form.get('password') or "").strip()
+
+    # 1. Caso especial para admin (Master) - NO SE TOCA, acceso total garantizado
+    if usuario_ingresado.lower() == 'admin':
+        session['usuario'] = 'admin'
+        session['permisos'] = {
+            'ENTRENAMIENTOS': 'SI', 'ASISTENCIAS': 'SI', 'FINANCIERO': 'SI', 'D.DEPORTIVA': 'SI', 'USUARIOS': 'SI'
+        }
+        return redirect(url_for('deportivo_bp.direccion_deportiva'))
+
+    # 2. Otros usuarios - Consultar la pestaña PERFILES
+    try:
+        sheet = get_perfiles_sheet()
+        records = sheet.get_all_records()
+        
+        # Búsqueda ultra-precisa: normalizamos el target y los registros
+        user_data = None
+        target_upper = usuario_ingresado.upper()
+        
+        for r in records:
+            # Creamos una copia de la fila con todas las llaves en MAYÚSCULAS y sin espacios
+            r_norm = {str(k).strip().upper(): v for k, v in r.items()}
+            if str(r_norm.get('USUARIO', '')).strip().upper() == target_upper:
+                user_data = r_norm
+                break
+
+        if user_data:
+            # Validación de contraseña (sensible a mayúsculas/minúsculas pero ignora espacios laterales)
+            if str(user_data.get('CONTRASEÑA', '')).strip() == password_ingresado:
+                session['usuario'] = usuario_ingresado
+                
+                # Función interna para asegurar que el permiso sea exactamente 'SI' o 'NO'
+                def check_p(key):
+                    val = str(user_data.get(key, 'NO')).strip().upper()
+                    return 'SI' if val == 'SI' else 'NO'
+
+                perms = {
+                    'ENTRENAMIENTOS': check_p('ENTRENAMIENTOS'),
+                    'ASISTENCIAS': check_p('ASISTENCIAS'),
+                    'FINANCIERO': check_p('FINANCIERO'),
+                    'D.DEPORTIVA': check_p('D.DEPORTIVA')
+                }
+                session['permisos'] = perms
+                
+                # Redirección inteligente al primer acceso permitido
+                if perms.get('D.DEPORTIVA') == 'SI': return redirect(url_for('deportivo_bp.direccion_deportiva'))
+                if perms.get('ENTRENAMIENTOS') == 'SI': return redirect(url_for('deportivo_bp.deportivo'))
+                if perms.get('ASISTENCIAS') == 'SI': return redirect(url_for('asistencias'))
+                if perms.get('FINANCIERO') == 'SI': return redirect(url_for('financiero.financiero'))
+                
+                return render_template('login.html', error="Usuario sin secciones asignadas. Contacta al admin.")
+            
+        return render_template('login.html', error="Usuario o contraseña incorrectos")
+
+    except Exception as e:
+        print(f"ERROR CRÍTICO EN LOGIN: {e}")
+        import traceback
+        traceback.print_exc() # Esto imprimirá el rastro completo del error en la terminal
+        return render_template('login.html', error="Error interno del servidor al verificar credenciales. Contacta al administrador.")
 
 @app.route('/delete_foto', methods=['POST']) # Esta ruta estaba duplicada, la he dejado solo una vez
 def delete_foto():
@@ -178,9 +244,12 @@ def delete_foto():
 
 @app.route('/asistencias')
 def asistencias():
-    usuario = session.get('usuario', 'Invitado')
+    usuario = session.get('usuario')
+    if not usuario:
+        return redirect(url_for('index'))
     
-
+    if session.get('permisos', {}).get('ASISTENCIAS') != 'SI':
+        return "No tienes permiso para ver esta sección", 403
     
     # Abre tu Excel y la pestaña de jugadores usando la constante global
     sheet = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
@@ -737,9 +806,11 @@ def recordatorio_individual():
 from financiero import financiero_bp
 from deportivo import deportivo_bp
 from jugadores_datos import jugadores_datos_bp
+from perfiles import perfiles_bp
 app.register_blueprint(financiero_bp)
 app.register_blueprint(deportivo_bp)
 app.register_blueprint(jugadores_datos_bp)
+app.register_blueprint(perfiles_bp)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001, use_reloader=False)

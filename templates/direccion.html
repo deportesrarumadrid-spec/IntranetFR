@@ -113,6 +113,9 @@
         <div class="tab-item active" onclick="switchTab(event, 'tab-coordinacion')">COORDINACIÓN</div>
         <div class="tab-item" onclick="switchTab(event, 'tab-d-deportiva')">D. DEPORTIVA</div>
         <div class="tab-item" onclick="switchTab(event, 'tab-otros')">INFORMES</div>
+        {% if usuario == 'admin' %}
+        <div class="tab-item" onclick="switchTab(event, 'tab-usuarios')">USUARIOS Y CONTRASEÑAS</div>
+        {% endif %}
     </div>
 
     <!-- SUBPESTAÑA: COORDINACIÓN -->
@@ -198,6 +201,12 @@
     <div id="tab-otros" class="tab-content">
         <div class="card-coord" style="text-align: center; padding: 50px; color: #999;">Módulo de Informes Técnicos</div>
     </div>
+
+    {% if usuario == 'admin' %}
+    <div id="tab-usuarios" class="tab-content">
+        {% include 'gestion_usuarios.html' %}
+    </div>
+    {% endif %}
 </div>
 
 <script>
@@ -209,6 +218,10 @@
         document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
         e.currentTarget.classList.add('active');
         document.getElementById(tabId).classList.add('active');
+
+        if (tabId === 'tab-usuarios' && typeof cargarPerfiles === 'function') {
+            cargarPerfiles();
+        }
     }
 
     // Full Calendar Logic

@@ -222,10 +222,18 @@
     <div class="logo-area">INTRANET FR</div>
     
     <div class="menu-container">
-<a href="/deportivo" class="menu-item {{ 'active' if 'deportivo' in request.path }}">ENTRENAMIENTOS</a>
-<a href="/asistencias" class="menu-item {{ 'active' if 'asistencias' in request.path }}">ASISTENCIAS</a>
-<a href="/financiero" class="menu-item {{ 'active' if 'financiero' in request.path }}">FINANCIERO</a>
-<a href="/direccion_deportiva" class="menu-item {{ 'active' if 'direccion_deportiva' in request.path }}">D. DEPORTIVA</a>
+        {% if session.get('permisos', {}).get('ENTRENAMIENTOS') == 'SI' %}
+        <a href="/deportivo" class="menu-item {{ 'active' if request.path == '/deportivo' }}">ENTRENAMIENTOS</a>
+        {% endif %}
+        {% if session.get('permisos', {}).get('ASISTENCIAS') == 'SI' %}
+        <a href="/asistencias" class="menu-item {{ 'active' if request.path == '/asistencias' }}">ASISTENCIAS</a>
+        {% endif %}
+        {% if session.get('permisos', {}).get('FINANCIERO') == 'SI' %}
+        <a href="/financiero" class="menu-item {{ 'active' if request.path == '/financiero' }}">FINANCIERO</a>
+        {% endif %}
+        {% if session.get('permisos', {}).get('D.DEPORTIVA') == 'SI' %}
+        <a href="/direccion_deportiva" class="menu-item {{ 'active' if request.path == '/direccion_deportiva' }}">D. DEPORTIVA</a>
+        {% endif %}
     </div>
 
     <div id="sidebarAvisos" class="avisos-sidebar">
@@ -240,8 +248,6 @@
     </div>
 </div>
 
-        
-    </div>
 
     <div class="main-content">
         <div class="top-bar">
@@ -249,7 +255,7 @@
                 <img src="{{ url_for('static', filename='ESCUDO SIN FONDO.png') }}" alt="Escudo" style="height: 65px; width: auto;">
                 <span style="font-size: 0.9rem; color: #666;">Bienvenido, <strong id="userId" style="color: #333;">{{ usuario }}</strong></span>
             </div>
-            <a href="/" class="btn-salir">CERRAR SESIÓN</a>
+            <a href="/logout" class="btn-salir">CERRAR SESIÓN</a>
         </div>
 
         <div class="render-area">

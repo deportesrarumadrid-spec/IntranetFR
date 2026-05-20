@@ -94,6 +94,9 @@
         <form action="/login" method="POST">
             <input type="text" name="usuario" placeholder="Usuario" required>
             <input type="password" name="password" placeholder="Contraseña" required>
+            {% if error %}
+            <div style="color: #e60000; font-size: 12px; font-weight: 800; margin-bottom: 15px; background: #ffebeb; padding: 10px; border-radius: 8px; border: 1px solid #ffcccc;">{{ error }}</div>
+            {% endif %}
             <button type="submit">ACCEDER</button>
         </form>
     </div>

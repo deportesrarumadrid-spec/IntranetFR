@@ -11,7 +11,7 @@ try:
     import pdfplumber
 except ImportError:
     pdfplumber = None
-from flask import Blueprint, render_template, request, session, jsonify
+from flask import Blueprint, render_template, request, session, jsonify, redirect
 from datetime import datetime # Import datetime for sorting
 
 # Creamos el Blueprint para la sección financiera
@@ -133,7 +133,12 @@ def get_friendly_concepto(concepto):
 def financiero():
     # Importamos las variables globales de conexión desde app.py
     from app import client, NOMBRE_EXCEL
-    usuario = session.get('usuario', 'admin')
+    usuario = session.get('usuario')
+    if not usuario:
+        return redirect('/')
+
+    if session.get('permisos', {}).get('FINANCIERO') != 'SI':
+        return "Acceso denegado", 403
     
     jugadores = leer_hoja_limpia(client, NOMBRE_EXCEL, "JUGADORES")
     # Obtenemos lista única de equipos
