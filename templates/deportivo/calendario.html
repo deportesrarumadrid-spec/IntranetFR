@@ -147,8 +147,18 @@
 
     <div class="calendario-wrapper">
 
+     <div style="margin-bottom: 20px;">
+        <label style="font-size: 10px; font-weight: 900; color: #444; display: block; margin-bottom: 5px;">EQUIPO ACTIVO</label>
+        <select id="selectEquipoEntrenos" onchange="showLoader(); window.location.href='?mes={{ mes_actual }}&equipo=' + encodeURIComponent(this.value.trim())" style="padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-weight: 700; width: 100%; max-width: 300px;">
+            <option value="">Seleccionar...</option>
+            {% for eq in equipos %}
+            <option value="{{ eq.strip() }}" {% if equipo_defecto|string|trim == eq|string|trim %}selected{% endif %}>{{ eq.strip() }}</option>
+            {% endfor %}
+        </select>
+     </div>
+
      <div class="header-row">
-    <select id="monthSelect" style="border:none; background:transparent; font-size:24px; font-weight:900; outline:none; cursor:pointer;" onchange="location.href='?mes=' + this.value">
+    <select id="monthSelect" style="border:none; background:transparent; font-size:24px; font-weight:900; outline:none; cursor:pointer;" onchange="showLoader(); window.location.href='?mes=' + this.value + '&equipo=' + encodeURIComponent('{{ equipo_defecto }}'.trim())">
         <option value="2026-05" {% if mes_actual == '2026-05' %}selected{% endif %}>MAYO 2026</option>
         <option value="2026-06" {% if mes_actual == '2026-06' %}selected{% endif %}>JUNIO 2026</option>
         <option value="2026-07" {% if mes_actual == '2026-07' %}selected{% endif %}>JULIO 2026</option>

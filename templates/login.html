@@ -97,8 +97,17 @@
             {% if error %}
             <div style="color: #e60000; font-size: 12px; font-weight: 800; margin-bottom: 15px; background: #ffebeb; padding: 10px; border-radius: 8px; border: 1px solid #ffcccc;">{{ error }}</div>
             {% endif %}
-            <button type="submit">ACCEDER</button>
+            <button type="submit" onclick="this.innerHTML='CARGANDO...';">ACCEDER</button>
         </form>
     </div>
+    <script>
+        // Pequeño script para mostrar que está cargando antes de la redirección
+        document.querySelector('form').onsubmit = function() {
+            const btn = this.querySelector('button');
+            btn.disabled = true;
+            btn.style.opacity = "0.7";
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ACCEDIENDO...';
+        };
+    </script>
 </body>
 </html>

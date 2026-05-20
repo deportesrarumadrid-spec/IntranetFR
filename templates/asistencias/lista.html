@@ -750,7 +750,7 @@ async function sincronizarTodoDesdeBackend() {
             }
         });
     } catch (e) { console.error("Error sincronizando observaciones/bajas:", e); }
-}
+} // Eliminado el finally huérfano que rompía el código
 
 async function cargarAsistenciasGuardadas() {
     const equipo = document.getElementById('selectEquipo').value;
@@ -768,6 +768,8 @@ async function cargarAsistenciasGuardadas() {
         const filas = document.querySelectorAll('#cuerpoTabla tr');
         filas.forEach(fila => {
             const spanNombre = fila.querySelector('.sticky-col span');
+        if (!spanNombre) return;
+        
             const nombreJugador = spanNombre.dataset.nombreOriginal || spanNombre.innerText.trim();
 
             // Actualizar porcentaje temporada (datos históricos del servidor)
@@ -787,9 +789,10 @@ async function cargarAsistenciasGuardadas() {
 
             celdas.forEach((td, index) => {
                 const thCelda = document.getElementById('cabeceraDias').cells[index + 1];
-        const diaNumHeader = thCelda.querySelector('.day-num-header');
-        if (!diaNumHeader) return;
-        const diaNum = diaNumHeader.innerText.trim();
+                if (!thCelda) return;
+                const diaNumHeader = thCelda.querySelector('.day-num-header');
+                if (!diaNumHeader) return;
+                const diaNum = diaNumHeader.innerText.trim();
                 const registro = datosGuardados.find(d => d.nombre === nombreJugador && d.dia == diaNum);
 
                 if (registro) {
@@ -834,7 +837,7 @@ async function cargarAsistenciasGuardadas() {
         calcularStats();
         actualizarAlertasVisuales(); // <--- ESTA ES LA LÍNEA QUE QUITA EL ROJO AL CARGAR
     } catch (e) { console.error("Error cargando asistencias:", e); }
-    finally { hideLoader(); }
+    finally { hideLoader(); } // Ahora dentro de la función
 }
 
 function registrarCambioLocal(el) {
@@ -1143,6 +1146,7 @@ async function anadirJugador() {
     const equipo = document.getElementById('selectEquipo').value;
     if (!nombre) return alert("Escribe el nombre del jugador");
 
+    showLoader();
     try {
         const response = await fetch('/anadir_jugador', {
             method: 'POST',
@@ -1157,7 +1161,7 @@ async function anadirJugador() {
         } else {
             alert("Error al añadir jugador.");
         }
-    } catch (e) { console.error(e); alert("Error de conexión."); }
+    } catch (e) { console.error(e); alert("Error de conexión."); } finally { hideLoader(); }
 }
 
 // Funciones para el nuevo modal de observaciones de jugador
@@ -1389,6 +1393,23 @@ window.onload = async function() {
     const hoyReal = new Date();
     const selectorMes = document.getElementById('selectMes');
     if (selectorMes) selectorMes.value = hoyReal.getMonth() + 1;
+
+    // 1. Prioridad: Equipo en URL, luego Sesión
+    const urlParams = new URLSearchParams(window.location.search);
+    const equipoDefecto = (urlParams.get('equipo') || "{{ session.get('equipo_defecto', '') }}").trim();
+
+    const select = document.getElementById('selectEquipo');
+    if (equipoDefecto && select) {
+        // Buscamos coincidencia exacta ignorando espacios laterales
+        for (let i = 0; i < select.options.length; i++) {
+            if (select.options[i].value.trim().toUpperCase() === equipoDefecto.toUpperCase()) {
+                select.selectedIndex = i;
+                await generarCalendario();
+                hideLoader();
+                return;
+            }
+        }
+    }
 
     // Recuperamos el último equipo si existe tras recargar
     const ultimoEquipo = localStorage.getItem('ultimoEquipoAsistencias');

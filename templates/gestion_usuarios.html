@@ -31,6 +31,10 @@
                 </div>
                 <label style="font-size: 10px; font-weight: 900; color: #999; display: block; margin-bottom: 10px; text-transform: uppercase;">Seguridad</label>
                 <input type="text" id="newPassword" class="input-coord" placeholder="Contraseña..." style="text-align: center; font-weight: 800; font-size: 14px; border-color: #eee;">
+                <div style="margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <input type="checkbox" id="checkElegirEquipo" class="check-coord">
+                    <label style="font-size: 9px; font-weight: 800; color: #666; cursor: pointer;" for="checkElegirEquipo">PEDIR EQUIPO AL ENTRAR</label>
+                </div>
             </div>
 
             <!-- Bloque 3: Permisos -->
@@ -95,6 +99,7 @@
                     <th style="text-align: center; font-size: 9px;">ASIST.</th>
                     <th style="text-align: center; font-size: 9px;">FINANC.</th>
                     <th style="text-align: center; font-size: 9px;">D.DEP.</th>
+                    <th style="text-align: center; font-size: 9px;">SEL. EQ. / ACCIÓN</th>
                     <th style="text-align: center; width: 80px;">ELIMINAR</th>
                 </tr>
             </thead>
@@ -112,26 +117,36 @@ function toggleFormularioNuevo() {
 }
 
 async function cargarPerfiles() {
+    showLoader();
     try {
         const res = await fetch('/api/perfiles');
         const data = await res.json();
         const tbody = document.getElementById('tbodyPerfiles');
+        const esAdminMaster = (u) => u.USUARIO.toLowerCase() === 'admin';
         
         tbody.innerHTML = data.map(u => `
-            <tr>
+            <tr data-user="${u.USUARIO}">
                 <td style="font-weight: 900; color: #333;">${u.USUARIO}</td>
-                <td><input type="text" value="${u.CONTRASEÑA}" class="input-coord" style="width: 100px; font-weight: 700;" onchange="actualizarDatoPerfil('${u.USUARIO}', 'CONTRASEÑA', this.value)"></td>
-                <td style="text-align: center;"><input type="checkbox" class="check-coord" ${u.ENTRENAMIENTOS === 'SI' ? 'checked' : ''} onchange="actualizarDatoPerfil('${u.USUARIO}', 'ENTRENAMIENTOS', this.checked ? 'SI' : 'NO')"></td>
-                <td style="text-align: center;"><input type="checkbox" class="check-coord" ${u.ASISTENCIAS === 'SI' ? 'checked' : ''} onchange="actualizarDatoPerfil('${u.USUARIO}', 'ASISTENCIAS', this.checked ? 'SI' : 'NO')"></td>
-                <td style="text-align: center;"><input type="checkbox" class="check-coord" ${u.FINANCIERO === 'SI' ? 'checked' : ''} onchange="actualizarDatoPerfil('${u.USUARIO}', 'FINANCIERO', this.checked ? 'SI' : 'NO')"></td>
-                <td style="text-align: center;"><input type="checkbox" class="check-coord" ${u['D.DEPORTIVA'] === 'SI' ? 'checked' : ''} onchange="actualizarDatoPerfil('${u.USUARIO}', 'D.DEPORTIVA', this.checked ? 'SI' : 'NO')"></td>
+                <td><input type="text" value="${u.CONTRASEÑA}" class="input-coord edit-pass" style="width: 100px; font-weight: 700;" ${esAdminMaster(u) ? 'disabled' : ''}></td>
+                <td style="text-align: center;"><input type="checkbox" class="check-coord edit-entrenos" ${u.ENTRENAMIENTOS === 'SI' ? 'checked' : ''} ${esAdminMaster(u) ? 'disabled' : ''}></td>
+                <td style="text-align: center;"><input type="checkbox" class="check-coord edit-asistencias" ${u.ASISTENCIAS === 'SI' ? 'checked' : ''} ${esAdminMaster(u) ? 'disabled' : ''}></td>
+                <td style="text-align: center;"><input type="checkbox" class="check-coord edit-financiero" ${u.FINANCIERO === 'SI' ? 'checked' : ''} ${esAdminMaster(u) ? 'disabled' : ''}></td>
+                <td style="text-align: center;"><input type="checkbox" class="check-coord edit-deportiva" ${u['D.DEPORTIVA'] === 'SI' ? 'checked' : ''} ${esAdminMaster(u) ? 'disabled' : ''}></td>
                 <td style="text-align: center;">
-                    ${u.USUARIO === 'admin' ? '-' : `<button onclick="eliminarPerfil('${u.USUARIO}')" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 16px;"><i class="fas fa-trash-alt"></i></button>`}
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <input type="checkbox" class="check-coord edit-seleq" ${u['SEL. EQ.'] === 'SI' ? 'checked' : ''} ${esAdminMaster(u) ? 'disabled' : ''}>
+                        ${esAdminMaster(u) ? '' : `<button onclick="guardarCambiosFila(this, '${u.USUARIO}')" style="background: #E31E24; color: white; border: none; border-radius: 4px; padding: 5px 8px; font-size: 8px; cursor: pointer; font-weight: 900; display: flex; align-items: center; gap: 4px;"><i class="fas fa-save"></i> GUARDAR</button>`}
+                    </div>
+                </td>
+                <td style="text-align: center;">
+                    ${esAdminMaster(u) ? '-' : `<button onclick="eliminarPerfil('${u.USUARIO}')" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 16px;"><i class="fas fa-trash-alt"></i></button>`}
                 </td>
             </tr>
         `).join('');
     } catch (e) { 
         console.error("Error al cargar perfiles:", e); 
+    } finally {
+        hideLoader();
     }
 }
 
@@ -147,9 +162,11 @@ async function crearPerfil() {
         ENTRENAMIENTOS: document.getElementById('checkEntreno').checked ? 'SI' : 'NO',
         ASISTENCIAS: document.getElementById('checkAsist').checked ? 'SI' : 'NO',
         FINANCIERO: document.getElementById('checkFinanc').checked ? 'SI' : 'NO',
-        'D.DEPORTIVA': document.getElementById('checkDepor').checked ? 'SI' : 'NO'
+        'D.DEPORTIVA': document.getElementById('checkDepor').checked ? 'SI' : 'NO',
+        'SEL. EQ.': document.getElementById('checkElegirEquipo').checked ? 'SI' : 'NO'
     };
 
+    showLoader();
     try {
         const res = await fetch('/api/perfiles', {
             method: 'POST',
@@ -180,21 +197,61 @@ async function crearPerfil() {
         } else { alert(result.message); }
     } catch (e) { 
         console.error(e);
-        alert("Error: " + e.message); 
+        alert("Error: " + e.message);
+    } finally {
+        hideLoader();
     }
 }
 
-async function actualizarDatoPerfil(username, campo, valor) {
-    await fetch(`/api/perfiles/${username}`, {
-        method: 'PUT',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ [campo]: valor })
-    });
+async function guardarCambiosFila(btn, username) {
+    const row = btn.closest('tr');
+    const data = {
+        'CONTRASEÑA': row.querySelector('.edit-pass').value,
+        'ENTRENAMIENTOS': row.querySelector('.edit-entrenos').checked ? 'SI' : 'NO',
+        'ASISTENCIAS': row.querySelector('.edit-asistencias').checked ? 'SI' : 'NO',
+        'FINANCIERO': row.querySelector('.edit-financiero').checked ? 'SI' : 'NO',
+        'D.DEPORTIVA': row.querySelector('.edit-deportiva').checked ? 'SI' : 'NO',
+        'SEL. EQ.': row.querySelector('.edit-seleq').checked ? 'SI' : 'NO'
+    };
+
+    showLoader();
+    const originalContent = btn.innerHTML;
+    try {
+        const res = await fetch(`/api/perfiles/${username}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        
+        if (res.ok) {
+            btn.style.background = "#28a745";
+            btn.innerHTML = '<i class="fas fa-check"></i> LISTO';
+            setTimeout(() => {
+                btn.style.background = "#E31E24";
+                btn.innerHTML = originalContent;
+            }, 2000);
+        } else {
+            const err = await res.json();
+            alert("Error: " + err.message);
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Error de conexión al intentar guardar los cambios.");
+    } finally {
+        hideLoader();
+    }
 }
 
 async function eliminarPerfil(username) {
     if (!confirm(`¿Estás seguro de que quieres eliminar el acceso de ${username}?`)) return;
-    await fetch(`/api/perfiles/${username}`, { method: 'DELETE' });
-    cargarPerfiles();
+    showLoader();
+    try {
+        await fetch(`/api/perfiles/${username}`, { method: 'DELETE' });
+        await cargarPerfiles();
+    } catch (e) {
+        alert("Error al eliminar.");
+    } finally {
+        hideLoader();
+    }
 }
 </script>

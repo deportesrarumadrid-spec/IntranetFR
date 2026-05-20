@@ -2,37 +2,81 @@ import os
 import json
 import calendar
 from datetime import datetime
-from flask import Blueprint, render_template, session, request, jsonify, redirect
+from flask import Blueprint, render_template, session, request, jsonify, redirect, current_app
 
 # Creamos el Blueprint para Dirección Deportiva
 deportivo_bp = Blueprint('deportivo_bp', __name__)
 
 def normalizar_cabeceras_dep(headers):
     """Limpia las cabeceras para que la búsqueda de columnas sea robusta."""
-    return [h.strip().upper().replace('Ó','O').replace('Í','I').replace('É','E').replace('Á','A').replace('Ú','U').replace(' ','_') for h in headers]
+    return [str(h).strip().upper().replace('Ó','O').replace('Í','I').replace('É','E').replace('Á','A').replace('Ú','U').replace(' ', '').replace('_', '') for h in headers]
 
 @deportivo_bp.route('/deportivo')
 def deportivo():
     # Importamos las rutas de carpetas desde la app principal
-    from app import DATA_FOLDER, UPLOAD_FOLDER
+    DATA_FOLDER = current_app.config.get('DATA_FOLDER', os.path.join(os.getcwd(), 'static', 'data'))
+    UPLOAD_FOLDER = current_app.config.get('UPLOAD_FOLDER', os.path.join(os.getcwd(), 'static', 'uploads'))
+    client = getattr(current_app, 'gs_client', None)
+    NOMBRE_EXCEL = getattr(current_app, 'gs_name', "Control Asistencia Club")
+
     usuario = session.get('usuario')
     if not usuario:
         return redirect('/')
-    
+
     if session.get('permisos', {}).get('ENTRENAMIENTOS') != 'SI':
         return "Acceso denegado", 403
 
+    # 1. Obtener lista de TODOS los equipos para el desplegable de selección
+    equipos = []
+    try:
+        sheet = client.open(NOMBRE_EXCEL).worksheet("EQUIPO")
+        all_v = sheet.get_all_values()
+        if all_v:
+            headers = normalizar_cabeceras_dep(all_v[0])
+            idx_eq = -1
+            # Búsqueda robusta por prioridad de nombres comunes, incluyendo "EQUIPO"
+            for col_name in ["EQUIPO", "NOMBRE", "CATEGORIA", "GRUPO", "EQUIPOS"]:
+                if col_name in headers:
+                    idx_eq = headers.index(col_name)
+                    break
+            
+            # Si no se encuentra una cabecera específica, asumimos que la columna de equipos es la primera (índice 0)
+            # y que los datos pueden empezar desde la fila 0 (si no hay cabeceras explícitas)
+            if idx_eq == -1: 
+                idx_eq = 0
+                start_row = 0 # Si no hay cabecera, los datos empiezan en la primera fila
+            else:
+                start_row = 1 # Si hay cabecera, los datos empiezan en la segunda fila
+
+            # Filtramos valores vacíos y la propia cabecera si está en la lista
+            equipos = sorted(list(set(str(row[idx_eq]).strip() for row in all_v[start_row:] if len(row) > idx_eq and str(row[idx_eq]).strip() and str(row[idx_eq]).strip().upper() != (headers[idx_eq] if start_row == 1 else ''))))
+    except Exception as e:
+        print(f"Error al cargar equipos en deportivo: {e}")
+
+    # 2. Determinar equipo activo y actualizar sesión para que la selección sea persistente
+    # Prioridad: 1. Parámetro URL | 2. Sesión | 3. Primer equipo disponible en la lista
+    equipo_param = request.args.get('equipo')
+    if equipo_param:
+        equipo_activo = equipo_param.strip()
+        session['equipo_defecto'] = equipo_activo
+    else:
+        equipo_activo = session.get('equipo_defecto', '')
+        if not equipo_activo and equipos:
+            equipo_activo = equipos[0]
+            session['equipo_defecto'] = equipo_activo
+
     mes_actual = request.args.get('mes', '2026-05')
     hoy = datetime.now()
-    
-    # 1. Cargar objetivos
-    obj_path = os.path.join(DATA_FOLDER, f'obj_{usuario}_{mes_actual}.json')
+
+    # 3. Cargar objetivos vinculados al EQUIPO activo (no solo al usuario)
+    # Así si un usuario cambia de equipo, ve objetivos distintos
+    obj_path = os.path.join(DATA_FOLDER, f'obj_{equipo_activo}_{mes_actual}.json')
     objetivos = {"tactico": "TIRO, CENTRO", "tecnico": "", "completados": []}
     if os.path.exists(obj_path):
         with open(obj_path, 'r', encoding='utf-8') as f:
             objetivos = json.load(f)
 
-    # 2. Lógica del Calendario
+    # 4. Lógica del Calendario
     try:
         anio, mes = map(int, mes_actual.split('-'))
     except:
@@ -75,7 +119,10 @@ def deportivo():
                            semanas=semanas,
                            archivos_subidos=len(archivos_reales),
                            fotos_subidas=fotos_subidas,
-                           dias_transcurridos=hoy.day if es_mes_actual else (30 if (anio < hoy.year or (anio == hoy.year and mes < hoy.month)) else 0))
+                           dias_transcurridos=hoy.day if es_mes_actual else (30 if (anio < hoy.year or (anio == hoy.year and mes < hoy.month)) else 0),
+                           equipos=equipos,
+                           equipo_defecto=equipo_activo
+                           )
 
 @deportivo_bp.route('/api/seguimiento_coordinacion', methods=['GET', 'POST'])
 def api_seguimiento_coordinacion():
@@ -184,8 +231,10 @@ def api_tecnificaciones():
 
 @deportivo_bp.route('/direccion_deportiva')
 def direccion_deportiva():
-    # Importamos la conexión desde la app principal
-    from app import client, NOMBRE_EXCEL
+    # Usamos current_app para evitar importaciones circulares que rompen el módulo
+    client = getattr(current_app, 'gs_client', None)
+    NOMBRE_EXCEL = getattr(current_app, 'gs_name', "Control Asistencia Club")
+    
     usuario = session.get('usuario')
     if not usuario:
         return redirect('/')

@@ -223,16 +223,16 @@
     
     <div class="menu-container">
         {% if session.get('permisos', {}).get('ENTRENAMIENTOS') == 'SI' %}
-        <a href="/deportivo" class="menu-item {{ 'active' if request.path == '/deportivo' }}">ENTRENAMIENTOS</a>
+        <a href="/deportivo" class="menu-item {{ 'active' if request.path == '/deportivo' }}" onclick="showLoader()">ENTRENAMIENTOS</a>
         {% endif %}
         {% if session.get('permisos', {}).get('ASISTENCIAS') == 'SI' %}
-        <a href="/asistencias" class="menu-item {{ 'active' if request.path == '/asistencias' }}">ASISTENCIAS</a>
+        <a href="/asistencias" class="menu-item {{ 'active' if request.path == '/asistencias' }}" onclick="showLoader()">ASISTENCIAS</a>
         {% endif %}
         {% if session.get('permisos', {}).get('FINANCIERO') == 'SI' %}
-        <a href="/financiero" class="menu-item {{ 'active' if request.path == '/financiero' }}">FINANCIERO</a>
+        <a href="/financiero" class="menu-item {{ 'active' if request.path == '/financiero' }}" onclick="showLoader()">FINANCIERO</a>
         {% endif %}
         {% if session.get('permisos', {}).get('D.DEPORTIVA') == 'SI' %}
-        <a href="/direccion_deportiva" class="menu-item {{ 'active' if request.path == '/direccion_deportiva' }}">D. DEPORTIVA</a>
+        <a href="/direccion_deportiva" class="menu-item {{ 'active' if request.path == '/direccion_deportiva' }}" onclick="showLoader()">D. DEPORTIVA</a>
         {% endif %}
     </div>
 
@@ -255,7 +255,7 @@
                 <img src="{{ url_for('static', filename='ESCUDO SIN FONDO.png') }}" alt="Escudo" style="height: 65px; width: auto;">
                 <span style="font-size: 0.9rem; color: #666;">Bienvenido, <strong id="userId" style="color: #333;">{{ usuario }}</strong></span>
             </div>
-            <a href="/logout" class="btn-salir">CERRAR SESIÓN</a>
+            <a href="/logout" class="btn-salir" onclick="showLoader()">CERRAR SESIÓN</a>
         </div>
 
         <div class="render-area">

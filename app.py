@@ -120,12 +120,60 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
 DATA_FOLDER = os.path.join(BASE_DIR, 'static', 'data')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['DATA_FOLDER'] = DATA_FOLDER
+
+def normalizar_cabecera_universal(h):
+    """Limpia cabeceras de forma agresiva para comparaciones seguras."""
+    return str(h).strip().upper().replace('Ó','O').replace('Í','I').replace('É','E').replace('Á','A').replace('Ú','U').replace(' ','').replace('_', '').replace('.', '')
 
 for p in [UPLOAD_FOLDER, DATA_FOLDER]: os.makedirs(p, exist_ok=True)
 
 @app.route('/')
 def index():
     return render_template('login.html')
+
+@app.route('/seleccionar_equipo', methods=['GET', 'POST'])
+def seleccionar_equipo():
+    if not session.get('usuario'): return redirect(url_for('index'))
+    
+    print(f"DEBUG: Accediendo a /seleccionar_equipo. Método: {request.method}")
+    
+    if request.method == 'POST':
+        equipo = request.form.get('equipo')
+        if equipo:
+            equipo_clean = str(equipo).strip()
+            session['equipo_defecto'] = equipo_clean
+            perms = session.get('permisos', {})
+            if perms.get('ASISTENCIAS') == 'SI': 
+                return redirect(url_for('asistencias', equipo=equipo_clean))
+            if perms.get('ENTRENAMIENTOS') == 'SI': 
+                return redirect(url_for('deportivo_bp.deportivo', equipo=equipo_clean))
+            if perms.get('D.DEPORTIVA') == 'SI': 
+                return redirect(url_for('deportivo_bp.direccion_deportiva'))
+            return redirect(url_for('deportivo_bp.direccion_deportiva'))
+
+    try:
+        sheet = client.open(NOMBRE_EXCEL).worksheet("EQUIPO")
+        all_v = sheet.get_all_values()
+        if not all_v: return render_template('seleccionar_equipo.html', equipos=[], usuario=session.get('usuario'))
+        
+        headers = [normalizar_cabecera_universal(h) for h in all_v[0]]
+        idx_eq = -1
+        for col_name in ["EQUIPO", "NOMBRE", "EQUIPOS", "CATEGORIA", "GRUPO"]:
+            if col_name in headers:
+                idx_eq = headers.index(col_name)
+                break
+        
+        if idx_eq == -1: idx_eq = 0 # Por defecto primera columna
+
+        if idx_eq != -1:
+            # Evitamos la cabecera si coincide con el nombre
+            start_row = 1 if all_v[0][idx_eq].strip().upper() in ["EQUIPO", "NOMBRE", "CATEGORIA"] else 0
+            equipos = sorted(list(set(str(row[idx_eq]).strip() for row in all_v[start_row:] if len(row) > idx_eq and str(row[idx_eq]).strip())))
+        else: equipos = []
+    except: equipos = []
+
+    return render_template('seleccionar_equipo.html', equipos=equipos, usuario=session.get('usuario'))
 
 @app.route('/logout')
 def logout():
@@ -184,8 +232,8 @@ def login():
         target_upper = usuario_ingresado.upper()
         
         for r in records:
-            # Creamos una copia de la fila con todas las llaves en MAYÚSCULAS y sin espacios
-            r_norm = {str(k).strip().upper(): v for k, v in r.items()}
+            # Normalización de llaves del diccionario de la fila
+            r_norm = {normalizar_cabecera_universal(k): v for k, v in r.items()}
             if str(r_norm.get('USUARIO', '')).strip().upper() == target_upper:
                 user_data = r_norm
                 break
@@ -195,9 +243,9 @@ def login():
             if str(user_data.get('CONTRASEÑA', '')).strip() == password_ingresado:
                 session['usuario'] = usuario_ingresado
                 
-                # Función interna para asegurar que el permiso sea exactamente 'SI' o 'NO'
                 def check_p(key):
-                    val = str(user_data.get(key, 'NO')).strip().upper()
+                    k_clean = normalizar_cabecera_universal(key)
+                    val = str(user_data.get(k_clean, 'NO')).strip().upper()
                     return 'SI' if val == 'SI' else 'NO'
 
                 perms = {
@@ -207,6 +255,11 @@ def login():
                     'D.DEPORTIVA': check_p('D.DEPORTIVA')
                 }
                 session['permisos'] = perms
+                
+                # 3. ¿Debe elegir equipo? Buscamos SELEQ (normalizado de SEL. EQ.)
+                debe_elegir = user_data.get('SELEQ') or user_data.get('ELEGIRIQUIPO') or 'NO'
+                if str(debe_elegir).strip().upper() == 'SI':
+                    return redirect(url_for('seleccionar_equipo'))
                 
                 # Redirección inteligente al primer acceso permitido
                 if perms.get('D.DEPORTIVA') == 'SI': return redirect(url_for('deportivo_bp.direccion_deportiva'))
@@ -251,26 +304,49 @@ def asistencias():
     if session.get('permisos', {}).get('ASISTENCIAS') != 'SI':
         return "No tienes permiso para ver esta sección", 403
     
-    # Abre tu Excel y la pestaña de jugadores usando la constante global
-    sheet = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
-    # Leemos todos los valores de la hoja
-    all_values = sheet.get_all_values()
-    
+    # 1. Cargar Jugadores y mapear cualquier columna de equipo a la clave 'EQUIPO'
+    sheet_jug = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
+    all_values = sheet_jug.get_all_values()
+    datos = []
+
     if all_values:
-        headers = [h.strip().upper() for h in all_values[0]]
-        datos = []
+        headers = [normalizar_cabecera_universal(h) for h in all_values[0]]
+        idx_eq_jug = -1
+        for col_name in ["EQUIPO", "CATEGORIA", "GRUPO", "EQUIPOS", "EQUIPOACTIVO"]:
+            if col_name in headers:
+                idx_eq_jug = headers.index(col_name)
+                break
+
         for row in all_values[1:]:
             if any(row):
                 registro = {}
                 for i, h in enumerate(headers):
                     val = row[i] if i < len(row) else ""
-                    if h == "NOMBRE": val = val.strip()
-                    registro[h] = val
+                    # Normalización crítica: Si es la columna identificada como equipo, la llamamos EQUIPO
+                    key = 'EQUIPO' if (i == idx_eq_jug and idx_eq_jug != -1) else h
+                    registro[key] = str(val).strip()
+                if 'EQUIPO' not in registro: registro['EQUIPO'] = ""
                 datos.append(registro)
-    else:
-        datos = []
+
+    # 2. Cargar lista de equipos desde la pestaña "EQUIPO"
+    try:
+        sheet_eq = client.open(NOMBRE_EXCEL).worksheet("EQUIPO")
+        rows_eq = sheet_eq.get_all_values()
+        if rows_eq:
+            h_eq = [normalizar_cabecera_universal(h) for h in rows_eq[0]]
+            i_eq = -1
+            for kw in ["EQUIPO", "NOMBRE", "EQUIPOS", "CATEGORIA", "GRUPO", "EQUIPOACTIVO"]:
+                if kw in h_eq:
+                    i_eq = h_eq.index(kw)
+                    break
+            s_row = 1 if i_eq != -1 else 0
+            if i_eq == -1: i_eq = 0
+            equipos = sorted(list(set(str(r[i_eq]).strip() for r in rows_eq[s_row:] if len(r) > i_eq and str(r[i_eq]).strip())))
+        else: equipos = []
+    except:
+        # Fallback si no existe la pestaña EQUIPO: sacarlos de JUGADORES
+        equipos = sorted(list(set(row['EQUIPO'] for row in datos if row.get('EQUIPO'))))
     
-    equipos = sorted(list(set(row['EQUIPO'] for row in datos)))
     meses = ["Enero 2026", "Febrero 2026", "Marzo 2026", "Abril 2026", "Mayo 2026", "Junio 2026"]
     
     # También cargamos el Staff para saber quiénes son los entrenadores
