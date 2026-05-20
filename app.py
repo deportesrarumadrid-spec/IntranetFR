@@ -136,21 +136,19 @@ def index():
 def seleccionar_equipo():
     if not session.get('usuario'): return redirect(url_for('index'))
     
-    print(f"DEBUG: Accediendo a /seleccionar_equipo. Método: {request.method}")
-    
-    if request.method == 'POST':
-        equipo = request.form.get('equipo')
-        if equipo:
-            equipo_clean = str(equipo).strip()
-            session['equipo_defecto'] = equipo_clean
-            perms = session.get('permisos', {})
-            if perms.get('ASISTENCIAS') == 'SI': 
-                return redirect(url_for('asistencias', equipo=equipo_clean))
-            if perms.get('ENTRENAMIENTOS') == 'SI': 
-                return redirect(url_for('deportivo_bp.deportivo', equipo=equipo_clean))
-            if perms.get('D.DEPORTIVA') == 'SI': 
-                return redirect(url_for('deportivo_bp.direccion_deportiva'))
-            return redirect(url_for('deportivo_bp.direccion_deportiva'))
+    # Soporte para selección directa vía enlace (GET) para un diseño de 'cards' moderno
+    equipo_seleccionado = request.args.get('equipo') or request.form.get('equipo')
+
+    if equipo_seleccionado:
+        equipo_clean = str(equipo_seleccionado).strip()
+        session['equipo_defecto'] = equipo_clean
+        perms = session.get('permisos', {})
+        # Redireccionamos a la sección principal del usuario con el equipo ya activo
+        if perms.get('ENTRENAMIENTOS') == 'SI':
+            return redirect(url_for('deportivo_bp.deportivo', equipo=equipo_clean))
+        if perms.get('ASISTENCIAS') == 'SI':
+            return redirect(url_for('asistencias', equipo=equipo_clean))
+        return redirect(url_for('deportivo_bp.direccion_deportiva'))
 
     try:
         sheet = client.open(NOMBRE_EXCEL).worksheet("EQUIPO")
@@ -257,8 +255,9 @@ def login():
                 session['permisos'] = perms
                 
                 # 3. ¿Debe elegir equipo? Buscamos SELEQ (normalizado de SEL. EQ.)
-                debe_elegir = user_data.get('SELEQ') or user_data.get('ELEGIRIQUIPO') or 'NO'
+                debe_elegir = user_data.get('SELEQ') or user_data.get('ELEGIRIQUIPO') or user_data.get('SELEQ.') or 'NO'
                 if str(debe_elegir).strip().upper() == 'SI':
+                    session['equipo_defecto'] = '' # Limpiamos selección previa para forzar la nueva
                     return redirect(url_for('seleccionar_equipo'))
                 
                 # Redirección inteligente al primer acceso permitido
@@ -304,6 +303,40 @@ def asistencias():
     if session.get('permisos', {}).get('ASISTENCIAS') != 'SI':
         return "No tienes permiso para ver esta sección", 403
     
+    # 0. Cargar lista de equipos desde la pestaña "EQUIPO" para el desplegable y para determinar el equipo activo
+    equipos = []
+    try:
+        sheet_eq = client.open(NOMBRE_EXCEL).worksheet("EQUIPO")
+        rows_eq = sheet_eq.get_all_values()
+        if rows_eq:
+            # Normalizar cabeceras para una búsqueda robusta
+            h_eq = [normalizar_cabecera_universal(h) for h in rows_eq[0]]
+            i_eq = -1
+            # Buscar la columna de equipo con varias posibles cabeceras
+            for kw in ["EQUIPO", "NOMBRE", "EQUIPOS", "CATEGORIA", "GRUPO", "EQUIPOACTIVO"]:
+                if kw in h_eq:
+                    i_eq = h_eq.index(kw)
+                    break
+            
+            # Determinar la fila de inicio de los datos
+            s_row = 1 if i_eq != -1 else 0 # Si hay cabecera, empezar desde la segunda fila
+            if i_eq == -1: i_eq = 0 # Si no se encontró una cabecera específica, asumir la primera columna
+            
+            # Extraer y ordenar equipos únicos
+            equipos = sorted(list(set(str(r[i_eq]).strip() for r in rows_eq[s_row:] if len(r) > i_eq and str(r[i_eq]).strip())))
+        else: equipos = []
+    except Exception as e:
+        print(f"Error al cargar equipos en asistencias: {e}")
+        # Fallback si no existe la pestaña EQUIPO o hay error: equipos vacíos por ahora
+        equipos = []
+
+    # 1. Determinar equipo activo
+    equipo_param = request.args.get('equipo')
+    equipo_activo = equipo_param.strip() if equipo_param else session.get('equipo_defecto', '')
+    if not equipo_activo and equipos: # Si no hay equipo activo y hay equipos disponibles, seleccionar el primero
+        equipo_activo = equipos[0]
+    session['equipo_defecto'] = equipo_activo # Guardar en sesión para persistencia
+
     # 1. Cargar Jugadores y mapear cualquier columna de equipo a la clave 'EQUIPO'
     sheet_jug = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
     all_values = sheet_jug.get_all_values()
@@ -367,7 +400,8 @@ def asistencias():
 
     return render_template('asistencias/lista.html', 
                            usuario=usuario, 
-                           equipos=equipos, 
+                           equipos=equipos,
+                           equipo_defecto=equipo_activo, # Pasar el equipo activo a la plantilla
                            meses=meses, 
                            jugadores_raw=datos,
                            staff_raw=staff_datos)
