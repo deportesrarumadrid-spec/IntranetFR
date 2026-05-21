@@ -2,33 +2,137 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seleccionar Equipo - Intranet Club</title>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
-        body { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Segoe UI', sans-serif; margin: 0; }
-        .box { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 350px; text-align: center; }
-        h2 { color: #e60000; font-weight: 800; margin-bottom: 10px; text-transform: uppercase; font-size: 1.2rem; }
-        p { color: #666; font-size: 0.9rem; margin-bottom: 25px; font-weight: 600; }
-        select { width: 100%; padding: 14px; margin-bottom: 20px; border: 2px solid #eee; border-radius: 10px; font-size: 15px; font-weight: 700; outline: none; transition: 0.3s; background: #fdfdfd; }
-        select:focus { border-color: #e60000; }
-        button { width: 100%; background: #e60000; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 16px; text-transform: uppercase; transition: 0.3s; }
-        button:hover { background: #cc0000; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(230, 0, 0, 0.3); }
+        :root { --club-red: #E31E24; }
+        
+        body { 
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); 
+            font-family: 'Montserrat', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
+
+        .selection-box {
+            background: #ffffff; 
+            padding: 40px; 
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.3); 
+            width: 100%;
+            max-width: 900px;
+            text-align: center;
+            margin: 20px;
+        }
+        
+        .welcome-msg h1 { 
+            font-family: 'Archivo Black', sans-serif; 
+            color: var(--club-red); 
+            text-transform: uppercase;
+            letter-spacing: -0.5px;
+            font-size: 1.8rem;
+            margin-top: 20px;
+        }
+        
+        .card-team {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid #eee;
+            border-radius: 15px;
+            background: #fdfdfd;
+            padding: 20px;
+        }
+        
+        .card-team:hover {
+            border-color: var(--club-red);
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(227, 30, 36, 0.1);
+        }
+        
+        .icon-box {
+            color: var(--club-red);
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .team-title { 
+            font-weight: 800; 
+            color: #333; 
+            font-size: 0.9rem; 
+            text-transform: uppercase;
+        }
+
+        .logout-btn { 
+            background: transparent;
+            color: #666;
+            text-decoration: none;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-top: 30px;
+            padding: 5px 10px;
+            border-radius: 8px;
+            transition: 0.3s;
+        }
+        .logout-btn:hover { color: var(--club-red); background: #ffebeb; }
+
+        .scroll-container {
+            max-height: 50vh;
+            overflow-y: auto;
+            padding: 10px;
+            margin-top: 20px;
+        }
+        /* Scrollbar styling */
+        .scroll-container::-webkit-scrollbar { width: 6px; }
+        .scroll-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .scroll-container::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
+        .scroll-container::-webkit-scrollbar-thumb:hover { background: var(--club-red); }
     </style>
 </head>
 <body>
-    <div class="box">
-        <img src="{{ url_for('static', filename='ESCUDO SIN FONDO.png') }}" alt="Escudo" style="width: 120px; margin-bottom: 15px;">
-        <h2>HOLA, {{ usuario }}</h2>
-        <p>Por favor, selecciona el equipo con el que vas a trabajar hoy:</p>
+
+    <div class="selection-box">
+        <img src="/static/ESCUDO SIN FONDO.png" alt="Escudo" style="width: 120px; margin-bottom: 10px;">
         
-        <form action="/seleccionar_equipo" method="POST">
-            <select name="equipo" required>
-                <option value="" disabled selected>ELEGIR EQUIPO...</option>
-                {% for eq in equipos %}
-                <option value="{{ eq }}">{{ eq }}</option>
+        <div class="text-center welcome-msg">
+            <h1 class="display-4 fw-bold">Hola, {{ usuario }}</h1>
+            <p style="font-size: 0.9rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 1px;">Selecciona un equipo para acceder</p>
+        </div>
+
+        {% if not equipos %}
+        <div class="alert alert-info text-center shadow-sm">
+            <i class="bi bi-info-circle"></i> No hay equipos disponibles para seleccionar en este momento.
+        </div>
+        {% else %}
+        <div class="scroll-container">
+            <div class="row g-3 justify-content-center">
+                {% for equipo in equipos %}
+                <div class="col-12 col-sm-6 col-md-4">
+                    <div class="card-team text-center" onclick="window.location.href='/seleccionar_equipo?equipo={{ equipo }}'">
+                        <div class="icon-box">
+                            <i class="bi bi-shield-fill"></i>
+                        </div>
+                        <div class="team-title">{{ equipo }}</div>
+                    </div>
+                </div>
                 {% endfor %}
-            </select>
-            <button type="submit">ACCEDER AL PANEL</button>
-        </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <a href="/logout" class="logout-btn">
+            <i class="bi bi-box-arrow-right"></i> Salir de la Intranet
+        </a>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

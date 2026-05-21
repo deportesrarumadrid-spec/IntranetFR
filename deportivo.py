@@ -243,26 +243,29 @@ def direccion_deportiva():
         return "Acceso denegado", 403
     
     try:
-        # Cargamos los jugadores para el selector de coordinación
-        sheet = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
-        all_v = sheet.get_all_values()
-        if not all_v: 
-            return render_template('direccion.html', usuario=usuario, equipos=[], jugadores_raw=[])
-        
-        headers = normalizar_cabeceras_dep(all_v[0])
-        # Buscamos índices con nombres normalizados
-        idx_eq = headers.index("EQUIPO") if "EQUIPO" in headers else 1
-        idx_nom = headers.index("NOMBRE") if "NOMBRE" in headers else 0
-        
+        # 1. Obtener lista de TODOS los equipos desde la pestaña EQUIPO (fuente de verdad)
+        equipos = []
+        try:
+            sheet_eq = client.open(NOMBRE_EXCEL).worksheet("EQUIPO")
+            rows_eq = sheet_eq.get_all_values()
+            if rows_eq:
+                h_eq = normalizar_cabeceras_dep(rows_eq[0])
+                idx_e = h_eq.index("EQUIPO") if "EQUIPO" in h_eq else 0
+                equipos = sorted(list(set(str(r[idx_e]).strip() for r in rows_eq[1:] if len(r) > idx_e and r[idx_e].strip())))
+        except: pass
+
+        # 2. Cargar jugadores para la gestión de datos
+        sheet_jug = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
+        all_jug = sheet_jug.get_all_values()
         jugadores = []
-        for row in all_v[1:]:
-            if len(row) > max(idx_eq, idx_nom) and row[idx_nom].strip():
-                jugadores.append({
-                    "NOMBRE": row[idx_nom].strip(), 
-                    "EQUIPO": row[idx_eq].strip() if idx_eq < len(row) else "SIN EQUIPO"
-                })
+        if all_jug:
+            h_j = normalizar_cabeceras_dep(all_jug[0])
+            i_n = h_j.index("NOMBRE") if "NOMBRE" in h_j else 0
+            i_e = h_j.index("EQUIPO") if "EQUIPO" in h_j else 1
+            for row in all_jug[1:]:
+                if len(row) > max(i_n, i_e):
+                    jugadores.append({"NOMBRE": row[i_n].strip(), "EQUIPO": row[i_e].strip()})
         
-        equipos = sorted(list(set(j['EQUIPO'] for j in jugadores if j['EQUIPO'])))
         return render_template('direccion.html', usuario=usuario, equipos=equipos, jugadores_raw=jugadores)
     except Exception as e:
         print(f"Error en direccion_deportiva: {e}")

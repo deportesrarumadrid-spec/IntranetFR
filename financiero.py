@@ -140,10 +140,21 @@ def financiero():
     if session.get('permisos', {}).get('FINANCIERO') != 'SI':
         return "Acceso denegado", 403
     
+    # 1. Obtener lista de equipos desde la pestaña EQUIPO (fuente de verdad para "todos")
+    equipos = []
+    try:
+        sheet_eq = client.open(NOMBRE_EXCEL).worksheet("EQUIPO")
+        rows_eq = sheet_eq.get_all_values()
+        if rows_eq:
+            h_eq = normalizar_cabeceras(rows_eq[0])
+            idx_e = h_eq.index("EQUIPO") if "EQUIPO" in h_eq else 0
+            equipos = sorted(list(set(str(r[idx_e]).strip() for r in rows_eq[1:] if len(r) > idx_e and r[idx_e].strip())))
+    except:
+        # Fallback si falla la pestaña EQUIPO
+        jugadores_temp = leer_ho_ja_limpia(client, NOMBRE_EXCEL, "JUGADORES")
+        equipos = sorted(list(set(j['EQUIPO'] for j in jugadores_temp if 'EQUIPO' in j)))
+
     jugadores = leer_hoja_limpia(client, NOMBRE_EXCEL, "JUGADORES")
-    # Obtenemos lista única de equipos
-    equipos = sorted(list(set(j['EQUIPO'] for j in jugadores if 'EQUIPO' in j)))
-    
     staff = leer_hoja_limpia(client, NOMBRE_EXCEL, "STAFF")
 
     return render_template('financiero/lista.html', 

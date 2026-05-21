@@ -136,40 +136,47 @@ def index():
 def seleccionar_equipo():
     if not session.get('usuario'): return redirect(url_for('index'))
     
-    # Soporte para selección directa vía enlace (GET) para un diseño de 'cards' moderno
+    # Recibimos el equipo seleccionado (Soporta clics en 'cards' vía URL ?equipo=... o formularios)
     equipo_seleccionado = request.args.get('equipo') or request.form.get('equipo')
 
     if equipo_seleccionado:
         equipo_clean = str(equipo_seleccionado).strip()
         session['equipo_defecto'] = equipo_clean
         perms = session.get('permisos', {})
-        # Redireccionamos a la sección principal del usuario con el equipo ya activo
-        if perms.get('ENTRENAMIENTOS') == 'SI':
-            return redirect(url_for('deportivo_bp.deportivo', equipo=equipo_clean))
-        if perms.get('ASISTENCIAS') == 'SI':
-            return redirect(url_for('asistencias', equipo=equipo_clean))
-        return redirect(url_for('deportivo_bp.direccion_deportiva'))
+        
+        # Redirección inteligente al módulo correspondiente tras elegir equipo
+        if perms.get('D.DEPORTIVA') == 'SI': target = url_for('deportivo_bp.direccion_deportiva')
+        elif perms.get('ENTRENAMIENTOS') == 'SI': target = url_for('deportivo_bp.deportivo')
+        elif perms.get('ASISTENCIAS') == 'SI': target = url_for('asistencias')
+        elif perms.get('FINANCIERO') == 'SI': target = url_for('financiero.financiero')
+        else: target = url_for('index')
+
+        return redirect(target)
 
     try:
+        # Obtenemos TODOS los equipos registrados en la pestaña EQUIPO para mostrarlos visualmente
         sheet = client.open(NOMBRE_EXCEL).worksheet("EQUIPO")
         all_v = sheet.get_all_values()
         if not all_v: return render_template('seleccionar_equipo.html', equipos=[], usuario=session.get('usuario'))
         
         headers = [normalizar_cabecera_universal(h) for h in all_v[0]]
         idx_eq = -1
+        found_header = False
+        # Buscamos la columna que contiene los nombres de los equipos
         for col_name in ["EQUIPO", "NOMBRE", "EQUIPOS", "CATEGORIA", "GRUPO"]:
             if col_name in headers:
                 idx_eq = headers.index(col_name)
+                found_header = True
                 break
         
-        if idx_eq == -1: idx_eq = 0 # Por defecto primera columna
-
-        if idx_eq != -1:
-            # Evitamos la cabecera si coincide con el nombre
-            start_row = 1 if all_v[0][idx_eq].strip().upper() in ["EQUIPO", "NOMBRE", "CATEGORIA"] else 0
-            equipos = sorted(list(set(str(row[idx_eq]).strip() for row in all_v[start_row:] if len(row) > idx_eq and str(row[idx_eq]).strip())))
-        else: equipos = []
-    except: equipos = []
+        # Si no encontramos cabecera clara, usamos la columna 0 y no saltamos la primera fila
+        actual_idx = idx_eq if found_header else 0
+        start_row = 1 if found_header else 0
+        
+        equipos = sorted(list(set(str(row[actual_idx]).strip() for row in all_v[start_row:] if len(row) > actual_idx and str(row[actual_idx]).strip())))
+    except Exception as e:
+        print(f"Error recuperando equipos para selección: {e}")
+        equipos = []
 
     return render_template('seleccionar_equipo.html', equipos=equipos, usuario=session.get('usuario'))
 
