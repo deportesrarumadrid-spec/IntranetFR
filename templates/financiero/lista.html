@@ -28,11 +28,36 @@
     .inactive-mode { background: #f1f5f9 !important; color: #64748b !important; border: 1px solid #e2e8f0 !important; }
     .table-ropa-active .col-financiera { display: none !important; }
     
+    /* Ocultar anclas que generan espacios vacíos */
+    .col-anchor-ropa { display: none !important; }
+
     /* Leyenda Ropa */
-    .ropa-legend { display: none; align-items: center; gap: 12px; background: #f8fafc; padding: 6px 15px; border-radius: 10px; border: 1px solid #e2e8f0; margin-left: 10px; }
-    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 9px; font-weight: 800; color: #475569; text-transform: uppercase; }
-    .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .legend-item:hover { opacity: 0.8; }
+    .ropa-legend { display: none; align-items: center; gap: 8px; margin-left: 15px; }
+    .legend-item { padding: 4px 10px; border-radius: 6px; font-size: 9px; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .item-pedida { background-color: #0d6efd; }
+    .item-llegado { background-color: #6f42c1; }
+    .item-entregada { background-color: #198754; }
+
+    /* Estilo Moderno Select Equipo */
+    #selectEquipoFin {
+        appearance: none;
+        background-color: #ffffff;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 14px;
+        padding: 8px 32px 8px 12px !important;
+        border-radius: 10px !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    #selectEquipoFin:hover { border-color: #cbd5e1; background-color: #f8fafc; }
+
+    /* Loader Escudo Girando */
+    #loaderGlobal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); backdrop-filter: blur(4px); z-index: 9999; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 15px; }
+    .escudo-girando { width: 80px; height: 80px; animation: spin-escudo 2s linear infinite; }
+    @keyframes spin-escudo { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
     /* Estados Ropa */
     .ropa-estado-pedida { background-color: #0d6efd !important; color: white !important; }
@@ -233,16 +258,16 @@
 
                 <!-- LEYENDA ROPA -->
                 <div id="legendRopa" class="ropa-legend">
-                    <div class="legend-item"><div class="legend-dot" style="background: #0d6efd;"></div> PEDIDA</div>
-                    <div class="legend-item"><div class="legend-dot" style="background: #6f42c1;"></div> LLEGADO</div>
-                    <div class="legend-item"><div class="legend-dot" style="background: #198754;"></div> ENTREGADA</div>
+                <div class="legend-item item-pedida">PEDIDA</div>
+                <div class="legend-item item-llegado">LLEGADO</div>
+                <div class="legend-item item-entregada">ENTREGADA</div>
                 </div>
 
                 <div style="display: flex; gap: 8px;">
                     <button class="btn-fin" style="background: #E31E24; color: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(227,30,36,0.2);" onclick="abrirModalAnadirJugadorFin()">
                         <i class="fas fa-user-plus"></i> AÑADIR JUGADOR
                     </button>
-                    <button class="btn-fin" style="background: #f8f9fa; color: #333; border: 1px solid #e2e8f0; border-radius: 10px;" onclick="generarReporteImpagos()">
+                <button id="btnSacarImpagos" class="btn-fin" style="background: #f8f9fa; color: #333; border: 1px solid #e2e8f0; border-radius: 10px; display: flex; align-items: center; gap: 8px;" onclick="generarReporteImpagos()">
                         <i class="fas fa-exclamation-circle"></i> SACAR IMPAGOS
                     </button>
                 </div>
@@ -265,10 +290,10 @@
                                 </select>
                             </div>
                         </th>
-                        <th style="width: 380px; background: #fdfdfd; padding: 15px;">
+                        <th style="width: 200px; background: #fdfdfd; padding: 15px;">
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <span style="font-size: 10px; color: #94a3b8; font-weight: 800; white-space: nowrap;">JUGADOR</span>
-                                <input type="text" id="busquedaJugador" oninput="filtrarJugadores()" placeholder="Buscar..." style="padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; font-weight: 700; font-family: inherit; font-size: 11px; width: 100%; outline: none; background: white;">
+                                <input type="text" id="busquedaJugador" oninput="filtrarJugadores()" placeholder="Buscar..." style="padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; font-weight: 700; font-family: inherit; font-size: 11px; width: 120px; outline: none; background: white;">
                             </div>
                         </th>
                         <th class="col-financiera" style="width: 110px; background: #fdfdfd; padding: 15px 5px;">
@@ -568,9 +593,19 @@
 
 </div> <!-- CIERRE DEL CONTENEDOR PRINCIPAL (padding: 10px) -->
 
+<!-- LOADER GLOBAL ESCUDO -->
+<div id="loaderGlobal">
+    <img src="/static/escudo.png" class="escudo-girando" alt="Club Escudo">
+    <div style="font-weight: 900; color: #333; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Sincronizando datos...</div>
+</div>
+
 <script>
+function showLoader() { document.getElementById('loaderGlobal').style.display = 'flex'; }
+function hideLoader() { document.getElementById('loaderGlobal').style.display = 'none'; }
+
 let celdasSeleccionadas = [];
 let celdaActiva = null;
+let celdasRopaSeleccionadas = [];
 const jugadoresRaw = {{ jugadores | tojson }};
 const staffRaw = {{ staff | tojson }};
 let presupuestoData = [];
@@ -591,18 +626,21 @@ function setVista(modo) {
     const tablas = document.querySelectorAll('.fin-table');
     const btnsPagos = [document.getElementById('btnPagosJug'), document.getElementById('btnPagosStaff')];
     const btnsRopa = [document.getElementById('btnRopaJug'), document.getElementById('btnRopaStaff')];
+    const btnImpagos = document.getElementById('btnSacarImpagos');
 
     if (modo === 'ropa') {
         tablas.forEach(t => t.classList.add('table-ropa-active'));
         btnsPagos.forEach(b => { if(b) { b.classList.remove('active-mode'); b.classList.add('inactive-mode'); } });
         btnsRopa.forEach(b => { if(b) { b.classList.remove('inactive-mode'); b.classList.add('active-mode'); } });
         document.getElementById('legendRopa').style.display = 'flex';
+        if(btnImpagos) btnImpagos.style.display = 'none';
         cargarDatosRopa();
     } else {
         tablas.forEach(t => t.classList.remove('table-ropa-active'));
         btnsPagos.forEach(b => { if(b) { b.classList.remove('inactive-mode'); b.classList.add('active-mode'); } });
         btnsRopa.forEach(b => { if(b) { b.classList.remove('active-mode'); b.classList.add('inactive-mode'); } });
         document.getElementById('legendRopa').style.display = 'none';
+        if(btnImpagos) btnImpagos.style.display = 'flex';
     }
 }
 
@@ -671,7 +709,7 @@ function renderRopaStructure() {
             const td = document.createElement('td');
             td.className = 'col-ropa celda-ropa celda-ropa-dinamica ropa-vacia pago-cell';
             td.innerText = '-';
-            td.onclick = (e) => abrirGestionRopa(fila, col, td);
+            td.onclick = (e) => abrirGestionRopa(fila, col, td, e);
             fragmentCells.appendChild(td);
         });
 
@@ -692,7 +730,7 @@ function renderRopaStructure() {
             const td = document.createElement('td');
             td.className = 'col-ropa celda-ropa celda-ropa-dinamica ropa-vacia pago-cell';
             td.innerText = '-';
-            td.onclick = (e) => abrirGestionRopa(fila, col, td);
+            td.onclick = (e) => abrirGestionRopa(fila, col, td, e);
             fragmentCells.appendChild(td);
         });
         const tdPlus = document.createElement('td');
@@ -719,6 +757,7 @@ function editarNombreColumnaRopa(idx) {
 }
 
 async function anadirNuevaColumnaRopa() {
+    showLoader();
     try {
         const res = await fetch('/api/ropa/nueva_columna', { method: 'POST' });
         const result = await res.json();
@@ -729,28 +768,59 @@ async function anadirNuevaColumnaRopa() {
         }
     } catch (e) {
         alert("Error al añadir columna");
+    } finally {
+        hideLoader();
     }
 }
 
-function abrirGestionRopa(fila, prenda, td) {
-    celdaRopaActiva = { fila, prenda, td };
-    const nombreJugador = fila.dataset.nombre.trim();
-    const dataActual = (ropaDataCache[nombreJugador] && ropaDataCache[nombreJugador][prenda]) || { talla: '', estado: '' };
-    
-    document.getElementById('txtTituloPrenda').innerText = `${prenda}: ${nombreJugador}`;
-    document.getElementById('seccionEstadoRopa').style.display = dataActual.talla ? 'block' : 'none';
-    
-    // Limpiar selección previa temporal
-    celdaRopaActiva.nuevaTalla = dataActual.talla;
-    celdaRopaActiva.nuevoEstado = dataActual.estado;
+function abrirGestionRopa(fila, prenda, td, event) {
+    // Manejo de multiselección con CTRL
+    if (!event.ctrlKey && !celdasRopaSeleccionadas.some(c => c.td === td)) {
+        celdasRopaSeleccionadas.forEach(c => c.td.classList.remove('selected-cell'));
+        celdasRopaSeleccionadas = [];
+    }
 
-    cargarHistorialRopa(nombreJugador, prenda);
+    if (event.ctrlKey) {
+        if (!celdasRopaSeleccionadas.some(c => c.td === td)) {
+            td.classList.add('selected-cell');
+            celdasRopaSeleccionadas.push({ fila, prenda, td });
+        } else {
+            td.classList.remove('selected-cell');
+            celdasRopaSeleccionadas = celdasRopaSeleccionadas.filter(c => c.td !== td);
+        }
+        return;
+    }
+
+    if (celdasRopaSeleccionadas.length <= 1) {
+        celdasRopaSeleccionadas = [{ fila, prenda, td }];
+        td.classList.add('selected-cell');
+    }
+
+    celdaRopaActiva = celdasRopaSeleccionadas[0];
+    const isMulti = celdasRopaSeleccionadas.length > 1;
+    const nombreJugador = fila.dataset.nombre.trim();
+
+    if (isMulti) {
+        document.getElementById('txtTituloPrenda').innerText = `GESTIÓN MÚLTIPLE (${celdasRopaSeleccionadas.length})`;
+        document.getElementById('seccionEstadoRopa').style.display = 'block';
+        document.getElementById('ropaHistoryList').innerHTML = '<span style="color:#94a3b8; font-style:italic;">Historial no disponible en edición múltiple.</span>';
+        celdaRopaActiva.nuevaTalla = undefined;
+        celdaRopaActiva.nuevoEstado = undefined;
+    } else {
+        const dataActual = (ropaDataCache[nombreJugador] && ropaDataCache[nombreJugador][prenda]) || { talla: '', estado: '' };
+        document.getElementById('txtTituloPrenda').innerText = `${prenda}: ${nombreJugador}`;
+        document.getElementById('seccionEstadoRopa').style.display = dataActual.talla ? 'block' : 'none';
+        celdaRopaActiva.nuevaTalla = dataActual.talla;
+        celdaRopaActiva.nuevoEstado = dataActual.estado;
+        cargarHistorialRopa(nombreJugador, prenda);
+    }
     
     // Reset estilos botones talla
     document.querySelectorAll('.btn-talla').forEach(b => {
-        b.style.background = b.innerText === dataActual.talla ? '#334155' : 'white';
-        b.style.color = b.innerText === dataActual.talla ? 'white' : 'black';
-        b.style.borderColor = b.innerText === dataActual.talla ? '#334155' : '#f1f5f9';
+        const isSelected = !isMulti && b.innerText === celdaRopaActiva.nuevaTalla;
+        b.style.background = isSelected ? '#334155' : 'white';
+        b.style.color = isSelected ? 'white' : 'black';
+        b.style.borderColor = isSelected ? '#334155' : '#f1f5f9';
     });
 
     document.getElementById('modalGestionRopa').style.display = 'flex';
@@ -778,10 +848,9 @@ async function cargarHistorialRopa(jugador, prenda) {
 }
 
 function seleccionarTallaRopa(talla) {
-    const nombreJugador = celdaRopaActiva.fila.dataset.nombre.trim();
-    const dataActual = (ropaDataCache[nombreJugador] && ropaDataCache[nombreJugador][celdaRopaActiva.prenda]) || { talla: '' };
+    const isMulti = celdasRopaSeleccionadas && celdasRopaSeleccionadas.length > 1;
+    const dataActual = (isMulti || !celdaRopaActiva) ? { talla: '' } : ((ropaDataCache[celdaRopaActiva.fila.dataset.nombre] && ropaDataCache[celdaRopaActiva.fila.dataset.nombre][celdaRopaActiva.prenda]) || { talla: '' });
 
-    // Solo pedir confirmación si la talla es diferente y no estamos borrando
     if (talla !== "" && dataActual.talla && talla !== dataActual.talla) {
         // Si el usuario cancela, no actualizamos la talla temporal
         if (!confirm(`¿Confirmar cambio de talla de ${dataActual.talla} a ${talla}?`)) return;
@@ -795,7 +864,7 @@ function seleccionarTallaRopa(talla) {
         b.style.borderColor = b.innerText === talla ? '#1e293b' : '#f1f5f9';
     });
     
-    document.getElementById('seccionEstadoRopa').style.display = talla ? 'block' : 'none';
+    document.getElementById('seccionEstadoRopa').style.display = (talla !== "" || isMulti) ? 'block' : 'none';
 }
 
 function confirmarEstadoRopa(estado) {
@@ -805,60 +874,60 @@ function confirmarEstadoRopa(estado) {
 }
 
 async function actualizarEstadoRopa(estado) {
-    // Si no hay talla seleccionada (ni nueva ni existente), no se puede cambiar el estado
-    if (!celdaRopaActiva.nuevaTalla && !((ropaDataCache[celdaRopaActiva.fila.cells[1].innerText] || {})[celdaRopaActiva.prenda] || {}).talla) {
-        return alert("Selecciona primero una talla");
-    }
     celdaRopaActiva.nuevoEstado = estado;
-    // Llamar a confirmarAccionRopa para guardar los cambios
     confirmarAccionRopa();
 }
 
 async function confirmarAccionRopa() {
-    const nombreJugador = celdaRopaActiva.fila.dataset.nombre;
-    const equipo = celdaRopaActiva.fila.dataset.equipo;
-    const prenda = celdaRopaActiva.prenda;
-    const talla = celdaRopaActiva.nuevaTalla !== undefined ? celdaRopaActiva.nuevaTalla : (ropaDataCache[nombreJugador]?.[prenda]?.talla || '');
-    const estado = celdaRopaActiva.nuevoEstado || (ropaDataCache[nombreJugador]?.[prenda]?.estado || 'SOLICITADO');
-
-    // Animación Shield + Spinner
-    const td = celdaRopaActiva.td;
-    const contentOriginal = td.innerHTML;
-    td.innerHTML = '<div class="shield-loading"><i class="fas fa-shield-alt"></i><br><i class="fas fa-circle-notch fa-spin" style="font-size:8px;"></i></div>';
-
-    // Sincronizar con el backend: Encontrar el índice de la columna en Google Sheets (D=4)
-    const col_idx = ropaColumns.indexOf(prenda) + 4;
+    if (celdasRopaSeleccionadas.length === 0) return;
+    showLoader();
     
-    // Si el estado es NADA o no hay talla, limpiamos
-    const valor = (estado === 'NADA' || !talla) ? '' : `${talla}|${estado}|${new Date().toLocaleDateString('es-ES')}`;
+    const tallaGlobal = celdaRopaActiva.nuevaTalla;
+    const estadoGlobal = celdaRopaActiva.nuevoEstado;
 
     try {
-        const res = await fetch('/api/ropa/save', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                equipo: equipo,
-                jugador: nombreJugador,
-                col_idx: col_idx,
-                valor: valor
-            })
-        });
+        for (const item of celdasRopaSeleccionadas) {
+            const { fila, prenda, td } = item;
+            const nombreJugador = fila.dataset.nombre;
+            const equipo = fila.dataset.equipo;
+            
+            const dataCache = ropaDataCache[nombreJugador]?.[prenda] || {};
+            
+            // Only apply changes if they have been defined in the modal.
+            // If tallaGlobal is undefined, we keep the one from the cache.
+            const tallaFinal = tallaGlobal !== undefined ? tallaGlobal : dataCache.talla || '';
+            const estadoFinal = estadoGlobal !== undefined ? estadoGlobal : dataCache.estado || 'SOLICITADO';
 
-        if (res.ok) {
-            // Actualizar Cache Local
-            if (!ropaDataCache[nombreJugador]) ropaDataCache[nombreJugador] = {};
-            ropaDataCache[nombreJugador][prenda] = (estado === 'NADA') ? null : { talla, estado };
+            if (!tallaFinal && tallaGlobal === undefined && celdasRopaSeleccionadas.length > 1) continue; 
 
-            actualizarVisualCeldaRopa(celdaRopaActiva.td, talla, estado);
-            cerrarModalsFin();
-            mostrarPopUpExito("PRENDA ACTUALIZADA");
-        } else {
-            td.innerHTML = contentOriginal;
-            alert("Error al guardar en el servidor");
+            const col_idx = ropaColumns.indexOf(prenda) + 4;
+            // Only clear if no talla. If state is NADA, save talla but clear state.
+            const valor = !tallaFinal ? '' : `${tallaFinal}|${estadoFinal === 'NADA' ? '' : estadoFinal}|${new Date().toLocaleDateString('es-ES')}`;
+
+            const res = await fetch('/api/ropa/save', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    equipo: equipo,
+                    jugador: nombreJugador,
+                    col_idx: col_idx,
+                    valor: valor
+                })
+            });
+
+            if (res.ok) {
+                if (!ropaDataCache[nombreJugador]) ropaDataCache[nombreJugador] = {};
+                ropaDataCache[nombreJugador][prenda] = !tallaFinal ? null : { talla: tallaFinal, estado: estadoFinal };
+                actualizarVisualCeldaRopa(td, tallaFinal, estadoFinal);
+            }
         }
+        cerrarModalsFin();
+        mostrarPopUpExito(celdasRopaSeleccionadas.length > 1 ? "PRENDAS ACTUALIZADAS" : "PRENDA ACTUALIZADA");
     } catch (e) {
-        td.innerHTML = contentOriginal;
-        alert("Error de conexión");
+        console.error(e);
+        alert("Error al guardar cambios de ropa");
+    } finally {
+        hideLoader();
     }
 }
 
@@ -875,18 +944,20 @@ function mostrarPopUpExito(mensaje) {
 }
 
 function actualizarVisualCeldaRopa(td, talla, estado) {
-    td.innerText = (estado === 'NADA') ? '-' : (talla || '-');
+    td.innerText = talla || '-';
     td.className = 'col-ropa celda-ropa celda-ropa-dinamica pago-cell';
-    if (!talla || estado === 'NADA') {
+    if (!talla) {
         td.classList.add('ropa-vacia');
         return;
     }
+    if (!estado || estado === 'NADA') return;
     if (estado === 'PEDIDA') td.classList.add('ropa-estado-pedida');
     else if (estado === 'LLEGADO') td.classList.add('ropa-estado-llegado');
     else if (estado === 'ENTREGADA') td.classList.add('ropa-estado-entregada');
 }
 
 async function cargarDatosRopa() {
+    showLoader();
     const res = await fetch('/api/ropa');
     const result = await res.json();
     
@@ -926,6 +997,7 @@ async function cargarDatosRopa() {
             }
         });
     });
+    hideLoader();
 }
 
 // --- FUNCIÓN DE NAVEGACIÓN CORREGIDA ---
@@ -1587,6 +1659,10 @@ function cerrarModalsFin() {
         delete c.dataset.tempItem;
     });
     celdasSeleccionadas = [];
+    celdasRopaSeleccionadas.forEach(c => {
+        c.td.classList.remove('selected-cell');
+    });
+    celdasRopaSeleccionadas = [];
     actualizarBarraPagos();
 }
 
@@ -1836,6 +1912,7 @@ async function guardarAsientoManual(btn) {
 }
 
 async function cargarPresupuesto() {
+    showLoader();
     try {
         const res = await fetch('/api/presupuesto');
         const data = await res.json();
@@ -1845,6 +1922,8 @@ async function cargarPresupuesto() {
     } catch (e) {
         console.error("Error cargando presupuesto:", e);
         presupuestoData = []; // Aseguramos que sea un array vacío para evitar errores posteriores
+    } finally {
+        hideLoader();
     }
 }
 
