@@ -18,6 +18,30 @@
     .pago-exceso { outline: 2px solid #ff0000 !important; outline-offset: -2px; z-index: 10; position: relative; }
     .selected-cell { outline: 2px solid #E31E24; z-index: 5; }
     
+    /* ESTILOS ROPA */
+    .col-ropa { display: none; border: 1px solid #f0f0f0; min-width: 50px; transition: all 0.3s; }
+    .table-ropa-active .col-ropa { display: table-cell; }
+    .table-ropa-active .col-ropa-btn { background-color: #f8fafc !important; border-left: 1px solid #e2e8f0 !important; }
+    .celda-ropa { cursor: pointer; font-size: 10px; font-weight: 900; text-align: center; border: 1px solid #e2e8f0; height: 35px; }
+    .col-financiera { transition: all 0.3s; }
+    .active-mode { background: #334155 !important; color: white !important; border: 1px solid #334155 !important; }
+    .inactive-mode { background: #f1f5f9 !important; color: #64748b !important; border: 1px solid #e2e8f0 !important; }
+    .table-ropa-active .col-financiera { display: none !important; }
+    
+    /* Leyenda Ropa */
+    .ropa-legend { display: none; align-items: center; gap: 12px; background: #f8fafc; padding: 6px 15px; border-radius: 10px; border: 1px solid #e2e8f0; margin-left: 10px; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 9px; font-weight: 800; color: #475569; text-transform: uppercase; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .legend-item:hover { opacity: 0.8; }
+
+    /* Estados Ropa */
+    .ropa-estado-pedida { background-color: #0d6efd !important; color: white !important; }
+    .ropa-estado-llegado { background-color: #6f42c1 !important; color: white !important; }
+    .ropa-estado-entregada { background-color: #198754 !important; color: white !important; }
+    .ropa-vacia { color: #cbd5e1; }
+
+    .header-ropa { cursor: pointer; position: relative; background: #fdfdfd !important; color: #94a3b8 !important; font-size: 9px !important; text-align: center !important; border-bottom: 2px solid #eee !important; vertical-align: middle; }
+    
     .section-grabar { background: #475569; padding: 20px; margin: 15px; border-radius: 12px; border: 1px solid #334155; }
     .section-grabar h3 { color: #fff; font-size: 11px; font-weight: 900; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; }
     
@@ -200,6 +224,20 @@
         <div class="fin-header" style="display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 25px;">
             <div style="display: flex; align-items: center; gap: 15px;">
                 <h2 style="font-size: 18px; letter-spacing: -0.5px;"><i class="fas fa-users-cog" style="color: #E31E24; margin-right: 10px;"></i> PAGOS JUGADORES</h2>
+                
+                <!-- SELECTOR DE VISTA -->
+                <div style="display: flex; background: #f1f5f9; padding: 4px; border-radius: 12px; gap: 4px; border: 1px solid #e2e8f0;">
+                    <button id="btnPagosJug" class="btn-fin active-mode" onclick="setVista('pagos')" style="padding: 8px 16px; border-radius: 9px; font-size: 10px;">PAGOS</button>
+                    <button id="btnRopaJug" class="btn-fin inactive-mode" onclick="setVista('ropa')" style="padding: 8px 16px; border-radius: 9px; font-size: 10px;">ROPA</button>
+                </div>
+
+                <!-- LEYENDA ROPA -->
+                <div id="legendRopa" class="ropa-legend">
+                    <div class="legend-item"><div class="legend-dot" style="background: #0d6efd;"></div> PEDIDA</div>
+                    <div class="legend-item"><div class="legend-dot" style="background: #6f42c1;"></div> LLEGADO</div>
+                    <div class="legend-item"><div class="legend-dot" style="background: #198754;"></div> ENTREGADA</div>
+                </div>
+
                 <div style="display: flex; gap: 8px;">
                     <button class="btn-fin" style="background: #E31E24; color: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(227,30,36,0.2);" onclick="abrirModalAnadirJugadorFin()">
                         <i class="fas fa-user-plus"></i> AÑADIR JUGADOR
@@ -233,7 +271,7 @@
                                 <input type="text" id="busquedaJugador" oninput="filtrarJugadores()" placeholder="Buscar..." style="padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; font-weight: 700; font-family: inherit; font-size: 11px; width: 100%; outline: none; background: white;">
                             </div>
                         </th>
-                        <th style="width: 110px; background: #fdfdfd; padding: 15px 5px;">
+                        <th class="col-financiera" style="width: 110px; background: #fdfdfd; padding: 15px 5px;">
                             <div style="display: flex; flex-direction: column; gap: 5px;">
                                 <div style="display: flex; align-items: center; justify-content: space-between;">
                                     <span style="font-size: 10px; color: #94a3b8; font-weight: 800;">TIPO PAGO</span>
@@ -251,7 +289,7 @@
                                 </select>
                             </div>
                         </th>
-                        <th style="width: 140px; background: #fdfdfd; padding: 15px 5px;">
+                        <th class="col-financiera" style="width: 140px; background: #fdfdfd; padding: 15px 5px;">
                             <div style="display: flex; flex-direction: column; gap: 5px;">
                                 <div style="display: flex; align-items: center; justify-content: space-between;">
                                     <span style="font-size: 10px; color: #94a3b8; font-weight: 800;">FORMA PAGO</span>
@@ -267,54 +305,61 @@
                                 </button>
                             </div>
                         </th>
-                        <th style="min-width: 50px; padding: 10px 5px; background: #fdfdfd; border-bottom: 2px solid #eee;">
+                        <th class="pago-cell col-financiera" style="min-width: 50px; padding: 10px 5px; background: #fdfdfd; border-bottom: 2px solid #eee;">
                             <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
                                 <span style="font-size: 9px; color: #94a3b8; font-weight: 800;">INSCR.</span>
                                 <i class="fas fa-cog" style="cursor: pointer; color: #E31E24; font-size: 11px;" onclick="abrirModalBulkEsperado('Inscripción')"></i>
                             </div>
                         </th>
                         {% for mes, label in [('01','ENE'),('02','FEB'),('03','MAR'),('04','ABR'),('05','MAY'),('06','JUN'),('07','JUL'),('08','AGO'),('09','SEP'),('10','OCT'),('11','NOV'),('12','DIC')] %}
-                        <th style="min-width: 50px; padding: 10px 5px; background: #fdfdfd; border-bottom: 2px solid #eee;">
+                        <th class="pago-cell col-financiera" style="min-width: 50px; padding: 10px 5px; background: #fdfdfd; border-bottom: 2px solid #eee;">
                             <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
                                 <span style="font-size: 9px; color: #94a3b8; font-weight: 800;">{{ label }}</span>
                                 <i class="fas fa-cog" style="cursor: pointer; color: #E31E24; font-size: 11px;" onclick="abrirModalBulkEsperado('{{ mes }}')"></i>
                             </div>
                         </th>
                         {% endfor %}
-                        <th style="min-width: 60px; padding: 10px 5px; background: #eceef2; border-bottom: 2px solid #dee2e6;">
-                            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                        <th class="col-financiera" style="min-width: 60px; padding: 10px 5px; background: #eceef2; border-bottom: 2px solid #dee2e6;">
+                            <div class="pago-cell" style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
                                 <span id="labelPackRopa" style="font-size: 9px; color: #475569; font-weight: 800;">PACK ROPA</span>
                                 <i class="fas fa-cog" style="cursor: pointer; color: #E31E24; font-size: 11px;" onclick="abrirModalBulkEsperado('PACK_ROPA')"></i>
                             </div>
                         </th>
-                        <th style="min-width: 60px; padding: 10px 5px; background: #eceef2; border-bottom: 2px solid #dee2e6;">
-                            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                        <th class="col-financiera" style="min-width: 60px; padding: 10px 5px; background: #eceef2; border-bottom: 2px solid #dee2e6;">
+                            <div class="pago-cell" style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
                                 <span id="labelExtra" style="font-size: 9px; color: #475569; font-weight: 800;">EXTRA</span>
                                 <i class="fas fa-pencil-alt" style="cursor: pointer; color: #E31E24; font-size: 11px;" onclick="renombrarExtra('EXTRA')"></i>
                             </div>
                         </th>
-                        <th style="min-width: 60px; padding: 10px 5px; background: #eceef2; border-bottom: 2px solid #dee2e6;">
-                            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                        <th class="col-financiera" style="min-width: 60px; padding: 10px 5px; background: #eceef2; border-bottom: 2px solid #dee2e6;">
+                            <div class="pago-cell" style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
                                 <span id="labelExtra2" style="font-size: 9px; color: #475569; font-weight: 800;">EXTRA 2</span>
                                 <i class="fas fa-pencil-alt" style="cursor: pointer; color: #E31E24; font-size: 11px;" onclick="renombrarExtra('EXTRA2')"></i>
                             </div>
                         </th>
+                        <!-- ANCLAJE CABECERAS ROPA -->
+                        <th class="col-anchor-ropa" id="thBtnRopa"></th>
+                        <!-- Contenedor de cabeceras de ropa (se llenará por JS) -->
+                        <th id="ropaHeadersContainer" style="display:none; padding:0; border:0;"></th>
                     </tr>
                 </thead>
                 <tbody id="cuerpoPagos">
                     {% for j in jugadores %}
-                    <tr class="fila-jugador" data-equipo="{{ j.EQUIPO }}">
+                    <tr class="fila-jugador" data-equipo="{{ j.EQUIPO }}" data-nombre="{{ j.NOMBRE }}">
                         <td style="font-weight: 800;">{{ j.EQUIPO }}</td>
                         <td>{{ j.NOMBRE }}</td>
-                        <td><span class="span-tipo-pago" style="background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-weight: 700; color: #475569; font-size: 10px;">{{ j.TIPO_PAGO or 'Efectivo' }}</span></td>
-                        <td><span class="span-forma-pago" style="background: #eee; padding: 2px 5px; border-radius: 4px;">{{ j.FORMA_PAGO or 'Efectivo' }}</span></td>
-                        <td class="pago-cell" onclick="seleccionarPago(event, this, 'Inscripción')">-</td>
+                        <td class="col-financiera"><span class="span-tipo-pago" style="background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-weight: 700; color: #475569; font-size: 10px;">{{ j.TIPO_PAGO or 'Efectivo' }}</span></td>
+                        <td class="col-financiera"><span class="span-forma-pago" style="background: #eee; padding: 2px 5px; border-radius: 4px;">{{ j.FORMA_PAGO or 'Efectivo' }}</span></td>
+                        <td class="pago-cell col-financiera" onclick="seleccionarPago(event, this, 'Inscripción')">-</td>
                         {% for mes in ['01','02','03','04','05','06','07','08','09','10','11','12'] %}
-                        <td class="pago-cell" onclick="seleccionarPago(event, this, '{{ mes }}')">-</td>
+                        <td class="pago-cell col-financiera" onclick="seleccionarPago(event, this, '{{ mes }}')">-</td>
                         {% endfor %}
-                        <td class="pago-cell pago-extra-bg" onclick="seleccionarPago(event, this, 'PACK_ROPA')">-</td>
-                        <td class="pago-cell pago-extra-bg" onclick="seleccionarPago(event, this, 'EXTRA')">-</td>
-                        <td class="pago-cell pago-extra-bg" onclick="seleccionarPago(event, this, 'EXTRA2')">-</td>
+                        <td class="pago-cell col-financiera pago-extra-bg" onclick="seleccionarPago(event, this, 'PACK_ROPA')">-</td>
+                        <td class="pago-cell col-financiera pago-extra-bg" onclick="seleccionarPago(event, this, 'EXTRA')">-</td>
+                        <td class="pago-cell col-financiera pago-extra-bg" onclick="seleccionarPago(event, this, 'EXTRA2')">-</td>
+                        <!-- Celdas de Ropa (se añadirán dinámicamente) -->
+                        <td class="col-anchor-ropa col-ropa-btn"></td>
+                        <td id="filaRopa_{{ loop.index0 }}" class="contenedor-celdas-ropa" style="display:none; padding:0; border:0;"></td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -380,18 +425,22 @@
                 <table class="fin-table">
                     <thead>
                         <tr>
-                            <th>CARGO</th>
+                            <th class="col-financiera">CARGO</th>
                             <th>EQUIPO</th>
                             <th>NOMBRE</th>
                                 {% for mes, label in [('01','ENE'),('02','FEB'),('03','MAR'),('04','ABR'),('05','MAY'),('06','JUN'),('07','JUL'),('08','AGO'),('09','SEP'),('10','OCT'),('11','NOV'),('12','DIC')] %}
-                                <th>{{ label }}</th>
+                                <th class="col-financiera">{{ label }}</th>
                                 {% endfor %}
-                                <th style="min-width: 60px; padding: 10px 5px; background: #eceef2; border-bottom: 2px solid #dee2e6;">
+                                <th class="col-financiera" style="min-width: 60px; padding: 10px 5px; background: #eceef2; border-bottom: 2px solid #dee2e6;">
                                     <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
                                         <span id="labelStaffOtros" style="font-size: 9px; color: #475569; font-weight: 800;">OTROS</span>
                                         <i class="fas fa-pencil-alt" style="cursor: pointer; color: #E31E24; font-size: 11px;" onclick="renombrarExtra('STAFF_OTROS')"></i>
                                     </div>
                                 </th>
+                        <!-- ANCLAJE CABECERAS ROPA STAFF -->
+                        <th class="col-anchor-ropa" id="thBtnRopaStaff"></th>
+                        <!-- CABECERAS DINÁMICAS ROPA -->
+                        <th id="ropaHeadersContainerStaff" style="display:none; padding:0; border:0;"></th>
                         </tr>
                     </thead>
                         <tbody id="cuerpoPagosStaff">
@@ -401,13 +450,15 @@
                                 data-equipo="{{ s.EQUIPO }}" 
                                 data-telefono="{{ s.TELEFONO }}" 
                                 data-dias="{{ s['DIAS ENTRENAMIENTO'] }}">
-                            <td style="font-weight: 800;">{{ s.CARGO }}</td>
+                            <td class="col-financiera" style="font-weight: 800;">{{ s.CARGO }}</td>
                             <td>{{ s.EQUIPO }}</td>
                             <td>{{ s.NOMBRE }} <i class="fas fa-pencil-alt" style="cursor:pointer; color:#ccc; font-size: 10px; margin-left: 5px;" onclick="abrirModalEditarStaff(event, this)"></i></td>
                             {% for mes in ['01','02','03','04','05','06','07','08','09','10','11','12'] %}
-                                <td class="pago-cell" onclick="seleccionarPagoStaff(event, this, 'Staff-{{ mes }}')">-</td>
+                                <td class="pago-cell col-financiera" onclick="seleccionarPagoStaff(event, this, 'Staff-{{ mes }}')">-</td>
                             {% endfor %}
-                                <td class="pago-cell pago-extra-bg" onclick="seleccionarPagoStaff(event, this, 'S-EXTRA')">-</td>
+                            <td class="pago-cell col-financiera pago-extra-bg" onclick="seleccionarPagoStaff(event, this, 'S-EXTRA')">-</td>
+                            <!-- Celdas Ropa Staff -->
+                            <td class="col-anchor-ropa col-ropa-btn-staff"></td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -428,6 +479,50 @@
                 <i class="fas fa-trash-alt"></i> ELIMINAR ASIENTO
             </button>
             <button class="btn-fin" style="background: #eee; color: #333;" onclick="document.getElementById('modalAccionAsiento').style.display='none'">CANCELAR</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL GESTIÓN ROPA (TALLAS Y ESTADOS) -->
+<div id="modalGestionRopa" class="modal">
+    <div class="modal-content" style="width: 440px; border-radius: 24px; padding: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+        <h3 id="tituloGestionRopa" style="font-size: 16px; font-weight: 900; margin-bottom: 25px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; text-transform: uppercase; color: #1e293b; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-tshirt" style="color: #E31E24;"></i> <span id="txtTituloPrenda">GESTIÓN DE PRENDA</span>
+        </h3>
+        
+        <!-- SECCIÓN TALLA -->
+        <div style="margin-bottom: 20px;">
+            <label style="font-size: 11px; font-weight: 800; color: #94a3b8; display: block; margin-bottom: 12px; text-transform: uppercase;">Seleccionar Talla</label>
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;">
+                {% for talla in ['4XS', '3XS', '2XS', 'XS', 'S', 'M', 'L', 'XL', '2XL'] %}
+                <button class="btn-talla" onclick="seleccionarTallaRopa('{{ talla }}')" style="padding: 12px 0; border: 2px solid #f1f5f9; border-radius: 12px; background: white; font-weight: 900; font-size: 12px; cursor: pointer; transition: all 0.2s;">{{ talla }}</button>
+                {% endfor %}
+                <button onclick="seleccionarTallaRopa('')" style="padding: 12px 0; border: 2px solid #fee2e2; border-radius: 12px; background: #fef2f2; color: #ef4444; font-weight: 900; font-size: 10px; cursor: pointer;">QUITAR</button>
+            </div>
+        </div>
+
+        <!-- SECCIÓN ESTADO -->
+        <div id="seccionEstadoRopa" style="margin-bottom: 20px; display: none; padding-top: 20px; border-top: 2px solid #f8fafc;">
+            <label style="font-size: 11px; font-weight: 800; color: #94a3b8; display: block; margin-bottom: 12px; text-transform: uppercase;">Estado del Pedido</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px;">
+                <button class="btn-fin ropa-estado-pedida" onclick="confirmarEstadoRopa('PEDIDA')" style="border-radius: 12px; height: 45px; border: none; font-size: 11px;">PEDIDA</button>
+                <button class="btn-fin ropa-estado-llegado" onclick="confirmarEstadoRopa('LLEGADO')" style="border-radius: 12px; height: 45px; border: none; font-size: 11px;">LLEGADO</button>
+                <button class="btn-fin ropa-estado-entregada" onclick="confirmarEstadoRopa('ENTREGADA')" style="border-radius: 12px; height: 45px; border: none; font-size: 11px;">ENTREGADA</button>
+                <button class="btn-fin ropa-estado-nada" onclick="confirmarEstadoRopa('NADA')" style="border-radius: 12px; height: 45px; border: 1px solid #e2e8f0; font-size: 11px; color: #64748b;">NADA</button>
+            </div>
+        </div>
+
+        <!-- HISTORIAL -->
+        <div style="background: #f8fafc; padding: 15px; border-radius: 15px; border: 1px solid #e2e8f0; margin-bottom: 25px;">
+            <label style="font-size: 10px; font-weight: 900; color: #94a3b8; display: block; margin-bottom: 10px; text-transform: uppercase;"><i class="fas fa-history"></i> Historial de Cambios</label>
+            <div id="ropaHistoryList" style="max-height: 100px; overflow-y: auto; font-size: 11px; color: #475569; line-height: 1.5;">
+                Cargando historial...
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; border-top: 1px solid #f1f5f9; padding-top: 20px;">
+            <button class="btn-fin" style="flex: 1; background: #f1f5f9; color: #475569; border-radius: 12px;" onclick="cerrarModalsFin()">CERRAR</button>
+            <button id="btnConfirmarRopa" class="btn-fin" style="flex: 1; background: #1e293b; color: white; border-radius: 12px;" onclick="confirmarAccionRopa()">GUARDAR TODO</button>
         </div>
     </div>
 </div>
@@ -486,6 +581,352 @@ let extraNames = { "EXTRA": "EXTRA", "EXTRA2": "EXTRA 2" };
 let bulkConceptoActivo = '';
 let asientoSeleccionado = null;
 let isSaving = false;
+
+// --- LÓGICA DE ROPA (SISTEMA PROLONGACIÓN) ---
+let ropaColumns = ["PRENDA 1"];
+let celdaRopaActiva = null;
+let ropaDataCache = {}; // Estructura: { "NombreJugador": { "CAMISETA": { talla: 'M', estado: 'PEDIDA', fecha: '...' } } }
+
+function setVista(modo) {
+    const tablas = document.querySelectorAll('.fin-table');
+    const btnsPagos = [document.getElementById('btnPagosJug'), document.getElementById('btnPagosStaff')];
+    const btnsRopa = [document.getElementById('btnRopaJug'), document.getElementById('btnRopaStaff')];
+
+    if (modo === 'ropa') {
+        tablas.forEach(t => t.classList.add('table-ropa-active'));
+        btnsPagos.forEach(b => { if(b) { b.classList.remove('active-mode'); b.classList.add('inactive-mode'); } });
+        btnsRopa.forEach(b => { if(b) { b.classList.remove('inactive-mode'); b.classList.add('active-mode'); } });
+        document.getElementById('legendRopa').style.display = 'flex';
+        cargarDatosRopa();
+    } else {
+        tablas.forEach(t => t.classList.remove('table-ropa-active'));
+        btnsPagos.forEach(b => { if(b) { b.classList.remove('inactive-mode'); b.classList.add('active-mode'); } });
+        btnsRopa.forEach(b => { if(b) { b.classList.remove('active-mode'); b.classList.add('inactive-mode'); } });
+        document.getElementById('legendRopa').style.display = 'none';
+    }
+}
+
+function toggleSeccionRopa() {
+    const tablas = document.querySelectorAll('.fin-table');
+    const isActive = tablas[0].classList.contains('table-ropa-active');
+    setVista(isActive ? 'pagos' : 'ropa');
+}
+
+function renderRopaStructure() {
+    const anchorJug = document.getElementById('thBtnRopa');
+    const anchorStaff = document.getElementById('thBtnRopaStaff');
+    if (!anchorJug) return;
+
+    // 1. Renderizar Cabeceras
+    
+    // Eliminar cabeceras viejas si existen
+    document.querySelectorAll('.header-ropa-dinamica').forEach(el => el.remove());
+    
+    // Usamos fragmento para mantener el orden correcto
+    const fragmentHeaders = document.createDocumentFragment();
+    ropaColumns.forEach((col, idx) => {
+        const th = document.createElement('th');
+        th.className = 'col-ropa header-ropa header-ropa-dinamica';
+        th.style.padding = '10px 5px';
+        th.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                <span style="font-size: 9px; color: #94a3b8; font-weight: 800; white-space: nowrap;">${col}</span>
+                <i class="fas fa-pencil-alt" style="cursor: pointer; color: #E31E24; font-size: 11px;" onclick="editarNombreColumnaRopa(${idx})"></i>
+            </div>
+        `;
+        th.ondblclick = () => editarNombreColumnaRopa(idx);
+        fragmentHeaders.appendChild(th);
+    });
+
+    // Cabecera "+" para añadir nuevas prendas
+    const thPlus = document.createElement('th');
+    thPlus.className = 'col-ropa header-ropa header-ropa-dinamica';
+    thPlus.style.background = '#E31E24';
+    thPlus.innerHTML = '<i class="fas fa-plus"></i>';
+    thPlus.onclick = anadirNuevaColumnaRopa;
+    fragmentHeaders.appendChild(thPlus);
+
+    // Clonar para Staff
+    const fragmentHeadersStaff = fragmentHeaders.cloneNode(true);
+    const plusBtnStaff = fragmentHeadersStaff.querySelector('.fa-plus')?.parentElement;
+    if (plusBtnStaff) plusBtnStaff.onclick = anadirNuevaColumnaRopa;
+    
+    const dynHeadersStaff = fragmentHeadersStaff.querySelectorAll('.header-ropa-dinamica');
+    dynHeadersStaff.forEach((th, idx) => {
+        if (idx < ropaColumns.length) th.ondblclick = () => editarNombreColumnaRopa(idx);
+    });
+
+    anchorJug.after(fragmentHeaders);
+    if (anchorStaff) anchorStaff.after(fragmentHeadersStaff);
+
+    // 2. Renderizar Celdas por cada fila
+    document.querySelectorAll('.fila-jugador').forEach((fila, fIdx) => {
+        const btnRopa = fila.querySelector('.col-ropa-btn');
+        
+        // Eliminar celdas viejas
+        fila.querySelectorAll('.celda-ropa-dinamica').forEach(el => el.remove());
+        
+        const fragmentCells = document.createDocumentFragment();
+        ropaColumns.forEach((col) => {
+            const td = document.createElement('td');
+            td.className = 'col-ropa celda-ropa celda-ropa-dinamica ropa-vacia pago-cell';
+            td.innerText = '-';
+            td.onclick = (e) => abrirGestionRopa(fila, col, td);
+            fragmentCells.appendChild(td);
+        });
+
+        // Celda vacía para la columna del botón "+"
+        const tdPlus = document.createElement('td');
+        tdPlus.className = 'col-ropa celda-ropa-dinamica';
+        fragmentCells.appendChild(tdPlus);
+
+        btnRopa.after(fragmentCells);
+    });
+
+    document.querySelectorAll('.fila-staff').forEach((fila) => {
+        const btnRopa = fila.querySelector('.col-ropa-btn-staff');
+        if (!btnRopa) return;
+        fila.querySelectorAll('.celda-ropa-dinamica').forEach(el => el.remove());
+        const fragmentCells = document.createDocumentFragment();
+        ropaColumns.forEach((col) => {
+            const td = document.createElement('td');
+            td.className = 'col-ropa celda-ropa celda-ropa-dinamica ropa-vacia pago-cell';
+            td.innerText = '-';
+            td.onclick = (e) => abrirGestionRopa(fila, col, td);
+            fragmentCells.appendChild(td);
+        });
+        const tdPlus = document.createElement('td');
+        tdPlus.className = 'col-ropa celda-ropa celda-ropa-dinamica';
+        fragmentCells.appendChild(tdPlus);
+        btnRopa.after(fragmentCells);
+    });
+}
+
+function editarNombreColumnaRopa(idx) {
+    const nuevoNombre = prompt("Introduce el nuevo nombre para la columna:", ropaColumns[idx]);
+    if (nuevoNombre && nuevoNombre.trim() !== "") {
+        const nombreFinal = nuevoNombre.trim().toUpperCase();
+        ropaColumns[idx] = nombreFinal;
+        renderRopaStructure();
+
+        // Sincronizar con backend (Columna D es la 4)
+        fetch('/api/ropa/header', { // No es necesario await aquí, la UI ya se actualizó
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ col_idx: idx + 4, nombre: nombreFinal })
+        });
+    }
+}
+
+async function anadirNuevaColumnaRopa() {
+    try {
+        const res = await fetch('/api/ropa/nueva_columna', { method: 'POST' });
+        const result = await res.json();
+        if (result.status === 'success') {
+            ropaColumns.push(result.nombre);
+            renderRopaStructure();
+            cargarDatosRopa();
+        }
+    } catch (e) {
+        alert("Error al añadir columna");
+    }
+}
+
+function abrirGestionRopa(fila, prenda, td) {
+    celdaRopaActiva = { fila, prenda, td };
+    const nombreJugador = fila.dataset.nombre.trim();
+    const dataActual = (ropaDataCache[nombreJugador] && ropaDataCache[nombreJugador][prenda]) || { talla: '', estado: '' };
+    
+    document.getElementById('txtTituloPrenda').innerText = `${prenda}: ${nombreJugador}`;
+    document.getElementById('seccionEstadoRopa').style.display = dataActual.talla ? 'block' : 'none';
+    
+    // Limpiar selección previa temporal
+    celdaRopaActiva.nuevaTalla = dataActual.talla;
+    celdaRopaActiva.nuevoEstado = dataActual.estado;
+
+    cargarHistorialRopa(nombreJugador, prenda);
+    
+    // Reset estilos botones talla
+    document.querySelectorAll('.btn-talla').forEach(b => {
+        b.style.background = b.innerText === dataActual.talla ? '#334155' : 'white';
+        b.style.color = b.innerText === dataActual.talla ? 'white' : 'black';
+        b.style.borderColor = b.innerText === dataActual.talla ? '#334155' : '#f1f5f9';
+    });
+
+    document.getElementById('modalGestionRopa').style.display = 'flex';
+}
+
+async function cargarHistorialRopa(jugador, prenda) {
+    const container = document.getElementById('ropaHistoryList');
+    container.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando...';
+    try {
+        const res = await fetch(`/api/ropa/logs?jugador=${encodeURIComponent(jugador)}&prenda=${encodeURIComponent(prenda)}`);
+        const logs = await res.json();
+        if (!logs.length) {
+            container.innerHTML = '<span style="color:#cbd5e1; font-style:italic;">No hay cambios registrados.</span>';
+            return;
+        }
+        container.innerHTML = logs.map(l => `
+            <div style="border-bottom: 1px dashed #f1f5f9; padding-bottom: 5px; margin-bottom: 5px;">
+                <strong style="color: #1e293b;">${l.fecha.split(' ')[0]}</strong>: 
+                <span style="color: #64748b;">${l.anterior.includes('|') ? l.anterior.split('|')[0] : l.anterior}</span> → 
+                <span style="font-weight: 900; color: #E31E24;">${l.nuevo.includes('|') ? l.nuevo.split('|')[0] : l.nuevo}</span> 
+                <small style="opacity:0.6; display:block;">Por: ${l.usuario}</small>
+            </div>
+        `).join('');
+    } catch(e) { container.innerHTML = "Error al cargar."; }
+}
+
+function seleccionarTallaRopa(talla) {
+    const nombreJugador = celdaRopaActiva.fila.dataset.nombre.trim();
+    const dataActual = (ropaDataCache[nombreJugador] && ropaDataCache[nombreJugador][celdaRopaActiva.prenda]) || { talla: '' };
+
+    // Solo pedir confirmación si la talla es diferente y no estamos borrando
+    if (talla !== "" && dataActual.talla && talla !== dataActual.talla) {
+        // Si el usuario cancela, no actualizamos la talla temporal
+        if (!confirm(`¿Confirmar cambio de talla de ${dataActual.talla} a ${talla}?`)) return;
+    }
+
+    // Guardar temporalmente para confirmar
+    celdaRopaActiva.nuevaTalla = talla;
+    document.querySelectorAll('.btn-talla').forEach(b => {
+        b.style.background = b.innerText === talla ? '#1e293b' : 'white';
+        b.style.color = b.innerText === talla ? 'white' : 'black';
+        b.style.borderColor = b.innerText === talla ? '#1e293b' : '#f1f5f9';
+    });
+    
+    document.getElementById('seccionEstadoRopa').style.display = talla ? 'block' : 'none';
+}
+
+function confirmarEstadoRopa(estado) {
+    if (confirm(`¿Marcar prenda como ${estado}?`)) {
+        actualizarEstadoRopa(estado);
+    }
+}
+
+async function actualizarEstadoRopa(estado) {
+    // Si no hay talla seleccionada (ni nueva ni existente), no se puede cambiar el estado
+    if (!celdaRopaActiva.nuevaTalla && !((ropaDataCache[celdaRopaActiva.fila.cells[1].innerText] || {})[celdaRopaActiva.prenda] || {}).talla) {
+        return alert("Selecciona primero una talla");
+    }
+    celdaRopaActiva.nuevoEstado = estado;
+    // Llamar a confirmarAccionRopa para guardar los cambios
+    confirmarAccionRopa();
+}
+
+async function confirmarAccionRopa() {
+    const nombreJugador = celdaRopaActiva.fila.dataset.nombre;
+    const equipo = celdaRopaActiva.fila.dataset.equipo;
+    const prenda = celdaRopaActiva.prenda;
+    const talla = celdaRopaActiva.nuevaTalla !== undefined ? celdaRopaActiva.nuevaTalla : (ropaDataCache[nombreJugador]?.[prenda]?.talla || '');
+    const estado = celdaRopaActiva.nuevoEstado || (ropaDataCache[nombreJugador]?.[prenda]?.estado || 'SOLICITADO');
+
+    // Animación Shield + Spinner
+    const td = celdaRopaActiva.td;
+    const contentOriginal = td.innerHTML;
+    td.innerHTML = '<div class="shield-loading"><i class="fas fa-shield-alt"></i><br><i class="fas fa-circle-notch fa-spin" style="font-size:8px;"></i></div>';
+
+    // Sincronizar con el backend: Encontrar el índice de la columna en Google Sheets (D=4)
+    const col_idx = ropaColumns.indexOf(prenda) + 4;
+    
+    // Si el estado es NADA o no hay talla, limpiamos
+    const valor = (estado === 'NADA' || !talla) ? '' : `${talla}|${estado}|${new Date().toLocaleDateString('es-ES')}`;
+
+    try {
+        const res = await fetch('/api/ropa/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                equipo: equipo,
+                jugador: nombreJugador,
+                col_idx: col_idx,
+                valor: valor
+            })
+        });
+
+        if (res.ok) {
+            // Actualizar Cache Local
+            if (!ropaDataCache[nombreJugador]) ropaDataCache[nombreJugador] = {};
+            ropaDataCache[nombreJugador][prenda] = (estado === 'NADA') ? null : { talla, estado };
+
+            actualizarVisualCeldaRopa(celdaRopaActiva.td, talla, estado);
+            cerrarModalsFin();
+            mostrarPopUpExito("PRENDA ACTUALIZADA");
+        } else {
+            td.innerHTML = contentOriginal;
+            alert("Error al guardar en el servidor");
+        }
+    } catch (e) {
+        td.innerHTML = contentOriginal;
+        alert("Error de conexión");
+    }
+}
+
+function mostrarPopUpExito(mensaje) {
+    const popup = document.createElement('div');
+    popup.style = "position: fixed; top: 20px; right: 20px; background: #198754; color: white; padding: 15px 25px; border-radius: 12px; font-weight: 900; font-size: 12px; z-index: 9999; box-shadow: 0 10px 20px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 10px; animation: slideIn 0.3s ease-out;";
+    popup.innerHTML = `<i class="fas fa-check-circle"></i> ${mensaje}`;
+    document.body.appendChild(popup);
+    
+    setTimeout(() => {
+        popup.style.animation = "slideOut 0.3s ease-in";
+        setTimeout(() => popup.remove(), 300);
+    }, 3000);
+}
+
+function actualizarVisualCeldaRopa(td, talla, estado) {
+    td.innerText = (estado === 'NADA') ? '-' : (talla || '-');
+    td.className = 'col-ropa celda-ropa celda-ropa-dinamica pago-cell';
+    if (!talla || estado === 'NADA') {
+        td.classList.add('ropa-vacia');
+        return;
+    }
+    if (estado === 'PEDIDA') td.classList.add('ropa-estado-pedida');
+    else if (estado === 'LLEGADO') td.classList.add('ropa-estado-llegado');
+    else if (estado === 'ENTREGADA') td.classList.add('ropa-estado-entregada');
+}
+
+async function cargarDatosRopa() {
+    const res = await fetch('/api/ropa');
+    const result = await res.json();
+    
+    if (result.headers) {
+        // Sincronizamos los nombres de las columnas reales (desde el índice 3 / Col D)
+        ropaColumns = result.headers.slice(3);
+        renderRopaStructure();
+    }
+
+    // Reconstruir el cache desde los datos planos de la hoja
+    ropaDataCache = {};
+    if (result.data) {
+        result.data.forEach(row => {
+            const jugador = row[2]; // Columna JUGADOR
+            if (!ropaDataCache[jugador]) ropaDataCache[jugador] = {};
+            for (let i = 3; i < row.length; i++) {
+                const prendaName = result.headers[i];
+                const val = row[i];
+                if (val && val.includes('|')) {
+                    const [talla, estado, fecha] = val.split('|');
+                    ropaDataCache[jugador][prendaName] = { talla, estado, fecha };
+                }
+            }
+        });
+    }
+
+    // Aplicar estilos a cada celda según el cache (JUGADORES y STAFF)
+    const todasFilas = [...document.querySelectorAll('.fila-jugador'), ...document.querySelectorAll('.fila-staff')];
+    todasFilas.forEach(fila => {
+        const nombre = fila.dataset.nombre;
+        if (!nombre || !ropaDataCache[nombre]) return;
+        
+        fila.querySelectorAll('.celda-ropa-dinamica').forEach((td, idx) => {
+            const prenda = ropaColumns[idx];
+            if (prenda && ropaDataCache[nombre][prenda]) {
+                actualizarVisualCeldaRopa(td, ropaDataCache[nombre][prenda].talla, ropaDataCache[nombre][prenda].estado);
+            }
+        });
+    });
+}
 
 // --- FUNCIÓN DE NAVEGACIÓN CORREGIDA ---
 function switchTab(event, id) {
@@ -595,7 +1036,6 @@ function abrirEdicionCompletaAsiento() {
 async function confirmarBorradoDesdeAccion() {
     if (!asientoSeleccionado) return;
     if (!confirm(`¿Borrar asiento #${asientoSeleccionado.id_global}?`)) return;
-    showLoader();
     try {
         const res = await fetch('/api/operacion_asiento', {
             method: 'POST',
@@ -611,22 +1051,17 @@ async function confirmarBorradoDesdeAccion() {
         }
         else {
             alert("Error al borrar");
-            hideLoader();
         }
     } catch (e) { 
         alert("Error de conexión"); 
-        hideLoader();
     }
 }
 
 async function procesarEdicionFinalAsiento(btn) {
     if (!asientoSeleccionado || isSaving) return;
     
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GUARDANDO...';
     btn.disabled = true;
     isSaving = true;
-    showLoader();
 
     const payload = {
         accion: 'editar', id: asientoSeleccionado.real_id, tipo_origen: asientoSeleccionado.tipo_origen,
@@ -646,13 +1081,10 @@ async function procesarEdicionFinalAsiento(btn) {
             await cargarPresupuesto();
         } else {
             alert("Error al actualizar");
-            hideLoader();
         }
     } catch (e) {
         alert("Error de conexión");
-        hideLoader();
     } finally {
-        btn.innerHTML = originalText;
         btn.disabled = false;
         isSaving = false;
     }
@@ -661,7 +1093,6 @@ async function procesarEdicionFinalAsiento(btn) {
 // Funciones para la limpieza del historial con doble verificación
 function solicitarLimpiezaHistorial(tipo) {
     callbackVerificacion = async () => {
-        showLoader();
         const res = await fetch('/api/limpiar_historial', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -672,7 +1103,6 @@ function solicitarLimpiezaHistorial(tipo) {
             await cargarPresupuesto();
         } else {
             alert("Error al limpiar el historial");
-            hideLoader();
         }
     };
     abrirVerificacionSegura();
@@ -716,10 +1146,7 @@ async function aplicarBulkEsperado(btn) {
     const nuevoVal = parseFloat(document.getElementById('bulkNuevoEsperado').value);
     if (isNaN(nuevoVal)) return alert("Introduce un importe válido");
 
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> APLICANDO...';
     btn.disabled = true;
-    showLoader();
 
     const filas = document.querySelectorAll('.fila-jugador');
     let equiposModificados = new Set();
@@ -789,9 +1216,7 @@ async function aplicarBulkEsperado(btn) {
     } catch (e) {
         alert("Error al sincronizar la configuración");
     } finally {
-        btn.innerHTML = originalText;
         btn.disabled = false;
-        hideLoader();
     }
 }
 
@@ -821,7 +1246,6 @@ function switchTab(event, id) {
 // Lógica para Fichas de Jugadores e IA
 async function procesarFichaConIA(input) {
     if (!input.files.length) return;
-    showLoader();
     const formData = new FormData();
     formData.append('file', input.files[0]);
 
@@ -838,7 +1262,6 @@ async function procesarFichaConIA(input) {
         console.error(e);
         alert("Error crítico al conectar con el servicio de IA");
     } finally {
-        hideLoader();
         input.value = '';
     }
 }
@@ -888,7 +1311,6 @@ async function confirmarFichaDefinitiva(btn) {
     const datos = {};
     inputs.forEach(inp => datos[inp.dataset.key] = inp.value);
 
-    showLoader();
     try {
         const res = await fetch('/api/jugadores_datos/confirmar', {
             method: 'POST',
@@ -900,41 +1322,45 @@ async function confirmarFichaDefinitiva(btn) {
             document.getElementById('zonaRevisionFicha').style.display = 'none';
             cargarTablaDatosJugadores();
         }
-    } finally {
-        hideLoader();
+    } catch (e) {
+        alert("Error al confirmar la ficha");
     }
 }
 
 async function cargarTablaDatosJugadores() {
-    const res = await fetch('/api/jugadores_datos');
-    const data = await res.json();
-    const tbody = document.querySelector('#tablaDatosJugadores tbody');
-    tbody.innerHTML = data.map(j => `
-        <tr>
-            <td style="font-weight:900; color:#E31E24;">${j.JUGADOR_EQUIPO_LETRA || '-'}</td>
-            <td>
-                <div style="font-weight:900;">${j.JUGADOR_NOMBRE || ''} ${j.JUGADOR_APELLIDOS || ''}</div>
-                <div style="font-size:10px; color:#666;">DNI: ${j.AUTORIZA_JUGADOR_DNI || '-'} | Nac: ${j.JUGADOR_FECHA_NACIMIENTO || '-'}</div>
-            </td>
-            <td style="font-size:10px;">${j.JUGADOR_COLEGIO || '-'}</td>
-            <td>
-                <div style="font-size:11px; font-weight:700;">${j.JUGADOR_TELEFONO_MOVIL || '-'}</div>
-                <div style="font-size:10px; color:#1e40af;">${j.JUGADOR_EMAIL || '-'}</div>
-            </td>
-            <td style="font-size:10px;">
-                <div>P: ${j.FAMILIA_NOMBRE_PADRE || '-'}</div>
-                <div>M: ${j.FAMILIA_NOMBRE_MADRE || '-'}</div>
-            </td>
-            <td><span style="background:#f1f5f9; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:800;">${j.PAGO_MODALIDAD || '-'}</span></td>
-            <td>
-                <div style="font-family:monospace; font-size:10px; font-weight:800;">${j.SEPA_IBAN || '-'}</div>
-                <div style="font-size:9px; color:#666;">${j.SEPA_TIPO_PAGO || '-'}</div>
-            </td>
-            <td style="text-align:center;">
-                <button class="btn-fin" style="padding:5px 10px; background:#333; color:white; font-size:9px;">VER FICHA</button>
-            </td>
-        </tr>
-    `).join('');
+    try {
+        const res = await fetch('/api/jugadores_datos');
+        const data = await res.json();
+        const tbody = document.querySelector('#tablaDatosJugadores tbody');
+        if (!tbody) return;
+        
+        tbody.innerHTML = data.map(j => `
+            <tr>
+                <td style="font-weight:900; color:#E31E24;">${j.JUGADOR_EQUIPO_LETRA || '-'}</td>
+                <td>
+                    <div style="font-weight:900;">${j.JUGADOR_NOMBRE || ''} ${j.JUGADOR_APELLIDOS || ''}</div>
+                    <div style="font-size:10px; color:#666;">DNI: ${j.AUTORIZA_JUGADOR_DNI || '-'} | Nac: ${j.JUGADOR_FECHA_NACIMIENTO || '-'}</div>
+                </td>
+                <td style="font-size:10px;">${j.JUGADOR_COLEGIO || '-'}</td>
+                <td>
+                    <div style="font-size:11px; font-weight:700;">${j.JUGADOR_TELEFONO_MOVIL || '-'}</div>
+                    <div style="font-size:10px; color:#1e40af;">${j.JUGADOR_EMAIL || '-'}</div>
+                </td>
+                <td style="font-size:10px;">
+                    <div>P: ${j.FAMILIA_NOMBRE_PADRE || '-'}</div>
+                    <div>M: ${j.FAMILIA_NOMBRE_MADRE || '-'}</div>
+                </td>
+                <td><span style="background:#f1f5f9; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:800;">${j.PAGO_MODALIDAD || '-'}</span></td>
+                <td>
+                    <div style="font-family:monospace; font-size:10px; font-weight:800;">${j.SEPA_IBAN || '-'}</div>
+                    <div style="font-size:9px; color:#666;">${j.SEPA_TIPO_PAGO || '-'}</div>
+                </td>
+                <td style="text-align:center;">
+                    <button class="btn-fin" style="padding:5px 10px; background:#333; color:white; font-size:9px;">VER FICHA</button>
+                </td>
+            </tr>
+        `).join('');
+    } catch (e) { console.error("Error al cargar datos de jugadores:", e); }
 }
 
 function filtrarJugadores() {
@@ -1173,20 +1599,16 @@ async function confirmarPago(btn) {
     // 1. Validación de sobrepago
     if (totalPagado > totalEsperado && totalEsperado > 0) {
         alert("El importe pagado es mayor que el total esperado. Por favor, ajusta el importe o selecciona más conceptos para que todo cuadre.");
-        btn.innerHTML = originalText;
         btn.disabled = false;
         isSaving = false;
-        hideLoader();
         return;
     }
 
     // 2. Confirmación de subpago
     if (totalPagado < totalEsperado && totalEsperado > 0) {
         if (!confirm(`El importe pagado (${totalPagado}€) es inferior al total esperado (${totalEsperado}€). La diferencia se asignará al último concepto seleccionado. ¿Deseas continuar?`)) {
-            btn.innerHTML = originalText;
             btn.disabled = false;
             isSaving = false;
-            hideLoader();
             return;
         }
     }
@@ -1194,21 +1616,15 @@ async function confirmarPago(btn) {
     // 3. Confirmación para pagos sin esperado (ej. Staff) si hay múltiples conceptos
     if (totalEsperado === 0 && totalPagado > 0 && celdasSeleccionadas.length > 1) {
         if (!confirm(`No hay importe esperado definido para los conceptos seleccionados. El importe total pagado (${totalPagado}€) se asignará al último concepto. ¿Deseas continuar?`)) {
-            btn.innerHTML = originalText;
             btn.disabled = false;
             isSaving = false;
-            hideLoader();
             return;
         }
     }
     if (!confirm(`¿Confirmar registro definitivo?`)) return;
 
-    // Solo activamos el estado de guardado tras pasar todas las confirmaciones
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     btn.disabled = true;
     isSaving = true;
-    showLoader();
 
     try {
         const fechaHoy = new Date().toLocaleDateString('es-ES');
@@ -1234,7 +1650,7 @@ async function confirmarPago(btn) {
 
             if (totalEsperado === 0) {
                     // Si no hay esperado, todo el importe va al último concepto
-                    pagoAsignado = (i === celdasSeleccionadas.length - 1) ? saldoPendienteDePago : 0;
+                    pagoAsignado = (i === celdasSeleccionadas.length - 1) ? saldoARepartir : 0;
                     esperadoIndividual = pagoAsignado; // El esperado se iguala a lo pagado en este caso
             } else if (i === celdasSeleccionadas.length - 1) {
                 pagoAsignado = saldoARepartir; // El último se lleva el resto
@@ -1254,9 +1670,7 @@ async function confirmarPago(btn) {
         cerrarModalsFin();
     } catch (e) {
         console.error(e);
-        hideLoader();
     } finally {
-        btn.innerHTML = originalText;
         btn.disabled = false;
         isSaving = false;
     }
@@ -1273,10 +1687,7 @@ function seleccionarPagoStaff(e, el, item) {
 async function eliminarPago(btn) {
     if (!celdaActiva || !btn) return;
     if (!confirm("¿Seguro que quieres eliminar este registro de pago definitivamente?")) return;
-    showLoader();
     
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     btn.disabled = true;
 
     const asientoId = celdaActiva.dataset.asientoId;
@@ -1315,13 +1726,10 @@ async function eliminarPago(btn) {
             cerrarModalsFin();
         } else {
             alert("Error al eliminar el pago");
-            hideLoader();
         }
     } catch (e) {
         alert("Error de conexión");
-        hideLoader();
     } finally {
-        btn.innerHTML = originalText;
         btn.disabled = false;
     }
 }
@@ -1330,10 +1738,7 @@ async function actualizarPago(btn) {
     if (!celdaActiva || !btn || isSaving) return;
     const nuevoImporte = parseFloat(document.getElementById('modPagoImporte').value);
     if (isNaN(nuevoImporte)) return alert("Introduce un importe válido");
-    showLoader();
 
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GUARDANDO...';
     btn.disabled = true;
     isSaving = true;
 
@@ -1383,13 +1788,10 @@ async function actualizarPago(btn) {
             cerrarModalsFin();
         } else {
             alert("Error al actualizar el pago");
-            hideLoader();
         }
     } catch (e) {
         alert("Error de conexión");
-        hideLoader();
     } finally {
-        btn.innerHTML = originalText;
         btn.disabled = false;
         isSaving = false;
     }
@@ -1407,10 +1809,7 @@ async function guardarAsientoManual(btn) {
     };
 
     if (!asiento.fecha || !asiento.importe) return alert("Fecha e Importe son obligatorios");
-    showLoader();
 
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     btn.disabled = true;
     isSaving = true;
 
@@ -1427,13 +1826,10 @@ async function guardarAsientoManual(btn) {
             ['asientoFecha', 'asientoPilar', 'asientoDesc', 'asientoImporte'].forEach(id => document.getElementById(id).value = "");
         } else {
             alert("Error al guardar en el servidor");
-            hideLoader();
         }
     } catch (e) {
         alert("Error de conexión");
-        hideLoader();
     } finally {
-        btn.innerHTML = originalText;
         btn.disabled = false;
         isSaving = false;
     }
@@ -1449,8 +1845,6 @@ async function cargarPresupuesto() {
     } catch (e) {
         console.error("Error cargando presupuesto:", e);
         presupuestoData = []; // Aseguramos que sea un array vacío para evitar errores posteriores
-    } finally {
-        hideLoader();
     }
 }
 
@@ -1460,7 +1854,7 @@ function cargarPagosEnTabla() {
     document.querySelectorAll('.fila-staff').forEach(fila => {
         fila.querySelectorAll('.pago-cell').forEach(cell => {
             const esExtra = cell.classList.contains('pago-extra-bg');
-            cell.className = esExtra ? 'pago-cell pago-extra-bg' : 'pago-cell';
+            cell.className = esExtra ? 'pago-cell col-financiera pago-extra-bg' : 'pago-cell col-financiera';
             cell.innerText = '-';
             delete cell.dataset.asientoId;
             delete cell.dataset.importe;
@@ -1485,7 +1879,7 @@ function cargarPagosEnTabla() {
             // RESET de la celda (por si cambió de modalidad)
             cell.style.display = '';
             cell.colSpan = 1;
-            cell.className = 'pago-cell';
+            cell.className = 'pago-cell col-financiera';
             cell.innerText = '-';
             delete cell.dataset.asientoId;
             cell.dataset.importe = "0";
@@ -2157,13 +2551,10 @@ window.onload = async function() {
     
     const lastTab = localStorage.getItem('activeFinTab');
     if (lastTab) switchTab(null, lastTab);
-    
-    hideLoader();
 
     // Lógica para la Carga Masiva (Revisión Previa)
     document.getElementById('excelInput').addEventListener('change', async function(e) {
         if (!e.target.files.length) return;
-        showLoader();
         const formData = new FormData();
         formData.append('file', e.target.files[0]);
 
@@ -2185,7 +2576,6 @@ window.onload = async function() {
             const msg = err.name === 'AbortError' ? 'El servidor tardó demasiado. Prueba con un archivo más pequeño.' : err.message;
             alert("ERROR DE CARGA: " + msg);
         } finally {
-            hideLoader();
             e.target.value = '';
         }
     });
@@ -2448,7 +2838,6 @@ function toggleSelectAllRevision(master) {
 async function guardarSeleccionadosRevision() {
     const filas = document.querySelectorAll('#tablaRevision tbody tr');
     let procesados = 0;
-    showLoader();
     
     for (let f of filas) {
         if (!f.querySelector('.check-rev').checked) continue;
@@ -2519,7 +2908,6 @@ async function guardarSeleccionadosRevision() {
         await cargarPresupuesto();
         actualizarContadorRevision();
     }
-    hideLoader();
 }
 </script>
 
@@ -2849,7 +3237,6 @@ async function guardarExtraDetalle(btn) {
     const equipo = celdaActiva.closest('tr').dataset.equipo;
     const rows = document.querySelectorAll('.extra-row-item');
     const fechaHoy = new Date().toLocaleDateString('es-ES');
-    showLoader();
 
     try {
         for (let row of rows) {

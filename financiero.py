@@ -151,7 +151,7 @@ def financiero():
             equipos = sorted(list(set(str(r[idx_e]).strip() for r in rows_eq[1:] if len(r) > idx_e and r[idx_e].strip())))
     except:
         # Fallback si falla la pestaña EQUIPO
-        jugadores_temp = leer_ho_ja_limpia(client, NOMBRE_EXCEL, "JUGADORES")
+        jugadores_temp = leer_hoja_limpia(client, NOMBRE_EXCEL, "JUGADORES")
         equipos = sorted(list(set(j['EQUIPO'] for j in jugadores_temp if 'EQUIPO' in j)))
 
     jugadores = leer_hoja_limpia(client, NOMBRE_EXCEL, "JUGADORES")

@@ -924,10 +924,12 @@ from financiero import financiero_bp
 from deportivo import deportivo_bp
 from jugadores_datos import jugadores_datos_bp
 from perfiles import perfiles_bp
+from ropa import ropa_bp
 app.register_blueprint(financiero_bp)
 app.register_blueprint(deportivo_bp)
 app.register_blueprint(jugadores_datos_bp)
 app.register_blueprint(perfiles_bp)
+app.register_blueprint(ropa_bp)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001, use_reloader=False)
