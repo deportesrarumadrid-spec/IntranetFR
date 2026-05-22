@@ -267,6 +267,9 @@
                     <button class="btn-fin" style="background: #E31E24; color: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(227,30,36,0.2);" onclick="abrirModalAnadirJugadorFin()">
                         <i class="fas fa-user-plus"></i> AÑADIR JUGADOR
                     </button>
+                    <button id="btnExportarRopa" class="btn-fin" style="background: #198754; color: white; border-radius: 10px; display: none; align-items: center; gap: 8px;" onclick="exportarRopaExcel()">
+                        <i class="fas fa-file-excel"></i> EXPORTAR ROPA
+                    </button>
                 <button id="btnSacarImpagos" class="btn-fin" style="background: #f8f9fa; color: #333; border: 1px solid #e2e8f0; border-radius: 10px; display: flex; align-items: center; gap: 8px;" onclick="generarReporteImpagos()">
                         <i class="fas fa-exclamation-circle"></i> SACAR IMPAGOS
                     </button>
@@ -627,6 +630,7 @@ function setVista(modo) {
     const btnsPagos = [document.getElementById('btnPagosJug'), document.getElementById('btnPagosStaff')];
     const btnsRopa = [document.getElementById('btnRopaJug'), document.getElementById('btnRopaStaff')];
     const btnImpagos = document.getElementById('btnSacarImpagos');
+    const btnExportarRopa = document.getElementById('btnExportarRopa');
 
     if (modo === 'ropa') {
         tablas.forEach(t => t.classList.add('table-ropa-active'));
@@ -634,6 +638,7 @@ function setVista(modo) {
         btnsRopa.forEach(b => { if(b) { b.classList.remove('inactive-mode'); b.classList.add('active-mode'); } });
         document.getElementById('legendRopa').style.display = 'flex';
         if(btnImpagos) btnImpagos.style.display = 'none';
+        if(btnExportarRopa) btnExportarRopa.style.display = 'flex';
         cargarDatosRopa();
     } else {
         tablas.forEach(t => t.classList.remove('table-ropa-active'));
@@ -641,6 +646,7 @@ function setVista(modo) {
         btnsRopa.forEach(b => { if(b) { b.classList.remove('active-mode'); b.classList.add('inactive-mode'); } });
         document.getElementById('legendRopa').style.display = 'none';
         if(btnImpagos) btnImpagos.style.display = 'flex';
+        if(btnExportarRopa) btnExportarRopa.style.display = 'none';
     }
 }
 
@@ -2621,6 +2627,49 @@ function exportarImpagosExcel() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+}
+
+function exportarRopaExcel() {
+    const equipoActual = document.getElementById('selectEquipoFin').value || 'TODOS';
+    let csv = [];
+    
+    // 1. Cabeceras (Equipo, Nombre + Prendas dinámicas)
+    let headers = ["EQUIPO", "JUGADOR"];
+    ropaColumns.forEach(h => headers.push(h));
+    csv.push(headers.join(";"));
+
+    // 2. Filas (Solo las visibles en pantalla para respetar filtros)
+    const filas = document.querySelectorAll('#cuerpoPagos tr.fila-jugador');
+    filas.forEach(f => {
+        if (f.style.display === 'none') return; // Saltamos los filtrados
+        
+        let row = [
+            '"' + f.cells[0].innerText.trim() + '"',
+            '"' + f.cells[1].innerText.trim() + '"'
+        ];
+        
+        const nombre = f.dataset.nombre;
+        ropaColumns.forEach(col => {
+            const info = (ropaDataCache[nombre] && ropaDataCache[nombre][col]);
+            let txt = "";
+            if (info && info.talla && info.talla !== '-' && info.talla !== '') {
+                txt = info.talla;
+                if (info.estado && info.estado !== '-' && info.estado !== 'NADA' && info.estado !== '') {
+                    txt += ` (${info.estado})`;
+                }
+            }
+            row.push('"' + txt + '"');
+        });
+        csv.push(row.join(";"));
+    });
+
+    const csvContent = "\uFEFF" + csv.join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `ropa_${equipoActual}_${new Date().toLocaleDateString()}.csv`);
+    link.click();
 }
 
 window.onload = async function() {
