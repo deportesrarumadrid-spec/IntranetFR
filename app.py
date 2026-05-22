@@ -193,12 +193,61 @@ def onesignal_worker():
 
 @app.route('/save_all', methods=['POST'])
 def save_all():
+    # Solo el administrador tiene permiso para marcar objetivos realizados
+    if session.get('usuario') != 'admin':
+        return jsonify({"status": "error", "message": "Acceso restringido: Solo el administrador puede marcar objetivos realizados"}), 403
+
     data = request.json
-    usuario = data.get('usuario')
-    mes = data.get('mes')
-    obj_path = os.path.join(DATA_FOLDER, f'obj_{usuario}_{mes}.json')
-    with open(obj_path, 'w', encoding='utf-8') as f:
-        json.dump(data['objetivos'], f)
+    equipo = data.get('equipo') or session.get('equipo_defecto')
+    mes_base = data.get('mes') # Formato "2026-05"
+    new_completados = data.get('objetivos', {}).get('completados', []) # Lista tipo ["1-Presion", "2-Tiro"]
+
+    client = app.gs_client
+    NOMBRE_EXCEL = app.gs_name
+    SHEET_NAME = "OBJ TACTEC"
+
+    try:
+        sheet = client.open(NOMBRE_EXCEL).worksheet(SHEET_NAME)
+        agrupados = {}
+        for item in new_completados:
+            if '-' in str(item):
+                dia, obj = str(item).split('-', 1)
+                if dia not in agrupados: agrupados[dia] = []
+                agrupados[dia].append(obj.strip())
+            else:
+                # Fallback por si llega sin prefijo (no debería ocurrir en el calendario)
+                if "sin_dia" not in agrupados: agrupados["sin_dia"] = []
+                agrupados["sin_dia"].append(str(item).strip())
+
+        year, month = mes_base.split('-')
+        existing_data = sheet.get_all_values()
+
+        for dia, objetivos in agrupados.items():
+            if dia == "sin_dia":
+                fecha_full = f"01/{month}/{year}" # Por defecto al día 1 si no hay info
+            else:
+                fecha_full = f"{dia.zfill(2)}/{month}/{year}"
+            
+            obj_str = ", ".join(objetivos) # Sin el prefijo 1-
+            
+            fila_idx = -1
+            for i, row in enumerate(existing_data):
+                if i == 0: continue # Saltar cabecera
+                if len(row) >= 2 and str(row[0]).strip() == fecha_full and str(row[1]).strip().upper() == equipo.strip().upper():
+                    fila_idx = i + 1
+                    break
+            
+            if fila_idx != -1:
+                # Actualizamos la Columna C (índice 3)
+                sheet.update_cell(fila_idx, 3, obj_str)
+            else:
+                # Nueva fila: Fecha, Equipo, Objetivos Completados, Táctico (vacío), Técnico (vacío)
+                nueva_fila = [fecha_full, equipo, obj_str, "", ""]
+                sheet.append_row(nueva_fila)
+
+    except Exception as e:
+        print(f"Error sincronizando completados (save_all): {e}")
+        return jsonify({"status": "error"}), 500
     return jsonify({"status": "success"})
 
 @app.route('/upload_foto', methods=['POST'])

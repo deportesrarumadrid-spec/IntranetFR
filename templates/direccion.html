@@ -272,6 +272,46 @@
                 * Los cambios en Tecnificaciones se guardan automáticamente al seleccionar las opciones.
             </div>
         </div>
+
+        <!-- Recuento de Objetivos Logrados (Nueva Sección) -->
+        <div class="card-coord" style="margin-top: 30px; border-top: 3px solid #E31E24; padding-top: 25px; background: #fff;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="width: 40px; height: 40px; background: #ffebeb; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #E31E24;">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 16px; font-weight: 900; color: #333; text-transform: uppercase;">Recuento de Objetivos Logrados</h3>
+                        <p style="margin: 0; font-size: 11px; color: #999; font-weight: 600;">Estado del progreso mensual por equipo</p>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px; background: #333; padding: 10px 20px; border-radius: 30px;">
+                    <label style="font-size: 10px; font-weight: 900; color: #ccc; text-transform: uppercase;">Mes:</label>
+                    <div class="custom-mes-wrapper" id="mesRecuentoWrapper" onclick="this.classList.toggle('open')">
+                        <div class="custom-mes-trigger" id="mesRecuentoText" style="background: transparent; color: white; border: none; padding: 0 35px 0 0; font-size: 13px;">Mayo 2026</div>
+                        <div class="custom-mes-options">
+                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-01', 'Enero 2026')" data-value="2026-01">Enero 2026</div>
+                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-02', 'Febrero 2026')" data-value="2026-02">Febrero 2026</div>
+                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-03', 'Marzo 2026')" data-value="2026-03">Marzo 2026</div>
+                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-04', 'Abril 2026')" data-value="2026-04">Abril 2026</div>
+                            <div class="custom-mes-option selected" onclick="cambiarMesRecuento('2026-05', 'Mayo 2026')" data-value="2026-05">Mayo 2026</div>
+                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-06', 'Junio 2026')" data-value="2026-06">Junio 2026</div>
+                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-07', 'Julio 2026')" data-value="2026-07">Julio 2026</div>
+                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-08', 'Agosto 2026')" data-value="2026-08">Agosto 2026</div>
+                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-09', 'Septiembre 2026')" data-value="2026-09">Septiembre 2026</div>
+                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-10', 'Octubre 2026')" data-value="2026-10">Octubre 2026</div>
+                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-11', 'Noviembre 2026')" data-value="2026-11">Noviembre 2026</div>
+                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-12', 'Diciembre 2026')" data-value="2026-12">Diciembre 2026</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="selectMesRecuento" value="2026-05">
+                </div>
+            </div>
+
+            <div id="containerRecuento" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                <div style="grid-column: span 2; text-align: center; padding: 40px; color: #ccc; font-weight: 700; border: 2px dashed #f0f0f0; border-radius: 15px;">SELECCIONA UN EQUIPO PARA VER EL PROGRESO</div>
+            </div>
+        </div>
     </div>
 
     <!-- SUBPESTAÑA: D. DEPORTIVA -->
@@ -359,7 +399,7 @@
 
         <div style="padding: 30px 40px; background: white; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 15px;">
             <button class="btn-fin" style="background: #f0f2f5; color: #666; border: none; border-radius: 15px; padding: 15px 35px; font-weight: 800; font-size: 12px;" onclick="document.getElementById('modalObjetivosMensuales').style.display='none'">CANCELAR</button>
-            <button class="btn-premium" style="width: auto; padding: 12px 35px;" onclick="solicitarGuardarObjetivos()">
+            <button id="btnGuardarObjetivos" class="btn-premium" style="width: auto; padding: 12px 35px;" onclick="solicitarGuardarObjetivos(this)">
                 <i class="fas fa-save"></i> GUARDAR Y SINCRONIZAR
             </button>
         </div>
@@ -369,6 +409,8 @@
 <script>
     const jugadoresRaw = {{ jugadores_raw | tojson if jugadores_raw else '[]' }};
     const equiposList = {{ equipos | tojson if equipos else '[]' }};
+    const isAdminUser = '{{ usuario|lower }}' === 'admin';
+
     // Tab switching logic
     function switchTab(e, tabId) {
 
@@ -544,6 +586,7 @@
         `).join('');
         
         cargarDatosDia();
+        cargarRecuentoObjetivos();
     }
 
     async function guardarSeguimiento(btn) {
@@ -682,12 +725,13 @@
     }
     async function cargarObjetivosMes() {
         const mes = document.getElementById('selectMesObjetivos').value;
+        const mesSheet = formatMesParaSheet(mes);
         const tbody = document.getElementById('tbodyObjetivos');
         if (!tbody) return;
         
         showLoader();
         try {
-            const res = await fetch(`/api/objetivos_mensuales?mes=${mes}`);
+            const res = await fetch(`/api/objetivos_mensuales?fecha=${mesSheet}`);
             const data = await res.json();
             
             if (!equiposList || equiposList.length === 0) {
@@ -700,8 +744,8 @@
                 return `
                     <tr style="transition: 0.2s;">
                         <td style="font-weight: 900; color: #333; padding: 15px 25px; font-size: 14px; border-right: 1px solid #f0f0f0;">${eq}</td>
-                        <td style="padding: 15px 25px;"><textarea class="input-coord obj-tactico" data-equipo="${eq}" placeholder="Ej: Repliegue, Basculación, Presión alta..." style="height: 70px; resize: vertical; border: 1px solid #e0e0e0; padding: 12px; border-radius: 10px; font-weight: 500; font-size: 12px; background: #fdfdfd; transition: border-color 0.2s;"></textarea></td>
-                        <td style="padding: 15px 25px;"><textarea class="input-coord obj-tecnico" data-equipo="${eq}" placeholder="Ej: Control orientado, Conducción, Remate..." style="height: 70px; resize: vertical; border: 1px solid #e0e0e0; padding: 12px; border-radius: 10px; font-weight: 500; font-size: 12px; background: #fdfdfd; transition: border-color 0.2s;"></textarea></td>
+                        <td style="padding: 15px 25px;"><textarea class="input-coord obj-tactico" data-equipo="${eq}" placeholder="Ej: Repliegue, Basculación, Presión alta..." style="height: 70px; resize: vertical; border: 1px solid #e0e0e0; padding: 12px; border-radius: 10px; font-weight: 500; font-size: 12px; background: #fdfdfd; transition: border-color 0.2s;">${obj.tactico}</textarea></td>
+                        <td style="padding: 15px 25px;"><textarea class="input-coord obj-tecnico" data-equipo="${eq}" placeholder="Ej: Control orientado, Conducción, Remate..." style="height: 70px; resize: vertical; border: 1px solid #e0e0e0; padding: 12px; border-radius: 10px; font-weight: 500; font-size: 12px; background: #fdfdfd; transition: border-color 0.2s;">${obj.tecnico}</textarea></td>
                     </tr>
                 `;
             }).join('');
@@ -735,34 +779,239 @@
         }
     });
 
-    async function solicitarGuardarObjetivos() {
+    // --- LÓGICA RECUENTO DE OBJETIVOS (Sincronizado con Entrenamientos) ---
+    async function cargarRecuentoObjetivos() {
+        const equipo = document.getElementById('selectEquipoCoord').value;
+        const mes = document.getElementById('selectMesRecuento').value;
+        const mesSheet = formatMesParaSheet(mes);
+        const container = document.getElementById('containerRecuento');
+        
+        if (!equipo) {
+            container.innerHTML = '<div style="grid-column: span 2; text-align: center; padding: 40px; color: #ccc; font-weight: 700; border: 2px dashed #f0f0f0; border-radius: 15px;">SELECCIONA UN EQUIPO PARA VER EL PROGRESO</div>';
+            return;
+        }
+
+        container.innerHTML = '<div style="grid-column: span 2; text-align: center; padding: 40px;"><i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #E31E24;"></i></div>';
+
+        try {
+            const res = await fetch(`/api/objetivos_mensuales?fecha=${mesSheet}`);
+            const data = await res.json();
+            const obj = data[equipo] || { tactico: "", tecnico: "", completados: [] };
+            
+            const tacticos = obj.tactico ? obj.tactico.split(',').map(s => s.trim()).filter(s => s) : [];
+            const tecnicos = obj.tecnico ? obj.tecnico.split(',').map(s => s.trim()).filter(s => s) : [];
+            const completados = obj.completados || [];
+
+            const renderLista = (lista) => {
+                if (lista.length === 0) return `<div style="padding: 15px; background: rgba(0,0,0,0.03); border-radius: 12px; color: #bbb; font-size: 11px; text-align: center; border: 1px dashed #eee;">SIN OBJETIVOS DEFINIDOS</div>`;
+
+                return `<div style="display: flex; flex-direction: column; gap: 10px;">${lista.map(txt => {
+                    const isDone = completados.includes(txt);
+                    // Escapamos comillas simples para que no rompan el onclick
+                    const txtEscaped = txt.replace(/'/g, "\\'");
+                    const equipoEscaped = equipo.replace(/'/g, "\\'");
+                    const action = isAdminUser ? `onclick="toggleProgresoObjetivo('${txtEscaped}', '${equipoEscaped}', '${mes}', event)"` : '';
+                    const cursorStyle = isAdminUser ? 'cursor: pointer;' : 'cursor: default;';
+                    return `<div ${action} style="${cursorStyle} display: flex; align-items: center; gap: 12px; padding: 12px 18px; background: ${isDone ? '#eaffef' : '#fff'}; border-radius: 12px; border: 1px solid ${isDone ? '#2eb85c44' : '#eee'}; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: 0.2s;">
+                        <i class="fas ${isDone ? 'fa-check-circle' : 'fa-circle'}" style="color: ${isDone ? '#2eb85c' : '#eee'}; font-size: 16px;"></i>
+                        <span style="font-size: 12px; font-weight: 800; color: ${isDone ? '#1a7a35' : '#444'}; text-transform: uppercase; letter-spacing: 0.5px;">${txt}</span>
+                    </div>`;
+                }).join('')}</div>`;
+            };
+
+            const total = tacticos.length + tecnicos.length;
+            const done = completados.filter(c => tacticos.includes(c) || tecnicos.includes(c)).length;
+            const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+
+            container.innerHTML = `
+                <div style="background: #fdfdfd; padding: 25px; border-radius: 20px; border: 1px solid #f0f0f0;">
+                    <h4 style="font-size: 12px; font-weight: 900; color: #1a1a1a; margin-bottom: 20px; text-transform: uppercase; display: flex; align-items: center; gap: 10px;"><div style="width:8px; height:8px; border-radius:50%; background:#E31E24;"></div> Objetivos Tácticos</h4>
+                    ${renderLista(tacticos)}
+                </div>
+                <div style="background: #fdfdfd; padding: 25px; border-radius: 20px; border: 1px solid #f0f0f0;">
+                    <h4 style="font-size: 12px; font-weight: 900; color: #1a1a1a; margin-bottom: 20px; text-transform: uppercase; display: flex; align-items: center; gap: 10px;"><div style="width:8px; height:8px; border-radius:50%; background:#E31E24;"></div> Objetivos Técnicos</h4>
+                    ${renderLista(tecnicos)}
+                </div>
+                <div style="grid-column: span 2; margin-top: 10px; padding: 30px 40px; background: linear-gradient(135deg, #1e1e1e 0%, #000 100%); border-radius: 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 15px 30px rgba(0,0,0,0.2);">
+                    <div>
+                        <div style="color: #E31E24; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px;">Rendimiento del Equipo</div>
+                        <div style="color: white; font-size: 36px; font-weight: 900;">${done} <span style="font-size: 18px; color: #444; margin-left: 5px;">/ ${total} OBJETIVOS</span></div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="color: white; font-size: 32px; font-weight: 900; font-family: 'Archivo Black';">${percent}%</div>
+                        <div style="width: 200px; height: 10px; background: #333; border-radius: 20px; margin-top: 10px; overflow: hidden; border: 1px solid #444;">
+                            <div style="width: ${percent}%; height: 100%; background: linear-gradient(90deg, #b31d2c 0%, #E31E24 100%); box-shadow: 0 0 15px rgba(227,30,36,0.5); transition: 1.5s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } catch (e) {
+            container.innerHTML = '<div style="grid-column: span 2; text-align: center; padding: 20px; color: #dc3545; font-weight: 700;">Error al cargar datos</div>';
+        }
+    }
+
+    function cambiarMesRecuento(val, text) {
+        document.getElementById('selectMesRecuento').value = val;
+        document.getElementById('mesRecuentoText').innerText = text;
+        cargarRecuentoObjetivos();
+    }
+
+    async function solicitarGuardarObjetivos(btn) {
         const mes = document.getElementById('selectMesObjetivos').value;
+        const mesSheet = formatMesParaSheet(mes);
+        
+        
+        // Obtener datos actuales para no sobreescribir el progreso de 'completados'
+        const resActual = await fetch(`/api/objetivos_mensuales?mes=${mesSheet}`);
+        const dataActual = await resActual.json();
+        
         const objetivos = {};
         
+        const originalContent = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-cloud-upload-alt fa-pulse"></i> SINCRONIZANDO...';
+        btn.style.background = '#444';
+
         document.querySelectorAll('.obj-tactico').forEach(el => {
             const eq = el.dataset.equipo;
             const tec = document.querySelector(`.obj-tecnico[data-equipo="${eq}"]`).value;
-            objetivos[eq] = { tactico: el.value, tecnico: tec };
+            
+            // Obtener completados y filtrar solo los que aún existen en el nuevo texto
+            let compAnterior = (dataActual[eq] && dataActual[eq].completados) ? dataActual[eq].completados : [];
+            const nuevosTextos = (el.value + "," + tec).split(',').map(s => s.trim()).filter(s => s);
+            const compFiltrados = compAnterior.filter(item => nuevosTextos.includes(item));
+            
+            objetivos[eq] = { 
+                tactico: el.value, 
+                tecnico: tec, 
+                completados: compFiltrados 
+            };
         });
 
-        showLoader();
         try {
             const res = await fetch('/api/objetivos_mensuales', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ mes, objetivos })
+                body: JSON.stringify({ fecha: mesSheet, objetivos })
             });
             
             if (res.ok) {
-                alert("Objetivos sincronizados con éxito en todo el club.");
-                document.getElementById('modalObjetivosMensuales').style.display = 'none';
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> ¡SINCRONIZADO!';
+                btn.style.background = '#28a745';
+                
+                setTimeout(() => {
+                    document.getElementById('modalObjetivosMensuales').style.display = 'none';
+                    btn.innerHTML = originalContent;
+                    btn.style.background = '';
+                    btn.disabled = false;
+                    // Recargar los recuentos de la pestaña principal si están visibles
+                    if (typeof cargarRecuentoObjetivos === 'function') cargarRecuentoObjetivos();
+                }, 1500);
             } else {
                 alert("Error al guardar en el servidor.");
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
             }
         } catch (e) {
             alert("Error de conexión.");
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+        }
+    }
+
+    // --- NUEVAS FUNCIONES PARA AUTOGUARDADO Y PROGRESO ---
+
+    function formatMesParaSheet(mes) {
+        if (!mes || !mes.includes('-')) return mes;
+        const [y, m] = mes.split('-');
+        return `01/${m}/${y}`; // Guarda como 01/05/2026
+    }
+
+    async function toggleProgresoObjetivo(txt, equipo, mes, e) {
+        const mesSheet = formatMesParaSheet(mes);
+        const el = e.currentTarget;
+        let originalOpacity = "1";
+        
+        // Mostrar mensaje de "Guardando" inmediatamente (solo para admin)
+        if (isAdminUser) {
+            mostrarToastAutoguardado("SINCRONIZANDO PROGRESO...", false, true);
+        }
+
+        if (el) {
+            originalOpacity = el.style.opacity || "1";
+            el.style.opacity = "0.5";
+            el.style.pointerEvents = "none";
+        }
+
+        try {
+            // Obtener el estado actual completo del mes
+            const res = await fetch(`/api/objetivos_mensuales?mes=${mesSheet}`);
+            const data = await res.json();
+            
+            let obj = data[equipo] || { tactico: "", tecnico: "", completados: [] };
+            let completados = obj.completados || [];
+            const txtLimpio = txt.trim();
+
+            // Toggle del objetivo
+            if (completados.includes(txtLimpio)) {
+                completados = completados.filter(c => c !== txtLimpio);
+            } else {
+                completados.push(txtLimpio);
+            }
+
+            // Actualizar solo el equipo seleccionado manteniendo lo demás
+            data[equipo] = { ...obj, completados: completados };
+
+            // Guardar en el servidor (esto actualizará el Google Sheet)
+            const saveRes = await fetch('/api/objetivos_mensuales', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ mes: mesSheet, objetivos: data })
+            });
+
+            if (saveRes.ok) {
+                mostrarToastAutoguardado("¡OBJETIVO ACTUALIZADO!");
+                cargarRecuentoObjetivos();
+            } else {
+                mostrarToastAutoguardado("Error al sincronizar", true);
+            }
+        } catch (e) {
+            console.error("Error al sincronizar el objetivo:", e);
+            mostrarToastAutoguardado("Error de conexión", true);
         } finally {
-            hideLoader();
+            if (el) {
+                el.style.opacity = originalOpacity;
+                el.style.pointerEvents = "auto";
+            }
+        }
+    }
+
+    function mostrarToastAutoguardado(texto = "GUARDADO EN GOOGLE SHEETS", isError = false, isLoading = false) {
+        let toast = document.getElementById('toast-autoguardado');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'toast-autoguardado';
+            toast.style.cssText = "position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: white; padding: 12px 25px; border-radius: 30px; font-weight: 800; font-size: 11px; z-index: 10001; transition: 0.4s; opacity: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 10px; border: 1px solid #333;";
+            document.body.appendChild(toast);
+        }
+
+        toast.style.background = isError ? '#dc3545' : '#1a1a1a';
+        
+        let icon = '<i class="fas fa-check-circle" style="color: #2eb85c;"></i>';
+        if (isError) icon = '<i class="fas fa-exclamation-circle" style="color: white;"></i>';
+        if (isLoading) icon = '<i class="fas fa-sync fa-spin" style="color: #ffc107;"></i>';
+        
+        toast.innerHTML = `${icon} ${texto}`;
+
+        toast.style.opacity = "1";
+        toast.style.bottom = "40px";
+
+        // Si no está cargando, lo ocultamos tras 3 segundos. Si está cargando, esperamos a la siguiente respuesta.
+        if (!isLoading) {
+            setTimeout(() => { 
+                toast.style.opacity = "0"; 
+                toast.style.bottom = "30px";
+            }, 3000);
         }
     }
 

@@ -68,13 +68,31 @@ def deportivo():
     mes_actual = request.args.get('mes', '2026-05')
     hoy = datetime.now()
 
-    # 3. Cargar objetivos vinculados al EQUIPO activo (no solo al usuario)
-    # Así si un usuario cambia de equipo, ve objetivos distintos
-    obj_path = os.path.join(DATA_FOLDER, f'obj_{equipo_activo}_{mes_actual}.json')
-    objetivos = {"tactico": "TIRO, CENTRO", "tecnico": "", "completados": []}
-    if os.path.exists(obj_path):
-        with open(obj_path, 'r', encoding='utf-8') as f:
-            objetivos = json.load(f)
+    # 3. Cargar objetivos desde Google Sheets (en lugar de JSON)
+    objetivos = {"tactico": "", "tecnico": "", "completados": []}
+    try:
+        sheet_obj = client.open(NOMBRE_EXCEL).worksheet("OBJ TACTEC")
+        all_objs = sheet_obj.get_all_values()
+        target_y, target_m = mes_actual.split('-')
+        
+        for row in all_objs[1:]:
+            if len(row) < 2: continue
+            fecha_row = row[0].strip() # "DD/MM/YYYY"
+            if '/' not in fecha_row: continue
+            d, m, y = fecha_row.split('/')
+            if m == target_m and y == target_y and row[1].strip().upper() == equipo_activo.upper():
+                # La planificación mensual suele estar en el día 01
+                if d == "01" or not objetivos["tactico"]:
+                    objetivos["tactico"] = row[3].strip() if len(row) > 3 else objetivos["tactico"]
+                    objetivos["tecnico"] = row[4].strip() if len(row) > 4 else objetivos["tecnico"]
+                
+                # Agregar los completados del día a la lista con prefijo "dia-" para el frontend
+                if len(row) > 2 and row[2].strip():
+                    for o in row[2].split(','):
+                        if o.strip():
+                            objetivos["completados"].append(f"{int(d)}-{o.strip()}")
+    except Exception as e:
+        print(f"Error cargando objetivos desde Sheets para vista: {e}")
 
     # 4. Lógica del Calendario
     try:
@@ -273,43 +291,75 @@ def direccion_deportiva():
 
 @deportivo_bp.route('/api/objetivos_mensuales', methods=['GET', 'POST'])
 def api_objetivos_mensuales():
-    DATA_FOLDER = current_app.config.get('DATA_FOLDER', os.path.join(os.getcwd(), 'static', 'data'))
+    client = getattr(current_app, 'gs_client', None)
+    NOMBRE_EXCEL = getattr(current_app, 'gs_name', "Control Asistencia Club")
+    SHEET_NAME = "OBJ TACTEC"
     
     if request.method == 'GET':
-        mes = request.args.get('mes') # e.g. "2026-05"
+        mes = request.args.get('mes') or request.args.get('fecha')
         res = {}
-        if not os.path.exists(DATA_FOLDER): return jsonify(res)
-        
-        # Buscamos archivos que coincidan con el patrón de objetivos para ese mes
-        for f in os.listdir(DATA_FOLDER):
-            if f.startswith('obj_') and f.endswith(f'_{mes}.json'):
-                # Extraemos el nombre del equipo del nombre del archivo
-                equipo = f.replace('obj_', '').replace(f'_{mes}.json', '')
-                try:
-                    with open(os.path.join(DATA_FOLDER, f), 'r', encoding='utf-8') as file:
-                        res[equipo] = json.load(file)
-                except: pass
+        try:
+            sheet = client.open(NOMBRE_EXCEL).worksheet(SHEET_NAME)
+            all_v = sheet.get_all_values()
+            for row in all_v[1:]:
+                if len(row) >= 2 and str(row[0]).strip() == str(mes).strip(): # mes_final es 01/MM/YYYY
+                    eq = row[1].strip()
+                    comps_str = row[2].strip() if len(row) > 2 else "" # Columna C: Objetivos Completados
+                    tactico = row[3].strip() if len(row) > 3 else "" # Columna D: Objetivos Tácticos Planificados
+                    tecnico = row[4].strip() if len(row) > 4 else "" # Columna E: Objetivos Técnicos Planificados
+                    comps = [c.strip() for c in comps_str.split(',') if c.strip()]
+                    res[eq] = {
+                        "tactico": tactico,
+                        "tecnico": tecnico,
+                        "completados": [str(c).strip() for c in comps if str(c).strip()]
+                    }
+        except: pass
         return jsonify(res)
 
     # POST: Guardar objetivos de múltiples equipos para un mes determinado
     data = request.json
-    mes = data.get('mes')
-    objetivos_por_equipo = data.get('objetivos', {})
+    mes = data.get('mes') or data.get('fecha')
     
+    # Solo el admin puede modificar la planificación o progreso
+    if session.get('usuario') != 'admin':
+        return jsonify({"status": "error", "message": "Permiso denegado: Se requieren privilegios de administrador"}), 403
+
+    objetivos_por_equipo = data.get('objetivos', {})
+
+    try:
+        sheet = client.open(NOMBRE_EXCEL).worksheet(SHEET_NAME)
+    except:
+        spreadsheet = client.open(NOMBRE_EXCEL)
+        sheet = spreadsheet.add_worksheet(title=SHEET_NAME, rows="1000", cols="5")
+        headers = ["FECHA", "EQUIPO", "OBJETIVOS COMPLETADOS", "OBJETIVOS TACTICOS PLANIFICADOS", "OBJETIVOS TECNICOS PLANIFICADOS"]
+        sheet.append_row(headers)
+
+    all_v = sheet.get_all_values()
+
     for equipo, objs in objetivos_por_equipo.items():
-        obj_path = os.path.join(DATA_FOLDER, f'obj_{equipo}_{mes}.json')
-        existing = {"tactico": "", "tecnico": "", "completados": []}
-        if os.path.exists(obj_path):
-            try:
-                with open(obj_path, 'r', encoding='utf-8') as f:
-                    existing = json.load(f)
-            except: pass
+        tactico_str = objs.get("tactico", "").strip()
+        tecnico_str = objs.get("tecnico", "").strip()
+        # La lista de 'completados' no se guarda aquí, ya que se gestiona en /save_all para la marcación diaria.
+        # Si se envía en el POST, se ignora para la escritura en esta ruta.
         
-        # Actualizamos solo lo que viene de Dirección Deportiva
-        existing["tactico"] = objs.get("tactico", "")
-        existing["tecnico"] = objs.get("tecnico", "")
-        
-        with open(obj_path, 'w', encoding='utf-8') as f:
-            json.dump(existing, f, ensure_ascii=False)
-            
+        # Asegurar formato de fecha DD/MM/YYYY
+        mes_final = str(mes).strip()
+        if '-' in mes_final and len(mes_final) <= 7:
+            y, m = mes_final.split('-')
+            mes_final = f"01/{m}/{y}"
+
+        idx = -1
+        for i, row in enumerate(all_v):
+            if i > 0 and len(row) >= 2 and str(row[0]).strip() == mes_final and str(row[1]).strip().upper() == str(equipo).strip().upper():
+                idx = i + 1
+                break
+
+        if idx != -1:
+            # Actualizamos Columnas D y E (índices 4, 5) para los objetivos planificados
+            rango = f"D{idx}:E{idx}"
+            sheet.update(values=[[tactico_str, tecnico_str]], range_name=rango, value_input_option='USER_ENTERED')
+        else:
+            # Nueva fila: Fecha completa, Equipo, (vacío para Completados), Tácticos, Técnicos
+            sheet.append_row([mes_final, equipo, "", tactico_str, tecnico_str])
+
     return jsonify({"status": "success"})
