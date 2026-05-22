@@ -170,20 +170,7 @@
     </select>
 </div>
 
-        <div class="obj-container">
-    <div class="obj-row">
-        <div class="obj-box">
-            <label>TACTICO</label>
-            <input type="text" id="topTac" value="{{ objetivos.tactico }}" oninput="syncInputs()">
-        </div>
-        <div class="obj-box">
-            <label>TECNICO</label>
-            <input type="text" id="topTec" value="{{ objetivos.tecnico }}" oninput="syncInputs()">
-        </div>
-    </div>
-    <!-- Botón de guardado a la derecha -->
-    <div class="save-btn" title="Guardar Cambios" onclick="saveAll()">💾</div>
-</div>
+        <!-- Se han movido los objetivos a Dirección Deportiva -->
 
         <div class="grid">
             {% for semana in semanas %}
@@ -273,10 +260,10 @@
 
         // Sincronizar inputs superiores con tarjetas
         function syncInputs() {
-            const tacVal = document.getElementById('topTac').value.split(',').map(s => s.trim()).filter(s => s);
-            const tecVal = document.getElementById('topTec').value.split(',').map(s => s.trim()).filter(s => s);
+            // Los objetivos ahora son de solo lectura aquí (se gestionan desde Dirección Deportiva)
+            const tacVal = "{{ objetivos.tactico }}".split(',').map(s => s.trim()).filter(s => s);
+            const tecVal = "{{ objetivos.tecnico }}".split(',').map(s => s.trim()).filter(s => s);
 
-            // Ahora cada div sabe a qué día pertenece
             document.querySelectorAll('.day').forEach(dayDiv => {
                 const diaNum = dayDiv.querySelector('.day-num').innerText;
                 
@@ -326,10 +313,7 @@
 }
 
         function updateStats() {
-            const conceptos = [
-                ...document.getElementById('topTac').value.split(','),
-                ...document.getElementById('topTec').value.split(',')
-            ].map(s => s.trim()).filter(s => s !== "");
+            const conceptos = "{{ objetivos.tactico }},{{ objetivos.tecnico }}".split(',').map(s => s.trim()).filter(s => s !== "");
 
             const container = document.getElementById('dotContainer');
             container.innerHTML = ""; 
@@ -409,8 +393,9 @@ function viewPhoto(dia) {
         usuario: usuario,
         mes: document.getElementById('monthSelect').value,
         objetivos: {
-            tactico: document.getElementById('topTac').value,
-            tecnico: document.getElementById('topTec').value,
+            // Mantenemos los valores actuales inyectados por el servidor
+            tactico: "{{ objetivos.tactico }}",
+            tecnico: "{{ objetivos.tecnico }}",
             completados: itemsCompletados
         }
     };

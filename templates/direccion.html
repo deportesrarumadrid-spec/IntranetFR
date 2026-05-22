@@ -9,8 +9,84 @@
     .tab-content.active { display: block; }
 
     .coordinacion-layout { display: grid; grid-template-columns: 280px 1fr; gap: 20px; align-items: start; }
+
+    /* Estilos para Modales */
+    .modal { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+    .modal-content { background: white; padding: 0; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); overflow: hidden; }
+
     .card-coord { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+
+    /* Botón Premium Moderno */
+    .btn-premium {
+        background: linear-gradient(135deg, #b31d2c 0%, #911719 100%); /* Rojo Granate más claro */
+        color: white;
+        border: none;
+        padding: 12px 22px; /* Más pequeño */
+        border-radius: 12px;
+        font-weight: 800;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(145, 23, 25, 0.3);
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+        border: 1px solid rgba(255,255,255,0.1);
+        white-space: nowrap;
+    }
+    .btn-premium:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(145, 23, 25, 0.4); filter: brightness(1.1); }
+    .btn-premium:active { transform: scale(0.98); }
+
+    /* Nuevo Desplegable de Mes Personalizado (Moderno y Redondeado) */
+    .custom-mes-wrapper {
+        position: relative;
+        min-width: 190px;
+        user-select: none;
+    }
+    .custom-mes-trigger {
+        background: rgba(255, 255, 255, 0.12);
+        color: white;
+        border: 2px solid rgba(255, 255, 255, 0.35);
+        padding: 10px 45px 10px 22px;
+        border-radius: 30px;
+        font-weight: 800;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        backdrop-filter: blur(8px);
+    }
+    .custom-mes-trigger:hover {
+        background: rgba(255, 255, 255, 0.22);
+        border-color: rgba(255, 255, 255, 0.55);
+        transform: translateY(-1px);
+    }
+    .custom-mes-trigger::after {
+        content: '\f078'; font-family: 'Font Awesome 6 Free'; font-weight: 900;
+        position: absolute; right: 20px; font-size: 10px; transition: transform 0.3s;
+    }
+    .custom-mes-wrapper.open .custom-mes-trigger::after { transform: rotate(180deg); }
     
+    .custom-mes-options {
+        position: absolute; top: calc(100% + 10px); left: 0; width: 100%;
+        background: white; border-radius: 18px; box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        overflow: hidden; display: none; z-index: 1000; border: 1px solid #eee;
+        animation: slideDown 0.2s ease-out;
+    }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    .custom-mes-wrapper.open .custom-mes-options { display: block; }
+    
+    .custom-mes-option {
+        padding: 12px 22px; font-size: 13px; font-weight: 700; color: #444; cursor: pointer; transition: 0.2s;
+    }
+    .custom-mes-option:hover { background: #f8f9fa; color: #E31E24; padding-left: 28px; } /* Mantener hover suave */
+    .custom-mes-option.selected { background: linear-gradient(90deg, #911719 0%, #b31d2c 100%); color: white; } /* Degradado granate */
+
     .table-coord { width: 100%; border-collapse: collapse; font-size: 13px; }
     .table-coord th { text-align: left; padding: 12px; background: #f8f9fa; color: #666; font-weight: 900; border-bottom: 2px solid #eee; }
     .table-coord td { padding: 10px; border-bottom: 1px solid #eee; }
@@ -142,6 +218,9 @@
         <div class="coordinacion-layout">
             <!-- Calendario Pequeño -->
             <div class="card-coord">
+                <button class="btn-premium" onclick="abrirModalObjetivos()" style="margin-bottom: 25px; width: 100%;">
+                    <i class="fas fa-calendar-alt"></i> PROGRAMAR OBJETIVOS
+                </button>
                 <label style="font-size: 10px; font-weight: 900; color: #999; display: block; margin-bottom: 10px;">FECHA DE SEGUIMIENTO</label>
                 <div id="fullCalendarContainer">
                     <div class="calendar-header">
@@ -195,9 +274,27 @@
         </div>
     </div>
 
+    <!-- SUBPESTAÑA: D. DEPORTIVA -->
+    <!-- SUBPESTAÑA: D. DEPORTIVA -->
     <div id="tab-d-deportiva" class="tab-content">
-        <div class="card-coord" style="text-align: center; padding: 50px; color: #999;">Módulo de Dirección Deportiva Avanzada</div>
+        <div style="display: grid; grid-template-columns: 1fr 350px; gap: 20px;">
+            <div class="card-coord" style="padding: 40px; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 300px;">
+                <div style="font-size: 50px; color: #eee; margin-bottom: 20px;"><i class="fas fa-calendar-alt"></i></div>
+                <h3 style="font-weight: 900; color: #333; margin-bottom: 10px;">GESTIÓN ESTRATÉGICA</h3>
+                <p style="color: #999; font-size: 13px; text-align: center; max-width: 400px; margin-bottom: 30px;">
+                    Configura los objetivos tácticos y técnicos mensuales para que aparezcan automáticamente en el calendario de cada entrenador.
+                </p>
+                <button class="btn-premium" onclick="abrirModalObjetivos()">
+                    <i class="fas fa-calendar-alt" style="font-size: 20px;"></i>
+                    PROGRAMAR OBJETIVOS MENSUALES
+                </button>
+            </div>
+            <div class="card-coord" style="background: #f8f9fa; border: 2px dashed #ddd; display: flex; align-items: center; justify-content: center; color: #bbb; font-weight: 800; text-transform: uppercase; font-size: 11px;">
+                Módulos adicionales en desarrollo
+            </div>
+        </div>
     </div>
+
     <div id="tab-otros" class="tab-content">
         <div class="card-coord" style="text-align: center; padding: 50px; color: #999;">Módulo de Informes Técnicos</div>
     </div>
@@ -209,11 +306,72 @@
     {% endif %}
 </div>
 
-<script>
-    const jugadoresRaw = {{ jugadores_raw | tojson }};
+<!-- MODAL PROGRAMAR OBJETIVOS MENSUALES MEJORADO -->
+<div id="modalObjetivosMensuales" class="modal">
+    <div class="modal-content" style="width: 1100px; max-width: 95%; max-height: 92vh; border-radius: 25px; display: flex; flex-direction: column; border: none;">
+        <div style="background: linear-gradient(90deg, #911719 0%, #b31d2c 100%); padding: 30px 45px; display: flex; justify-content: space-between; align-items: center; color: white; border-bottom: 1px solid rgba(255,255,255,0.1);">
+            <div>
+                <h3 style="margin: 0; font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px;">
+                    <i class="fas fa-calendar-alt" style="color: white; margin-right: 18px; font-size: 28px;"></i> Planificación Estratégica
+                </h3>
+                <p style="margin: 8px 0 0 46px; font-size: 12px; color: #bbb; font-weight: 500;">Define objetivos tácticos y técnicos para cada equipo del club.</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <label style="font-size: 11px; font-weight: 800; color: white; text-transform: uppercase;">Mes:</label>
+                <div class="custom-mes-wrapper" id="customMesWrapper" onclick="this.classList.toggle('open')">
+                    <div class="custom-mes-trigger" id="mesSelectedText">Mayo 2026</div>
+                    <div class="custom-mes-options">
+                        <div class="custom-mes-option" onclick="updateCustomMes('2026-01', 'Enero 2026')" data-value="2026-01">Enero 2026</div>
+                        <div class="custom-mes-option" onclick="updateCustomMes('2026-02', 'Febrero 2026')" data-value="2026-02">Febrero 2026</div>
+                        <div class="custom-mes-option" onclick="updateCustomMes('2026-03', 'Marzo 2026')" data-value="2026-03">Marzo 2026</div>
+                        <div class="custom-mes-option" onclick="updateCustomMes('2026-04', 'Abril 2026')" data-value="2026-04">Abril 2026</div>
+                        <div class="custom-mes-option selected" onclick="updateCustomMes('2026-05', 'Mayo 2026')" data-value="2026-05">Mayo 2026</div>
+                        <div class="custom-mes-option" onclick="updateCustomMes('2026-06', 'Junio 2026')" data-value="2026-06">Junio 2026</div>
+                        <div class="custom-mes-option" onclick="updateCustomMes('2026-07', 'Julio 2026')" data-value="2026-07">Julio 2026</div>
+                        <div class="custom-mes-option" onclick="updateCustomMes('2026-08', 'Agosto 2026')" data-value="2026-08">Agosto 2026</div>
+                        <div class="custom-mes-option" onclick="updateCustomMes('2026-09', 'Septiembre 2026')" data-value="2026-09">Septiembre 2026</div>
+                        <div class="custom-mes-option" onclick="updateCustomMes('2026-10', 'Octubre 2026')" data-value="2026-10">Octubre 2026</div>
+                        <div class="custom-mes-option" onclick="updateCustomMes('2026-11', 'Noviembre 2026')" data-value="2026-11">Noviembre 2026</div>
+                        <div class="custom-mes-option" onclick="updateCustomMes('2026-12', 'Diciembre 2026')" data-value="2026-12">Diciembre 2026</div>
+                    </div>
+                </div>
+                <input type="hidden" id="selectMesObjetivos" value="2026-05">
+            </div>
+        </div>
+        
+        <div style="flex: 1; overflow-y: auto; padding: 30px; background: #fcfcfc;">
+            <p style="font-size: 11px; color: #999; margin-bottom: 20px; text-align: center; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+                <i class="fas fa-info-circle"></i> PARA PONER VARIOS OBJETIVOS SEPARALOS CON COMAS
+            </p>
+            <table class="table-coord" style="background: white; border-radius: 18px; box-shadow: 0 8px 25px rgba(0,0,0,0.05);">
+                <thead style="position: sticky; top: 0; z-index: 10; background: #fff; border-bottom: 1px solid #eee;">
+                    <tr>
+                        <th style="width: 220px; color: #666; font-size: 11px; padding: 20px 25px; text-transform: uppercase; letter-spacing: 0.5px;">Equipo</th>
+                        <th style="color: #666; font-size: 11px; padding: 20px 25px; text-transform: uppercase; letter-spacing: 0.5px;">Objetivos Tácticos</th>
+                        <th style="color: #666; font-size: 11px; padding: 20px 25px; text-transform: uppercase; letter-spacing: 0.5px;">Objetivos Técnicos</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyObjetivos">
+                    <tr><td colspan="3" style="text-align:center; padding:50px;"><i class="fas fa-spinner fa-spin"></i> Cargando equipos...</td></tr>
+                </tbody>
+            </table>
+        </div>
 
+        <div style="padding: 30px 40px; background: white; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 15px;">
+            <button class="btn-fin" style="background: #f0f2f5; color: #666; border: none; border-radius: 15px; padding: 15px 35px; font-weight: 800; font-size: 12px;" onclick="document.getElementById('modalObjetivosMensuales').style.display='none'">CANCELAR</button>
+            <button class="btn-premium" style="width: auto; padding: 12px 35px;" onclick="solicitarGuardarObjetivos()">
+                <i class="fas fa-save"></i> GUARDAR Y SINCRONIZAR
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const jugadoresRaw = {{ jugadores_raw | tojson if jugadores_raw else '[]' }};
+    const equiposList = {{ equipos | tojson if equipos else '[]' }};
     // Tab switching logic
     function switchTab(e, tabId) {
+
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
         e.currentTarget.classList.add('active');
@@ -512,6 +670,100 @@
             body: JSON.stringify({ fecha, equipo, grupo })
         });
         hideLoader();
+    }
+
+    // --- LÓGICA OBJETIVOS MENSUALES (VERSIÓN ÚNICA Y CORREGIDA) ---
+    function abrirModalObjetivos() {
+        const modal = document.getElementById('modalObjetivosMensuales');
+        if (modal) {
+            modal.style.display = 'flex';
+            cargarObjetivosMes();
+        }
+    }
+    async function cargarObjetivosMes() {
+        const mes = document.getElementById('selectMesObjetivos').value;
+        const tbody = document.getElementById('tbodyObjetivos');
+        if (!tbody) return;
+        
+        showLoader();
+        try {
+            const res = await fetch(`/api/objetivos_mensuales?mes=${mes}`);
+            const data = await res.json();
+            
+            if (!equiposList || equiposList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:30px; color: #999;">No hay equipos cargados</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = equiposList.map(eq => {
+                const obj = data[eq] || { tactico: "", tecnico: "" };
+                return `
+                    <tr style="transition: 0.2s;">
+                        <td style="font-weight: 900; color: #333; padding: 15px 25px; font-size: 14px; border-right: 1px solid #f0f0f0;">${eq}</td>
+                        <td style="padding: 15px 25px;"><textarea class="input-coord obj-tactico" data-equipo="${eq}" placeholder="Ej: Repliegue, Basculación, Presión alta..." style="height: 70px; resize: vertical; border: 1px solid #e0e0e0; padding: 12px; border-radius: 10px; font-weight: 500; font-size: 12px; background: #fdfdfd; transition: border-color 0.2s;"></textarea></td>
+                        <td style="padding: 15px 25px;"><textarea class="input-coord obj-tecnico" data-equipo="${eq}" placeholder="Ej: Control orientado, Conducción, Remate..." style="height: 70px; resize: vertical; border: 1px solid #e0e0e0; padding: 12px; border-radius: 10px; font-weight: 500; font-size: 12px; background: #fdfdfd; transition: border-color 0.2s;"></textarea></td>
+                    </tr>
+                `;
+            }).join('');
+        } catch (e) {
+            console.error("Error al cargar objetivos:", e);
+        } finally {
+            hideLoader();
+        }
+    }
+
+    // Funciones para el Desplegable de Mes Moderno
+    function updateCustomMes(val, text) {
+        document.getElementById('selectMesObjetivos').value = val;
+        document.getElementById('mesSelectedText').innerText = text;
+        
+        // Actualizar clase selected visualmente
+        document.querySelectorAll('.custom-mes-option').forEach(opt => {
+            opt.classList.remove('selected');
+            if (opt.dataset.value === val) opt.classList.add('selected');
+        });
+        
+        // Cargar objetivos del nuevo mes
+        cargarObjetivosMes();
+    }
+
+    // Cerrar desplegable si se hace clic fuera
+    document.addEventListener('click', function(e) {
+        const wrapper = document.getElementById('customMesWrapper');
+        if (wrapper && !wrapper.contains(e.target)) {
+            wrapper.classList.remove('open');
+        }
+    });
+
+    async function solicitarGuardarObjetivos() {
+        const mes = document.getElementById('selectMesObjetivos').value;
+        const objetivos = {};
+        
+        document.querySelectorAll('.obj-tactico').forEach(el => {
+            const eq = el.dataset.equipo;
+            const tec = document.querySelector(`.obj-tecnico[data-equipo="${eq}"]`).value;
+            objetivos[eq] = { tactico: el.value, tecnico: tec };
+        });
+
+        showLoader();
+        try {
+            const res = await fetch('/api/objetivos_mensuales', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ mes, objetivos })
+            });
+            
+            if (res.ok) {
+                alert("Objetivos sincronizados con éxito en todo el club.");
+                document.getElementById('modalObjetivosMensuales').style.display = 'none';
+            } else {
+                alert("Error al guardar en el servidor.");
+            }
+        } catch (e) {
+            alert("Error de conexión.");
+        } finally {
+            hideLoader();
+        }
     }
 
     // Sobreescribimos las funciones de navegación para actualizar ambos calendarios

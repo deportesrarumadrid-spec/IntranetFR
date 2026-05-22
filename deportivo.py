@@ -270,3 +270,46 @@ def direccion_deportiva():
     except Exception as e:
         print(f"Error en direccion_deportiva: {e}")
         return str(e), 500
+
+@deportivo_bp.route('/api/objetivos_mensuales', methods=['GET', 'POST'])
+def api_objetivos_mensuales():
+    DATA_FOLDER = current_app.config.get('DATA_FOLDER', os.path.join(os.getcwd(), 'static', 'data'))
+    
+    if request.method == 'GET':
+        mes = request.args.get('mes') # e.g. "2026-05"
+        res = {}
+        if not os.path.exists(DATA_FOLDER): return jsonify(res)
+        
+        # Buscamos archivos que coincidan con el patrón de objetivos para ese mes
+        for f in os.listdir(DATA_FOLDER):
+            if f.startswith('obj_') and f.endswith(f'_{mes}.json'):
+                # Extraemos el nombre del equipo del nombre del archivo
+                equipo = f.replace('obj_', '').replace(f'_{mes}.json', '')
+                try:
+                    with open(os.path.join(DATA_FOLDER, f), 'r', encoding='utf-8') as file:
+                        res[equipo] = json.load(file)
+                except: pass
+        return jsonify(res)
+
+    # POST: Guardar objetivos de múltiples equipos para un mes determinado
+    data = request.json
+    mes = data.get('mes')
+    objetivos_por_equipo = data.get('objetivos', {})
+    
+    for equipo, objs in objetivos_por_equipo.items():
+        obj_path = os.path.join(DATA_FOLDER, f'obj_{equipo}_{mes}.json')
+        existing = {"tactico": "", "tecnico": "", "completados": []}
+        if os.path.exists(obj_path):
+            try:
+                with open(obj_path, 'r', encoding='utf-8') as f:
+                    existing = json.load(f)
+            except: pass
+        
+        # Actualizamos solo lo que viene de Dirección Deportiva
+        existing["tactico"] = objs.get("tactico", "")
+        existing["tecnico"] = objs.get("tecnico", "")
+        
+        with open(obj_path, 'w', encoding='utf-8') as f:
+            json.dump(existing, f, ensure_ascii=False)
+            
+    return jsonify({"status": "success"})
