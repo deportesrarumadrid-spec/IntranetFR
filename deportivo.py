@@ -1,5 +1,6 @@
 import os
 import json
+import base64
 import calendar
 from datetime import datetime
 from flask import Blueprint, render_template, session, request, jsonify, redirect, current_app
@@ -10,6 +11,12 @@ deportivo_bp = Blueprint('deportivo_bp', __name__)
 def normalizar_cabeceras_dep(headers):
     """Limpia las cabeceras para que la búsqueda de columnas sea robusta."""
     return [str(h).strip().upper().replace('Ó','O').replace('Í','I').replace('É','E').replace('Á','A').replace('Ú','U').replace(' ', '').replace('_', '') for h in headers]
+
+def normalizar_fecha_sheet(fecha_str):
+    """Normaliza fechas tipo DD/MM/YYYY eliminando ceros iniciales para comparaciones seguras."""
+    if not fecha_str or '/' not in fecha_str: return str(fecha_str).strip()
+    partes = fecha_str.split('/')
+    return "/".join([str(int(p)) if p.strip().isdigit() else p.strip() for p in partes])
 
 @deportivo_bp.route('/deportivo')
 def deportivo():
@@ -144,14 +151,15 @@ def deportivo():
 
 @deportivo_bp.route('/api/seguimiento_coordinacion', methods=['GET', 'POST'])
 def api_seguimiento_coordinacion():
-    from app import client, NOMBRE_EXCEL
+    client = current_app.gs_client
+    NOMBRE_EXCEL = current_app.gs_name
     
     try:
         sheet_name = "COORDINACION"
         try:
             sheet = client.open(NOMBRE_EXCEL).worksheet(sheet_name)
         except:
-            sheet = client.open(NOMBRE_EXCEL).add_worksheet(title=sheet_name, rows="1000", cols="6")
+            sheet = client.open(NOMBRE_EXCEL).add_worksheet(title=sheet_name, rows=1000, cols=6)
             sheet.append_row(["FECHA", "EQUIPO", "JUGADOR", "REUNION", "TIPO", "OBSERVACIONES"])
 
         if request.method == 'GET':
@@ -211,13 +219,14 @@ def api_seguimiento_coordinacion():
 
 @deportivo_bp.route('/api/tecnificaciones', methods=['GET', 'POST'])
 def api_tecnificaciones():
-    from app import client, NOMBRE_EXCEL
+    client = current_app.gs_client
+    NOMBRE_EXCEL = current_app.gs_name
     try:
         sheet_name = "TECNIFICACIONES"
         try:
             sheet = client.open(NOMBRE_EXCEL).worksheet(sheet_name)
         except:
-            sheet = client.open(NOMBRE_EXCEL).add_worksheet(title=sheet_name, rows="1000", cols="3")
+            sheet = client.open(NOMBRE_EXCEL).add_worksheet(title=sheet_name, rows=1000, cols=3)
             sheet.append_row(["FECHA", "EQUIPO", "GRUPO"])
 
         if request.method == 'GET':
@@ -239,7 +248,7 @@ def api_tecnificaciones():
                 break
         
         if fila_idx != -1:
-            sheet.update(f'B{fila_idx}:C{fila_idx}', [[datos['equipo'], datos['grupo']]])
+            sheet.update(f'B{fila_idx}:C{fila_idx}', [[datos['equipo'], datos['grupo']]], value_input_option='USER_ENTERED')
         else:
             sheet.append_row([datos['fecha'], datos['equipo'], datos['grupo']])
             
@@ -249,9 +258,8 @@ def api_tecnificaciones():
 
 @deportivo_bp.route('/direccion_deportiva')
 def direccion_deportiva():
-    # Usamos current_app para evitar importaciones circulares que rompen el módulo
-    client = getattr(current_app, 'gs_client', None)
-    NOMBRE_EXCEL = getattr(current_app, 'gs_name', "Control Asistencia Club")
+    client = current_app.gs_client
+    NOMBRE_EXCEL = current_app.gs_name
     
     usuario = session.get('usuario')
     if not usuario:
@@ -291,8 +299,8 @@ def direccion_deportiva():
 
 @deportivo_bp.route('/api/objetivos_mensuales', methods=['GET', 'POST'])
 def api_objetivos_mensuales():
-    client = getattr(current_app, 'gs_client', None)
-    NOMBRE_EXCEL = getattr(current_app, 'gs_name', "Control Asistencia Club")
+    client = current_app.gs_client
+    NOMBRE_EXCEL = current_app.gs_name
     SHEET_NAME = "OBJ TACTEC"
     
     if request.method == 'GET':
@@ -363,3 +371,83 @@ def api_objetivos_mensuales():
             sheet.append_row([mes_final, equipo, "", tactico_str, tecnico_str])
 
     return jsonify({"status": "success"})
+
+@deportivo_bp.route('/api/ejercicios_semanales', methods=['GET', 'POST'])
+def api_ejercicios_semanales():
+    client = current_app.gs_client
+    NOMBRE_EXCEL = current_app.gs_name
+    SHEET_NAME = "EJERCICIOS"
+    try:
+        try:
+            sheet = client.open(NOMBRE_EXCEL).worksheet(SHEET_NAME)
+        except:
+            sheet = client.open(NOMBRE_EXCEL).add_worksheet(title=SHEET_NAME, rows=1000, cols=6)
+            sheet.append_row(["SEMANA", "EQUIPOS", "CATEGORIA", "TITULO", "DESCRIPCION", "URL"])
+
+        if request.method == 'GET':
+            semana = request.args.get('semana') # Format DD/MM/YYYY
+            semana_norm = normalizar_fecha_sheet(semana)
+            all_v = sheet.get_all_values()
+            res = []
+            for row in all_v[1:]:
+                # Comparamos fechas normalizadas
+                if len(row) >= 6 and normalizar_fecha_sheet(row[0]) == semana_norm:
+                    res.append({
+                        "equipos": row[1],
+                        "categoria": row[2],
+                        "titulo": row[3],
+                        "descripcion": row[4],
+                        "url": row[5]
+                    })
+            return jsonify(res)
+
+        # POST: Guardar ejercicio
+        data = request.json
+        semana = data.get('semana')
+        equipos_str = ",".join(data.get('equipos', []))
+        categoria = str(data.get('categoria'))
+        titulo = data.get('titulo')
+        descripcion = data.get('descripcion')
+        url = data.get('url', '')
+
+        semana_norm = normalizar_fecha_sheet(semana)
+        all_v = sheet.get_all_values()
+        fila_idx = -1
+        # Buscamos si ya existe ese ejercicio para esa semana y categoría
+        for i, row in enumerate(all_v):
+            if i == 0: continue
+            if len(row) >= 3 and normalizar_fecha_sheet(row[0]) == semana_norm and str(row[2]).strip() == str(categoria).strip():
+                fila_idx = i + 1
+                break
+        
+        # Aseguramos que los datos se guarden como texto para evitar que Sheets cambie formatos
+        nueva_fila = [str(semana), str(equipos_str), str(categoria), str(titulo), str(descripcion), str(url)]
+        if fila_idx != -1:
+            # Sintaxis universal para gspread (rango, valores)
+            sheet.update(f'A{fila_idx}:F{fila_idx}', [nueva_fila], value_input_option='USER_ENTERED')
+        else:
+            sheet.append_row(nueva_fila)
+        
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@deportivo_bp.route('/api/upload_ejercicio', methods=['POST'])
+def api_upload_ejercicio():
+    try:
+        # Usamos la carpeta de subidas configurada en app.py
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', os.path.join(os.getcwd(), 'static', 'uploads'))
+        if not upload_folder: 
+            return jsonify({"status": "error", "message": "Configuración UPLOAD_FOLDER no encontrada"}), 500
+        
+        os.makedirs(upload_folder, exist_ok=True)
+
+        file = request.files.get('file')
+        if not file: return jsonify({"status": "error", "message": "No se recibió ningún archivo"}), 400
+        
+        filename = f"ejercicio_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}"
+        file.save(os.path.join(upload_folder, filename))
+        return jsonify({"status": "success", "url": f"/static/uploads/{filename}"})
+    except Exception as e:
+        print(f"DEBUG UPLOAD ERROR: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500

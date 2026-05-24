@@ -1,6 +1,7 @@
 {% extends 'dashboard.html' %}
 
 {% block content %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
     .tabs-container { display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 2px solid #eee; }
     .tab-item { padding: 12px 25px; cursor: pointer; font-weight: 800; font-size: 11px; color: #999; text-transform: uppercase; transition: 0.3s; border-radius: 8px 8px 0 0; }
@@ -347,6 +348,18 @@
         border-color: #E31E24;
         background: linear-gradient(180deg, #fff 0%, #fff5f5 100%);
     }
+    .cat-box.disabled {
+        opacity: 0.6;
+        cursor: not-allowed !important;
+        pointer-events: none; /* Prevents click events */
+        border-color: #eee !important;
+        background: #f8f8f8 !important;
+        box-shadow: none !important;
+        transform: none !important;
+    }
+    .cat-box.disabled i, .cat-box.disabled span {
+        color: #ccc !important;
+    }
     .calendar-day.week-selected { background: #ffebeb; color: #E31E24; }
 
     .pill-checkbox {
@@ -650,7 +663,7 @@
                     <div style="display: flex; flex-wrap: wrap; gap: 10px;" id="containerTicksEquipos">
                         {% for eq in equipos %}
                         <label class="pill-checkbox">
-                            <input type="checkbox" class="check-eq-ejercicio" value="{{ eq }}" onchange="this.parentElement.classList.toggle('checked', this.checked)"> 
+                            <input type="checkbox" class="check-eq-ejercicio" value="{{ eq }}" onchange="this.parentElement.classList.toggle('checked', this.checked); checkAndEnableExerciseCategories();"> 
                             <i class="fas fa-shield-halved" style="font-size: 10px;"></i> {{ eq }}
                         </label>
                         {% endfor %}
@@ -658,41 +671,60 @@
                 </div>
 
                 <!-- Categorías de Ejercicios -->
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
-                    <div class="cat-box" onclick="mostrarSelectorCarga(0)">
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;" id="exerciseCategoriesContainer">
+                    <div class="cat-box disabled" onclick="mostrarSelectorCarga(0)">
                         <i class="fas fa-project-diagram" style="font-size: 24px; color: #E31E24; margin-bottom: 5px;"></i>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span id="txtCat_0" style="font-weight: 900; font-size: 12px;">JUGADA COMBINATIVA</span>
                             <i class="fas fa-pencil-alt" style="font-size: 10px; color: #E31E24;" onclick="event.stopPropagation(); editarNombreCategoria(0)"></i>
                         </div>
                         <div id="status_0" style="font-size: 9px; color: #999;">VACÍO</div>
+                        <div id="view_btn_container_0" style="margin-top: 10px;"></div>
                     </div>
-                    <div class="cat-box" onclick="mostrarSelectorCarga(1)">
+                    <div class="cat-box disabled" onclick="mostrarSelectorCarga(1)">
                         <i class="fas fa-running" style="font-size: 24px; color: #E31E24; margin-bottom: 5px;"></i>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span id="txtCat_1" style="font-weight: 900; font-size: 12px;">FISICO COORDINACIÓN</span>
                             <i class="fas fa-pencil-alt" style="font-size: 10px; color: #E31E24;" onclick="event.stopPropagation(); editarNombreCategoria(1)"></i>
                         </div>
                         <div id="status_1" style="font-size: 9px; color: #999;">VACÍO</div>
+                        <div id="view_btn_container_1" style="margin-top: 10px;"></div>
                     </div>
-                    <div class="cat-box" onclick="mostrarSelectorCarga(2)">
+                    <div class="cat-box disabled" onclick="mostrarSelectorCarga(2)">
                         <i class="fas fa-shoe-prints" style="font-size: 24px; color: #E31E24; margin-bottom: 5px;"></i>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span id="txtCat_2" style="font-weight: 900; font-size: 12px;">PIERNA NO HÁBIL</span>
                             <i class="fas fa-pencil-alt" style="font-size: 10px; color: #E31E24;" onclick="event.stopPropagation(); editarNombreCategoria(2)"></i>
                         </div>
                         <div id="status_2" style="font-size: 9px; color: #999;">VACÍO</div>
+                        <div id="view_btn_container_2" style="margin-top: 10px;"></div>
                     </div>
-                    <div class="cat-box" onclick="mostrarSelectorCarga(3)">
+                    <div class="cat-box disabled" onclick="mostrarSelectorCarga(3)">
                         <i class="fas fa-plus-circle" style="font-size: 24px; color: #E31E24; margin-bottom: 5px;"></i>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span id="txtCat_3" style="font-weight: 900; font-size: 12px;">EDITAR...</span>
                             <i class="fas fa-pencil-alt" style="font-size: 10px; color: #E31E24;" onclick="event.stopPropagation(); editarNombreCategoria(3)"></i>
                         </div>
                         <div id="status_3" style="font-size: 9px; color: #999;">VACÍO</div>
+                        <div id="view_btn_container_3" style="margin-top: 10px;"></div>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+    <input type="file" id="inputImgEje" style="display:none" accept="image/*, .pdf" onchange="subirArchivoEjercicio(this)">
+</div>
+
+<!-- MODAL VER EJERCICIO -->
+<div id="modalVerEjercicio" class="modal">
+    <div class="modal-content" style="width: 75vw; max-height: 85vh; border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; background: #fff; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
+        <div style="padding: 20px 30px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: #fff;">
+            <h3 id="txtTituloVerEjercicio" style="margin: 0; font-weight: 900; color: #1e293b; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 0.5px;">Ver Ejercicio</h3>
+            <span style="cursor: pointer; font-size: 32px; font-weight: 300; color: #94a3b8; line-height: 1; transition: 0.2s;" onmouseover="this.style.color='#E31E24'" onmouseout="this.style.color='#94a3b8'" onclick="document.getElementById('modalVerEjercicio').style.display='none'">&times;</span>
+        </div>
+        <div id="containerVerEjercicio" style="flex: 1; overflow-y: auto; padding: 40px; text-align: center; background: #f8fafc;">
+            <img id="imgVerEjercicio" src="" style="max-width: 100%; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 4px solid white; margin-bottom: 30px;">
+            <div id="descVerEjercicio" style="background: white; padding: 25px; border-radius: 15px; text-align: left; font-size: 14px; color: #444; border: 1px solid #eee; line-height: 1.7; box-shadow: 0 2px 8px rgba(0,0,0,0.02);"></div>
         </div>
     </div>
 </div>
@@ -728,7 +760,7 @@
                 <input type="text" id="nombreEjercicioPizarra" placeholder="Título del ejercicio..." style="border: none; border-bottom: 2px solid #eee; font-weight: 800; font-size: 1.1rem; padding: 5px 10px; outline: none; width: 300px; color: #E31E24;">
             </div>
             <div style="display: flex; gap: 15px;">
-                <button class="btn-fin" style="background: #28a745; color: white;" onclick="guardarEjercicioPizarra()"><i class="fas fa-save"></i> GUARDAR EJERCICIO</button>
+                <button id="btnGuardarPizarra" class="btn-fin" style="background: #10b981; color: white; padding: 12px 25px; border-radius: 14px; font-weight: 900;" onclick="guardarEjercicioPizarra(this)"><i class="fas fa-save"></i> GUARDAR EJERCICIO</button>
                 <button class="btn-fin" style="background: #eee; color: #666;" onclick="document.getElementById('modalEditorEjercicio').style.display='none'"><i class="fas fa-times"></i> CERRAR</button>
             </div>
         </div>
@@ -837,8 +869,17 @@
     let semanaActiva = null;
     let conoColorActivo = '#ff0000';
 
+    function getSemanaStr() {
+        if (!semanaActiva) return "";
+        const s = semanaActiva.start;
+        return `${s.getDate().toString().padStart(2, '0')}/${(s.getMonth() + 1).toString().padStart(2, '0')}/${s.getFullYear()}`;
+    }
+
     function mostrarSelectorCarga(idx) {
-        if (!semanaActiva) return alert("Primero selecciona una semana en el calendario");
+        const selectedTeams = Array.from(document.querySelectorAll('.check-eq-ejercicio:checked')).map(cb => cb.value);
+        if (!semanaActiva || selectedTeams.length === 0) {
+            return alert("Es obligatorio seleccionar una FECHA y al menos un EQUIPO antes de continuar.");
+        }
         catActiva = idx;
         document.getElementById('tituloCarga').innerText = document.getElementById(`txtCat_${idx}`).innerText;
         document.getElementById('modalTipoCargaEjercicio').style.display = 'flex';
@@ -846,8 +887,74 @@
 
     function prepararSubidaArchivo() {
         document.getElementById('modalTipoCargaEjercicio').style.display = 'none';
-        // Simulamos clic en imagen por defecto
         document.getElementById('inputImgEje').click();
+    }
+
+    async function subirArchivoEjercicio(input) {
+        if (!input.files || !input.files[0]) return;
+        const file = input.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        showLoader();
+        try {
+            const res = await fetch("{{ url_for('deportivo_bp.api_upload_ejercicio') }}", { method: 'POST', body: formData });
+            
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(`Error en el servidor (${res.status}): ${text.substring(0, 50)}`);
+            }
+
+            const result = await res.json();
+            
+            if (result.status === 'success') {
+                const selectedTeams = Array.from(document.querySelectorAll('.check-eq-ejercicio:checked')).map(cb => cb.value);
+                const semanaStr = getSemanaStr();
+                
+                const payload = {
+                    semana: semanaStr,
+                    equipos: selectedTeams,
+                    categoria: catActiva,
+                    titulo: document.getElementById(`txtCat_${catActiva}`).innerText,
+                    descripcion: "Archivo: " + file.name,
+                    url: result.url
+                };
+                
+                const saveRes = await fetch("{{ url_for('deportivo_bp.api_ejercicios_semanales') }}", {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                
+                if (saveRes.ok) {
+                    mostrarToastAutoguardado("ARCHIVO GUARDADO CORRECTAMENTE");
+                    cargarEjerciciosSemana();
+                }
+            }
+        } catch (e) { alert("Error al subir el archivo"); }
+        finally { hideLoader(); input.value = ''; }
+    }
+
+    function renderVerButton(idx, url, titulo, descripcion) {
+        const container = document.getElementById(`view_btn_container_${idx}`);
+        if (!container) return;
+        // Preparamos los textos para el modal (escapando comillas y saltos de línea)
+        const t = (titulo || "").replace(/'/g, "\\'");
+        const d = (descripcion || "").replace(/'/g, "\\'").replace(/\n/g, '<br>');
+
+        container.innerHTML = `
+            <button class="btn-fin" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; padding: 14px 18px; font-size: 10px; border-radius: 14px; width: 100%; justify-content: center; margin-top: 15px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.1); transition: 0.3s;" 
+                    onclick="event.stopPropagation(); abrirModalVerEjercicio('${url}', '${t}', '${d}')">
+                <i class="fas fa-eye"></i> VER EJERCICIO
+            </button>
+        `;
+    }
+
+    function abrirModalVerEjercicio(url, titulo, descripcion) {
+        document.getElementById('txtTituloVerEjercicio').innerText = titulo || "Visualización de Ejercicio";
+        document.getElementById('imgVerEjercicio').src = url;
+        document.getElementById('descVerEjercicio').innerHTML = descripcion || "<i>Sin descripción adicional.</i>";
+        document.getElementById('modalVerEjercicio').style.display = 'flex';
     }
 
     function prepararCrearPizarra() {
@@ -865,6 +972,7 @@
     function abrirModalEjercicios() {
         document.getElementById('modalEjerciciosSemanales').style.display = 'flex';
         renderCalendarWeekly();
+        checkAndEnableExerciseCategories();
     }
 
     function renderCalendarWeekly() {
@@ -923,6 +1031,7 @@
         endOfWeek.setDate(startOfWeek.getDate() + 6);
         endOfWeek.setHours(23,59,59,999);
 
+        document.querySelectorAll('.calendar-week-row').forEach(row => row.classList.remove('selected-week'));
         // Actualizar el texto de la semana seleccionada
         semanaActiva = { start: startOfWeek, end: endOfWeek };
         document.getElementById('semanaSeleccionadaTxt').innerText = 
@@ -945,6 +1054,39 @@
             row.classList.toggle('selected-week', isSelected);
             daysInRow.forEach(d => d.classList.toggle('week-selected', isSelected));
         });
+        checkAndEnableExerciseCategories();
+        cargarEjerciciosSemana();
+    }
+
+    async function cargarEjerciciosSemana() {
+        if (!semanaActiva) return;
+        const semanaStr = getSemanaStr();
+        
+        // Reset visual
+        for(let i=0; i<4; i++) {
+            const statusEl = document.getElementById(`status_${i}`);
+            const containerEl = document.getElementById(`view_btn_container_${i}`);
+            if (statusEl) {
+                statusEl.innerText = "VACÍO";
+                statusEl.style.color = "#999";
+            }
+            if (containerEl) containerEl.innerHTML = "";
+        }
+
+        try {
+            const res = await fetch("{{ url_for('deportivo_bp.api_ejercicios_semanales') }}?semana=" + semanaStr);
+            const data = await res.json();
+            
+            data.forEach(item => {
+                const idx = parseInt(item.categoria);
+                const statusEl = document.getElementById(`status_${idx}`);
+                if (statusEl) {
+                    statusEl.innerText = "✓ GUARDADO";
+                    statusEl.style.color = "#28a745";
+                    renderVerButton(idx, item.url, item.titulo, item.descripcion);
+                }
+            });
+        } catch (e) { console.error(e); }
     }
 
     function editarNombreCategoria(idx) {
@@ -969,6 +1111,18 @@
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
         setupCanvasListeners();
+    }
+
+    function checkAndEnableExerciseCategories() {
+        const catBoxes = document.querySelectorAll('#exerciseCategoriesContainer .cat-box');
+        const selectedTeams = Array.from(document.querySelectorAll('.check-eq-ejercicio:checked')).map(cb => cb.value);
+        const canProceed = semanaActiva && selectedTeams.length > 0;
+
+        catBoxes.forEach(box => {
+            box.classList.toggle('disabled', !canProceed);
+            box.style.cursor = canProceed ? 'pointer' : 'not-allowed';
+            box.style.pointerEvents = canProceed ? 'auto' : 'none';
+        });
     }
 
     // --- LÓGICA PIZARRA DRAG & DROP ---
@@ -1108,17 +1262,90 @@
         pizarraField.appendChild(el);
     }
 
-    async function guardarEjercicioPizarra() {
+    async function guardarEjercicioPizarra(btn) {
+        const originalContent = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> PROCESANDO...';
+        }
+        
         showLoader();
-        // Aquí iría la lógica para convertir el 'areaDibujo' en imagen (html2canvas) o guardar el JSON de posiciones.
-        // Por ahora simulamos el guardado exitoso:
-        setTimeout(() => {
-            hideLoader();
-            document.getElementById(`status_${catActiva}`).innerText = "✓ GUARDADO (PIZARRA)";
-            document.getElementById(`status_${catActiva}`).style.color = "#28a745";
-            document.getElementById('modalEditorEjercicio').style.display = 'none';
-            mostrarToastAutoguardado("EJERCICIO GUARDADO");
-        }, 1000);
+        try {
+            // Capturamos el contenedor de la pizarra como imagen real
+            const container = document.querySelector('.pizarra-container');
+            const canvasCap = await html2canvas(container, {
+                useCORS: true,
+                backgroundColor: '#2e7d32',
+                scale: 1
+            });
+            const imgData = canvasCap.toDataURL('image/jpeg', 0.8);
+            
+            // Subimos la captura al servidor
+            const fd = new FormData();
+            fd.append('file', dataURLtoBlob(imgData), 'pizarra.jpg');
+            
+            const uploadRes = await fetch("{{ url_for('deportivo_bp.api_upload_ejercicio') }}", {
+                method: 'POST',
+                body: fd
+            });
+
+            if (!uploadRes.ok) {
+                const text = await uploadRes.text();
+                throw new Error(`Error en el servidor al subir imagen (${uploadRes.status}): ${text.substring(0, 50)}`);
+            }
+
+            const uploadResult = await uploadRes.json();
+
+            if (uploadResult.status !== 'success') {
+                throw new Error("Error al subir la imagen");
+            }
+
+            const selectedTeams = Array.from(document.querySelectorAll('.check-eq-ejercicio:checked')).map(cb => cb.value);
+            const semanaStr = getSemanaStr();
+            
+            const payload = {
+                semana: semanaStr,
+                equipos: selectedTeams,
+                categoria: catActiva,
+                titulo: document.getElementById('nombreEjercicioPizarra').value || document.getElementById(`txtCat_${catActiva}`).innerText,
+                descripcion: document.getElementById('descEjercicioPizarra').value,
+                url: uploadResult.url
+            };
+
+            const saveRes = await fetch("{{ url_for('deportivo_bp.api_ejercicios_semanales') }}", {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            
+            if (saveRes.ok) {
+                document.getElementById('modalEditorEjercicio').style.display = 'none';
+                mostrarToastAutoguardado("EJERCICIO GUARDADO CORRECTAMENTE");
+                // Await para asegurar que termine de cargar antes de ocultar el loader
+                await cargarEjerciciosSemana();
+            } else {
+                throw new Error("El servidor no pudo registrar el ejercicio en el Excel.");
+            }
+        } catch(e) { 
+            console.error("Error crítico al guardar:", e);
+            alert("ERROR AL GUARDAR: " + e.message); 
+        }
+        finally { 
+            hideLoader(); 
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalContent;
+            }
+        }
+    }
+
+    function dataURLtoBlob(dataurl) {
+        var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+        while(n--){
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], {type:mime});
     }
 
     function resizeCanvas() {
@@ -1370,7 +1597,7 @@
         
         showLoader();
         // Mostrar loader al iniciar la petición
-        const res = await fetch(`/api/seguimiento_coordinacion?equipo=${equipo}&fecha=${fechaStr}`);
+        const res = await fetch("{{ url_for('deportivo_bp.api_seguimiento_coordinacion') }}?equipo=" + equipo + "&fecha=" + fechaStr);
         const data = await res.json();
         hideLoader();
 
@@ -1469,7 +1696,7 @@
 
         // Mostrar loader al iniciar la petición
         showLoader();
-        const res = await fetch('/api/seguimiento_coordinacion', {
+        const res = await fetch("{{ url_for('deportivo_bp.api_seguimiento_coordinacion') }}", {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
@@ -1507,7 +1734,7 @@
         // Cargar datos existentes
         // Mostrar loader al iniciar la petición
         showLoader();
-        const res = await fetch(`/api/tecnificaciones?mes_anio=${mesAnio}`);
+        const res = await fetch("{{ url_for('deportivo_bp.api_tecnificaciones') }}?mes_anio=" + mesAnio);
         const tecData = await res.json();
         hideLoader();
 
@@ -1568,7 +1795,7 @@
         // Solo guardamos si ambos están seleccionados o ambos vacíos (limpieza)
         // Mostrar loader al iniciar la petición
         showLoader();
-        await fetch('/api/tecnificaciones', {
+        await fetch("{{ url_for('deportivo_bp.api_tecnificaciones') }}", {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ fecha, equipo, grupo })
@@ -1592,7 +1819,7 @@
         
         showLoader();
         try {
-            const res = await fetch(`/api/objetivos_mensuales?fecha=${mesSheet}`);
+            const res = await fetch("{{ url_for('deportivo_bp.api_objetivos_mensuales') }}?fecha=" + mesSheet);
             const data = await res.json();
             
             if (!equiposList || equiposList.length === 0) {
@@ -1655,7 +1882,7 @@
         container.innerHTML = '<div style="grid-column: span 2; text-align: center; padding: 40px;"><i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #E31E24;"></i></div>';
 
         try {
-            const res = await fetch(`/api/objetivos_mensuales?fecha=${mesSheet}`);
+            const res = await fetch("{{ url_for('deportivo_bp.api_objetivos_mensuales') }}?fecha=" + mesSheet);
             const data = await res.json();
             const obj = data[equipo] || { tactico: "", tecnico: "", completados: [] };
             
@@ -1723,7 +1950,7 @@
         
         
         // Obtener datos actuales para no sobreescribir el progreso de 'completados'
-        const resActual = await fetch(`/api/objetivos_mensuales?mes=${mesSheet}`);
+        const resActual = await fetch("{{ url_for('deportivo_bp.api_objetivos_mensuales') }}?mes=" + mesSheet);
         const dataActual = await resActual.json();
         
         const objetivos = {};
@@ -1750,7 +1977,7 @@
         });
 
         try {
-            const res = await fetch('/api/objetivos_mensuales', {
+            const res = await fetch("{{ url_for('deportivo_bp.api_objetivos_mensuales') }}", {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ fecha: mesSheet, objetivos })
@@ -1806,7 +2033,7 @@
 
         try {
             // Obtener el estado actual completo del mes
-            const res = await fetch(`/api/objetivos_mensuales?mes=${mesSheet}`);
+            const res = await fetch("{{ url_for('deportivo_bp.api_objetivos_mensuales') }}?mes=" + mesSheet);
             const data = await res.json();
             
             let obj = data[equipo] || { tactico: "", tecnico: "", completados: [] };
@@ -1824,7 +2051,7 @@
             data[equipo] = { ...obj, completados: completados };
 
             // Guardar en el servidor (esto actualizará el Google Sheet)
-            const saveRes = await fetch('/api/objetivos_mensuales', {
+            const saveRes = await fetch("{{ url_for('deportivo_bp.api_objetivos_mensuales') }}", {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ mes: mesSheet, objetivos: data })
