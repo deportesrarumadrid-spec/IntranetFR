@@ -23,10 +23,10 @@
         border: none;
         padding: 12px 22px; /* Más pequeño */
         border-radius: 12px;
-        font-weight: 800;
-        font-size: 11px;
+        font-weight: 900;
+        font-size: 10px;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.5px;
         cursor: pointer;
         box-shadow: 0 4px 12px rgba(145, 23, 25, 0.3);
         transition: all 0.3s ease;
@@ -39,6 +39,28 @@
     }
     .btn-premium:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(145, 23, 25, 0.4); filter: brightness(1.1); }
     .btn-premium:active { transform: scale(0.98); }
+
+    /* Botón Oscuro Moderno (Para Ejercicios) */
+    .btn-modern-dark {
+        background: #1a1a1a;
+        color: white;
+        border: 1px solid rgba(255,255,255,0.05);
+        padding: 10px 18px;
+        border-radius: 10px;
+        font-weight: 900;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    .btn-modern-dark:hover { background: #000; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3); }
+    .btn-modern-dark:active { transform: scale(0.98); }
 
     /* Nuevo Desplegable de Mes Personalizado (Moderno y Redondeado) */
     .custom-mes-wrapper {
@@ -172,6 +194,8 @@
         border: 2px solid #E31E24;
         background: #ffebeb;
         color: #E31E24;
+        text-decoration: underline;
+        text-underline-offset: 4px;
     }
 
     /* Estilos para el calendario de Tecnificaciones */
@@ -182,6 +206,192 @@
     .tec-hoy-label { position: absolute; top: -8px; right: 10px; background: #E31E24; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; z-index: 20; }
     .tec-day-num { font-weight: 900; color: #E31E24; margin-bottom: 8px; border-bottom: 1px solid #eee; display: block; }
     .tec-select { width: 100%; padding: 4px; font-size: 10px; font-weight: 700; border-radius: 4px; border: 1px solid #eee; margin-bottom: 4px; background: #fafafa; }
+
+    /* Estilos Botones Modernos */
+    .btn-fin {
+        border: none;
+        padding: 12px 20px;
+        border-radius: 12px;
+        font-weight: 800;
+        font-size: 11px;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .btn-fin:hover { transform: translateY(-2px); filter: brightness(1.1); box-shadow: 0 6px 15px rgba(0,0,0,0.15); }
+    .btn-fin:active { transform: scale(0.95); }
+
+    /* Estilos Pizarra Táctica */
+    .pizarra-container {
+        width: 100%; height: 550px;
+        background: #2e7d32;
+        background-image: linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px);
+        background-size: 40px 40px;
+        position: relative;
+        overflow: hidden;
+        border: 6px solid #fff;
+        cursor: crosshair;
+        border-radius: 10px;
+        background-color: #2e7d32;
+        background-image: repeating-linear-gradient(
+            180deg,
+            #2e7d32,
+            #2e7d32 50px,
+            #2a702d 50px,
+            #2a702d 100px
+        );
+    }
+    /* Líneas reglamentarias campo (Campograma) */
+    .field-lines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 3px solid rgba(255,255,255,0.6); pointer-events: none; }
+    .field-half-line { position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: rgba(255,255,255,0.6); }
+    .field-center-circle { 
+        position: absolute; top: -90px; left: 50%; transform: translateX(-50%); 
+        width: 180px; height: 180px; border: 2px solid rgba(255,255,255,0.6); border-radius: 50%; 
+    }
+    .field-penalty-area { 
+        position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); 
+        width: 60%; height: 31%; border: 2px solid rgba(255,255,255,0.6); border-bottom: none; 
+    }
+    .field-goal-area { 
+        position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); 
+        width: 27%; height: 10%; border: 2px solid rgba(255,255,255,0.6); border-bottom: none; 
+    }
+    .field-penalty-spot { 
+        position: absolute; bottom: 21%; left: 50%; transform: translateX(-50%); 
+        width: 6px; height: 6px; background: rgba(255,255,255,0.8); border-radius: 50%; 
+    }
+    .field-penalty-arc { 
+        position: absolute; bottom: 31%; left: 50%; transform: translateX(-50%); 
+        width: 120px; height: 60px; border: 2px solid rgba(255,255,255,0.6); 
+        border-bottom: none; border-radius: 100px 100px 0 0; 
+    }
+    .field-goal-net {
+        position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+        width: 12%; height: 12px; border: 3px solid rgba(255,255,255,0.9); border-bottom: none; background: rgba(255,255,255,0.2); box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+    }
+
+    .herramientas-pizarra-side {
+        background: rgba(255,255,255,0.9);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 15px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        display: flex; flex-direction: column; gap: 12px;
+        align-items: center;
+        max-height: 550px;
+        overflow-y: hidden; /* Evitamos el scroll si es posible */
+    }
+    .herramienta-pizarra {
+        width: 34px; height: 34px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        cursor: grab;
+        transition: 0.2s;
+        font-size: 16px;
+        user-select: none;
+        touch-action: none;
+        border: 1px solid #eee;
+    }
+    .herramienta-pizarra.active-tool {
+        background: #E31E24 !important;
+        color: white !important;
+        border-color: #E31E24 !important;
+    }
+    .herramienta-pizarra:hover { background: white; transform: scale(1.1); border-color: #E31E24; color: #E31E24; }
+    
+    .resize-handle {
+        position: absolute; bottom: -8px; right: -8px;
+        width: 12px; height: 12px; background: #E31E24;
+        border-radius: 50%; cursor: nwse-resize; display: none;
+        z-index: 110; border: 2px solid white;
+    }
+    .item-pizarra:hover .resize-handle { display: block; }
+
+    .item-pizarra {
+        position: absolute;
+        cursor: move;
+        z-index: 100;
+        touch-action: none;
+        transition: transform 0.1s ease;
+    }
+    .rect-texto {
+        background: rgba(255,255,255,0.8);
+        border: 1px solid #333;
+        padding: 5px;
+        min-width: 80px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+    .cat-box {
+        flex: 1;
+        background: white;
+        border: 1px solid rgba(0,0,0,0.05);
+        border-radius: 20px;
+        padding: 25px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        min-height: 140px;
+        display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    }
+    .cat-box:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 15px 30px rgba(227, 30, 36, 0.1);
+        border-color: #E31E24;
+        background: linear-gradient(180deg, #fff 0%, #fff5f5 100%);
+    }
+    .calendar-day.week-selected { background: #ffebeb; color: #E31E24; }
+
+    .pill-checkbox {
+        display: flex; align-items: center; gap: 8px; background: #fff; border: 2px solid #eee; padding: 8px 16px; border-radius: 30px; font-size: 11px; font-weight: 800; cursor: pointer; transition: 0.3s; color: #666; user-select: none;
+    }
+    .pill-checkbox:hover { border-color: #E31E24; background: #fff5f5; }
+    .pill-checkbox input { display: none; }
+    .pill-checkbox.checked { background: #E31E24 !important; color: white !important; border-color: #E31E24 !important; box-shadow: 0 4px 10px rgba(227, 30, 36, 0.3); }
+    .pill-checkbox.checked i { color: white !important; }
+
+    /* Resaltado de fila de semana */
+    .calendar-week-row {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 5px;
+        padding: 4px;
+        border-radius: 8px;
+        transition: background 0.2s;
+        cursor: pointer;
+    }
+    .calendar-week-row:hover {
+        background: rgba(227, 30, 36, 0.05);
+        box-shadow: 0 0 0 1px #eee;
+    }
+    .calendar-week-row.selected-week { background: #ffebeb; }
+
+    /* Estilos para el pincel */
+    .pizarra-canvas {
+        position: absolute;
+        top: 0; left: 0;
+        z-index: 50; /* Debajo de los elementos arrastrables */
+    }
+    .drawing-options {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid #eee;
+    }
+    .drawing-options button {
+        background: #f0f0f0;
+        border: 1px solid #ddd;
+        color: #666;
+    }
 </style>
 
 <div style="padding: 10px;">
@@ -220,6 +430,9 @@
             <div class="card-coord">
                 <button class="btn-premium" onclick="abrirModalObjetivos()" style="margin-bottom: 25px; width: 100%;">
                     <i class="fas fa-calendar-alt"></i> PROGRAMAR OBJETIVOS
+                </button>
+                <button class="btn-modern-dark" onclick="abrirModalEjercicios()" style="margin-bottom: 25px; width: 100%;">
+                    <i class="fas fa-dumbbell"></i> PROGRAMAR EJERCICIOS SEMANALES
                 </button>
                 <label style="font-size: 10px; font-weight: 900; color: #999; display: block; margin-bottom: 10px;">FECHA DE SEGUIMIENTO</label>
                 <div id="fullCalendarContainer">
@@ -325,8 +538,11 @@
                     Configura los objetivos tácticos y técnicos mensuales para que aparezcan automáticamente en el calendario de cada entrenador.
                 </p>
                 <button class="btn-premium" onclick="abrirModalObjetivos()">
-                    <i class="fas fa-calendar-alt" style="font-size: 20px;"></i>
                     PROGRAMAR OBJETIVOS MENSUALES
+                </button>
+                <button class="btn-modern-dark" onclick="abrirModalEjercicios()" style="margin-top: 15px; width: 100%;">
+                    <i class="fas fa-dumbbell"></i>
+                    PROGRAMAR EJERCICIOS SEMANALES
                 </button>
             </div>
             <div class="card-coord" style="background: #f8f9fa; border: 2px dashed #ddd; display: flex; align-items: center; justify-content: center; color: #bbb; font-weight: 800; text-transform: uppercase; font-size: 11px;">
@@ -406,10 +622,655 @@
     </div>
 </div>
 
+<!-- MODAL EJERCICIOS SEMANALES -->
+<div id="modalEjerciciosSemanales" class="modal">
+    <div class="modal-content" style="width: 1200px; max-width: 95%; height: 90vh; border-radius: 30px;">
+        <div style="padding: 25px 40px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fff;">
+            <h3 style="margin: 0; font-weight: 900; color: #1a1a1a; letter-spacing: -0.5px; font-size: 1.5rem;">Planificación Semanal de Ejercicios</h3>
+            <button class="nav-button" onclick="document.getElementById('modalEjerciciosSemanales').style.display='none'"><i class="fas fa-times"></i></button>
+        </div>
+        
+        <div style="display: flex; flex: 1; overflow: hidden;">
+            <!-- Izquierda: Calendario Semanal -->
+            <div style="width: 300px; border-right: 1px solid #eee; padding: 20px; overflow-y: auto;">
+                <label style="font-size: 10px; font-weight: 900; color: #999; display: block; margin-bottom: 15px;">SELECCIONA SEMANA</label>
+                <div id="weeklyCalendarMonthYear" style="text-align: center; font-weight: 900; color: #333; margin-bottom: 10px; font-size: 13px; text-transform: uppercase;"></div>
+                <div style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 10px; font-weight: 800; color: #999; margin-bottom: 8px;">
+                    <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+                </div>
+                <div id="calendarWeekly"></div>
+                <div id="semanaSeleccionadaTxt" style="margin-top: 20px; font-size: 12px; font-weight: 800; color: #E31E24; text-align: center;"></div>
+            </div>
+
+            <!-- Derecha: Contenido -->
+            <div style="flex: 1; padding: 25px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto;">
+                <!-- Equipos (Ticks) -->
+                <div>
+                    <label style="font-size: 10px; font-weight: 900; color: #999; display: block; margin-bottom: 10px;">EQUIPOS DESTINATARIOS</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px;" id="containerTicksEquipos">
+                        {% for eq in equipos %}
+                        <label class="pill-checkbox">
+                            <input type="checkbox" class="check-eq-ejercicio" value="{{ eq }}" onchange="this.parentElement.classList.toggle('checked', this.checked)"> 
+                            <i class="fas fa-shield-halved" style="font-size: 10px;"></i> {{ eq }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Categorías de Ejercicios -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                    <div class="cat-box" onclick="mostrarSelectorCarga(0)">
+                        <i class="fas fa-project-diagram" style="font-size: 24px; color: #E31E24; margin-bottom: 5px;"></i>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span id="txtCat_0" style="font-weight: 900; font-size: 12px;">JUGADA COMBINATIVA</span>
+                            <i class="fas fa-pencil-alt" style="font-size: 10px; color: #E31E24;" onclick="event.stopPropagation(); editarNombreCategoria(0)"></i>
+                        </div>
+                        <div id="status_0" style="font-size: 9px; color: #999;">VACÍO</div>
+                    </div>
+                    <div class="cat-box" onclick="mostrarSelectorCarga(1)">
+                        <i class="fas fa-running" style="font-size: 24px; color: #E31E24; margin-bottom: 5px;"></i>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span id="txtCat_1" style="font-weight: 900; font-size: 12px;">FISICO COORDINACIÓN</span>
+                            <i class="fas fa-pencil-alt" style="font-size: 10px; color: #E31E24;" onclick="event.stopPropagation(); editarNombreCategoria(1)"></i>
+                        </div>
+                        <div id="status_1" style="font-size: 9px; color: #999;">VACÍO</div>
+                    </div>
+                    <div class="cat-box" onclick="mostrarSelectorCarga(2)">
+                        <i class="fas fa-shoe-prints" style="font-size: 24px; color: #E31E24; margin-bottom: 5px;"></i>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span id="txtCat_2" style="font-weight: 900; font-size: 12px;">PIERNA NO HÁBIL</span>
+                            <i class="fas fa-pencil-alt" style="font-size: 10px; color: #E31E24;" onclick="event.stopPropagation(); editarNombreCategoria(2)"></i>
+                        </div>
+                        <div id="status_2" style="font-size: 9px; color: #999;">VACÍO</div>
+                    </div>
+                    <div class="cat-box" onclick="mostrarSelectorCarga(3)">
+                        <i class="fas fa-plus-circle" style="font-size: 24px; color: #E31E24; margin-bottom: 5px;"></i>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span id="txtCat_3" style="font-weight: 900; font-size: 12px;">EDITAR...</span>
+                            <i class="fas fa-pencil-alt" style="font-size: 10px; color: #E31E24;" onclick="event.stopPropagation(); editarNombreCategoria(3)"></i>
+                        </div>
+                        <div id="status_3" style="font-size: 9px; color: #999;">VACÍO</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL SELECCIONAR TIPO DE CARGA -->
+<div id="modalTipoCargaEjercicio" class="modal">
+    <div class="modal-content" style="width: 450px; padding: 40px; border-radius: 30px; text-align: center;">
+        <h3 id="tituloCarga" style="font-weight: 900; margin-bottom: 30px; color: #1a1a1a; font-size: 1.2rem; text-transform: uppercase;">Opciones de Carga</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div class="cat-box" onclick="prepararSubidaArchivo()" style="min-height: 160px; border: 2px solid #eee; background: #fff; justify-content: space-between; padding-top: 30px; padding-bottom: 30px;">
+                <div style="width: 60px; height: 60px; background: #cce0ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                    <i class="fas fa-chalkboard-teacher" style="font-size: 28px; color: #0284c7;"></i>
+                </div>
+                <span style="font-weight: 900; font-size: 10px; text-transform: uppercase; color: #333;">Subir Documento</span>
+            </div>
+            <div class="cat-box" onclick="prepararCrearPizarra()" style="min-height: 160px; border: 2px solid #eee; background: #fff; justify-content: space-between; padding-top: 30px; padding-bottom: 30px;">
+                <div style="width: 60px; height: 60px; background: #bbf7d0; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                    <i class="fas fa-futbol" style="font-size: 24px; color: #16a34a;"></i>
+                </div>
+                <span style="font-weight: 900; font-size: 10px; text-transform: uppercase; color: #333;">Crear Documento</span>
+            </div>
+        </div>
+        <button class="btn-fin" style="margin-top: 30px; background: #f1f5f9; color: #64748b; width: 100%; justify-content: center;" onclick="document.getElementById('modalTipoCargaEjercicio').style.display='none'">CANCELAR</button>
+    </div>
+</div>
+
+<!-- MODAL EDITOR EJERCICIO (PIZARRA / SUBIDA) -->
+<div id="modalEditorEjercicio" class="modal">
+    <div class="modal-content" style="width: 95vw; height: 92vh; border-radius: 30px; background: #f4f7f6; display: flex; flex-direction: column;">
+        <div style="padding: 25px 40px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fff;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <h3 id="tituloEditor" style="margin: 0; font-weight: 900; color: #333; letter-spacing: -0.5px; font-size: 1.5rem;">Editor de Ejercicio:</h3>
+                <input type="text" id="nombreEjercicioPizarra" placeholder="Título del ejercicio..." style="border: none; border-bottom: 2px solid #eee; font-weight: 800; font-size: 1.1rem; padding: 5px 10px; outline: none; width: 300px; color: #E31E24;">
+            </div>
+            <div style="display: flex; gap: 15px;">
+                <button class="btn-fin" style="background: #28a745; color: white;" onclick="guardarEjercicioPizarra()"><i class="fas fa-save"></i> GUARDAR EJERCICIO</button>
+                <button class="btn-fin" style="background: #eee; color: #666;" onclick="document.getElementById('modalEditorEjercicio').style.display='none'"><i class="fas fa-times"></i> CERRAR</button>
+            </div>
+        </div>
+        
+        <div style="padding: 30px; display: grid; grid-template-columns: 300px 1fr 240px; gap: 25px; flex: 1; overflow: hidden;">
+            <!-- Izquierda: Descripción -->
+            <div style="background: white; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                <label style="font-size: 10px; font-weight: 900; color: #999; text-transform: uppercase; letter-spacing: 1px;">Descripción del Ejercicio</label>
+                <textarea id="descEjercicioPizarra" style="flex: 1; border: 1px solid #eee; border-radius: 12px; padding: 15px; font-family: inherit; font-size: 13px; font-weight: 600; color: #555; resize: none; background: #fafafa; outline: none;" placeholder="Escribe aquí los detalles del entrenamiento..."></textarea>
+            </div>
+
+            <!-- Centro: Campo -->
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; gap: 10px; align-items: center; justify-content: center; background: #fff; padding: 5px; border-radius: 10px; border: 1px solid #eee;">
+                    <div style="font-size: 10px; color: #999; font-weight: 800; flex: 1; text-align: center;">
+                    <i class="fas fa-mouse-pointer"></i> RUEDA DEL RATÓN PARA TAMAÑO | <strong style="color: #E31E24;"><i class="fas fa-hand-pointer"></i> DOBLE CLIC PARA ELIMINAR</strong>
+                    </div>
+                    <button onclick="toggleLineasCampo()" style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 6px; padding: 4px 10px; font-size: 9px; font-weight: 900; cursor: pointer; color: #666;"><i class="fas fa-border-none"></i> ELIMINAR LINEAS DEL CAMPO</button>
+                </div>
+                <div class="pizarra-container" style="height: 100%; width: 100%;">
+                    <canvas id="pizarraCanvas" class="pizarra-canvas"></canvas>
+                    <div class="field-lines"></div>
+                    <div class="field-half-line"></div>
+                    <div class="field-center-circle"></div>
+                    <div class="field-penalty-area"></div>
+                    <div class="field-penalty-arc"></div>
+                    <div class="field-goal-area"></div>
+                    <div class="field-penalty-spot"></div>
+                    <div class="field-goal-net"></div>
+                </div>
+            </div>
+            
+            <!-- Derecha: Herramientas (Material y Pincel) -->
+            <div class="herramientas-pizarra-side">
+                <label style="font-size: 8px; font-weight: 900; color: #E31E24; text-transform: uppercase; margin-bottom: -5px;">Material</label>
+                <div style="font-size: 8px; font-weight: 800; color: #999; text-transform: uppercase;">Arrastre el objeto</div>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%;">
+                    <div class="herramienta-pizarra" draggable="true" ondragstart="drag(event, 'ball')"><i class="fas fa-futbol" style="color: #333;"></i></div>
+                    
+                    <div id="prevCono" class="herramienta-pizarra" draggable="true" ondragstart="drag(event, 'cone')">
+                        <div style="width: 18px; height: 6px; background: #ff0000; border-radius: 10px 10px 3px 3px;"></div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1px;">
+                        <div onclick="cambiarColorCono('#ff0000')" style="width: 7px; height: 7px; background: red; cursor: pointer; border-radius: 50%;"></div>
+                        <div onclick="cambiarColorCono('#0000ff')" style="width: 7px; height: 7px; background: blue; cursor: pointer; border-radius: 50%;"></div>
+                        <div onclick="cambiarColorCono('#ffff00')" style="width: 7px; height: 7px; background: yellow; cursor: pointer; border-radius: 50%;"></div>
+                        <div onclick="cambiarColorCono('#DFFF00')" style="width: 7px; height: 7px; background: #DFFF00; cursor: pointer; border-radius: 50%;"></div>
+                        <div onclick="cambiarColorCono('#ffffff')" style="width: 7px; height: 7px; background: white; border: 1px solid #ccc; cursor: pointer; border-radius: 50%;"></div>
+                    </div>
+                </div>
+
+                <label style="font-size: 8px; font-weight: 900; color: #2563eb; text-transform: uppercase; margin-top: 2px;">Jugadores</label>
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; width: 100%;">
+                    <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="drag(event, 'player-red')" onclick="setDrawingMode('none')" title="Rojo"><div style="width:10px; height:10px; background:red; border-radius:50%;"></div></div>
+                    <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="drag(event, 'player-green')" onclick="setDrawingMode('none')" title="Verde Fosforito"><div style="width:10px; height:10px; background:#DFFF00; border-radius:50%;"></div></div>
+                    <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="drag(event, 'player-white')" onclick="setDrawingMode('none')" title="Blanco"><div style="width:10px; height:10px; background:white; border-radius:50%; border:1px solid #ccc;"></div></div>
+                    <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="drag(event, 'player-blue')" onclick="setDrawingMode('none')" title="Azul"><div style="width:10px; height:10px; background:blue; border-radius:50%;"></div></div>
+                    <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="drag(event, 'player-yellow')" onclick="setDrawingMode('none')" title="Amarillo"><div style="width:10px; height:10px; background:yellow; border-radius:50%;"></div></div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; margin-top: 5px;">
+                    <div class="herramienta-pizarra" draggable="true" ondragstart="drag(event, 'pica')" onclick="setDrawingMode('none')" title="Pica"><div style="width: 2px; height: 20px; background: #333;"></div></div>
+                    <div class="herramienta-pizarra" draggable="true" ondragstart="drag(event, 'goal-mini')" onclick="setDrawingMode('none')" title="Mini Portería"><div style="width:16px; height:10px; border:1.5px solid #333; border-bottom:none;"></div></div>
+                    <div class="herramienta-pizarra" draggable="true" ondragstart="drag(event, 'text')" onclick="setDrawingMode('none')" title="Texto"><span style="font-weight:900; font-size:10px;">ABC</span></div>
+                </div>
+                
+                <label style="font-size: 8px; font-weight: 900; color: #E31E24; text-transform: uppercase; margin-top: 2px;">Pincel</label>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%;">
+                    <div class="herramienta-pizarra tool-pincel" onclick="setDrawingMode('freehand', this)" title="Dibujo a mano alzada"><i class="fas fa-pencil-alt"></i></div>
+                    <div class="herramienta-pizarra tool-pincel" onclick="setDrawingMode('straight', this)" title="Flecha Recta"><i class="fas fa-long-arrow-alt-right"></i></div>
+                    <div class="herramienta-pizarra tool-pincel" onclick="setDrawingMode('dashed', this)" title="Flecha Discontinua"><i class="fas fa-arrow-right" style="border-bottom: 2px dashed; padding-bottom: 2px;"></i></div>
+                    <div class="herramienta-pizarra tool-pincel" onclick="setDrawingMode('rect', this)" title="Zona (Rectángulo)"><i class="far fa-square"></i></div>
+                </div>
+                
+                <div style="display: flex; gap: 8px; margin-top: 8px; justify-content: center; width: 100%;">
+                    <div onclick="cambiarColorPincel('#E31E24', this)" style="width: 15px; height: 15px; background: #E31E24; border-radius: 50%; cursor: pointer; border: 2px solid white; box-shadow: 0 0 0 2px #E31E24;" class="pincel-color-opt"></div>
+                    <div onclick="cambiarColorPincel('#2563eb', this)" style="width: 15px; height: 15px; background: #2563eb; border-radius: 50%; cursor: pointer; border: 2px solid white; box-shadow: 0 0 0 1px #eee;" class="pincel-color-opt"></div>
+                    <div onclick="cambiarColorPincel('#28a745', this)" style="width: 15px; height: 15px; background: #28a745; border-radius: 50%; cursor: pointer; border: 2px solid white; box-shadow: 0 0 0 1px #eee;" class="pincel-color-opt"></div>
+                    <div onclick="cambiarColorPincel('#333333', this)" style="width: 15px; height: 15px; background: #333333; border-radius: 50%; cursor: pointer; border: 2px solid white; box-shadow: 0 0 0 1px #eee;" class="pincel-color-opt"></div>
+                    <div onclick="cambiarColorPincel('#ffffff', this)" style="width: 15px; height: 15px; background: #ffffff; border-radius: 50%; cursor: pointer; border: 2px solid #ccc; box-shadow: 0 0 0 1px #eee;" class="pincel-color-opt"></div>
+                </div>
+
+                <div style="display: flex; gap: 5px; width: 100%; margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
+                    <button class="btn-fin" style="padding: 6px; font-size: 8px; flex: 1; justify-content: center; background: #f8f9fa; color: #666; width: auto; min-width: 0;" onclick="undoLastDraw()" title="Deshacer"><i class="fas fa-undo"></i> DESHACER</button>
+                    <button class="btn-fin" style="padding: 6px; font-size: 8px; flex: 1; justify-content: center; background: #ffebeb; color: #E31E24; width: auto; min-width: 0; border: 1px solid #ffcccc;" onclick="clearDrawings()" title="Eliminar todo"><i class="fas fa-trash-alt"></i> ELIMINAR TODO</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     const jugadoresRaw = {{ jugadores_raw | tojson if jugadores_raw else '[]' }};
     const equiposList = {{ equipos | tojson if equipos else '[]' }};
     const isAdminUser = '{{ usuario|lower }}' === 'admin';
+
+    // --- LÓGICA PIZARRA CANVAS ---
+    let pizarraCanvas, ctx;
+    let isDrawing = false;
+    let lastX = 0, lastY = 0;
+    let drawingMode = 'none'; // 'none', 'freehand', 'straight', 'dashed'
+    let drawHistory = [];
+
+    // --- LÓGICA PLANIFICACIÓN SEMANAL ---
+    let catActiva = -1;
+    let semanaActiva = null;
+    let conoColorActivo = '#ff0000';
+
+    function mostrarSelectorCarga(idx) {
+        if (!semanaActiva) return alert("Primero selecciona una semana en el calendario");
+        catActiva = idx;
+        document.getElementById('tituloCarga').innerText = document.getElementById(`txtCat_${idx}`).innerText;
+        document.getElementById('modalTipoCargaEjercicio').style.display = 'flex';
+    }
+
+    function prepararSubidaArchivo() {
+        document.getElementById('modalTipoCargaEjercicio').style.display = 'none';
+        // Simulamos clic en imagen por defecto
+        document.getElementById('inputImgEje').click();
+    }
+
+    function prepararCrearPizarra() {
+        document.getElementById('modalTipoCargaEjercicio').style.display = 'none';
+        abrirEditorEjercicio(catActiva);
+    }
+
+    function cambiarColorCono(color) {
+        conoColorActivo = color;
+        const prev = document.getElementById('prevCono');
+        prev.innerHTML = `<div style="width: 20px; height: 20px; position: relative; display: flex; align-items: center; justify-content: center;"><div style="width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 16px solid ${color}; position: relative; z-index: 2;"></div><div style="width: 18px; height: 4px; background: ${color}; border-radius: 50%; position: absolute; bottom: 0; z-index: 1; filter: brightness(0.7);"></div></div>`;
+    }
+    function toggleLineasCampo() { const s = '.field-lines, .field-half-line, .field-center-circle, .field-penalty-area, .field-penalty-arc, .field-goal-area, .field-penalty-spot, .field-goal-net'; document.querySelectorAll(s).forEach(el => el.style.display = el.style.display === 'none' ? 'block' : 'none'); }
+
+    function abrirModalEjercicios() {
+        document.getElementById('modalEjerciciosSemanales').style.display = 'flex';
+        renderCalendarWeekly();
+    }
+
+    function renderCalendarWeekly() {
+        const grid = document.getElementById('calendarWeekly');
+        grid.innerHTML = '';
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+
+        document.getElementById('weeklyCalendarMonthYear').innerText = 
+            now.toLocaleString('es-ES', { month: 'long', year: 'numeric' }).toUpperCase();
+
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0).getDate();
+        
+        // Alineación Lunes a Domingo
+        let startDay = firstDay.getDay();
+        if (startDay === 0) startDay = 6; else startDay--;
+
+        let currentWeekRow = document.createElement('div');
+        currentWeekRow.className = 'calendar-week-row';
+        grid.appendChild(currentWeekRow);
+
+        for (let i = 0; i < startDay; i++) {
+            const empty = document.createElement('div');
+            empty.classList.add('calendar-day', 'empty');
+            currentWeekRow.appendChild(empty);
+        }
+
+        const today = new Date();
+        for (let d = 1; d <= lastDay; d++) {
+            if (currentWeekRow.children.length === 7) {
+                currentWeekRow = document.createElement('div');
+                currentWeekRow.className = 'calendar-week-row';
+                grid.appendChild(currentWeekRow);
+            }
+
+            const day = document.createElement('div');
+            day.className = 'calendar-day';
+            if (d === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+                day.classList.add('today');
+            }
+            day.innerText = d;
+            day.onclick = (e) => { e.stopPropagation(); seleccionarSemana(new Date(year, month, d)); };
+            currentWeekRow.appendChild(day);
+        }
+    }
+
+    function seleccionarSemana(date) {
+        const startOfWeek = new Date(date);
+        startOfWeek.setHours(0,0,0,0);
+        const day = startOfWeek.getDay() || 7; // Domingo es 7
+        startOfWeek.setDate(startOfWeek.getDate() - (day - 1)); // Retroceder al Lunes
+
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23,59,59,999);
+
+        // Actualizar el texto de la semana seleccionada
+        semanaActiva = { start: startOfWeek, end: endOfWeek };
+        document.getElementById('semanaSeleccionadaTxt').innerText = 
+            `SEMANA: ${startOfWeek.toLocaleDateString()} al ${endOfWeek.toLocaleDateString()}`;
+        
+        // Actualizar el display del mes/año para el calendario semanal
+        document.getElementById('weeklyCalendarMonthYear').innerText = 
+            startOfWeek.toLocaleString('es-ES', { month: 'long', year: 'numeric' }).toUpperCase();
+
+        const currentMonth = date.getMonth();
+        const currentYear = date.getFullYear();
+
+        document.querySelectorAll('.calendar-week-row').forEach(row => {
+            const daysInRow = Array.from(row.querySelectorAll('.calendar-day:not(.empty)'));
+            const isSelected = daysInRow.some(d => {
+                const dDate = new Date(currentYear, currentMonth, parseInt(d.innerText));
+                dDate.setHours(0,0,0,0);
+                return dDate >= startOfWeek && dDate <= endOfWeek;
+            });
+            row.classList.toggle('selected-week', isSelected);
+            daysInRow.forEach(d => d.classList.toggle('week-selected', isSelected));
+        });
+    }
+
+    function editarNombreCategoria(idx) {
+        const nuevo = prompt("Nuevo nombre para la categoría:", document.getElementById(`txtCat_${idx}`).innerText);
+        if (nuevo) document.getElementById(`txtCat_${idx}`).innerText = nuevo.toUpperCase();
+    }
+
+    function abrirEditorEjercicio(idx) {
+        catActiva = idx;
+        document.getElementById('tituloEditor').innerText = "EDITOR: " + document.getElementById(`txtCat_${idx}`).innerText;
+        document.getElementById('nombreEjercicioPizarra').value = "";
+        document.getElementById('descEjercicioPizarra').value = "";
+        document.getElementById('modalEditorEjercicio').style.display = 'flex';
+
+        // Limpiar el campo y historial
+        document.querySelectorAll('.item-pizarra').forEach(el => el.remove());
+        drawHistory = [];
+
+        // Inicializar Canvas
+        pizarraCanvas = document.getElementById('pizarraCanvas');
+        ctx = pizarraCanvas.getContext('2d');
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        setupCanvasListeners();
+    }
+
+    // --- LÓGICA PIZARRA DRAG & DROP ---
+    function drag(ev, type) {
+        ev.dataTransfer.setData("type", type);
+        setDrawingMode('none');
+    }
+
+    const pizarraField = document.querySelector('.pizarra-container'); // Renombrado para claridad
+    pizarraField.ondragover = (e) => e.preventDefault();
+    pizarraField.ondrop = (e) => {
+        e.preventDefault();
+        const type = e.dataTransfer.getData("type");
+        const rect = pizarraField.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        crearElementoPizarra(type, x, y);
+    };
+
+    function crearElementoPizarra(type, x, y) {
+        const el = document.createElement('div');
+        el.className = 'item-pizarra';
+        el.style.left = (x - 15) + 'px';
+        el.style.top = (y - 15) + 'px';
+        
+        let content = '';
+        switch(type) {
+            case 'ball': content = '<i class="fas fa-futbol" style="color:#333; font-size:24px; filter: drop-shadow(2px 2px 3px rgba(0,0,0,0.2));"></i>'; break;
+            case 'cone': content = `<div style="width: 24px; height: 24px; position: relative; display: flex; align-items: center; justify-content: center; filter: drop-shadow(2px 2px 3px rgba(0,0,0,0.3));"><div style="width: 0; height: 0; border-left: 9px solid transparent; border-right: 9px solid transparent; border-bottom: 20px solid ${conoColorActivo}; position: relative; z-index: 2;"></div><div style="width: 22px; height: 6px; background: ${conoColorActivo}; border-radius: 50%; position: absolute; bottom: 0; z-index: 1; filter: brightness(0.7);"></div></div>`; break;
+            case 'player-red': content = '<div style="width:26px; height:26px; background:red; border-radius:50%; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>'; break;
+            case 'player-green': content = '<div style="width:26px; height:26px; background:#DFFF00; border-radius:50%; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>'; break;
+            case 'player-blue': content = '<div style="width:26px; height:26px; background:blue; border-radius:50%; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>'; break;
+            case 'player-yellow': content = '<div style="width:26px; height:26px; background:yellow; border-radius:50%; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>'; break;
+            case 'player-white': content = '<div style="width:26px; height:26px; background:white; border-radius:50%; border:1px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>'; break;
+            case 'pica': content = '<div style="width: 4px; height: 35px; background: #333; position: relative;"><div style="width: 14px; height: 5px; background: #333; position: absolute; bottom: 0; left: -5px; border-radius: 2px;"></div></div>'; break;
+            case 'valla': content = '<div style="width:30px; height:15px; border:3px solid #ff9800; border-bottom:none; border-radius:4px 4px 0 0;"></div>'; break;
+            case 'escalera': content = '<div style="width:20px; height:40px; border:2px solid #ccc; display:flex; flex-direction:column; gap:4px; padding:2px;">' + '<div style="height:4px; background:#ccc;"></div>'.repeat(5) + '</div>'; break;
+            case 'goal-mini': content = '<div style="width: 30px; height: 18px; border: 2px solid white; border-bottom: none; background: rgba(255,255,255,0.2);"></div>'; break;
+            case 'goal': content = '<div style="width: 60px; height: 35px; border: 3px solid white; border-bottom: none; background: repeating-linear-gradient(90deg, white, white 1px, transparent 1px, transparent 10px), repeating-linear-gradient(0deg, white, white 1px, transparent 1px, transparent 10px); opacity:0.6;"></div>'; break;
+            case 'text': 
+                el.className += ' rect-texto';
+                el.contentEditable = true;
+                el.innerText = 'TEXTO...';
+                break;
+        }
+        el.innerHTML = content;
+        
+        // Hacer movible después de soltar
+        // Usar Pointer Events para compatibilidad táctil
+        let activePointerId = null;
+        let isDragging = false;
+        let initialX, initialY;
+        let currentX, currentY;
+
+        el.oncontextmenu = (e) => {
+            e.preventDefault();
+            selectItem(el);
+            copySelectedItem();
+        };
+
+        el.onpointerdown = (e) => {
+            selectItem(el);
+            if (el.contentEditable === "true" || e.button !== 0) return; // Only left click
+            e.preventDefault();
+            isDragging = true;
+            activePointerId = e.pointerId;
+            initialX = e.clientX;
+            initialY = e.clientY;
+            currentX = el.offsetLeft;
+            currentY = el.offsetTop;
+            el.setPointerCapture(activePointerId);
+        };
+
+        el.onpointermove = (e) => {
+            if (!isDragging || e.pointerId !== activePointerId) return;
+            e.preventDefault();
+            const dx = e.clientX - initialX;
+            const dy = e.clientY - initialY;
+            el.style.left = (currentX + dx) + 'px';
+            el.style.top = (currentY + dy) + 'px';
+        };
+
+        function selectItem(target) {
+            document.querySelectorAll('.item-pizarra').forEach(i => i.style.outline = 'none');
+            target.style.outline = '2px dashed #E31E24';
+            selectedItem = target;
+        }
+
+        el.onpointerup = (e) => {
+            if (e.pointerId !== activePointerId) return;
+            isDragging = false;
+            activePointerId = null;
+            el.releasePointerCapture(e.pointerId);
+        };
+        
+        // Lógica de Redimensionado con Rueda del Ratón
+        el.onwheel = (e) => {
+            e.preventDefault();
+            let currentScale = parseFloat(el.dataset.scale || "1");
+            if (e.deltaY < 0) currentScale += 0.1;
+            else currentScale -= 0.1;
+            
+            if (currentScale < 0.4) currentScale = 0.4;
+            if (currentScale > 3.0) currentScale = 3.0;
+            
+            el.dataset.scale = currentScale;
+            el.style.transform = `scale(${currentScale})`;
+        };
+
+        // Manejador de Redimensionado por vértice
+        const handle = document.createElement('div');
+        handle.className = 'resize-handle';
+        el.appendChild(handle);
+
+        handle.onpointerdown = (e) => {
+            e.stopPropagation();
+            const startX = e.clientX;
+            const startScale = parseFloat(el.dataset.scale || "1");
+            const onPointerMove = (mE) => {
+                const delta = (mE.clientX - startX) / 100;
+                const newScale = Math.max(0.4, Math.min(3.0, startScale + delta));
+                el.dataset.scale = newScale;
+                el.style.transform = `scale(${newScale})`;
+            };
+            const onPointerUp = () => {
+                window.removeEventListener('pointermove', onPointerMove);
+                window.removeEventListener('pointerup', onPointerUp);
+            };
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('pointerup', onPointerUp);
+        };
+
+        // Doble clic para borrar
+        el.ondblclick = () => el.remove();
+
+        pizarraField.appendChild(el);
+    }
+
+    async function guardarEjercicioPizarra() {
+        showLoader();
+        // Aquí iría la lógica para convertir el 'areaDibujo' en imagen (html2canvas) o guardar el JSON de posiciones.
+        // Por ahora simulamos el guardado exitoso:
+        setTimeout(() => {
+            hideLoader();
+            document.getElementById(`status_${catActiva}`).innerText = "✓ GUARDADO (PIZARRA)";
+            document.getElementById(`status_${catActiva}`).style.color = "#28a745";
+            document.getElementById('modalEditorEjercicio').style.display = 'none';
+            mostrarToastAutoguardado("EJERCICIO GUARDADO");
+        }, 1000);
+    }
+
+    function resizeCanvas() {
+        const container = pizarraCanvas.parentElement;
+        pizarraCanvas.width = container.clientWidth;
+        pizarraCanvas.height = container.clientHeight;
+        redrawAllDrawings(); // Redibujar si el canvas cambia de tamaño
+    }
+
+    function setupCanvasListeners() {
+        pizarraCanvas.addEventListener('pointerdown', startDrawing);
+        pizarraCanvas.addEventListener('pointermove', draw);
+        pizarraCanvas.addEventListener('pointerup', stopDrawing);
+        pizarraCanvas.addEventListener('pointerleave', stopDrawing); // Detener si el puntero sale del canvas
+    }
+
+    let currentBrushColor = '#E31E24';
+    function cambiarColorPincel(color, el) {
+        currentBrushColor = color;
+        document.querySelectorAll('.pincel-color-opt').forEach(opt => opt.style.boxShadow = '0 0 0 1px #eee');
+        if (el) el.style.boxShadow = '0 0 0 2px ' + color;
+    }
+
+    function setDrawingMode(mode, element) {
+        drawingMode = mode;
+        // Quitar clase activa de todos los botones del bloque Pincel
+        document.querySelectorAll('.tool-pincel').forEach(btn => btn.classList.remove('active-tool'));
+        // Añadir a este si existe el elemento
+        if (element) {
+            element.classList.add('active-tool');
+        }
+    }
+
+    function startDrawing(e) {
+        if (drawingMode === 'none' || e.button !== 0) return; // Solo botón izquierdo
+        e.preventDefault();
+        isDrawing = true;
+        [lastX, lastY] = [e.offsetX, e.offsetY];
+        ctx.strokeStyle = currentBrushColor;
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        if (drawingMode === 'dashed') {
+            ctx.setLineDash([5, 5]); // Patrón de guiones
+        } else {
+            ctx.setLineDash([]); // Línea sólida
+        }
+
+        // Guardar el estado inicial para los modos de dibujo por arrastre
+        if (drawingMode === 'straight' || drawingMode === 'dashed') {
+            drawHistory.push({ type: 'straight-start', x: lastX, y: lastY, color: ctx.strokeStyle, width: ctx.lineWidth });
+        } else if (drawingMode === 'rect') {
+            drawHistory.push({ type: 'rect-start', x: lastX, y: lastY, color: ctx.strokeStyle, width: ctx.lineWidth });
+        }
+    }
+
+    function draw(e) {
+        if (!isDrawing || drawingMode === 'none') return;
+        e.preventDefault();
+
+        const currentX = e.offsetX;
+        const currentY = e.offsetY;
+
+        if (drawingMode === 'freehand') {
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(currentX, currentY);
+            ctx.stroke();
+            drawHistory.push({ type: 'segment', x1: lastX, y1: lastY, x2: currentX, y2: currentY, color: ctx.strokeStyle, width: ctx.lineWidth, dash: false });
+            [lastX, lastY] = [currentX, currentY];
+        } else if (drawingMode === 'straight' || drawingMode === 'dashed' || drawingMode === 'rect') {
+            // Redibujar todo el historial excepto la línea temporal actual
+            redrawAllDrawings(true);
+            
+            const startPoint = drawHistory[drawHistory.length - 1];
+            if (startPoint) {
+                if (drawingMode === 'straight' || drawingMode === 'dashed') {
+                    ctx.setLineDash(drawingMode === 'dashed' ? [5, 5] : []);
+                    ctx.beginPath();
+                    ctx.moveTo(startPoint.x, startPoint.y);
+                    ctx.lineTo(currentX, currentY);
+                    ctx.stroke();
+                    drawArrowhead(ctx, startPoint.x, startPoint.y, currentX, currentY);
+                } else if (drawingMode === 'rect') {
+                    ctx.setLineDash([]);
+                    ctx.strokeRect(startPoint.x, startPoint.y, currentX - startPoint.x, currentY - startPoint.y);
+                }
+            }
+        }
+    }
+
+    function stopDrawing(e) {
+        if (!isDrawing) return;
+        isDrawing = false;
+        if (drawingMode === 'straight' || drawingMode === 'dashed' || drawingMode === 'rect') {
+            const startPoint = drawHistory.pop(); // Eliminar el punto de inicio temporal
+            if (startPoint) {
+                if (drawingMode === 'rect') {
+                    drawHistory.push({ type: 'rect', x: startPoint.x, y: startPoint.y, w: e.offsetX - startPoint.x, h: e.offsetY - startPoint.y, color: ctx.strokeStyle, width: ctx.lineWidth });
+                } else {
+                    drawHistory.push({ type: 'straight-line', x1: startPoint.x, y1: startPoint.y, x2: e.offsetX, y2: e.offsetY, color: ctx.strokeStyle, width: ctx.lineWidth, dash: drawingMode === 'dashed' });
+                }
+            }
+            redrawAllDrawings(); // Redibujar la línea final
+        }
+    }
+
+    function drawArrowhead(ctx, fromX, fromY, toX, toY) {
+        const headlen = 10; // length of head in pixels
+        const angle = Math.atan2(toY - fromY, toX - fromX);
+        ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+        ctx.moveTo(toX, toY);
+        ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+    }
+
+    function redrawAllDrawings(excludeLastStraight = false) {
+        ctx.save();
+        ctx.clearRect(0, 0, pizarraCanvas.width, pizarraCanvas.height);
+        drawHistory.forEach((item, index) => {
+            if (excludeLastStraight && index === drawHistory.length - 1 && (item.type === 'straight-start' || item.type === 'rect-start')) return;
+            ctx.strokeStyle = item.color;
+            ctx.lineWidth = item.width;
+            ctx.setLineDash(item.dash ? [5, 5] : []);
+            ctx.beginPath();
+            if (item.type === 'segment') {
+                ctx.moveTo(item.x1, item.y1);
+                ctx.lineTo(item.x2, item.y2);
+            } else if (item.type === 'straight-line') {
+                ctx.moveTo(item.x1, item.y1);
+                ctx.lineTo(item.x2, item.y2);
+                drawArrowhead(ctx, item.x1, item.y1, item.x2, item.y2);
+            } else if (item.type === 'rect') {
+                ctx.setLineDash([]);
+                ctx.strokeRect(item.x, item.y, item.w, item.h);
+            }
+            ctx.stroke();
+        });
+        ctx.restore();
+    }
+
+    function undoLastDraw() {
+        drawHistory.pop(); // Eliminar el último elemento del historial
+        redrawAllDrawings();
+    }
+
+    function clearDrawings() {
+        if (!confirm("¿Seguro que quieres eliminar todos los elementos y dibujos de la pizarra?")) return;
+        ctx.clearRect(0, 0, pizarraCanvas.width, pizarraCanvas.height);
+        drawHistory = [];
+        document.querySelectorAll('.item-pizarra').forEach(el => el.remove());
+    }
 
     // Tab switching logic
     function switchTab(e, tabId) {
