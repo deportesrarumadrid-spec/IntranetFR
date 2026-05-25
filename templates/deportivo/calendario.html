@@ -326,16 +326,18 @@
             }
         </style>
         <div class="modal-content" style="width: 1100px; max-width: 98%; max-height: 95vh; border-radius: 15px; padding: 0; overflow: hidden; display: flex; flex-direction: column;">
-            <div class="no-print" style="padding: 15px 25px; background: #f8fafc; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin:0; font-size:12px; font-weight:900; color:#333; text-transform:uppercase;">Editor de Sesión de Entrenamiento</h3>
-                <div style="display:flex; gap:10px;">
-                    <button class="btn-fin" style="background:#E31E24; color:white; border:none; height:35px; padding:0 15px;" onclick="guardarSesionServidor()">
-                        <i class="fas fa-save"></i> GUARDAR EN MI CARPETA
+            <div class="no-print" style="padding: 10px 20px; background: white; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin:0; font-size:13px; font-weight:900; color:#1e293b; text-transform:uppercase; letter-spacing: 0.5px;">
+                    <i class="fas fa-edit" style="color: var(--red); margin-right: 10px;"></i> Editor de Sesión de Entrenamiento
+                </h3>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-fin" style="background: linear-gradient(135deg, #E31E24 0%, #b31d2c 100%); color:white; border:none; height:34px; padding:0 18px; border-radius: 8px; font-weight: 900; box-shadow: 0 2px 8px rgba(227,30,36,0.2); transition: all 0.3s ease; cursor: pointer; font-size: 10px;" onclick="guardarSesionServidor()" onmouseover="this.style.transform='translateY(-1px)';" onmouseout="this.style.transform='translateY(0)';">
+                        <i class="fas fa-save"></i> GUARDAR
                     </button>
-                    <button class="btn-fin" style="background:#28a745; color:white; border:none; height:35px; padding:0 15px;" onclick="window.print()">
-                        <i class="fas fa-download"></i> DESCARGAR
+                    <button class="btn-fin" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color:white; border:none; height:34px; padding:0 18px; border-radius: 8px; font-weight: 900; box-shadow: 0 2px 8px rgba(40,167,69,0.2); transition: all 0.3s ease; cursor: pointer; font-size: 10px;" onclick="window.print()" onmouseover="this.style.transform='translateY(-1px)';" onmouseout="this.style.transform='translateY(0)';">
+                        <i class="fas fa-download"></i> DESCARGAR/IMPRIMIR
                     </button>
-                    <button class="btn-fin" style="background:#eee; color:#333; border:none; height:35px; padding:0 15px;" onclick="document.getElementById('modalSesionOnline').style.display='none'">
+                    <button class="btn-fin" style="background: #f1f5f9; color:#64748b; border: 1px solid #e2e8f0; height:34px; padding:0 18px; border-radius: 8px; font-weight: 900; transition: all 0.3s ease; cursor: pointer; font-size: 10px;" onclick="document.getElementById('modalSesionOnline').style.display='none'">
                         CERRAR
                     </button>
                 </div>
@@ -343,39 +345,44 @@
             
             <div id="printableSessionSheet">
                 <!-- Cabecera estilo Plantilla PDF -->
-                <div style="display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 20px; border-bottom: 3px solid #000; padding-bottom: 15px; margin-bottom: 10px;">
-                    <!-- Columna 1: Info Club -->
-                    <div style="border-right: 2px solid #000; padding-right: 15px;">
-                        <div style="font-weight: 900; font-size: 24px; color: #E31E24;">25/26</div>
-                        <img src="/static/ESCUDO%20SIN%20FONDO.png" style="height: 70px; margin: 10px 0;">
-                        <div style="font-size: 13px; font-weight: 900; margin-bottom: 5px; text-transform: uppercase;">
+                <div style="display: grid; grid-template-columns: 1fr 1.8fr 1.2fr; gap: 20px; border-bottom: 3px solid #000; padding-bottom: 10px; margin-bottom: 10px;">
+                    <!-- Columna 1: Info Club (Revertida a vertical) -->
+                    <div style="border-right: 2px solid #000; padding-right: 15px; display: flex; flex-direction: column; justify-content: space-between; height: 180px;">
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
+                            <div style="font-weight: 900; font-size: 20px; color: #E31E24;">25/26</div>
+                            <img src="/static/ESCUDO%20SIN%20FONDO.png" style="height: 40px;">
+                        </div>
+                        <div style="font-size: 10px; font-weight: 900; text-transform: uppercase;">
                             EQUIPO: 
-                            <select id="sheetEquipoHeader" style="border:none; border-bottom:2px solid #000; width:120px; outline:none; font-weight:900; background: transparent; font-family: inherit; cursor: pointer;">
+                            <select id="sheetEquipoHeader" style="border:none; border-bottom:2px solid #000; width:110px; outline:none; font-weight:900; background: transparent; font-family: inherit; cursor: pointer; color: #333;">
                                 {% for eq in equipos %}
-                                <option value="{{ eq }}" {% if equipo_defecto == eq %}selected{% endif %}>{{ eq }}</option>
+                                <option value="{{ eq.strip() }}" {% if equipo_defecto|string|trim == eq|string|trim %}selected{% endif %}>{{ eq.strip() }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div style="font-size: 13px; font-weight: 900; margin-bottom: 5px;">
-                            FECHA: <input type="date" id="sheetFecha" value="{{ now.strftime('%Y-%m-%d') }}" style="border:none; border-bottom:2px solid #000; outline:none; font-weight:900; font-family: inherit;">
+                        <div style="font-size: 10px; font-weight: 900; text-transform: uppercase;">
+                            FECHA: <input type="date" id="sheetFecha" value="{{ now.strftime('%Y-%m-%d') }}" style="border:none; border-bottom:2px solid #000; outline:none; font-weight:900; font-family: inherit; width: 120px;">
                         </div>
-                        <div style="font-size: 12px; font-weight: 800;">
-                            MATERIAL: <input type="text" style="border:none; border-bottom:1px solid #000; width:100px; outline:none;">
+                        <div style="font-size: 10px; font-weight: 900; text-transform: uppercase;">
+                            MAT: <input type="text" style="border:none; border-bottom:1px solid #000; width:90px; outline:none; font-weight: 800;">
                         </div>
-                        <div style="font-size: 12px; font-weight: 800;">
-                            BALONES: <input type="text" style="border:none; border-bottom:1px solid #000; width:50px; outline:none;">
+                        <div style="font-size: 10px; font-weight: 900; text-transform: uppercase;">
+                            BALONES: <input type="text" style="border:none; border-bottom:1px solid #000; width:40px; outline:none; text-align: center; font-weight: 800;">
                         </div>
                     </div>
-                    <!-- Columna 2: Medio Campo Visual -->
-                    <div class="canvas-container" onclick="abrirPizarraModal(this)" style="background: #2e7d32; display: flex; align-items: center; justify-content: center; position: relative; height: 160px; border-radius: 8px; cursor: pointer;">
-                        <img src="https://www.web-futbol.com/wp-content/uploads/2021/01/medio-campo-vertical.png" class="pizarra-img" style="opacity: 0.6; width: 100%; height: 100%; object-fit: contain;">
-                        <div style="position: absolute; font-weight: 900; color: white; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; pointer-events: none; text-shadow: 0 0 4px #000;">Esquema Táctico General</div>
-                        <div style="position: absolute; bottom: 5px; right: 5px; font-size: 8px; color: rgba(255,255,255,0.8); pointer-events: none;">CLIC PARA DIBUJAR</div>
+
+                    <!-- Columna 2: Alineación -->
+                    <div id="containerAlineacionSesion" onclick="abrirSelectorFormaciones()" style="background: #fff; display: flex; align-items: flex-start; justify-content: center; position: relative; height: 180px; border-radius: 8px; border: 2px solid #000; overflow: hidden; cursor: pointer; transition: 0.3s;" onmouseover="this.style.filter='brightness(1.05)'; this.style.borderColor='var(--red)';" onmouseout="this.style.filter='none'; this.style.borderColor='#000';">
+                        <img id="imgAlineacionSesion" src="https://www.web-futbol.com/wp-content/uploads/2021/01/medio-campo-vertical.png" style="width: 100%; height: 100%; object-fit: contain; object-position: top; opacity: 1; pointer-events: none;">
+                        <div id="alineacionPlaceholder" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #666; background: rgba(255,255,255,0.7); transition: 0.3s; text-align: center; padding: 10px;">
+                            <i class="fas fa-users-cog" style="font-size: 28px; margin-bottom: 8px; color: var(--red);"></i>
+                            <span style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; line-height: 1.2;">Selecciona diseño<br>de Alineación</span>
+                        </div>
                     </div>
+
                     <!-- Columna 3: Notas -->
-                    <div style="border: 2px solid #000; padding: 10px; border-radius: 8px; background: #fff;">
-                        <label style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: #E31E24; display: block; margin-bottom: 5px;">Notas de la Sesión:</label>
-                        <textarea style="width: 100%; height: 120px; border: none; resize: none; font-family: inherit; font-size: 12px; outline: none; line-height: 1.4;" placeholder="Observaciones, lista de ausentes, recordatorios..."></textarea>
+                    <div style="border: 2px solid #000; padding: 8px; border-radius: 8px; background: #fff; height: 180px;">
+                        <textarea id="sessionNotesTextarea" style="width: 100%; height: 100%; border: none; resize: none; font-family: inherit; font-size: 12px; outline: none; line-height: 1.4; background: transparent;" placeholder="Observaciones, lista de ausentes, recordatorios..."></textarea>
                     </div>
                 </div>
 
@@ -402,22 +409,255 @@
                 </div>
 
                 <!-- Pie de página: Trabajo final -->
-                <div style="border: 2px solid #000; border-top: none; padding: 10px 15px; display: flex; align-items: center; justify-content: space-between; background: #fff;">
-                    <span style="font-weight: 900; font-size: 14px; text-transform: uppercase;">FINAL</span>
-                    <span style="font-weight: 900; font-size: 14px; text-transform: uppercase; color: #000; letter-spacing: 1px;">CORE + SUPERIOR Y ESTIRAMIENTOS</span>
-                    <div style="display: flex; gap: 5px;">
-                        <div style="width: 20px; height: 20px; border: 1px solid #000;"></div>
-                        <div style="width: 20px; height: 20px; border: 1px solid #000;"></div>
-                    </div>
-                </div>
-
-                <!-- Identificación del Equipo (No está en el PDF pero ayuda al entrenador) -->
-                <div style="margin-top: 10px; text-align: right; font-size: 10px; color: #666; font-weight: 700;">
-                    EQUIPO: <input type="text" id="sheetEquipo" style="border:none; border-bottom:1px solid #eee; width:120px; outline:none; font-size: 10px; font-weight: 700; color: #666;">
+                <div style="border: 2px solid #000; border-top: none; padding: 10px 15px; display: flex; align-items: center; justify-content: center; background: #fff;">
+                    <input type="text" value="CORE + SUPERIOR Y ESTIRAMIENTOS" style="border:none; width: 100%; text-align: center; font-weight: 900; font-size: 14px; text-transform: uppercase; color: #000; letter-spacing: 1px; outline: none;" placeholder="NOTAS FINALES / TRABAJO POST-SESIÓN">
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- MODAL SELECCIONAR IMAGEN FORMACIÓN -->
+    <div id="modalSelectorFormaciones" class="modal">
+        <div class="modal-content" style="width: 600px; border-radius: 20px; padding: 25px;">
+            <h3 style="font-weight: 900; text-transform: uppercase; margin-bottom: 20px; font-size: 14px;">Diseño de Alineación</h3>
+            <div style="display: flex; justify-content: center;">
+                <div onclick="seleccionarImagenFormacion('PLANTILLA JUGADORES.png')" style="cursor:pointer; border: 2px solid var(--red); border-radius: 10px; padding: 15px; text-align: center; transition: 0.2s; width: 250px;">
+                    <div style="height: 180px; background: #f8fafc; border-radius: 6px; margin-bottom: 8px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                        <img src="/static/img/formaciones/PLANTILLA JUGADORES.png" style="width:100%; height:100%; object-fit:contain;" onerror="this.src='https://placehold.co/250x180?text=PLANTILLA'">
+                    </div>
+                    <span style="font-weight: 900; font-size: 14px; color: #1e293b;">PLANTILLA JUGADORES</span>
+                </div>
+            </div>
+            <button class="btn-fin" style="margin-top: 20px; background: #f1f5f9; color: #64748b; width: 100%; justify-content: center;" onclick="document.getElementById('modalSelectorFormaciones').style.display='none'">CANCELAR</button>
+        </div>
+    </div>
+
+    <!-- MODAL EDITOR DE NOMBRES SOBRE FORMACIÓN -->
+    <div id="modalEditorAlineacion" class="modal">
+        <div class="modal-content" style="width: 98vw; height: 98vh; max-width: none; max-height: none; background: transparent; box-shadow: none; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: none; border-radius: 0; backdrop-filter: blur(2px);">
+            <h3 style="color: white; font-weight: 900; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; font-size: 18px; width: 100%; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
+                <i class="fas fa-users" style="margin-right: 10px; color: #fff;"></i> ALINEACIÓN: <span id="txtEquipoAlineacion" style="color: #fff;"></span>
+            </h3>
+            
+            <div style="background: rgba(225, 245, 254, 0.9); color: #01579b; padding: 10px 25px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; font-weight: 800; border-left: 5px solid #0288d1; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <i class="fas fa-info-circle" style="margin-right: 8px;"></i> ARRASTRA LOS JUGADORES AL CAMPO | USA LA ESQUINA PARA REDIMENSIONAR O LA RUEDA DEL RATÓN
+            </div>
+
+            <!-- BOTONERA SUPERIOR (Confirmar, Añadir y Salir) -->
+            <div style="display: flex; gap: 15px; margin-bottom: 25px; z-index: 101; width: 100%; justify-content: center; align-items: center; padding-top: 10px;">
+                <button class="btn-fin" style="background: #28a745; color: white; padding: 12px 35px; border-radius: 8px; font-weight: 900; box-shadow: 0 4px 15px rgba(40,167,69,0.3); border: none; cursor: pointer;" onclick="confirmarAlineacion()">
+                    <i class="fas fa-check-circle"></i> CONFIRMAR E INSERTAR
+                </button>
+                <button onclick="anadirJugadorExtra()" style="background: #475569; color: white; border: none; padding: 0 20px; border-radius: 8px; font-weight: 900; font-size: 11px; cursor: pointer; height: 42px; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    <i class="fas fa-plus-circle"></i> AÑADIR JUGADOR
+                </button>
+                <button class="btn-fin" style="background: white; color: #333; padding: 12px 30px; border-radius: 8px; font-weight: 900; border: 1px solid #ddd; cursor: pointer;" onclick="document.getElementById('modalEditorAlineacion').style.display='none'">
+                    SALIR SIN GUARDAR
+                </button>
+            </div>
+
+            <div id="areaCapturaAlineacion" style="position: relative; background: #235d25; flex-shrink: 0; border: 4px solid #fff; box-shadow: 0 0 50px rgba(0,0,0,0.8); margin-left: 150px;">
+                <img id="imgFondoAlineacion" src="" style="width: 100%; height: 100%; object-fit: fill; display: block;">
+                <div id="inputsOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .player-wrapper { position: absolute; z-index: 100; display: flex; align-items: center; justify-content: center; cursor: move; padding: 4px; border-radius: 6px; touch-action: none; }
+        .player-wrapper:hover { background: rgba(255,255,255,0.1); }
+        .input-alineacion { 
+            width: 120px; height: 28px; padding: 0; font-size: 13px; font-weight: 900; text-align: center; 
+            border: 1px solid transparent; background: rgba(255,255,255,0.1); color: #fff !important; outline: none; 
+            text-transform: uppercase; border-radius: 4px; text-shadow: 1px 1px 3px #000; cursor: text;
+        }
+        .input-alineacion::placeholder { color: #fff; opacity: 1; }
+        .player-wrapper:hover .input-alineacion { background: rgba(255, 255, 255, 0.3); border-color: rgba(255,255,255,0.5); }
+        .resize-handle-corner { position: absolute; bottom: 2px; right: 2px; width: 10px; height: 10px; cursor: nwse-resize; opacity: 0; transition: 0.2s; z-index: 110; background: linear-gradient(135deg, transparent 50%, #cbd5e1 50%); border-radius: 0 0 2px 0; }
+        .player-wrapper:hover .resize-handle-corner { opacity: 1; }
+    </style>
+
+    <script>
+        let currentFormationImgName = "";
+
+        function abrirSelectorFormaciones() {
+            seleccionarImagenFormacion('PLANTILLA JUGADORES.png');
+        }
+
+        function attachDragAndScale(wrapper) {
+            const area = document.getElementById('areaCapturaAlineacion');
+            const input = wrapper.querySelector('.input-alineacion');
+            const resizer = wrapper.querySelector('.resize-handle-corner');
+            
+            let isDragging = false, isResizing = false;
+            let startX, startY, initialLeft, initialTop, initialScale, hasMoved = false;
+
+            wrapper.onpointerdown = (e) => {
+                if (e.target === resizer) {
+                    isResizing = true;
+                    startX = e.clientX;
+                    initialScale = parseFloat(wrapper.dataset.scale || "1");
+                    resizer.setPointerCapture(e.pointerId);
+                    e.preventDefault();
+                    return;
+                }
+
+                isDragging = true;
+                hasMoved = false;
+                startX = e.clientX;
+                startY = e.clientY;
+                const rect = area.getBoundingClientRect();
+                initialLeft = (wrapper.offsetLeft / rect.width) * 100;
+                initialTop = (wrapper.offsetTop / rect.height) * 100;
+                wrapper.setPointerCapture(e.pointerId);
+            };
+
+            wrapper.onpointermove = (e) => {
+                if (!isDragging) return;
+                const rect = area.getBoundingClientRect();
+                const dx = ((e.clientX - startX) / rect.width) * 100;
+                const dy = ((e.clientY - startY) / rect.height) * 100;
+                if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) hasMoved = true;
+                wrapper.style.left = (initialLeft + dx) + '%';
+                wrapper.style.top = (initialTop + dy) + '%';
+            };
+
+            resizer.onpointermove = (e) => {
+                if (!isResizing) return;
+                const dx = e.clientX - startX;
+                let newScale = initialScale + (dx / 100);
+                newScale = Math.max(0.5, Math.min(2.5, newScale));
+                wrapper.dataset.scale = newScale;
+                wrapper.style.transform = `scale(${newScale})`;
+            };
+
+            wrapper.onpointerup = (e) => { 
+                if (isDragging && !hasMoved && e.target === input) {
+                    input.focus();
+                }
+                isDragging = false; 
+            };
+
+            resizer.onpointerup = () => { isResizing = false; };
+
+            wrapper.onwheel = (e) => {
+                e.preventDefault();
+                let scale = parseFloat(wrapper.dataset.scale || "1");
+                scale += (e.deltaY < 0) ? 0.05 : -0.05;
+                scale = Math.max(0.5, Math.min(2.5, scale));
+                wrapper.dataset.scale = scale;
+                wrapper.style.transform = `scale(${scale})`;
+            };
+        }
+
+        function createPlayerWrapper(idx, x, y, scale = 1, name = "") {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'player-wrapper';
+            wrapper.style.left = x;
+            wrapper.style.top = y;
+            wrapper.style.transform = `scale(${scale})`;
+            wrapper.dataset.scale = scale;
+            
+            wrapper.innerHTML = `
+                <input type="text" class="input-alineacion" placeholder="JUGADOR ${idx + 1}" value="${name}">
+                <div class="resize-handle-corner"></div>
+            `;
+            
+            attachDragAndScale(wrapper);
+            return wrapper;
+        }
+
+        function anadirJugadorExtra() {
+            const container = document.getElementById('inputsOverlay');
+            const idx = container.querySelectorAll('.player-wrapper').length;
+            const x = "-150px";
+            const y = (5 + (idx * 3.8)) + "%";
+            container.appendChild(createPlayerWrapper(idx, x, y, 1, ""));
+        }
+
+        function seleccionarImagenFormacion(imgName) {
+            currentFormationImgName = imgName;
+            const equipo = document.getElementById('selectEquipoEntrenos').value.trim();
+            document.getElementById('txtEquipoAlineacion').innerText = equipo || "GENERAL";
+
+            if (document.getElementById('modalSelectorFormaciones')) document.getElementById('modalSelectorFormaciones').style.display = 'none';
+            const modal = document.getElementById('modalEditorAlineacion');
+            const img = document.getElementById('imgFondoAlineacion');
+            const area = document.getElementById('areaCapturaAlineacion');
+            const container = document.getElementById('inputsOverlay');
+
+            img.src = '';
+            container.innerHTML = "";
+
+            img.onload = function() {
+                const ratio = img.naturalHeight / img.naturalWidth;
+                let displayHeight = window.innerHeight * 0.7;
+                let displayWidth = displayHeight / ratio;
+                if (displayWidth > window.innerWidth * 0.75) {
+                    displayWidth = window.innerWidth * 0.75;
+                    displayHeight = displayWidth * ratio;
+                }
+                area.style.width = displayWidth + 'px';
+                area.style.height = displayHeight + 'px';
+
+                const key = `custom_formation_${equipo}_${imgName}`;
+                const saved = localStorage.getItem(key);
+                const coords = saved ? JSON.parse(saved) : null;
+                
+                const numPlayers = coords ? Math.max(25, coords.length) : 25;
+                for(let i=0; i < numPlayers; i++) {
+                    let x, y, scale = 1, name = "";
+                    if (coords && coords[i]) {
+                        x = coords[i].x; y = coords[i].y; scale = coords[i].scale || 1;
+                        name = coords[i].name || "";
+                    } else {
+                        x = "-150px"; y = (5 + (i * 3.8)) + '%';
+                    }
+                    container.appendChild(createPlayerWrapper(i, x, y, scale, name));
+                }
+            };
+            img.src = '/static/img/formaciones/' + imgName;
+            modal.style.display = 'flex';
+        }
+
+        async function confirmarAlineacion() {
+            const equipo = document.getElementById('selectEquipoEntrenos').value.trim();
+            if (!equipo) return alert("Selecciona un equipo primero");
+
+            // 1. Guardar automáticamente las posiciones en el navegador
+            const positions = [];
+            document.querySelectorAll('.player-wrapper').forEach(wrap => {
+                const inp = wrap.querySelector('.input-alineacion');
+                positions.push({
+                    x: wrap.style.left,
+                    y: wrap.style.top,
+                    scale: wrap.dataset.scale || "1",
+                    name: inp ? inp.value : ""
+                });
+            });
+            const key = `custom_formation_${equipo}_${currentFormationImgName}`;
+            localStorage.setItem(key, JSON.stringify(positions));
+
+            // 2. Realizar captura de imagen
+            const area = document.getElementById('areaCapturaAlineacion');
+            area.style.overflow = "hidden";
+            
+            showLoader();
+            try {
+                const canvas = await html2canvas(area, { backgroundColor: null, scale: 2 }); 
+                const data = canvas.toDataURL('image/png');
+                const imgOutput = document.getElementById('imgAlineacionSesion');
+                imgOutput.src = data;
+                document.getElementById('alineacionPlaceholder').style.display = 'none';
+                document.getElementById('modalEditorAlineacion').style.display = 'none';
+            } catch (e) {
+                alert("Error al capturar la alineación");
+            } finally {
+                area.style.overflow = "visible";
+                hideLoader();
+            }
+        }
+    </script>
 
     <!-- MODAL MIS SESIONES -->
     <div id="modalMisSesiones" class="modal">
@@ -712,15 +952,38 @@
             document.getElementById('photoMenu').style.display = 'flex';
         }
 
-        function abrirModalSesionOnline() {
-            const eq = document.getElementById('selectEquipoEntrenos').value;
+        async function abrirModalSesionOnline() {
+            const eq = document.getElementById('selectEquipoEntrenos').value.trim();
+            if(!eq) return alert("Por favor, selecciona un equipo en el desplegable superior antes de crear la sesión.");
+            
             document.getElementById('sheetEquipoHeader').value = eq;
             
-            // Limpiamos dibujos previos
+            // Limpiamos dibujos y alineación previa
             document.querySelectorAll('.drawn-overlay').forEach(el => el.remove());
             document.querySelectorAll('.canvas-container div').forEach(d => d.style.display = 'block');
+            document.getElementById('imgAlineacionSesion').src = "https://www.web-futbol.com/wp-content/uploads/2021/01/medio-campo-vertical.png";
+            document.getElementById('alineacionPlaceholder').style.display = 'flex';
 
             document.getElementById('modalSesionOnline').style.display = 'flex';
+
+            // AUTO-CARGA DE ALINEACIÓN: Si el equipo tiene una formación guardada, la cargamos automáticamente
+            const key = `custom_formation_${eq}_PLANTILLA JUGADORES.png`;
+            if (localStorage.getItem(key)) {
+                const modalAlineacion = document.getElementById('modalEditorAlineacion');
+                const originalOpacity = modalAlineacion.style.opacity;
+                
+                // Hacemos el modal invisible mientras se genera la imagen para que no parpadee
+                modalAlineacion.style.opacity = "0";
+                modalAlineacion.style.display = "flex";
+                
+                seleccionarImagenFormacion('PLANTILLA JUGADORES.png');
+                
+                // Esperamos un momento a que la imagen y los nombres se posicionen antes de la captura
+                setTimeout(async () => {
+                    await confirmarAlineacion();
+                    modalAlineacion.style.opacity = originalOpacity || "1";
+                }, 800);
+            }
         }
 
         let targetCanvasContainer = null;
@@ -1073,7 +1336,7 @@
 
             // Recopilar textos para búsqueda posterior
             const sessionData = {
-                notas: sheet.querySelector('textarea').value,
+                notas: document.getElementById('sessionNotesTextarea').value,
                 ejercicios: []
             };
 
