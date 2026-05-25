@@ -499,45 +499,6 @@
             </div>
         </div>
 
-        <!-- Recuento de Objetivos Logrados (Nueva Sección) -->
-        <div class="card-coord" style="margin-top: 30px; border-top: 3px solid #E31E24; padding-top: 25px; background: #fff;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <div style="width: 40px; height: 40px; background: #ffebeb; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #E31E24;">
-                        <i class="fas fa-tasks"></i>
-                    </div>
-                    <div>
-                        <h3 style="margin: 0; font-size: 16px; font-weight: 900; color: #333; text-transform: uppercase;">Recuento de Objetivos Logrados</h3>
-                        <p style="margin: 0; font-size: 11px; color: #999; font-weight: 600;">Estado del progreso mensual por equipo</p>
-                    </div>
-                </div>
-                <div style="display: flex; align-items: center; gap: 15px; background: #333; padding: 10px 20px; border-radius: 30px;">
-                    <label style="font-size: 10px; font-weight: 900; color: #ccc; text-transform: uppercase;">Mes:</label>
-                    <div class="custom-mes-wrapper" id="mesRecuentoWrapper" onclick="this.classList.toggle('open')">
-                        <div class="custom-mes-trigger" id="mesRecuentoText" style="background: transparent; color: white; border: none; padding: 0 35px 0 0; font-size: 13px;">Mayo 2026</div>
-                        <div class="custom-mes-options">
-                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-01', 'Enero 2026')" data-value="2026-01">Enero 2026</div>
-                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-02', 'Febrero 2026')" data-value="2026-02">Febrero 2026</div>
-                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-03', 'Marzo 2026')" data-value="2026-03">Marzo 2026</div>
-                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-04', 'Abril 2026')" data-value="2026-04">Abril 2026</div>
-                            <div class="custom-mes-option selected" onclick="cambiarMesRecuento('2026-05', 'Mayo 2026')" data-value="2026-05">Mayo 2026</div>
-                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-06', 'Junio 2026')" data-value="2026-06">Junio 2026</div>
-                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-07', 'Julio 2026')" data-value="2026-07">Julio 2026</div>
-                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-08', 'Agosto 2026')" data-value="2026-08">Agosto 2026</div>
-                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-09', 'Septiembre 2026')" data-value="2026-09">Septiembre 2026</div>
-                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-10', 'Octubre 2026')" data-value="2026-10">Octubre 2026</div>
-                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-11', 'Noviembre 2026')" data-value="2026-11">Noviembre 2026</div>
-                            <div class="custom-mes-option" onclick="cambiarMesRecuento('2026-12', 'Diciembre 2026')" data-value="2026-12">Diciembre 2026</div>
-                        </div>
-                    </div>
-                    <input type="hidden" id="selectMesRecuento" value="2026-05">
-                </div>
-            </div>
-
-            <div id="containerRecuento" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
-                <div style="grid-column: span 2; text-align: center; padding: 40px; color: #ccc; font-weight: 700; border: 2px dashed #f0f0f0; border-radius: 15px;">SELECCIONA UN EQUIPO PARA VER EL PROGRESO</div>
-            </div>
-        </div>
     </div>
 
     <!-- SUBPESTAÑA: D. DEPORTIVA -->
@@ -670,7 +631,7 @@
                     </div>
                 </div>
 
-                <!-- Categorías de Ejercicios -->
+                <!-- Categorías de Ejercicios (Contenedor de las 4 cajas) -->
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;" id="exerciseCategoriesContainer">
                     <div class="cat-box disabled" onclick="mostrarSelectorCarga(0)">
                         <i class="fas fa-project-diagram" style="font-size: 24px; color: #E31E24; margin-bottom: 5px;"></i>
@@ -928,7 +889,7 @@
                 
                 if (saveRes.ok) {
                     mostrarToastAutoguardado("ARCHIVO GUARDADO CORRECTAMENTE");
-                    cargarEjerciciosSemana();
+                    await cargarEjerciciosSemana();
                 }
             }
         } catch (e) { alert("Error al subir el archivo"); }
@@ -943,11 +904,47 @@
         const d = (descripcion || "").replace(/'/g, "\\'").replace(/\n/g, '<br>');
 
         container.innerHTML = `
-            <button class="btn-fin" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; padding: 14px 18px; font-size: 10px; border-radius: 14px; width: 100%; justify-content: center; margin-top: 15px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.1); transition: 0.3s;" 
-                    onclick="event.stopPropagation(); abrirModalVerEjercicio('${url}', '${t}', '${d}')">
-                <i class="fas fa-eye"></i> VER EJERCICIO
-            </button>
+            <div style="display: flex; gap: 8px; margin-top: 15px;">
+                <button class="btn-fin" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; padding: 12px 10px; font-size: 10px; border-radius: 12px; flex: 1.5; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.3s;" 
+                        onclick="event.stopPropagation(); abrirModalVerEjercicio('${url}', '${t}', '${d}')">
+                    <i class="fas fa-eye"></i> VER
+                </button>
+                <button class="btn-fin" style="background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; padding: 12px 5px; font-size: 10px; border-radius: 12px; width: 40px; justify-content: center; transition: 0.3s;" 
+                        title="Modificar" onclick="event.stopPropagation(); abrirModificarEjercicio(${idx}, '${url}', '${t}', '${d}')">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-fin" style="background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; padding: 12px 5px; font-size: 10px; border-radius: 12px; width: 40px; justify-content: center; transition: 0.3s;" 
+                        title="Eliminar" onclick="event.stopPropagation(); eliminarEjercicio(${idx})">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
         `;
+    }
+
+    function abrirModificarEjercicio(idx, url, titulo, descripcion) {
+        catActiva = idx;
+        // Pre-poblamos los campos por si decide usar la pizarra
+        document.getElementById('nombreEjercicioPizarra').value = titulo;
+        document.getElementById('descEjercicioPizarra').value = descripcion.replace(/<br>/g, '\n');
+        mostrarSelectorCarga(idx);
+    }
+
+    async function eliminarEjercicio(idx) {
+        if (!confirm("¿Seguro que deseas eliminar este ejercicio de la planificación?")) return;
+        const semanaStr = getSemanaStr();
+        showLoader();
+        try {
+            const res = await fetch("{{ url_for('deportivo_bp.api_ejercicios_semanales') }}", {
+                method: 'DELETE',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ semana: semanaStr, categoria: idx })
+            });
+            if (res.ok) {
+                mostrarToastAutoguardado("EJERCICIO ELIMINADO");
+                await cargarEjerciciosSemana();
+            } else { throw new Error("Error al eliminar"); }
+        } catch (e) { alert("Error: " + e.message); }
+        finally { hideLoader(); }
     }
 
     function abrirModalVerEjercicio(url, titulo, descripcion) {
@@ -972,7 +969,8 @@
     function abrirModalEjercicios() {
         document.getElementById('modalEjerciciosSemanales').style.display = 'flex';
         renderCalendarWeekly();
-        checkAndEnableExerciseCategories();
+        // Auto-seleccionar la semana actual para disparar la carga de datos con el cargador global
+        seleccionarSemana(new Date());
     }
 
     function renderCalendarWeekly() {
@@ -981,14 +979,11 @@
         const now = new Date();
         const year = now.getFullYear();
         const month = now.getMonth();
-
         document.getElementById('weeklyCalendarMonthYear').innerText = 
             now.toLocaleString('es-ES', { month: 'long', year: 'numeric' }).toUpperCase();
-
         const firstDay = new Date(year, month, 1);
         const lastDay = new Date(year, month + 1, 0).getDate();
         
-        // Alineación Lunes a Domingo
         let startDay = firstDay.getDay();
         if (startDay === 0) startDay = 6; else startDay--;
 
@@ -1062,6 +1057,8 @@
         if (!semanaActiva) return;
         const semanaStr = getSemanaStr();
         
+        showLoader();
+        
         // Reset visual
         for(let i=0; i<4; i++) {
             const statusEl = document.getElementById(`status_${i}`);
@@ -1086,7 +1083,11 @@
                     renderVerButton(idx, item.url, item.titulo, item.descripcion);
                 }
             });
-        } catch (e) { console.error(e); }
+        } catch (e) { 
+            console.error(e); 
+        } finally {
+            hideLoader();
+        }
     }
 
     function editarNombreCategoria(idx) {
@@ -1536,7 +1537,6 @@
         if (startDay === 0) startDay = 6; // Sunday becomes 6
         else startDay--; // Monday becomes 0, Tuesday 1, etc.
 
-        // Fill leading empty days
         for (let i = 0; i < startDay; i++) {
             const emptyDay = document.createElement('div');
             emptyDay.classList.add('calendar-day', 'empty');
@@ -1674,133 +1674,6 @@
         `).join('');
         
         cargarDatosDia();
-        cargarRecuentoObjetivos();
-    }
-
-    async function guardarSeguimiento(btn) {
-        const equipo = document.getElementById('selectEquipoCoord').value;
-        if (!equipo || !selectedCoordinationDate) return alert("Selecciona equipo y fecha");
-
-        const filas = document.querySelectorAll('#cuerpoCoordinacion tr');
-        const registros = Array.from(filas).map(tr => ({
-            jugador: tr.dataset.jugador,
-            reunion: tr.querySelector('.check-coord').checked,
-            tipo: tr.querySelector('.select-tipo-coord').value,
-            obs: tr.querySelector('.input-coord').value
-        }));
-        
-        const fechaStr = `${selectedCoordinationDate.getDate().toString().padStart(2, '0')}/${(selectedCoordinationDate.getMonth() + 1).toString().padStart(2, '0')}/${selectedCoordinationDate.getFullYear()}`;
-
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GUARDANDO...';
-
-        // Mostrar loader al iniciar la petición
-        showLoader();
-        const res = await fetch("{{ url_for('deportivo_bp.api_seguimiento_coordinacion') }}", {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                fecha: fechaStr,
-                equipo,
-                registros
-            })
-        });
-
-        // Ocultar loader al finalizar la petición
-        hideLoader();
-        if (res.ok) {
-            btn.style.background = "#28a745";
-            btn.innerHTML = '¡GUARDADO!';
-            setTimeout(() => {
-                btn.disabled = false;
-                btn.style.background = "#333";
-                btn.innerHTML = 'GUARDAR SEGUIMIENTO';
-            }, 2000);
-        } else {
-            alert("Error al guardar");
-            btn.disabled = false;
-            btn.innerHTML = 'GUARDAR SEGUIMIENTO';
-        }
-    }
-
-    // Lógica Calendario Tecnificaciones
-    async function renderTecCalendar() {
-        const grid = document.getElementById('tecGrid');
-        grid.innerHTML = '';
-        const year = currentCalendarDate.getFullYear();
-        const month = currentCalendarDate.getMonth();
-        const mesAnio = `${(month + 1).toString().padStart(2, '0')}/${year}`;
-
-        // Cargar datos existentes
-        // Mostrar loader al iniciar la petición
-        showLoader();
-        const res = await fetch("{{ url_for('deportivo_bp.api_tecnificaciones') }}?mes_anio=" + mesAnio);
-        const tecData = await res.json();
-        hideLoader();
-
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0).getDate();
-        let startDay = firstDay.getDay();
-        if (startDay === 0) startDay = 6; else startDay--;
-
-        const today = new Date();
-        const isThisMonth = year === today.getFullYear() && month === today.getMonth();
-
-        for (let i = 0; i < startDay; i++) {
-            grid.innerHTML += '<div class="tec-day" style="background:#f8f8f8"></div>';
-        }
-
-        const listaEquipos = Array.from(document.getElementById('selectEquipoCoord').options)
-                             .filter(opt => opt.value !== "")
-                             .map(opt => opt.value);
-
-        for (let day = 1; day <= lastDay; day++) {
-            const fechaStr = `${day.toString().padStart(2, '0')}/${mesAnio}`;
-            const actual = tecData[fechaStr] || { equipo: "", grupo: "" };
-            
-            const dayDiv = document.createElement('div');
-            dayDiv.className = 'tec-day';
-
-            if (isThisMonth && day === today.getDate()) {
-                dayDiv.classList.add('today');
-                dayDiv.innerHTML = '<div class="tec-hoy-label">HOY</div>';
-            }
-
-            dayDiv.innerHTML += `
-                <span class="tec-day-num">${day}</span>
-                <select class="tec-select" onchange="guardarTec('${fechaStr}', this.value, 'equipo')">
-                    <option value="">EQUIPO...</option>
-                    ${listaEquipos.map(e => `<option value="${e}" ${actual.equipo === e ? 'selected' : ''}>${e}</option>`).join('')}
-                </select>
-                <select class="tec-select" onchange="guardarTec('${fechaStr}', this.value, 'grupo')">
-                    <option value="">GRUPO...</option>
-                    <option value="DEFENSAS" ${actual.grupo === 'DEFENSAS' ? 'selected' : ''}>DEFENSAS</option>
-                    <option value="MEDIOS" ${actual.grupo === 'MEDIOS' ? 'selected' : ''}>MEDIOS</option>
-                    <option value="EXTREMOS" ${actual.grupo === 'EXTREMOS' ? 'selected' : ''}>EXTREMOS</option>
-                    <option value="DELANTEROS" ${actual.grupo === 'DELANTEROS' ? 'selected' : ''}>DELANTEROS</option>
-                </select>
-            `;
-            grid.appendChild(dayDiv);
-        }
-    }
-
-    async function guardarTec(fecha, valor, tipo) {
-        const grid = document.getElementById('tecGrid');
-        const dayDiv = Array.from(grid.children).find(d => d.querySelector('.tec-day-num')?.innerText == parseInt(fecha.split('/')[0]));
-        if (!dayDiv) return;
-
-        const equipo = dayDiv.querySelectorAll('.tec-select')[0].value;
-        const grupo = dayDiv.querySelectorAll('.tec-select')[1].value;
-
-        // Solo guardamos si ambos están seleccionados o ambos vacíos (limpieza)
-        // Mostrar loader al iniciar la petición
-        showLoader();
-        await fetch("{{ url_for('deportivo_bp.api_tecnificaciones') }}", {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ fecha, equipo, grupo })
-        });
-        hideLoader();
     }
 
     // --- LÓGICA OBJETIVOS MENSUALES (VERSIÓN ÚNICA Y CORREGIDA) ---
@@ -1866,83 +1739,6 @@
             wrapper.classList.remove('open');
         }
     });
-
-    // --- LÓGICA RECUENTO DE OBJETIVOS (Sincronizado con Entrenamientos) ---
-    async function cargarRecuentoObjetivos() {
-        const equipo = document.getElementById('selectEquipoCoord').value;
-        const mes = document.getElementById('selectMesRecuento').value;
-        const mesSheet = formatMesParaSheet(mes);
-        const container = document.getElementById('containerRecuento');
-        
-        if (!equipo) {
-            container.innerHTML = '<div style="grid-column: span 2; text-align: center; padding: 40px; color: #ccc; font-weight: 700; border: 2px dashed #f0f0f0; border-radius: 15px;">SELECCIONA UN EQUIPO PARA VER EL PROGRESO</div>';
-            return;
-        }
-
-        container.innerHTML = '<div style="grid-column: span 2; text-align: center; padding: 40px;"><i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #E31E24;"></i></div>';
-
-        try {
-            const res = await fetch("{{ url_for('deportivo_bp.api_objetivos_mensuales') }}?fecha=" + mesSheet);
-            const data = await res.json();
-            const obj = data[equipo] || { tactico: "", tecnico: "", completados: [] };
-            
-            const tacticos = obj.tactico ? obj.tactico.split(',').map(s => s.trim()).filter(s => s) : [];
-            const tecnicos = obj.tecnico ? obj.tecnico.split(',').map(s => s.trim()).filter(s => s) : [];
-            const completados = obj.completados || [];
-
-            const renderLista = (lista) => {
-                if (lista.length === 0) return `<div style="padding: 15px; background: rgba(0,0,0,0.03); border-radius: 12px; color: #bbb; font-size: 11px; text-align: center; border: 1px dashed #eee;">SIN OBJETIVOS DEFINIDOS</div>`;
-
-                return `<div style="display: flex; flex-direction: column; gap: 10px;">${lista.map(txt => {
-                    const isDone = completados.includes(txt);
-                    // Escapamos comillas simples para que no rompan el onclick
-                    const txtEscaped = txt.replace(/'/g, "\\'");
-                    const equipoEscaped = equipo.replace(/'/g, "\\'");
-                    const action = isAdminUser ? `onclick="toggleProgresoObjetivo('${txtEscaped}', '${equipoEscaped}', '${mes}', event)"` : '';
-                    const cursorStyle = isAdminUser ? 'cursor: pointer;' : 'cursor: default;';
-                    return `<div ${action} style="${cursorStyle} display: flex; align-items: center; gap: 12px; padding: 12px 18px; background: ${isDone ? '#eaffef' : '#fff'}; border-radius: 12px; border: 1px solid ${isDone ? '#2eb85c44' : '#eee'}; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: 0.2s;">
-                        <i class="fas ${isDone ? 'fa-check-circle' : 'fa-circle'}" style="color: ${isDone ? '#2eb85c' : '#eee'}; font-size: 16px;"></i>
-                        <span style="font-size: 12px; font-weight: 800; color: ${isDone ? '#1a7a35' : '#444'}; text-transform: uppercase; letter-spacing: 0.5px;">${txt}</span>
-                    </div>`;
-                }).join('')}</div>`;
-            };
-
-            const total = tacticos.length + tecnicos.length;
-            const done = completados.filter(c => tacticos.includes(c) || tecnicos.includes(c)).length;
-            const percent = total > 0 ? Math.round((done / total) * 100) : 0;
-
-            container.innerHTML = `
-                <div style="background: #fdfdfd; padding: 25px; border-radius: 20px; border: 1px solid #f0f0f0;">
-                    <h4 style="font-size: 12px; font-weight: 900; color: #1a1a1a; margin-bottom: 20px; text-transform: uppercase; display: flex; align-items: center; gap: 10px;"><div style="width:8px; height:8px; border-radius:50%; background:#E31E24;"></div> Objetivos Tácticos</h4>
-                    ${renderLista(tacticos)}
-                </div>
-                <div style="background: #fdfdfd; padding: 25px; border-radius: 20px; border: 1px solid #f0f0f0;">
-                    <h4 style="font-size: 12px; font-weight: 900; color: #1a1a1a; margin-bottom: 20px; text-transform: uppercase; display: flex; align-items: center; gap: 10px;"><div style="width:8px; height:8px; border-radius:50%; background:#E31E24;"></div> Objetivos Técnicos</h4>
-                    ${renderLista(tecnicos)}
-                </div>
-                <div style="grid-column: span 2; margin-top: 10px; padding: 30px 40px; background: linear-gradient(135deg, #1e1e1e 0%, #000 100%); border-radius: 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 15px 30px rgba(0,0,0,0.2);">
-                    <div>
-                        <div style="color: #E31E24; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px;">Rendimiento del Equipo</div>
-                        <div style="color: white; font-size: 36px; font-weight: 900;">${done} <span style="font-size: 18px; color: #444; margin-left: 5px;">/ ${total} OBJETIVOS</span></div>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="color: white; font-size: 32px; font-weight: 900; font-family: 'Archivo Black';">${percent}%</div>
-                        <div style="width: 200px; height: 10px; background: #333; border-radius: 20px; margin-top: 10px; overflow: hidden; border: 1px solid #444;">
-                            <div style="width: ${percent}%; height: 100%; background: linear-gradient(90deg, #b31d2c 0%, #E31E24 100%); box-shadow: 0 0 15px rgba(227,30,36,0.5); transition: 1.5s cubic-bezier(0.4, 0, 0.2, 1);"></div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        } catch (e) {
-            container.innerHTML = '<div style="grid-column: span 2; text-align: center; padding: 20px; color: #dc3545; font-weight: 700;">Error al cargar datos</div>';
-        }
-    }
-
-    function cambiarMesRecuento(val, text) {
-        document.getElementById('selectMesRecuento').value = val;
-        document.getElementById('mesRecuentoText').innerText = text;
-        cargarRecuentoObjetivos();
-    }
 
     async function solicitarGuardarObjetivos(btn) {
         const mes = document.getElementById('selectMesObjetivos').value;

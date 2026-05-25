@@ -1,6 +1,7 @@
 {% extends 'dashboard.html' %}
 
 {% block content %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root { --red: #E31E24; --bg: #f4f4f4; --sidebar: #E31E24; --green: #2eb85c; }
         
@@ -8,6 +9,7 @@
         .calendario-wrapper { display: flex; flex-direction: column; height: 100%; font-family: 'Montserrat', sans-serif; }
 
    /* Objetivos Superiores Estilo Imagen 1 */
+   /* ... (estilos existentes) ... */
 .obj-container { display: flex; align-items: stretch; gap: 10px; margin-bottom: 20px; width: 100%; }
 .obj-row { display: flex; gap: 10px; flex: 1; }
 .obj-box { flex: 1; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 8px 12px; }
@@ -62,11 +64,44 @@
         /* Estilo para botón con foto subida */
         .btn-foto.has-file { background: var(--green); }
 
-        /* Pop-up para ver la foto subida */
-        #viewPhotoModal .modal-content { width: 90%; max-width: 400px; position: relative; padding: 20px; }
-        #viewPhotoModal img { width: 100%; border-radius: 10px; margin-bottom: 15px; border: 1px solid #ddd; }
-        .close-view { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 24px; font-weight: bold; color: #666; }
+        /* Visor de Foto a Pantalla Completa Moderno */
+        #viewPhotoModal .modal-content { 
+            width: 98vw !important; height: 95vh !important; max-width: none !important; 
+            position: relative; padding: 0; background: #000;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 20px; overflow: hidden;
+        }
+        #viewPhotoModal img { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: contain; 
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+        
+        /* Ocultar elementos heredados que no queremos en el visor gigante */
+        #viewPhotoModal .modal-btn, 
+        #viewPhotoModal h3, 
+        #viewPhotoModal div[style*="display: flex"]:not(.close-view) { display: none !important; }
+
+        .close-view { 
+            position: absolute; top: 20px; right: 20px; 
+            cursor: pointer; font-size: 30px; font-weight: 900; 
+            color: white; background: rgba(255,255,255,0.2);
+            width: 50px; height: 50px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000; transition: 0.3s;
+        }
+        .close-view:hover { background: var(--red); transform: rotate(90deg); }
     
+        /* Estilo Pizarra Táctica */
+        .canvas-container { position: relative; background: #2e7d32; border: 2px solid white; border-radius: 4px; cursor: crosshair; overflow: hidden; }
+        .pizarra-img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+        
+        /* Ajuste Editor de Sesión */
+        #modalSesionOnline .modal-content { width: 95vw; height: 95vh; max-width: 1200px; padding: 0; display: flex; flex-direction: column; }
+        #printableSessionSheet { flex: 1; overflow-y: auto; padding: 20px; background: white; scrollbar-width: thin; }
+        .session-grid-item { border: 1px solid #000; height: 240px; display: flex; flex-direction: column; }
+
     /* --- AJUSTES DE FLECHAS Y ALINEACIÓN --- */
         .wrapper-asistencia { 
             display: flex !important; 
@@ -108,54 +143,76 @@
             flex-shrink: 0;
         }
 
-        /* Estilo de botones para la cabecera */
-.btn-todo-si, .btn-todo-val {
-    display: inline-block;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 10px;
-    font-weight: 800;
-    cursor: pointer;
-    text-transform: uppercase;
-    transition: all 0.2s ease;
-    border: 1px solid rgba(0,0,0,0.05);
-    user-select: none;
-    margin: 2px;
-}
+    /* --- ESTILOS PIZARRA AVANZADA (UNIFICADOS CON DIRECCIÓN) --- */
+    .pizarra-container {
+        width: 100%; height: 550px;
+        background: #2e7d32;
+        position: relative; overflow: hidden;
+        border: 6px solid #fff; border-radius: 10px;
+        cursor: crosshair;
+        background-image: repeating-linear-gradient(180deg, #2e7d32, #2e7d32 50px, #2a702d 50px, #2a702d 100px);
+    }
+    .field-lines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 3px solid rgba(255,255,255,0.6); pointer-events: none; }
+    .field-half-line { position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: rgba(255,255,255,0.6); }
+    .field-center-circle { position: absolute; top: -90px; left: 50%; transform: translateX(-50%); width: 180px; height: 180px; border: 2px solid rgba(255,255,255,0.6); border-radius: 50%; }
+    .field-penalty-area { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 60%; height: 31%; border: 2px solid rgba(255,255,255,0.6); border-bottom: none; }
+    .field-goal-area { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 27%; height: 10%; border: 2px solid rgba(255,255,255,0.6); border-bottom: none; }
+    .field-penalty-spot { position: absolute; bottom: 21%; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; background: rgba(255,255,255,0.8); border-radius: 50%; }
+    .field-penalty-arc { position: absolute; bottom: 31%; left: 50%; transform: translateX(-50%); width: 120px; height: 60px; border: 2px solid rgba(255,255,255,0.6); border-bottom: none; border-radius: 100px 100px 0 0; }
+    .field-goal-net { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 12%; height: 12px; border: 3px solid rgba(255,255,255,0.9); border-bottom: none; background: rgba(255,255,255,0.2); }
 
-/* Botón TODO SI (Rojizo/Blanco) */
-.btn-todo-si {
-    color: #E31E24;
-    background-color: #fff1f1;
-}
-.btn-todo-si:hover {
-    background-color: #E31E24;
-    color: white;
-}
-
-/* Botón TODO OK (Verdoso/Blanco) */
-.btn-todo-val {
-    color: #1e7e34;
-    background-color: #f1f8f1;
-}
-.btn-todo-val:hover {
-    background-color: #1e7e34;
-    color: white;
-}
+    .herramientas-pizarra-side {
+        background: rgba(255,255,255,0.9); backdrop-filter: blur(10px);
+        border-radius: 20px; padding: 15px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        display: flex; flex-direction: column; gap: 12px; align-items: center;
+        max-height: 550px;
+    }
+    .herramienta-pizarra {
+        width: 34px; height: 34px; background: #f8f9fa; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        cursor: grab; transition: 0.2s; font-size: 16px; border: 1px solid #eee;
+    }
+    .herramienta-pizarra.active-tool { background: var(--red) !important; color: white !important; border-color: var(--red) !important; }
+    .herramienta-pizarra:hover { background: white; transform: scale(1.1); border-color: var(--red); color: var(--red); }
     
+    .item-pizarra { position: absolute; cursor: move; z-index: 100; touch-action: none; transition: transform 0.1s ease; }
+    .resize-handle { position: absolute; bottom: -8px; right: -8px; width: 12px; height: 12px; background: var(--red); border-radius: 50%; cursor: nwse-resize; display: none; z-index: 110; border: 2px solid white; }
+    .item-pizarra:hover .resize-handle { display: block; }
+    .rect-texto { background: rgba(255,255,255,0.8); border: 1px solid #333; padding: 5px; min-width: 80px; font-size: 12px; font-weight: 700; }
+    .pizarra-canvas { position: absolute; top: 0; left: 0; z-index: 50; }
+
+    #modalPizarra .modal-content {
+        width: 95vw; height: 92vh; border-radius: 30px;
+        background: #f4f7f6; display: flex; flex-direction: column; padding: 0;
+    }
     </style>
 
     <div class="calendario-wrapper">
 
-     <div style="margin-bottom: 20px;">
-        <label style="font-size: 10px; font-weight: 900; color: #444; display: block; margin-bottom: 5px;">EQUIPO ACTIVO</label>
-        <select id="selectEquipoEntrenos" onchange="showLoader(); window.location.href='?mes={{ mes_actual }}&equipo=' + encodeURIComponent(this.value.trim())" style="padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-weight: 700; width: 100%; max-width: 300px;">
-            <option value="">Seleccionar...</option>
-            {% for eq in equipos %}
-            <option value="{{ eq.strip() }}" {% if equipo_defecto|string|trim == eq|string|trim %}selected{% endif %}>{{ eq.strip() }}</option>
-            {% endfor %}
-        </select>
-     </div>
+        <!-- CABECERA DE CONTROL Y PLANTILLAS -->
+        <div style="display: flex; align-items: flex-end; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 250px; max-width: 300px;">
+                <label style="font-size: 10px; font-weight: 900; color: #444; display: block; margin-bottom: 5px;">EQUIPO ACTIVO</label>
+                <select id="selectEquipoEntrenos" onchange="showLoader(); window.location.href='?mes={{ mes_actual }}&equipo=' + encodeURIComponent(this.value.trim())" style="padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-weight: 700; width: 100%; background: white;">
+                    <option value="">Seleccionar...</option>
+                    {% for eq in equipos %}
+                    <option value="{{ eq.strip() }}" {% if equipo_defecto|string|trim == eq|string|trim %}selected{% endif %}>{{ eq.strip() }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <a href="/static/data/plantilla_entrenamiento.pdf" download class="btn-fin" style="background: #ffffff; color: #E31E24; padding: 0 18px; font-size: 10px; border-radius: 8px; height: 42px; border: 2px solid #E31E24; cursor: pointer; font-weight: 800; text-decoration: none; display: flex; align-items: center; box-sizing: border-box;">
+                    <i class="fas fa-file-pdf" style="margin-right: 8px;"></i> PLANTILLA PDF
+                </a>
+                <button class="btn-fin" onclick="abrirModalSesionOnline()" style="background: #ffffff; color: #E31E24; padding: 0 18px; font-size: 10px; border-radius: 8px; height: 42px; border: 2px solid #E31E24; cursor: pointer; font-weight: 800; box-sizing: border-box;">
+                    <i class="fas fa-edit" style="margin-right: 8px;"></i> CREAR SESIÓN ONLINE
+                </button>
+                <button class="btn-fin" onclick="abrirModalMisSesiones()" style="background: #ffffff; color: #E31E24; padding: 0 18px; font-size: 10px; border-radius: 8px; height: 42px; border: 2px solid #E31E24; cursor: pointer; font-weight: 800; box-sizing: border-box;">
+                    <i class="fas fa-folder-open" style="margin-right: 8px;"></i> MIS SESIONES
+                </button>
+            </div>
+        </div>
 
      <div class="header-row">
     <select id="monthSelect" style="border:none; background:transparent; font-size:24px; font-weight:900; outline:none; cursor:pointer;" onchange="showLoader(); window.location.href='?mes=' + this.value + '&equipo=' + encodeURIComponent('{{ equipo_defecto }}'.trim())">
@@ -173,7 +230,33 @@
         <!-- Se han movido los objetivos a Dirección Deportiva -->
 
         <div class="grid">
-            {% for semana in semanas %}
+            {% for sem_obj in semanas %}
+                {% set semana = sem_obj.dias %}
+                <!-- APARTADO DE EJERCICIOS SEMANALES -->
+                <div style="grid-column: span 6; background: #ffffff; padding: 0 20px; margin-top: 5px; margin-bottom: -11px; display: flex; align-items: center; border-radius: 12px 12px 0 0; border: 1px solid #ddd; border-bottom: none; position: relative; z-index: 10; height: 50px;">
+                    <div style="display: flex; gap: 12px; width: 100%; justify-content: center; height: 100%; align-items: center;">
+                        {% set slot_names = ['JUGADA COMBINATIVA', 'FISICO COORDINACIÓN', 'PIERNA NO HÁBIL', 'EDITAR...'] %}
+                        {% set slot_icons = ['fas fa-project-diagram', 'fas fa-running', 'fas fa-shoe-prints', 'fas fa-plus-circle'] %}
+                        {% for ej in sem_obj.ejercicios %}
+                            {% set label = slot_names[loop.index0] %}
+                            {% set icon = slot_icons[loop.index0] %}
+                            {% if ej %}
+                            <button class="btn-fin" 
+                                    style="background: #ffffff; color: #E31E24; padding: 0 18px; font-size: 10px; border-radius: 8px; height: 38px; border: 2px solid #E31E24; cursor: pointer; font-weight: 800; min-width: 190px; justify-content: center; letter-spacing: 0.5px; transition: 0.2s; display: flex; align-items: center; box-sizing: border-box;"
+                                    onclick="abrirModalVerEjercicio('{{ ej.url }}', '{{ ej.titulo|upper|replace("'", "\\'") }}', '{{ (ej.descripcion or "")|replace("'", "\\'")|replace("\n", " ")|replace("\r", "") }}')">
+                                <i class="{{ icon }}" style="color: #E31E24; margin-right: 12px; font-size: 16px;"></i> {{ label }}
+                            </button>
+                            {% else %}
+                            <button class="btn-fin" 
+                                    style="background: #ffffff; color: #cbd5e1; padding: 0 18px; font-size: 10px; border-radius: 8px; height: 38px; border: 1.5px dashed #e2e8f0; cursor: default; font-weight: 700; min-width: 190px; justify-content: center; opacity: 0.6; display: flex; align-items: center; box-sizing: border-box;"
+                                    disabled>
+                                <i class="{{ icon }}" style="margin-right: 12px; font-size: 16px; color: #f1f5f9;"></i> {{ label }}
+                            </button>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+
                 {% for d in semana[:5] %}
                     {% if d %}
                     <div class="day {% if d.es_hoy %}today{% endif %}">
@@ -230,7 +313,264 @@
     </div>
 </div>
     </div>
+
+    <!-- MODAL SESIÓN ONLINE (PRINTABLE) -->
+    <div id="modalSesionOnline" class="modal">
+        <style>
+            @media print {
+                body * { visibility: hidden; }
+                #modalSesionOnline, #modalSesionOnline * { visibility: visible; }
+                #modalSesionOnline { position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: white !important; z-index: 99999; }
+                .no-print { display: none !important; }
+                #printableSessionSheet { border: none !important; box-shadow: none !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+            }
+        </style>
+        <div class="modal-content" style="width: 1100px; max-width: 98%; max-height: 95vh; border-radius: 15px; padding: 0; overflow: hidden; display: flex; flex-direction: column;">
+            <div class="no-print" style="padding: 15px 25px; background: #f8fafc; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin:0; font-size:12px; font-weight:900; color:#333; text-transform:uppercase;">Editor de Sesión de Entrenamiento</h3>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-fin" style="background:#E31E24; color:white; border:none; height:35px; padding:0 15px;" onclick="guardarSesionServidor()">
+                        <i class="fas fa-save"></i> GUARDAR EN MI CARPETA
+                    </button>
+                    <button class="btn-fin" style="background:#28a745; color:white; border:none; height:35px; padding:0 15px;" onclick="window.print()">
+                        <i class="fas fa-download"></i> DESCARGAR
+                    </button>
+                    <button class="btn-fin" style="background:#eee; color:#333; border:none; height:35px; padding:0 15px;" onclick="document.getElementById('modalSesionOnline').style.display='none'">
+                        CERRAR
+                    </button>
+                </div>
+            </div>
+            
+            <div id="printableSessionSheet">
+                <!-- Cabecera estilo Plantilla PDF -->
+                <div style="display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 20px; border-bottom: 3px solid #000; padding-bottom: 15px; margin-bottom: 10px;">
+                    <!-- Columna 1: Info Club -->
+                    <div style="border-right: 2px solid #000; padding-right: 15px;">
+                        <div style="font-weight: 900; font-size: 24px; color: #E31E24;">25/26</div>
+                        <img src="/static/ESCUDO%20SIN%20FONDO.png" style="height: 70px; margin: 10px 0;">
+                        <div style="font-size: 13px; font-weight: 900; margin-bottom: 5px; text-transform: uppercase;">
+                            EQUIPO: 
+                            <select id="sheetEquipoHeader" style="border:none; border-bottom:2px solid #000; width:120px; outline:none; font-weight:900; background: transparent; font-family: inherit; cursor: pointer;">
+                                {% for eq in equipos %}
+                                <option value="{{ eq }}" {% if equipo_defecto == eq %}selected{% endif %}>{{ eq }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div style="font-size: 13px; font-weight: 900; margin-bottom: 5px;">
+                            FECHA: <input type="date" id="sheetFecha" value="{{ now.strftime('%Y-%m-%d') }}" style="border:none; border-bottom:2px solid #000; outline:none; font-weight:900; font-family: inherit;">
+                        </div>
+                        <div style="font-size: 12px; font-weight: 800;">
+                            MATERIAL: <input type="text" style="border:none; border-bottom:1px solid #000; width:100px; outline:none;">
+                        </div>
+                        <div style="font-size: 12px; font-weight: 800;">
+                            BALONES: <input type="text" style="border:none; border-bottom:1px solid #000; width:50px; outline:none;">
+                        </div>
+                    </div>
+                    <!-- Columna 2: Medio Campo Visual -->
+                    <div class="canvas-container" onclick="abrirPizarraModal(this)" style="background: #2e7d32; display: flex; align-items: center; justify-content: center; position: relative; height: 160px; border-radius: 8px; cursor: pointer;">
+                        <img src="https://www.web-futbol.com/wp-content/uploads/2021/01/medio-campo-vertical.png" class="pizarra-img" style="opacity: 0.6; width: 100%; height: 100%; object-fit: contain;">
+                        <div style="position: absolute; font-weight: 900; color: white; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; pointer-events: none; text-shadow: 0 0 4px #000;">Esquema Táctico General</div>
+                        <div style="position: absolute; bottom: 5px; right: 5px; font-size: 8px; color: rgba(255,255,255,0.8); pointer-events: none;">CLIC PARA DIBUJAR</div>
+                    </div>
+                    <!-- Columna 3: Notas -->
+                    <div style="border: 2px solid #000; padding: 10px; border-radius: 8px; background: #fff;">
+                        <label style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: #E31E24; display: block; margin-bottom: 5px;">Notas de la Sesión:</label>
+                        <textarea style="width: 100%; height: 120px; border: none; resize: none; font-family: inherit; font-size: 12px; outline: none; line-height: 1.4;" placeholder="Observaciones, lista de ausentes, recordatorios..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Cuadrícula de Ejercicios 1-6 -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; border: 2px solid #000; border-top: none;">
+                    {% for i in range(1, 7) %}
+                    <div class="session-grid-item">
+                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding: 2px 8px; background: #fff;">
+                            <span style="font-weight: 900; font-size: 14px;">{{ i }}- <input type="text" placeholder="NOMBRE DEL EJERCICIO" style="border:none; width: 200px; font-weight:900; font-size: 11px; outline:none;"></span>
+                            <span style="font-size: 10px; font-weight: 900;">DURACIÓN <input type="text" style="width: 40px; border: none; border-bottom: 1px solid #000; outline: none; text-align: center; font-weight: 800;"> min</span>
+                        </div>
+                        <div style="border-bottom: 1px solid #000; padding: 2px 8px; background: #f0f0f0; font-size: 11px; font-weight: 900;">
+                            OBJ: <input type="text" placeholder="escribir objetivos separados por comas" style="width: 85%; border: none; background: transparent; outline: none; font-weight: 700; font-size: 10px;">
+                        </div>
+                        <div style="flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 0;">
+                            <textarea style="border: none; border-right: 1px solid #000; padding: 8px; resize: none; font-family: inherit; font-size: 11px; outline: none;" placeholder="Descripción detallada..."></textarea>
+                            <div class="canvas-container" onclick="abrirPizarraModal(this)" style="background: #2e7d32; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer;">
+                                <img src="https://www.web-futbol.com/wp-content/uploads/2021/01/medio-campo-vertical.png" class="pizarra-img" style="opacity: 0.6; width: 100%; height: 100%; object-fit: contain;">
+                                <div style="position: absolute; color: white; font-weight: 900; font-size: 9px; text-transform: uppercase; pointer-events: none; text-shadow: 0 0 3px #000;">CLIC PARA DIBUJAR {{ i }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Pie de página: Trabajo final -->
+                <div style="border: 2px solid #000; border-top: none; padding: 10px 15px; display: flex; align-items: center; justify-content: space-between; background: #fff;">
+                    <span style="font-weight: 900; font-size: 14px; text-transform: uppercase;">FINAL</span>
+                    <span style="font-weight: 900; font-size: 14px; text-transform: uppercase; color: #000; letter-spacing: 1px;">CORE + SUPERIOR Y ESTIRAMIENTOS</span>
+                    <div style="display: flex; gap: 5px;">
+                        <div style="width: 20px; height: 20px; border: 1px solid #000;"></div>
+                        <div style="width: 20px; height: 20px; border: 1px solid #000;"></div>
+                    </div>
+                </div>
+
+                <!-- Identificación del Equipo (No está en el PDF pero ayuda al entrenador) -->
+                <div style="margin-top: 10px; text-align: right; font-size: 10px; color: #666; font-weight: 700;">
+                    EQUIPO: <input type="text" id="sheetEquipo" style="border:none; border-bottom:1px solid #eee; width:120px; outline:none; font-size: 10px; font-weight: 700; color: #666;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL MIS SESIONES -->
+    <div id="modalMisSesiones" class="modal">
+        <div class="modal-content" style="width: 800px; max-width: 95%; max-height: 85vh; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column;">
+            <div style="padding: 20px 30px; background: #f8fafc; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin:0; font-weight:900; color:#333; text-transform:uppercase; font-size: 1.1rem;">Mis Sesiones Guardadas</h3>
+                <span class="close-view" style="position: static; font-size: 30px;" onclick="document.getElementById('modalMisSesiones').style.display='none'">&times;</span>
+            </div>
+            
+            <div style="padding: 20px; background: white; flex: 1; display: flex; flex-direction: column; gap: 15px; overflow: hidden;">
+                <!-- Filtros Meses -->
+                <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;" id="filtroMesesSesiones">
+                    {% for m in ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] %}
+                    <button class="btn-mes-filtro" data-mes="{{ loop.index }}" onclick="toggleFiltroMes(this)" style="padding: 5px 12px; border: 1px solid #ddd; border-radius: 20px; background: white; cursor: pointer; font-weight: 800; font-size: 10px; transition: 0.2s;">{{ m }}</button>
+                    {% endfor %}
+                </div>
+
+                <!-- Buscador -->
+                <div style="position: relative;">
+                    <i class="fas fa-search" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #999;"></i>
+                    <input type="text" id="buscadorSesiones" placeholder="Buscar por contenido (nombre ejercicio, objetivos, notas...)" oninput="renderSesionesList()" style="width: 100%; padding: 12px 15px 12px 40px; border-radius: 12px; border: 1px solid #eee; font-family: inherit; font-weight: 700; font-size: 13px; outline: none; background: #fcfcfc;">
+                </div>
+
+                <!-- Lista de Sesiones -->
+                <div id="listaSesionesContainer" style="
+                    flex: 1; 
+                    overflow-y: auto; 
+                    display: grid; 
+                    grid-template-columns: repeat(10, 1fr); 
+                    gap: 15px; 
+                    padding: 10px;
+                    padding-right: 5px;">
+                    <!-- Se llena por JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PIZARRA TÁCTICA (EDITOR UNIFICADO) -->
+    <div id="modalPizarra" class="modal">
+        <div class="modal-content">
+            <div style="padding: 25px 40px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fff;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <h3 style="margin: 0; font-weight: 900; color: #333; letter-spacing: -0.5px; font-size: 1.5rem;">Editor de Dibujo Táctico:</h3>
+                    <input type="text" id="nombreEjercicioPizarra" placeholder="Título..." style="border: none; border-bottom: 2px solid #eee; font-weight: 800; font-size: 1.1rem; padding: 5px 10px; outline: none; width: 300px; color: var(--red);">
+                </div>
+                <div style="display: flex; gap: 15px;">
+                    <button id="btnGuardarPizarra" class="btn-fin" style="background: #10b981; color: white; padding: 12px 25px; border-radius: 14px; font-weight: 900; border: none; cursor: pointer; transition: 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="confirmarDibujo()"><i class="fas fa-check"></i> INSERTAR EN SESIÓN</button>
+                    <button class="btn-fin" style="background: #f1f5f9; color: #64748b; padding: 12px 25px; border-radius: 14px; font-weight: 900; border: 1px solid #e2e8f0; cursor: pointer;" onclick="document.getElementById('modalPizarra').style.display='none'"><i class="fas fa-times"></i> CERRAR</button>
+                </div>
+            </div>
+            
+            <div style="padding: 30px; display: grid; grid-template-columns: 300px 1fr 240px; gap: 25px; flex: 1; overflow: hidden;">
+                <!-- Izquierda: Notas adicionales (Opcional) -->
+                <div style="background: white; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                    <label style="font-size: 10px; font-weight: 900; color: #999; text-transform: uppercase; letter-spacing: 1px;">Anotaciones del Dibujo</label>
+                    <textarea id="descEjercicioPizarra" style="flex: 1; border: 1px solid #eee; border-radius: 12px; padding: 15px; font-family: inherit; font-size: 13px; font-weight: 600; color: #555; resize: none; background: #fafafa; outline: none;" placeholder="Detalles específicos para este gráfico..."></textarea>
+                </div>
+
+                <!-- Centro: Campo -->
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div style="display: flex; gap: 10px; align-items: center; justify-content: center; background: #fff; padding: 5px; border-radius: 10px; border: 1px solid #eee;">
+                        <div style="font-size: 10px; color: #999; font-weight: 800; flex: 1; text-align: center;">
+                        <i class="fas fa-mouse-pointer"></i> RUEDA DEL RATÓN PARA TAMAÑO | <strong style="color: var(--red);"><i class="fas fa-hand-pointer"></i> DOBLE CLIC PARA ELIMINAR</strong>
+                        </div>
+                    </div>
+                    <div id="pizarraDropArea" class="pizarra-container" style="height: 100%; width: 100%;">
+                        <canvas id="mainCanvasPizarra" class="pizarra-canvas"></canvas>
+                        <div class="field-lines"></div>
+                        <div class="field-half-line"></div>
+                        <div class="field-center-circle"></div>
+                        <div class="field-penalty-area"></div>
+                        <div class="field-penalty-arc"></div>
+                        <div class="field-goal-area"></div>
+                        <div class="field-penalty-spot"></div>
+                        <div class="field-goal-net"></div>
+                    </div>
+                </div>
+                
+                <!-- Derecha: Herramientas (Material y Pincel) -->
+                <div class="herramientas-pizarra-side">
+                    <label style="font-size: 8px; font-weight: 900; color: var(--red); text-transform: uppercase;">Material</label>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%;">
+                        <div class="herramienta-pizarra" draggable="true" ondragstart="dragItem(event, 'ball')"><i class="fas fa-futbol" style="color: #333;"></i></div>
+                        <div id="prevCono" class="herramienta-pizarra" draggable="true" ondragstart="dragItem(event, 'cone')">
+                            <div style="width: 18px; height: 6px; background: #ff0000; border-radius: 10px 10px 3px 3px;"></div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1px;">
+                            <div onclick="cambiarColorCono('#ff0000')" style="width: 7px; height: 7px; background: red; cursor: pointer; border-radius: 50%;"></div>
+                            <div onclick="cambiarColorCono('#0000ff')" style="width: 7px; height: 7px; background: blue; cursor: pointer; border-radius: 50%;"></div>
+                            <div onclick="cambiarColorCono('#ffff00')" style="width: 7px; height: 7px; background: yellow; cursor: pointer; border-radius: 50%;"></div>
+                            <div onclick="cambiarColorCono('#ffffff')" style="width: 7px; height: 7px; background: white; border: 1px solid #ccc; cursor: pointer; border-radius: 50%;"></div>
+                        </div>
+                    </div>
+
+                    <label style="font-size: 8px; font-weight: 900; color: #2563eb; text-transform: uppercase;">Jugadores</label>
+                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; width: 100%;">
+                        <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="dragItem(event, 'player-red')"><div style="width:10px; height:10px; background:red; border-radius:50%;"></div></div>
+                        <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="dragItem(event, 'player-green')"><div style="width:10px; height:10px; background:#DFFF00; border-radius:50%;"></div></div>
+                        <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="dragItem(event, 'player-white')"><div style="width:10px; height:10px; background:white; border-radius:50%; border:1px solid #ccc;"></div></div>
+                        <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="dragItem(event, 'player-blue')"><div style="width:10px; height:10px; background:blue; border-radius:50%;"></div></div>
+                        <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="dragItem(event, 'player-yellow')"><div style="width:10px; height:10px; background:yellow; border-radius:50%;"></div></div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; margin-top: 5px;">
+                        <div class="herramienta-pizarra" draggable="true" ondragstart="dragItem(event, 'pica')"><div style="width: 2px; height: 20px; background: #333;"></div></div>
+                        <div class="herramienta-pizarra" draggable="true" ondragstart="dragItem(event, 'goal-mini')"><div style="width:16px; height:10px; border:1.5px solid #333; border-bottom:none;"></div></div>
+                        <div class="herramienta-pizarra" draggable="true" ondragstart="dragItem(event, 'text')"><span style="font-weight:900; font-size:10px;">ABC</span></div>
+                    </div>
+                    
+                    <label style="font-size: 8px; font-weight: 900; color: var(--red); text-transform: uppercase;">Pincel</label>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%;">
+                        <div class="herramienta-pizarra tool-btn-pincel" onclick="setDrawingMode('freehand', this)" title="Dibujo libre"><i class="fas fa-pencil-alt"></i></div>
+                        <div class="herramienta-pizarra tool-btn-pincel" onclick="setDrawingMode('straight', this)" title="Flecha"><i class="fas fa-long-arrow-alt-right"></i></div>
+                        <div class="herramienta-pizarra tool-btn-pincel" onclick="setDrawingMode('dashed', this)" title="Dashed"><i class="fas fa-arrow-right" style="border-bottom: 2px dashed;"></i></div>
+                        <div class="herramienta-pizarra tool-btn-pincel" onclick="setDrawingMode('rect', this)" title="Zona"><i class="far fa-square"></i></div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 8px; margin-top: 8px; justify-content: center; width: 100%;">
+                        <div onclick="setBrushColor('#ffffff', this)" style="width: 15px; height: 15px; background: white; border-radius: 50%; cursor: pointer; border: 2px solid #ccc;" class="color-opt active"></div>
+                        <div onclick="setBrushColor('#E31E24', this)" style="width: 15px; height: 15px; background: red; border-radius: 50%; cursor: pointer;" class="color-opt"></div>
+                        <div onclick="setBrushColor('#2563eb', this)" style="width: 15px; height: 15px; background: blue; border-radius: 50%; cursor: pointer;" class="color-opt"></div>
+                        <div onclick="setBrushColor('#28a745', this)" style="width: 15px; height: 15px; background: green; border-radius: 50%; cursor: pointer;" class="color-opt"></div>
+                    </div>
+
+                    <div style="display: flex; gap: 5px; width: 100%; margin-top: auto; border-top: 1px solid #eee; padding-top: 10px;">
+                        <button class="btn-fin" style="padding: 12px; font-size: 10px; flex: 1; justify-content: center; background: #f8f9fa; color: #64748b; border: 1px solid #cbd5e1; font-weight: 900; border-radius: 10px;" onclick="undoLastDraw()"><i class="fas fa-undo"></i> DESHACER</button>
+                        <button class="btn-fin" style="padding: 12px; font-size: 10px; flex: 1; justify-content: center; background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; font-weight: 900; border-radius: 10px;" onclick="limpiarPizarra()"><i class="fas fa-trash-alt"></i> BORRAR</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 {% include 'modales_fotos.html' %}
+
+    <!-- MODAL VER EJERCICIO SEMANAL -->
+    <div id="modalVerEjercicio" class="modal">
+        <div class="modal-content" style="width: 75vw; max-height: 85vh; border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; background: #fff; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
+            <div style="padding: 20px 30px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: #fff;">
+                <h3 id="txtTituloVerEjercicio" style="margin: 0; font-weight: 900; color: #1e293b; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 0.5px;">Ver Ejercicio</h3>
+                <span style="cursor: pointer; font-size: 32px; font-weight: 300; color: #94a3b8; line-height: 1; transition: 0.2s;" onmouseover="this.style.color='#E31E24'" onmouseout="this.style.color='#94a3b8'" onclick="document.getElementById('modalVerEjercicio').style.display='none'">&times;</span>
+            </div>
+            <div id="containerVerEjercicio" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; background: #f8fafc; min-height: 0;">
+                <div id="wrapperMedia" style="padding: 25px; text-align: center; flex: 1;">
+                    <img id="imgVerEjercicio" src="" style="max-width: 100%; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); border: 4px solid white; display: none;">
+                    <iframe id="pdfVerEjercicio" src="" style="width: 100%; height: 550px; border: 1px solid #eee; border-radius: 10px; display: none; background: white;"></iframe>
+                </div>
+                <div id="descVerEjercicio" style="background: white; padding: 30px; border-top: 1px solid #f1f5f9; flex-shrink: 0;"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Menú Foto -->
     <div id="photoMenu" class="modal">
         <div class="modal-content">
@@ -312,6 +652,39 @@
     saveAll();
 }
 
+        function abrirModalVerEjercicio(url, titulo, descripcion) {
+            document.getElementById('txtTituloVerEjercicio').innerText = (titulo || "DETALLES DEL EJERCICIO").toUpperCase();
+            const imgEl = document.getElementById('imgVerEjercicio');
+            const pdfEl = document.getElementById('pdfVerEjercicio');
+            const descEl = document.getElementById('descVerEjercicio');
+            
+            imgEl.style.display = 'none';
+            pdfEl.style.display = 'none';
+            pdfEl.src = ""; 
+            imgEl.src = "";
+
+            // Lógica para detectar si es un PDF o una Imagen
+            if (url.toLowerCase().endsWith('.pdf')) {
+                pdfEl.style.display = 'block';
+                pdfEl.src = url;
+            } else {
+                imgEl.style.display = 'inline-block';
+                imgEl.src = url;
+            }
+
+            descEl.innerHTML = `
+                <div style="max-width: 850px; margin: 0 auto;">
+                    <h4 style="color: #E31E24; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-clipboard-list"></i> Especificaciones de la Sesión
+                    </h4>
+                    <div style="font-size: 16px; color: #1e293b; line-height: 1.6; font-weight: 600; background: #f8fafc; padding: 25px; border-radius: 15px; border: 1px solid #f1f5f9; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+                        ${descripcion || "<i>Sin descripción adicional.</i>"}
+                    </div>
+                </div>`;
+
+            document.getElementById('modalVerEjercicio').style.display = 'flex';
+        }
+
         function updateStats() {
             const conceptos = "{{ objetivos.tactico }},{{ objetivos.tecnico }}".split(',').map(s => s.trim()).filter(s => s !== "");
 
@@ -339,15 +712,549 @@
             document.getElementById('photoMenu').style.display = 'flex';
         }
 
-        function closeModals() {
-            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        function abrirModalSesionOnline() {
+            const eq = document.getElementById('selectEquipoEntrenos').value;
+            document.getElementById('sheetEquipoHeader').value = eq;
+            
+            // Limpiamos dibujos previos
+            document.querySelectorAll('.drawn-overlay').forEach(el => el.remove());
+            document.querySelectorAll('.canvas-container div').forEach(d => d.style.display = 'block');
+
+            document.getElementById('modalSesionOnline').style.display = 'flex';
+        }
+
+        let targetCanvasContainer = null;
+        let canvas, ctx;
+        
+        // Estados del Pincel
+        let isDrawing = false;
+        let drawingMode = 'none'; // 'none', 'freehand', 'straight', 'dashed', 'rect'
+        let brushColor = '#ffffff';
+        let conoColorActivo = '#ff0000';
+        let lastX = 0, lastY = 0;
+        let drawHistory = [];
+
+        function cambiarColorCono(color) {
+            conoColorActivo = color;
+            document.getElementById('prevCono').innerHTML = `<div style="width: 20px; height: 20px; position: relative; display: flex; align-items: center; justify-content: center;"><div style="width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 16px solid ${color}; position: relative; z-index: 2;"></div><div style="width: 18px; height: 4px; background: ${color}; border-radius: 50%; position: absolute; bottom: 0; z-index: 1; filter: brightness(0.7);"></div></div>`;
+        }
+
+        function setDrawingMode(mode, el) {
+            drawingMode = mode;
+            document.querySelectorAll('.tool-btn-pincel').forEach(b => b.classList.remove('active-tool', 'active'));
+            if(el) el.classList.add('active-tool');
+        }
+
+        function setBrushColor(color, el) {
+            brushColor = color;
+            document.querySelectorAll('.color-opt').forEach(b => { b.style.boxShadow = 'none'; b.classList.remove('active'); });
+            if(el) { el.style.boxShadow = '0 0 0 2px ' + color; el.classList.add('active'); }
+        }
+
+        function abrirPizarraModal(container) {
+            targetCanvasContainer = container;
+            const nameInp = document.getElementById('nombreEjercicioPizarra');
+            const descArea = document.getElementById('descEjercicioPizarra');
+            
+            // Cargar datos actuales del slot de la sesión (si es un slot de ejercicio)
+            const parentSlot = container.closest('.session-grid-item');
+            if (parentSlot) {
+                const inputTitulo = parentSlot.querySelector('input[type="text"]');
+                nameInp.value = inputTitulo ? inputTitulo.value : "";
+                
+                const textareaDesc = container.parentElement.querySelector('textarea');
+                descArea.value = textareaDesc ? textareaDesc.value : "";
+            } else {
+                nameInp.value = "";
+                // Cargar notas generales si es el board del encabezado
+                const mainNotes = container.parentElement.querySelector('textarea');
+                descArea.value = mainNotes ? mainNotes.value : "";
+            }
+            
+            document.getElementById('modalPizarra').style.display = 'flex';
+            
+            canvas = document.getElementById('mainCanvasPizarra');
+            ctx = canvas.getContext('2d');
+            
+            const containerPizarra = document.getElementById('pizarraDropArea');
+            canvas.width = containerPizarra.offsetWidth;
+            canvas.height = containerPizarra.offsetHeight;
+            
+            drawHistory = [];
+            document.querySelectorAll('.item-pizarra').forEach(el => el.remove());
+            ctx.clearRect(0,0, canvas.width, canvas.height);
+            
+            canvas.onpointerdown = startDraw;
+            canvas.onpointermove = draw;
+            canvas.onpointerup = stopDraw;
+            
+            containerPizarra.ondragover = (e) => e.preventDefault();
+            containerPizarra.ondrop = dropItem;
+        }
+
+        function startDraw(e) {
+            if (drawingMode === 'none' || e.button !== 0) return;
+            isDrawing = true;
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+            ctx.strokeStyle = brushColor;
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            if (drawingMode === 'dashed') ctx.setLineDash([5, 5]);
+            else ctx.setLineDash([]);
+
+            if (drawingMode === 'straight' || drawingMode === 'dashed') {
+                drawHistory.push({ type: 'straight-start', x: lastX, y: lastY, color: brushColor, width: 2 });
+            } else if (drawingMode === 'rect') {
+                drawHistory.push({ type: 'rect-start', x: lastX, y: lastY, color: brushColor, width: 2 });
+            }
+        }
+        
+        function draw(e) {
+            if (!isDrawing) return;
+            const curX = e.offsetX;
+            const curY = e.offsetY;
+
+            if (drawingMode === 'freehand') {
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(curX, curY);
+                ctx.stroke();
+                drawHistory.push({ type: 'segment', x1: lastX, y1: lastY, x2: curX, y2: curY, color: brushColor, width: 2 });
+                [lastX, lastY] = [curX, curY];
+            } else {
+                redrawHistory(curX, curY);
+            }
+        }
+
+        function stopDraw(e) {
+            if (!isDrawing) return;
+            isDrawing = false;
+            if (drawingMode === 'straight' || drawingMode === 'dashed' || drawingMode === 'rect') {
+                const startPoint = drawHistory.pop();
+                if (startPoint) {
+                    if (drawingMode === 'rect') {
+                        drawHistory.push({ type: 'rect', x: startPoint.x, y: startPoint.y, w: e.offsetX - startPoint.x, h: e.offsetY - startPoint.y, color: brushColor, width: 2 });
+                    } else {
+                        drawHistory.push({ type: 'straight-line', x1: startPoint.x, y1: startPoint.y, x2: e.offsetX, y2: e.offsetY, color: brushColor, width: 2, dash: drawingMode === 'dashed' });
+                    }
+                }
+                redrawHistory();
+            }
+        }
+
+        function redrawHistory(tempX, tempY) {
+            ctx.clearRect(0,0, canvas.width, canvas.height);
+            drawHistory.forEach((item, index) => {
+                if (tempX !== undefined && index === drawHistory.length - 1 && (item.type === 'straight-start' || item.type === 'rect-start')) return;
+                ctx.strokeStyle = item.color;
+                ctx.lineWidth = item.width;
+                ctx.setLineDash(item.dash ? [5, 5] : []);
+                ctx.beginPath();
+                if (item.type === 'segment') {
+                    ctx.moveTo(item.x1, item.y1); ctx.lineTo(item.x2, item.y2);
+                } else if (item.type === 'straight-line') {
+                    ctx.moveTo(item.x1, item.y1); ctx.lineTo(item.x2, item.y2);
+                    drawArrowHead(item.x1, item.y1, item.x2, item.y2);
+                } else if (item.type === 'rect') {
+                    ctx.setLineDash([]);
+                    ctx.strokeRect(item.x, item.y, item.w, item.h);
+                }
+                ctx.stroke();
+            });
+
+            if (tempX !== undefined && isDrawing) {
+                const start = drawHistory[drawHistory.length-1];
+                ctx.strokeStyle = brushColor;
+                ctx.setLineDash(drawingMode === 'dashed' ? [5, 5] : []);
+                ctx.beginPath();
+                if (drawingMode === 'straight' || drawingMode === 'dashed') {
+                    ctx.moveTo(start.x, start.y); ctx.lineTo(tempX, tempY);
+                    drawArrowHead(start.x, start.y, tempX, tempY);
+                } else if (drawingMode === 'rect') {
+                    ctx.setLineDash([]);
+                    ctx.strokeRect(start.x, start.y, tempX - start.x, tempY - start.y);
+                }
+                ctx.stroke();
+            }
+        }
+
+        function drawArrowHead(x1, y1, x2, y2) {
+            const angle = Math.atan2(y2 - y1, x2 - x1);
+            ctx.lineTo(x2 - 10 * Math.cos(angle - Math.PI / 6), y2 - 10 * Math.sin(angle - Math.PI / 6));
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2 - 10 * Math.cos(angle + Math.PI / 6), y2 - 10 * Math.sin(angle + Math.PI / 6));
+        }
+
+        function undoLastDraw() {
+            drawHistory.pop();
+            redrawHistory();
+        }
+
+        function dragItem(ev, type) { ev.dataTransfer.setData("type", type); }
+        
+        function dropItem(ev) {
+            ev.preventDefault();
+            const type = ev.dataTransfer.getData("type");
+            const rect = document.getElementById('pizarraDropArea').getBoundingClientRect();
+            const x = ev.clientX - rect.left;
+            const y = ev.clientY - rect.top;
+            crearObjetoPizarra(type, x, y);
+        }
+
+        function crearObjetoPizarra(type, x, y) {
+            const el = document.createElement('div');
+            el.className = 'item-pizarra';
+            el.style.left = (x - 15) + 'px';
+            el.style.top = (y - 15) + 'px';
+            
+            let html = '';
+            if(type === 'ball') html = '<i class="fas fa-futbol" style="font-size:24px;"></i>';
+            else if(type === 'cone') html = '<i class="fas fa-triangle-exclamation" style="font-size:24px; color:#ff9800;"></i>';
+            else if(type.startsWith('player')) {
+                const color = type.split('-')[1];
+                html = `<div style="width:25px; height:25px; background:${color}; border-radius:50%; border:2px solid white; box-shadow:0 2px 4px rgba(0,0,0,0.3);"></div>`;
+            } else if(type === 'pica') {
+                html = '<div style="width: 4px; height: 35px; background: #333; position: relative;"><div style="width: 14px; height: 5px; background: #333; position: absolute; bottom: 0; left: -5px; border-radius: 2px;"></div></div>';
+            } else if(type === 'goal-mini') {
+                html = '<div style="width: 30px; height: 18px; border: 2px solid white; border-bottom: none; background: rgba(255,255,255,0.2);"></div>';
+            } else if(type === 'text') {
+                el.className += ' rect-texto';
+                el.contentEditable = true;
+                el.innerText = 'TEXTO...';
+            }
+
+            el.innerHTML = html;
+            
+            // Sistema de movimiento táctil/ratón unificado (Pointer Events)
+            let isDrag = false;
+            let activePointerId = null;
+            let initialX, initialY, currentX, currentY;
+
+            el.onpointerdown = (e) => {
+                if (el.contentEditable === "true" || e.button !== 0) return;
+                e.preventDefault();
+                isDrag = true;
+                activePointerId = e.pointerId;
+                initialX = e.clientX; initialY = e.clientY;
+                currentX = el.offsetLeft; currentY = el.offsetTop;
+                el.setPointerCapture(activePointerId);
+            };
+
+            el.onpointermove = (e) => {
+                if (!isDrag || e.pointerId !== activePointerId) return;
+                const dx = e.clientX - initialX;
+                const dy = e.clientY - initialY;
+                el.style.left = (currentX + dx) + 'px';
+                el.style.top = (currentY + dy) + 'px';
+            };
+
+            el.onpointerup = (e) => {
+                isDrag = false; activePointerId = null;
+            };
+
+            // Redimensionado con Rueda
+            el.onwheel = (e) => {
+                e.preventDefault();
+                let scale = parseFloat(el.dataset.scale || "1");
+                scale += (e.deltaY < 0) ? 0.1 : -0.1;
+                scale = Math.max(0.4, Math.min(3, scale));
+                el.dataset.scale = scale;
+                el.style.transform = `scale(${scale})`;
+            };
+
+            el.onpointerdown = (e) => {
+                if(el.contentEditable === "true") return;
+                let shiftX = e.clientX - el.getBoundingClientRect().left;
+                let shiftY = e.clientY - el.getBoundingClientRect().top;
+                function moveAt(pageX, pageY) {
+                    const pRect = document.getElementById('pizarraDropArea').getBoundingClientRect();
+                    el.style.left = (pageX - pRect.left - shiftX) + 'px';
+                    el.style.top = (pageY - pRect.top - shiftY) + 'px';
+                }
+                function onMouseMove(e) { moveAt(e.pageX, e.pageY); }
+                document.addEventListener('mousemove', onMouseMove);
+                el.onpointerup = () => { document.removeEventListener('mousemove', onMouseMove); el.onpointerup = null; };
+            };
+            
+            el.ondragstart = () => false;
+            el.ondblclick = () => el.remove(); // Doble clic para borrar
+
+            document.getElementById('pizarraDropArea').appendChild(el);
+        }
+
+        function limpiarPizarra() {
+            drawHistory = [];
+            redrawHistory();
+            document.querySelectorAll('.item-pizarra').forEach(el => el.remove());
+        }
+
+        async function confirmarDibujo() {
+            if(!targetCanvasContainer) return;
+
+            const area = document.getElementById('pizarraDropArea');
+            const nameInp = document.getElementById('nombreEjercicioPizarra');
+            const descArea = document.getElementById('descEjercicioPizarra');
+
+            if (typeof html2canvas === 'undefined') {
+                alert("Error: La librería de dibujo no se ha podido cargar desde el servidor externo. Por favor, recarga la página (F5) o comprueba si algún bloqueador de publicidad está impidiendo la carga.");
+                return;
+            }
+
+            // Desenfocar cualquier elemento editable para asegurar captura limpia y que el texto se procese
+            if (document.activeElement && typeof document.activeElement.blur === 'function') {
+                document.activeElement.blur();
+            }
+
+            // 1. Sincronizar textos de vuelta al editor de sesión
+            const parentSlot = targetCanvasContainer.closest('.session-grid-item');
+            if (parentSlot) {
+                // Sincronizar Título
+                const inputTitulo = parentSlot.querySelector('input[type="text"]');
+                if (inputTitulo) inputTitulo.value = nameInp.value;
+                
+                // Sincronizar Descripción Detallada
+                const textareaDesc = targetCanvasContainer.parentElement.querySelector('textarea');
+                if (textareaDesc) textareaDesc.value = descArea.value;
+            } else {
+                // Sincronizar Notas de Sesión (Board de Cabecera)
+                const mainNotes = targetCanvasContainer.parentElement.querySelector('textarea');
+                if (mainNotes) mainNotes.value = descArea.value;
+            }
+
+            // 2. Capturar y volcar el dibujo
+            if (typeof showLoader === 'function') showLoader();
+            
+            try {
+                // Pausa para asegurar que los cambios del DOM (como el blur) se asienten
+                await new Promise(r => setTimeout(r, 200));
+
+                const canvasCap = await html2canvas(area, { 
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#2e7d32',
+                    scale: 2, // Doble resolución para que se vea nítido en el PDF
+                    logging: false
+                });
+                
+                const data = canvasCap.toDataURL('image/png');
+                
+                let overlay = targetCanvasContainer.querySelector('.drawn-overlay');
+                if(!overlay) {
+                    overlay = document.createElement('img');
+                    overlay.className = 'drawn-overlay';
+                    overlay.style = "position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain; pointer-events:none; z-index:5;";
+                    targetCanvasContainer.appendChild(overlay);
+                }
+                overlay.src = data;
+                
+                // Ocultar el texto de ayuda del slot
+                const placeholder = targetCanvasContainer.querySelector('div:not(.drawn-overlay)');
+                if(placeholder) placeholder.style.display = 'none';
+                
+                document.getElementById('modalPizarra').style.display = 'none';
+            } catch (e) {
+                console.error(e);
+                alert("Error al capturar el dibujo táctico");
+            } finally {
+                if (typeof hideLoader === 'function') hideLoader();
+            }
+        }
+
+        async function guardarSesionServidor() {
+            const sheet = document.getElementById('printableSessionSheet');
+            const equipo = document.getElementById('sheetEquipoHeader').value;
+            const fechaRaw = document.getElementById('sheetFecha').value; // YYYY-MM-DD
+            
+            if(!equipo || !fechaRaw || equipo === "") return alert("Por favor, selecciona equipo y fecha.");
+            const [y, m, d] = fechaRaw.split('-');
+            const fechaFormatted = `${d}/${m}/${y}`;
+
+            // Recopilar textos para búsqueda posterior
+            const sessionData = {
+                notas: sheet.querySelector('textarea').value,
+                ejercicios: []
+            };
+
+            sheet.querySelectorAll('.session-grid-item').forEach(item => {
+                sessionData.ejercicios.push({
+                    nombre: item.querySelector('input[type="text"]').value,
+                    obj: item.querySelectorAll('input[type="text"]')[1].value, // Segundo input es OBJ
+                    desc: item.querySelector('textarea').value
+                });
+            });
+
+            if(typeof html2canvas === 'undefined') return alert("Error: La función de captura no está disponible en este momento.");
+
+            try {
+                showLoader();
+                const canvas = await html2canvas(sheet, { scale: 1.5, useCORS: true, logging: false });
+                const imgData = canvas.toDataURL('image/jpeg', 0.8);
+                const res = await fetch('/api/guardar_sesion_img', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        equipo: equipo, 
+                        fecha: fechaFormatted, 
+                        image: imgData, 
+                        usuario: usuario,
+                        notas: sessionData.notas,
+                        ejercicios: sessionData.ejercicios
+                    })
+                });
+                if(res.ok) {
+                    alert("Sesión guardada correctamente en tu carpeta del club.");
+                    location.reload(); // Recargar para mostrar el botón VER en el calendario
+                }
+                else alert("Error al guardar en el servidor.");
+            } catch (e) {
+                console.error(e);
+                alert("Error al procesar la imagen de la sesión.");
+            } finally {
+                hideLoader();
+            }
+        }
+
+        let allSesiones = [];
+        let mesesSeleccionados = [];
+
+        async function abrirModalMisSesiones() {
+            const equipo = document.getElementById('selectEquipoEntrenos').value;
+            
+            showLoader();
+            try {
+                const res = await fetch(`/api/listar_sesiones?equipo=${encodeURIComponent(equipo)}`);
+                allSesiones = await res.json();
+                
+                // Reset filtros
+                mesesSeleccionados = [];
+                document.querySelectorAll('.btn-mes-filtro').forEach(btn => {
+                    btn.style.background = 'white'; btn.style.color = '#333'; btn.style.borderColor = '#ddd';
+                });
+                document.getElementById('buscadorSesiones').value = "";
+                
+                renderSesionesList();
+                document.getElementById('modalMisSesiones').style.display = 'flex';
+            } catch (e) {
+                console.error(e);
+                alert("Error al cargar las sesiones.");
+            } finally { hideLoader(); }
+        }
+
+        function toggleFiltroMes(btn) {
+            const mes = parseInt(btn.dataset.mes);
+            if (mesesSeleccionados.includes(mes)) {
+                mesesSeleccionados = mesesSeleccionados.filter(m => m !== mes);
+                btn.style.background = 'white'; btn.style.color = '#333'; btn.style.borderColor = '#ddd';
+            } else {
+                mesesSeleccionados.push(mes);
+                btn.style.background = 'var(--red)'; btn.style.color = 'white'; btn.style.borderColor = 'var(--red)';
+            }
+            renderSesionesList();
+        }
+
+        function renderSesionesList() {
+            const container = document.getElementById('listaSesionesContainer');
+            const query = document.getElementById('buscadorSesiones').value.trim().toLowerCase();
+            container.innerHTML = "";
+            
+            const filtradas = allSesiones.filter(s => {
+                const mesSesion = parseInt(s.fecha.split('/')[1]);
+                // Si el mes es desconocido (??) o coincide con el filtro, pasa
+                const pasaMes = isNaN(mesSesion) || mesesSeleccionados.length === 0 || mesesSeleccionados.includes(mesSesion);
+                
+                if (!pasaMes) return false;
+                if (!query) return true;
+                const contenido = (s.notas + " " + s.ejercicios.map(e => e.nombre + " " + e.obj + " " + e.desc).join(" ")).toLowerCase();
+                return contenido.includes(query);
+            });
+
+            if (filtradas.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:40px; color:#999; font-weight:700;">No se encontraron sesiones.</div>`;
+                return;
+            }
+
+            filtradas.forEach(s => {
+                const div = document.createElement('div');
+                div.style = `
+                    padding: 8px; 
+                    border: 1px solid #f1f5f9; 
+                    border-radius: 15px; 
+                    display: flex; 
+                    flex-direction: column; 
+                    align-items: center; 
+                    gap: 8px; 
+                    background: #fff; 
+                    transition: 0.3s; 
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+                    text-align: center;
+                `;
+                div.onmouseover = () => div.style.borderColor = 'var(--red)';
+                div.onmouseout = () => div.style.borderColor = '#f1f5f9';
+                
+                // Normalización de fecha para visualización (maneja DD/MM/YYYY o YYYY-MM-DD)
+                let d, m, a;
+                if (s.fecha.includes('/')) {
+                    [d, m, a] = s.fecha.split('/');
+                } else {
+                    const parts = s.fecha.split('-');
+                    if (parts[0].length === 4) { [a, m, d] = parts; }
+                    else { [d, m, a] = parts; }
+                }
+                const fechaDisplay = `${d.toString().padStart(2, '0')}-${m.toString().padStart(2, '0')}-${a}`;
+
+                div.innerHTML = `
+                    <div style="background: #f8fafc; padding: 10px 5px; border-radius: 10px; text-align: center; width: 100%; border: 1px solid #eee;">
+                        <div style="font-size: 11px; font-weight: 900; color: var(--red);">${fechaDisplay}</div>
+                    </div>
+                    <button onclick="verSesionGuardada('${s.img_url}')" style="background: #fdf2f2; border: none; color: var(--red); width: 38px; height: 38px; border-radius: 50%; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-eye"></i>
+                    </button>`;
+                container.appendChild(div);
+            });
+        }
+
+        function highlightMatches(s, query) {
+            let allText = s.notas + " | " + s.ejercicios.map(e => `${e.nombre} (${e.obj}) ${e.desc}`).join(" | ");
+            if (!query) return allText.substring(0, 100) + (allText.length > 100 ? "..." : "");
+            const regex = new RegExp(`(${query})`, 'gi');
+            const index = allText.toLowerCase().indexOf(query);
+            let start = Math.max(0, index - 40);
+            let end = Math.min(allText.length, index + 100);
+            let snippet = (start > 0 ? "..." : "") + allText.substring(start, end) + (end < allText.length ? "..." : "");
+            return snippet.replace(regex, '<span style="text-decoration: underline; font-weight: 900; color: var(--red); background: #fff5f5;">$1</span>');
+        }
+
+        function verSesionGuardada(url) {
+            document.getElementById('imgPreview').src = url + "?t=" + new Date().getTime();
+            document.getElementById('viewPhotoModal').style.display = 'flex';
+        }
+
+        function closeModals(e) {
+            if (e) { 
+                e.preventDefault(); 
+                e.stopPropagation(); 
+            }
+            
+            const viewer = document.getElementById('viewPhotoModal');
+            
+            // Si el visor de fotos está abierto, cerramos solo ese modal para no cerrar modales inferiores (como Mis Sesiones)
+            if (viewer && (viewer.style.display === 'flex' || viewer.style.display === 'block')) {
+                viewer.style.display = 'none';
+            } else {
+                // Cierre general para el resto de modales (menús de subida, cámara, etc.)
+                document.querySelectorAll('.modal:not(#modalMisSesiones)').forEach(m => m.style.display = 'none');
+            }
+
             const v = document.getElementById('video');
             if(v.srcObject) v.srcObject.getTracks().forEach(t => t.stop());
+            return false;
         }
 function viewPhoto(dia) {
     currentDay = dia;
-    const userId = document.getElementById('userId').innerText.trim();
-    // Añadimos "entreno_" antes del nombre para que coincida con app.py
+    // Usamos la variable 'usuario' que ya está definida globalmente en el script
+    const userId = usuario;
     document.getElementById('imgPreview').src = `/static/uploads/entreno_${userId}_${dia}.jpg?t=` + new Date().getTime();
     document.getElementById('viewPhotoModal').style.display = 'flex';
 }

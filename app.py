@@ -128,6 +128,127 @@ def normalizar_cabecera_universal(h):
 
 for p in [UPLOAD_FOLDER, DATA_FOLDER]: os.makedirs(p, exist_ok=True)
 
+@app.route('/api/guardar_sesion_img', methods=['POST'])
+def guardar_sesion_img():
+    try:
+        data = request.json
+        equipo = data.get('equipo', 'GENERAL').strip().replace(' ', '_')
+        fecha = data.get('fecha') # DD/MM/YYYY
+        usuario = data.get('usuario') or session.get('usuario', 'admin')
+        
+        if not data.get('image'): return jsonify({"status":"error"}), 400
+        img_base64 = data.get('image').split(',')[1]
+        
+        # 1. Guardar en la carpeta del equipo (DATA_FOLDER/sesiones/EQUIPO)
+        folder_equipo = os.path.join(app.config['DATA_FOLDER'], 'sesiones', equipo)
+        os.makedirs(folder_equipo, exist_ok=True)
+        filename_base = f"Sesion_{fecha.replace('/', '-')}"
+        filename_equipo = f"{filename_base}.jpg"
+        
+        img_data = base64.b64decode(img_base64)
+        with open(os.path.join(folder_equipo, filename_equipo), "wb") as f:
+            f.write(img_data)
+            
+        # Guardar metadatos para búsqueda (JSON)
+        metadata = {
+            "fecha": fecha,
+            "equipo": equipo,
+            "usuario": usuario,
+            "notas": data.get('notas', ''),
+            "ejercicios": data.get('ejercicios', [])
+        }
+        with open(os.path.join(folder_equipo, f"{filename_base}.json"), "w", encoding="utf-8") as f:
+            json.dump(metadata, f, ensure_ascii=False, indent=4)
+            
+        # 2. Guardar como evidencia de entrenamiento para el calendario (botón VER)
+        dia_num = str(int(fecha.split('/')[0]))
+        filename_evidencia = f"entreno_{usuario}_{dia_num}.jpg"
+        with open(os.path.join(app.config['UPLOAD_FOLDER'], filename_evidencia), "wb") as f:
+            f.write(img_data)
+            
+        return jsonify({"status": "success", "url": f"/static/data/sesiones/{equipo}/{filename_equipo}"})
+    except Exception as e:
+        print(f"Error guardando sesión: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/listar_sesiones')
+def listar_sesiones():
+    equipo_req = request.args.get('equipo', '').strip().replace(' ', '_')
+    usuario = session.get('usuario', 'admin')
+    
+    sesiones = []
+    
+    # 1. Escanear Sesiones Online (JSON + JPG)
+    path_base = os.path.join(app.config['DATA_FOLDER'], 'sesiones')
+    if os.path.exists(path_base):
+        for eq_folder in os.listdir(path_base):
+            # Si hay filtro de equipo, saltamos las carpetas que no coincidan
+            if equipo_req and eq_folder.upper() != equipo_req.upper():
+                continue
+            
+            full_path = os.path.join(path_base, eq_folder)
+            if not os.path.isdir(full_path): continue
+            
+            for f in os.listdir(full_path):
+                if f.endswith('.json'):
+                    try:
+                        with open(os.path.join(full_path, f), 'r', encoding='utf-8') as file:
+                            meta = json.load(file)
+                            if usuario != 'admin' and meta.get('usuario') != usuario:
+                                continue
+                            meta['img_url'] = f"/static/data/sesiones/{eq_folder}/{f.replace('.json', '.jpg')}"
+                            meta['tipo'] = 'ONLINE'
+                            sesiones.append(meta)
+                    except: continue
+
+    # 2. Escanear Sesiones Subidas (Evidencias directas del calendario)
+    if os.path.exists(UPLOAD_FOLDER):
+        for f in os.listdir(UPLOAD_FOLDER):
+            if f.startswith(f"entreno_{usuario}_") and f.endswith('.jpg'):
+                try:
+                    file_path = os.path.join(UPLOAD_FOLDER, f)
+                    # Obtener la fecha de modificación del archivo
+                    timestamp = os.path.getmtime(file_path)
+                    fecha_dt = datetime.fromtimestamp(timestamp)
+                    fecha_str = fecha_dt.strftime("%d/%m/%Y")
+                except:
+                    dia = f.split('_')[-1].split('.')[0]
+                    fecha_str = f"{dia.zfill(2)}/05/2026" # Fallback
+
+                sesiones.append({
+                    "fecha": fecha_str,
+                    "equipo": "Archivo Adjunto",
+                    "usuario": usuario,
+                    "notas": "",
+                    "ejercicios": [],
+                    "img_url": f"/static/uploads/{f}",
+                    "tipo": "SUBIDA"
+                })
+    
+    # Función auxiliar para convertir string de fecha en objeto datetime para ordenar
+    def sort_fecha(f_str):
+        try:
+            # Intentar varios formatos comunes
+            for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
+                try:
+                    return datetime.strptime(f_str, fmt)
+                except (ValueError, TypeError):
+                    continue
+            return datetime.min
+        except: return datetime.min
+
+    # DEDUPLICACIÓN: Priorizamos la versión ONLINE sobre la SUBIDA
+    vistas = {}
+    for s in sesiones:
+        clave = f"{s['fecha']}_{s['equipo']}"
+        if clave not in vistas:
+            vistas[clave] = s
+        else:
+            if s['tipo'] == 'ONLINE':
+                vistas[clave] = s
+
+    return jsonify(sorted(vistas.values(), key=lambda x: sort_fecha(x.get('fecha', '')), reverse=True))
+
 @app.route('/')
 def index():
     return render_template('login.html')
@@ -359,65 +480,33 @@ def asistencias():
     if session.get('permisos', {}).get('ASISTENCIAS') != 'SI':
         return "No tienes permiso para ver esta sección", 403
     
-    # 0. Cargar lista de equipos desde la pestaña "EQUIPO" para el desplegable y para determinar el equipo activo
-    equipos = []
-    try:
-        sheet_eq = client.open(NOMBRE_EXCEL).worksheet("EQUIPO")
-        rows_eq = sheet_eq.get_all_values()
-        if rows_eq:
-            # Normalizar cabeceras para una búsqueda robusta
-            h_eq = [normalizar_cabecera_universal(h) for h in rows_eq[0]]
-            i_eq = -1
-            # Buscar la columna de equipo con varias posibles cabeceras
-            for kw in ["EQUIPO", "NOMBRE", "EQUIPOS", "CATEGORIA", "GRUPO", "EQUIPOACTIVO"]:
-                if kw in h_eq:
-                    i_eq = h_eq.index(kw)
-                    break
-            
-            # Determinar la fila de inicio de los datos
-            s_row = 1 if i_eq != -1 else 0 # Si hay cabecera, empezar desde la segunda fila
-            if i_eq == -1: i_eq = 0 # Si no se encontró una cabecera específica, asumir la primera columna
-            
-            # Extraer y ordenar equipos únicos
-            equipos = sorted(list(set(str(r[i_eq]).strip() for r in rows_eq[s_row:] if len(r) > i_eq and str(r[i_eq]).strip())))
-        else: equipos = []
-    except Exception as e:
-        print(f"Error al cargar equipos en asistencias: {e}")
-        # Fallback si no existe la pestaña EQUIPO o hay error: equipos vacíos por ahora
-        equipos = []
-
-    # 1. Determinar equipo activo
-    equipo_param = request.args.get('equipo')
-    equipo_activo = equipo_param.strip() if equipo_param else session.get('equipo_defecto', '')
-    if not equipo_activo and equipos: # Si no hay equipo activo y hay equipos disponibles, seleccionar el primero
-        equipo_activo = equipos[0]
-    session['equipo_defecto'] = equipo_activo # Guardar en sesión para persistencia
-
     # 1. Cargar Jugadores y mapear cualquier columna de equipo a la clave 'EQUIPO'
-    sheet_jug = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
-    all_values = sheet_jug.get_all_values()
     datos = []
+    try:
+        sheet_jug = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
+        all_values = sheet_jug.get_all_values()
+        if all_values:
+            headers = [normalizar_cabecera_universal(h) for h in all_values[0]]
+            idx_eq_jug = -1
+            for col_name in ["EQUIPO", "CATEGORIA", "GRUPO", "EQUIPOS", "EQUIPOACTIVO"]:
+                if col_name in headers:
+                    idx_eq_jug = headers.index(col_name)
+                    break
 
-    if all_values:
-        headers = [normalizar_cabecera_universal(h) for h in all_values[0]]
-        idx_eq_jug = -1
-        for col_name in ["EQUIPO", "CATEGORIA", "GRUPO", "EQUIPOS", "EQUIPOACTIVO"]:
-            if col_name in headers:
-                idx_eq_jug = headers.index(col_name)
-                break
+            for row in all_values[1:]:
+                if any(row):
+                    registro = {}
+                    for i, h in enumerate(headers):
+                        val = row[i] if i < len(row) else ""
+                        key = 'EQUIPO' if (i == idx_eq_jug and idx_eq_jug != -1) else h
+                        registro[key] = str(val).strip()
+                    if 'EQUIPO' not in registro: registro['EQUIPO'] = ""
+                    datos.append(registro)
+    except Exception as e:
+        print(f"Error al cargar jugadores en asistencias: {e}")
 
-        for row in all_values[1:]:
-            if any(row):
-                registro = {}
-                for i, h in enumerate(headers):
-                    val = row[i] if i < len(row) else ""
-                    # Normalización crítica: Si es la columna identificada como equipo, la llamamos EQUIPO
-                    key = 'EQUIPO' if (i == idx_eq_jug and idx_eq_jug != -1) else h
-                    registro[key] = str(val).strip()
-                if 'EQUIPO' not in registro: registro['EQUIPO'] = ""
-                datos.append(registro)
-
-    # 2. Cargar lista de equipos desde la pestaña "EQUIPO"
+    # 2. Cargar lista de equipos (Fuente: Pestaña EQUIPO o Fallback: JUGADORES)
+    equipos = []
     try:
         sheet_eq = client.open(NOMBRE_EXCEL).worksheet("EQUIPO")
         rows_eq = sheet_eq.get_all_values()
@@ -433,9 +522,15 @@ def asistencias():
             equipos = sorted(list(set(str(r[i_eq]).strip() for r in rows_eq[s_row:] if len(r) > i_eq and str(r[i_eq]).strip())))
         else: equipos = []
     except:
-        # Fallback si no existe la pestaña EQUIPO: sacarlos de JUGADORES
         equipos = sorted(list(set(row['EQUIPO'] for row in datos if row.get('EQUIPO'))))
     
+    # 3. Determinar equipo activo
+    equipo_param = request.args.get('equipo')
+    equipo_activo = equipo_param.strip() if equipo_param else session.get('equipo_defecto', '')
+    if not equipo_activo and equipos:
+        equipo_activo = equipos[0]
+    session['equipo_defecto'] = equipo_activo 
+
     meses = ["Enero 2026", "Febrero 2026", "Marzo 2026", "Abril 2026", "Mayo 2026", "Junio 2026"]
     
     # También cargamos el Staff para saber quiénes son los entrenadores
@@ -445,11 +540,12 @@ def asistencias():
         # Normalizamos las llaves por si acaso
         staff_datos = []
         for s in staff_all:
+            s_norm = {normalizar_cabecera_universal(k): v for k, v in s.items()}
             staff_datos.append({
-                "NOMBRE": s.get("NOMBRE", ""),
-                "EQUIPO": s.get("EQUIPO", "").strip().upper(),
-                "TELEFONO": str(s.get("TELEFONO", "")),
-                "DIAS ENTRENAMIENTO": s.get("DIAS ENTRENAMIENTO", "") # Changed key to match Google Sheet header
+                "NOMBRE": str(s_norm.get("NOMBRE", "")),
+                "EQUIPO": str(s_norm.get("EQUIPO", "")).strip().upper(),
+                "TELEFONO": str(s_norm.get("TELEFONO", "")),
+                "DIAS ENTRENAMIENTO": str(s_norm.get("DIASENTRENAMIENTO", ""))
             })
     except:
         staff_datos = []
@@ -567,8 +663,11 @@ def obtener_asistencias():
                 if len(partes_fecha) < 2: continue
                 
                 # Normalizamos a string sin ceros a la izquierda para comparar con el frontend
-                dia_extraido = str(int(partes_fecha[0])) 
-                mes_extraido = str(int(partes_fecha[1]))
+                try:
+                    dia_extraido = str(int(partes_fecha[0])) 
+                    mes_extraido = str(int(partes_fecha[1]))
+                except (ValueError, IndexError):
+                    continue
                 
                 # Si se solicita un mes específico, filtramos
                 if mes_filtro and mes_extraido != str(int(mes_filtro)):
@@ -697,7 +796,7 @@ def guardar_asistencia_masiva():
                 sheet.update(f'E{fila_idx}:H{fila_idx}', [[estado, valoracion, observacion, charla]], value_input_option='USER_ENTERED')
             else:
                 # Nueva fila: FECHA, EQUIPO, NOMBRE, APELLIDO, ASISTENCIA, VALORACIÓN, OBSERVACIONES, CHARLA
-                sheet.append_row([fecha_full, equipo, nombre, "", estado, valoracion, observacion, charla])
+                sheet.append_row([fecha_full, c['equipo'], nombre, "", estado, valoracion, observacion, charla])
 
         return jsonify({"status": "success"}), 200
     except Exception as e:

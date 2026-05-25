@@ -1,0 +1,38 @@
+{
+    "fecha": "05/05/2026",
+    "equipo": "BENJAMIN_A",
+    "usuario": "admin",
+    "notas": "",
+    "ejercicios": [
+        {
+            "nombre": "",
+            "obj": "",
+            "desc": "casa"
+        },
+        {
+            "nombre": "",
+            "obj": "",
+            "desc": ""
+        },
+        {
+            "nombre": "",
+            "obj": "",
+            "desc": "leon"
+        },
+        {
+            "nombre": "",
+            "obj": "",
+            "desc": ""
+        },
+        {
+            "nombre": "",
+            "obj": "",
+            "desc": ""
+        },
+        {
+            "nombre": "",
+            "obj": "",
+            "desc": ""
+        }
+    ]
+}

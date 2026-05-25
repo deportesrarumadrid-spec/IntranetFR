@@ -2,7 +2,8 @@ import os
 import json
 import base64
 import calendar
-from datetime import datetime
+import unicodedata
+from datetime import datetime, timedelta
 from flask import Blueprint, render_template, session, request, jsonify, redirect, current_app
 
 # Creamos el Blueprint para Dirección Deportiva
@@ -17,6 +18,12 @@ def normalizar_fecha_sheet(fecha_str):
     if not fecha_str or '/' not in fecha_str: return str(fecha_str).strip()
     partes = fecha_str.split('/')
     return "/".join([str(int(p)) if p.strip().isdigit() else p.strip() for p in partes])
+
+def limpiar_texto_robusto(t):
+    """Quita tildes, espacios y pasa a mayúsculas para comparaciones infalibles."""
+    if not t: return ""
+    s = "".join(c for c in unicodedata.normalize('NFD', str(t)) if unicodedata.category(c) != 'Mn')
+    return s.strip().upper()
 
 @deportivo_bp.route('/deportivo')
 def deportivo():
@@ -101,6 +108,35 @@ def deportivo():
     except Exception as e:
         print(f"Error cargando objetivos desde Sheets para vista: {e}")
 
+    # 5. Obtener ejercicios semanales para el equipo activo
+    ejercicios_semanales = {}
+    try:
+        sheet_eje = client.open(NOMBRE_EXCEL).worksheet("EJERCICIOS")
+        all_eje = sheet_eje.get_all_values()
+        if all_eje:
+            # Columnas: SEMANA(0), EQUIPOS(1), CATEGORIA(2), TITULO(3), DESCRIPCION(4), URL(5)
+            for row in all_eje[1:]:
+                if len(row) >= 6 and row[0] and row[1]:
+                    # Normalización robusta de la lista de equipos guardada
+                    equipos_eje = [limpiar_texto_robusto(e) for e in str(row[1]).split(',') if e.strip()]
+                    target_eq = limpiar_texto_robusto(equipo_activo)
+                    
+                    if target_eq in equipos_eje:
+                        sem_key = normalizar_fecha_sheet(row[0])
+                        if sem_key not in ejercicios_semanales:
+                            ejercicios_semanales[sem_key] = []
+                        ejercicios_semanales[sem_key].append({
+                            "categoria": str(row[2]),
+                            "titulo": row[3],
+                            "descripcion": row[4],
+                            "url": row[5]
+                        })
+            # Ordenar ejercicios por categoría (0, 1, 2, 3)
+            for k in ejercicios_semanales:
+                ejercicios_semanales[k].sort(key=lambda x: x['categoria'])
+    except Exception as e:
+        print(f"Error cargando ejercicios en deportivo: {e}")
+
     # 4. Lógica del Calendario
     try:
         anio, mes = map(int, mes_actual.split('-'))
@@ -121,6 +157,21 @@ def deportivo():
 
     for s in semanas_raw:
         semana_formateada = []
+        # Determinamos el lunes de esta fila para vincular con la tabla de Ejercicios
+        anchor_day = 0
+        anchor_idx = 0
+        for idx, d in enumerate(s):
+            if d != 0:
+                anchor_day = d
+                anchor_idx = idx
+                break
+        
+        if anchor_day == 0: continue # Fila vacía
+        
+        dt_anchor = datetime(anio, mes, anchor_day)
+        monday_dt = dt_anchor - timedelta(days=anchor_idx)
+        semana_key = normalizar_fecha_sheet(monday_dt.strftime("%d/%m/%Y"))
+
         es_fin_de_semana_hoy = any(d in dias_a_resaltar for d in s if d != 0) if es_mes_actual else False
         for d in s:
             if d == 0: semana_formateada.append(None)
@@ -131,10 +182,26 @@ def deportivo():
                     'es_hoy': es_hoy_exacto,
                     'resaltar_finde': es_fin_de_semana_hoy
                 })
-        semanas.append(semana_formateada)
+        
+        # Mapeamos a 4 slots fijos según la categoría (0, 1, 2, 3) para mantener el orden solicitado
+        ejes_fijos = [None, None, None, None]
+        lista_ejes = ejercicios_semanales.get(semana_key, [])
+        for e in lista_ejes:
+            idx_cat = str(e['categoria']).strip()
+            # Si la categoría es numérica (0-3), la ponemos en su sitio
+            if idx_cat.isdigit() and 0 <= int(idx_cat) < 4:
+                ejes_fijos[int(idx_cat)] = e
+
+        semanas.append({
+            'dias': semana_formateada,
+            'ejercicios': ejes_fijos
+        })
 
     # 3. Fotos subidas
-    archivos_reales = [f for f in os.listdir(UPLOAD_FOLDER) if f.startswith(f"entreno_{usuario}_")]
+    if os.path.exists(UPLOAD_FOLDER):
+        archivos_reales = [f for f in os.listdir(UPLOAD_FOLDER) if f.startswith(f"entreno_{usuario}_")]
+    else:
+        archivos_reales = []
     fotos_subidas = [f.split('_')[-1].split('.')[0] for f in archivos_reales]
 
     return render_template('deportivo/calendario.html',
@@ -146,7 +213,8 @@ def deportivo():
                            fotos_subidas=fotos_subidas,
                            dias_transcurridos=hoy.day if es_mes_actual else (30 if (anio < hoy.year or (anio == hoy.year and mes < hoy.month)) else 0),
                            equipos=equipos,
-                           equipo_defecto=equipo_activo
+                           equipo_defecto=equipo_activo,
+                           now=hoy
                            )
 
 @deportivo_bp.route('/api/seguimiento_coordinacion', methods=['GET', 'POST'])
@@ -400,6 +468,23 @@ def api_ejercicios_semanales():
                         "url": row[5]
                     })
             return jsonify(res)
+
+        if request.method == 'DELETE':
+            data = request.json
+            semana = data.get('semana')
+            categoria = str(data.get('categoria'))
+            semana_norm = normalizar_fecha_sheet(semana)
+            all_v = sheet.get_all_values()
+            fila_idx = -1
+            for i, row in enumerate(all_v):
+                if i == 0: continue
+                if len(row) >= 3 and normalizar_fecha_sheet(row[0]) == semana_norm and str(row[2]).strip() == str(categoria).strip():
+                    fila_idx = i + 1
+                    break
+            if fila_idx != -1:
+                sheet.delete_rows(fila_idx)
+                return jsonify({"status": "success"})
+            return jsonify({"status": "error", "message": "Ejercicio no encontrado"}), 404
 
         # POST: Guardar ejercicio
         data = request.json
