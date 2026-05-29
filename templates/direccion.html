@@ -386,6 +386,42 @@
     }
     .calendar-week-row.selected-week { background: #ffebeb; }
 
+    /* Botón Circular Cronograma Estilo Moderno */
+    .btn-cronograma-float {
+        position: fixed;
+        top: 15px;
+        right: 180px;
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        background: #E31E24;
+        color: white;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        box-shadow: 0 4px 15px rgba(227,30,36,0.4);
+        z-index: 10001;
+        transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .btn-cronograma-float:hover { transform: scale(1.1) rotate(10deg); background: #1a1a1a; }
+    
+    /* Estilos para Perfiles en Cronograma */
+    .btn-profile {
+        padding: 10px;
+        background: #f1f5f9;
+        color: #64748b;
+        border: 2px solid transparent;
+        border-radius: 10px;
+        font-weight: 800;
+        font-size: 10px;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+    .btn-profile.selected { background: #E31E24; color: white; border-color: #E31E24; }
+
     /* Estilos para el pincel */
     .pizarra-canvas {
         position: absolute;
@@ -407,12 +443,17 @@
     }
 </style>
 
+<!-- Botón Cronograma junto a Cerrar Sesión con Autenticación -->
+<button class="btn-cronograma-float" onclick="openCronogramaAuth()" title="Ver Cronograma">
+    <i class="fas fa-calendar-days"></i>
+</button>
+
 <div style="padding: 10px;">
     <div class="tabs-container">
         <div class="tab-item active" onclick="switchTab(event, 'tab-coordinacion')">COORDINACIÓN</div>
         <div class="tab-item" onclick="switchTab(event, 'tab-d-deportiva')">D. DEPORTIVA</div>
         <div class="tab-item" onclick="switchTab(event, 'tab-otros')">INFORMES</div>
-        {% if usuario == 'admin' %}
+        {% if usuario|lower == 'admin' %}
         <div class="tab-item" onclick="switchTab(event, 'tab-usuarios')">USUARIOS Y CONTRASEÑAS</div>
         {% endif %}
     </div>
@@ -529,7 +570,7 @@
         <div class="card-coord" style="text-align: center; padding: 50px; color: #999;">Módulo de Informes Técnicos</div>
     </div>
 
-    {% if usuario == 'admin' %}
+    {% if usuario|lower == 'admin' %}
     <div id="tab-usuarios" class="tab-content">
         {% include 'gestion_usuarios.html' %}
     </div>
@@ -676,6 +717,51 @@
     <input type="file" id="inputImgEje" style="display:none" accept="image/*, .pdf" onchange="subirArchivoEjercicio(this)">
 </div>
 
+<!-- MODAL UNIFICADO CRONOGRAMA -->
+<div id="modalCronogramaUnified" class="modal">
+    <div class="modal-content" style="width: 450px; padding: 0; border-radius: 20px; position: relative; transition: width 0.3s ease;">
+        <span onclick="closeCronogramaModal()" style="position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #999; z-index: 10002;">&times;</span>
+        
+        <div id="cronogramaEntryView" style="padding: 40px;">
+            <h3 style="margin-top: 0; font-weight: 900; color: #333; margin-bottom: 30px; text-align: center; text-transform: uppercase;">Cronograma Deportivo</h3>
+            
+            <div style="margin-bottom: 25px;">
+                <label style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 12px; text-transform: uppercase;">1. Perfil</label>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                    <button class="btn-profile" onclick="selectCronoProfile('Gonzalo', this)">GONZALO</button>
+                    <button class="btn-profile" onclick="selectCronoProfile('Raul', this)">RAÚL</button>
+                    <button class="btn-profile" onclick="selectCronoProfile('Ruben', this)">RUBÉN</button>
+                </div>
+            </div>
+
+            <div id="cronoPasswordSection" style="display: none; margin-bottom: 25px;">
+                <label style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 8px; text-transform: uppercase;">Contraseña</label>
+                <input type="password" id="cronoPasswordInput" class="input-coord" placeholder="****" style="text-align: center; font-size: 18px; letter-spacing: 5px;">
+            </div>
+
+            <div style="margin-bottom: 30px;">
+                <label style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 12px; text-transform: uppercase;">2. Vista</label>
+                <div style="display: flex; gap: 10px;">
+                    <label class="pill-checkbox checked" id="pillSemanal" style="flex:1; justify-content:center;">
+                        <input type="radio" name="cronoView" value="semanal" checked onchange="updateViewPill()"> SEMANAL
+                    </label>
+                    <label class="pill-checkbox" id="pillAnual" style="flex:1; justify-content:center;">
+                        <input type="radio" name="cronoView" value="anual" onchange="updateViewPill()"> ANUAL
+                    </label>
+                </div>
+            </div>
+
+            <button class="btn-premium" style="width: 100%;" onclick="accederCronograma()">
+                <i class="fas fa-calendar-check"></i> VER CRONOGRAMA
+            </button>
+        </div>
+
+        <div id="cronogramaIframeView" style="display: none; height: 92vh; width: 100%; background: white; border-radius: 20px; overflow: hidden;">
+            <iframe id="cronogramaIframe" src="" style="width: 100%; height: 100%; border: none;"></iframe>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL VER EJERCICIO -->
 <div id="modalVerEjercicio" class="modal">
     <div class="modal-content" style="width: 75vw; max-height: 85vh; border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; background: #fff; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
@@ -817,6 +903,119 @@
     const jugadoresRaw = {{ jugadores_raw | tojson if jugadores_raw else '[]' }};
     const equiposList = {{ equipos | tojson if equipos else '[]' }};
     const isAdminUser = '{{ usuario|lower }}' === 'admin';
+
+    let selectedCronoUser = null;
+
+    function openCronogramaAuth() {
+        document.getElementById('modalCronogramaUnified').style.display = 'flex';
+        updateViewPill();
+    }
+
+    function selectCronoProfile(user, btn) {
+        selectedCronoUser = user;
+        document.querySelectorAll('.btn-profile').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        const pwdSection = document.getElementById('cronoPasswordSection');
+        if (user === 'Raul' || user === 'Ruben') {
+            pwdSection.style.display = 'block';
+            document.getElementById('cronoPasswordInput').focus();
+        } else {
+            pwdSection.style.display = 'none';
+            document.getElementById('cronoPasswordInput').value = '';
+        }
+    }
+
+    function updateViewPill() {
+        const view = document.querySelector('input[name="cronoView"]:checked').value;
+        document.getElementById('pillSemanal').classList.toggle('checked', view === 'semanal');
+        document.getElementById('pillAnual').classList.toggle('checked', view === 'anual');
+    }
+
+    function accederCronograma() {
+        if (!selectedCronoUser) return alert("Selecciona un perfil.");
+        if ((selectedCronoUser === 'Raul' || selectedCronoUser === 'Ruben') && 
+            document.getElementById('cronoPasswordInput').value !== '2204') {
+            return alert("Contraseña incorrecta.");
+        }
+        const view = document.querySelector('input[name="cronoView"]:checked').value;
+        document.getElementById('cronogramaIframe').src = `/cronograma?view=${view}`;
+        document.getElementById('cronogramaEntryView').style.display = 'none';
+        document.getElementById('cronogramaIframeView').style.display = 'block';
+        document.getElementById('modalCronogramaUnified').querySelector('.modal-content').style.width = '95vw';
+    }
+
+    function closeCronogramaModal() {
+        const modal = document.getElementById('modalCronogramaUnified');
+        if (!modal) return;
+        modal.style.display = 'none';
+        document.getElementById('cronogramaEntryView').style.display = 'block';
+        document.getElementById('cronogramaIframeView').style.display = 'none';
+        document.getElementById('modalCronogramaUnified').querySelector('.modal-content').style.width = '450px';
+        document.getElementById('cronogramaIframe').src = '';
+        selectedCronoUser = null;
+        document.querySelectorAll('.btn-profile').forEach(b => b.classList.remove('selected'));
+        document.getElementById('cronoPasswordSection').style.display = 'none';
+        document.getElementById('cronoPasswordInput').value = '';
+    }
+
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCronogramaModal(); });
+
+    // --- LÓGICA TECNIFICACIONES (Restaurada) ---
+    async function renderTecCalendar() {
+        const tecGrid = document.getElementById('tecGrid');
+        if (!tecGrid) return;
+        
+        const year = currentCalendarDate.getFullYear();
+        const month = currentCalendarDate.getMonth();
+        const lastDay = new Date(year, month + 1, 0).getDate();
+        const firstDay = new Date(year, month, 1).getDay();
+        const offset = firstDay === 0 ? 6 : firstDay - 1;
+
+        tecGrid.innerHTML = '';
+        for (let i = 0; i < offset; i++) {
+            tecGrid.innerHTML += '<div class="tec-day" style="background:#f8f9fa; opacity:0.5;"></div>';
+        }
+
+        const mesAnio = `${(month + 1).toString().padStart(2, '0')}/${year}`;
+        try {
+            const res = await fetch(`/api/tecnificaciones?mes_anio=${mesAnio}`);
+            const data = await res.json();
+            const today = new Date();
+            const isThisMonth = today.getFullYear() === year && today.getMonth() === month;
+
+            for (let d = 1; d <= lastDay; d++) {
+                const fechaStr = `${d.toString().padStart(2, '0')}/${mesAnio}`;
+                const tec = data[fechaStr] || { equipo: "", grupo: "" };
+                const isToday = isThisMonth && today.getDate() === d;
+                
+                tecGrid.innerHTML += `
+                    <div class="tec-day ${isToday ? 'today' : ''}">
+                        ${isToday ? '<div class="tec-hoy-label">HOY</div>' : ''}
+                        <span class="tec-day-num">${d}</span>
+                        <select class="tec-select" onchange="updateTecnificacion('${fechaStr}', 'equipo', this.value)">
+                            <option value="">Equipo...</option>
+                            ${equiposList.map(e => `<option value="${e}" ${tec.equipo === e ? 'selected' : ''}>${e}</option>`).join('')}
+                        </select>
+                        <select class="tec-select" onchange="updateTecnificacion('${fechaStr}', 'grupo', this.value)">
+                            <option value="">Grupo...</option>
+                            <option value="GRUPO 1" ${tec.grupo === 'GRUPO 1' ? 'selected' : ''}>GRUPO 1</option>
+                            <option value="GRUPO 2" ${tec.grupo === 'GRUPO 2' ? 'selected' : ''}>GRUPO 2</option>
+                            <option value="GRUPO 3" ${tec.grupo === 'GRUPO 3' ? 'selected' : ''}>GRUPO 3</option>
+                        </select>
+                    </div>`;
+            }
+        } catch(e) { console.error("Error renderTec:", e); }
+    }
+
+    async function updateTecnificacion(fecha, campo, valor) {
+        const diaNum = parseInt(fecha.split('/')[0]);
+        const dayDiv = Array.from(document.querySelectorAll('.tec-day')).find(el => el.querySelector('.tec-day-num')?.innerText == diaNum);
+        if(!dayDiv) return;
+        const selects = dayDiv.querySelectorAll('select');
+        const payload = { fecha, equipo: selects[0].value, grupo: selects[1].value };
+        const res = await fetch('/api/tecnificaciones', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+        if (res.ok) mostrarToastAutoguardado("TECNIFICACIÓN ACTUALIZADA");
+    }
 
     // --- LÓGICA PIZARRA CANVAS ---
     let pizarraCanvas, ctx;
@@ -1502,15 +1701,28 @@
 
     // Tab switching logic
     function switchTab(e, tabId) {
+        try {
+            document.querySelectorAll('.tab-content').forEach(c => {
+                c.style.display = 'none'; // Ensure it's hidden
+                c.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+            
+            e.currentTarget.classList.add('active');
+            const target = document.getElementById(tabId);
+            if (target) {
+                target.style.display = 'block'; // Ensure it's visible
+                target.classList.add('active');
+            }
 
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-        e.currentTarget.classList.add('active');
-        document.getElementById(tabId).classList.add('active');
-
-        if (tabId === 'tab-usuarios' && typeof cargarPerfiles === 'function') {
-            cargarPerfiles();
-        }
+            if (tabId === 'tab-usuarios') {
+                cargarPerfiles();
+            }
+            if (tabId === 'tab-coordinacion') {
+                renderFullCalendar();
+                renderTecCalendar();
+            }
+        } catch (err) { console.error("Error switchTab:", err); }
     }
 
     // Full Calendar Logic

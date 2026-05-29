@@ -1067,6 +1067,56 @@ def recordatorio_individual():
         print(f"Error recordatorio_individual: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/cronograma')
+def cronograma():
+    if not session.get('usuario'): return redirect(url_for('index'))
+    
+    # Vista solicitada (semanal o anual)
+    view = request.args.get('view', 'semanal')
+    
+    # Lógica para generar los meses de la temporada (Sep a Ago)
+    hoy = datetime.now()
+    anio_inicio = hoy.year if hoy.month >= 9 else hoy.year - 1
+    meses_anual = []
+    meses_nombres = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+    
+    # Generamos de Septiembre a Agosto
+    for i in range(12):
+        m = (8 + i) % 12 + 1
+        y = anio_inicio + (1 if (8 + i) >= 12 else 0)
+        meses_anual.append({
+            'num': m,
+            'anio': y,
+            'label': f"{meses_nombres[m-1]} {y}"
+        })
+
+    # Lógica para la semana actual
+    start_of_week = hoy - timedelta(days=hoy.weekday())
+    semana_actual = []
+    dias_nombres = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO", "DOMINGO"]
+    for i in range(7):
+        d = start_of_week + timedelta(days=i)
+        semana_actual.append({
+            'nombre': dias_nombres[i],
+            'fecha_full': d.strftime("%d/%m/%Y"),
+            'fecha_iso': d.strftime("%Y-%m-%d")
+        })
+
+    return render_template('cronograma_full.html', 
+                           meses_anual=meses_anual, 
+                           semana_actual=semana_actual, 
+                           usuario_sesion=session.get('usuario'),
+                           view=view)
+
+@app.route('/api/cronograma_data')
+def api_cronograma_data():
+    try:
+        sheet = client.open(NOMBRE_EXCEL).worksheet("CRONOGRAMA")
+        records = sheet.get_all_records()
+        return jsonify(records)
+    except:
+        return jsonify([])
+
 # --- REGISTRO DE BLUEPRINTS ---
 from financiero import financiero_bp
 from deportivo import deportivo_bp

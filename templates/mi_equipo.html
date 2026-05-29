@@ -1,0 +1,156 @@
+{% extends 'dashboard.html' %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .stats-container { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; padding: 10px; }
+    .card-chart { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 1px solid #eee; }
+    .card-chart h3 { margin-top: 0; font-size: 15px; font-weight: 900; color: #333; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; margin-bottom: 25px; }
+    .card-chart h3 i { color: #E31E24; }
+    .full-width { grid-column: span 2; }
+    .chart-info { margin-top: 20px; padding-top: 15px; border-top: 1px solid #f1f5f9; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .info-box { padding: 12px; border-radius: 12px; background: #f8fafc; border: 1px solid #f1f5f9; }
+    .info-box label { display: block; font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; }
+    .info-box span { font-size: 12px; font-weight: 700; color: #1e293b; }
+</style>
+
+<div style="padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h2 style="font-weight: 900; color: #E31E24; text-transform: uppercase; margin: 0; letter-spacing: -0.5px; font-size: 24px;">
+            <i class="fas fa-chart-line"></i> Estadísticas de Mi Equipo: {{ equipo }}
+        </h2>
+    </div>
+    
+    <div class="stats-container">
+        <!-- GRÁFICO ASISTENCIAS -->
+        <div class="card-chart">
+            <h3><i class="fas fa-calendar-check"></i> Porcentaje de Asistencia</h3>
+            <div style="height: 280px; position: relative;"><canvas id="chartAsistencia"></canvas></div>
+            <div class="chart-info">
+                <div class="info-box"><label>Más Asistente (Último Mes)</label><span id="txtMaxAsis">-</span></div>
+                <div class="info-box"><label>Menos Asistente (Último Mes)</label><span id="txtMinAsis">-</span></div>
+            </div>
+        </div>
+
+        <!-- GRÁFICO VALORACIONES -->
+        <div class="card-chart">
+            <h3><i class="fas fa-star"></i> Rendimiento en Entrenamientos</h3>
+            <div style="height: 280px; position: relative;"><canvas id="chartValoracion"></canvas></div>
+            <div class="chart-info">
+                <div class="info-box"><label>Mejor Valorado (Último Mes)</label><span id="txtMaxVal">-</span></div>
+                <div class="info-box"><label>Peor Valorado (Último Mes)</label><span id="txtMinVal">-</span></div>
+            </div>
+        </div>
+
+        <!-- GRÁFICO BALONES -->
+        <div class="card-chart full-width">
+            <h3><i class="fas fa-futbol"></i> Gestión de Material (Inicio vs Final Diario)</h3>
+            <div style="height: 300px; position: relative;"><canvas id="chartBalones"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function cargarEstadisticas() {
+    try {
+        const res = await fetch('/api/stats/mi-equipo');
+        const data = await res.json();
+        
+        renderAsistencia(data.asistencia);
+        renderValoracion(data.valoracion);
+        renderBalones(data.balones);
+    } catch (e) { console.error(e); }
+}
+
+function renderAsistencia(d) {
+    if (!d.labels.length) return;
+    const lastIdx = d.labels.length - 1;
+    document.getElementById('txtMaxAsis').innerText = d.max_player[lastIdx];
+    document.getElementById('txtMinAsis').innerText = d.min_player[lastIdx];
+
+    new Chart(document.getElementById('chartAsistencia'), {
+        type: 'bar',
+        data: {
+            labels: d.labels,
+            datasets: [{
+                label: 'Asistencia %',
+                data: d.media,
+                backgroundColor: 'rgba(227, 30, 36, 0.7)',
+                borderColor: '#E31E24',
+                borderWidth: 2,
+                borderRadius: 8
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: { afterBody: (ctx) => `\nMáx: ${d.max_player[ctx[0].dataIndex]}\nMín: ${d.min_player[ctx[0].dataIndex]}` }
+                }
+            }
+        }
+    });
+}
+
+function renderValoracion(d) {
+    if (!d.labels.length) return;
+    const lastIdx = d.labels.length - 1;
+    document.getElementById('txtMaxVal').innerText = d.max_player[lastIdx];
+    document.getElementById('txtMinVal').innerText = d.min_player[lastIdx];
+
+    new Chart(document.getElementById('chartValoracion'), {
+        type: 'line',
+        data: {
+            labels: d.labels,
+            datasets: [{
+                label: 'Media (0-10)',
+                data: d.media,
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 6,
+                pointBackgroundColor: '#28a745'
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, max: 10 } },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: { afterBody: (ctx) => `\nMejor: ${d.max_player[ctx[0].dataIndex]}\nPeor: ${d.min_player[ctx[0].dataIndex]}` }
+                }
+            }
+        }
+    });
+}
+
+function renderBalones(d) {
+    new Chart(document.getElementById('chartBalones'), {
+        type: 'bar',
+        data: {
+            labels: d.labels,
+            datasets: [
+                {
+                    label: 'Balones Inicio',
+                    data: d.inicio,
+                    backgroundColor: '#333',
+                    borderRadius: 4
+                },
+                {
+                    label: 'Balones Final',
+                    data: d.final,
+                    backgroundColor: '#E31E24',
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+    });
+}
+window.onload = cargarEstadisticas;
+</script>
+{% endblock %}

@@ -21,12 +21,16 @@ def get_perfiles_sheet():
         sheet = client.open(NOMBRE_EXCEL).worksheet("PERFILES")
         
         # Sincronización de cabeceras: Si las cabeceras no coinciden exactamente, las actualizamos
-        current_headers = [str(h).strip() for h in sheet.row_values(1)]
+        all_values = sheet.get_all_values()
+        row1 = all_values[0] if all_values else []
+        
+        current_headers = [str(h).strip().upper() for h in row1]
         expected_headers = [h.strip() for h in PERFILES_HEADERS]
+        
         if current_headers != expected_headers:
-            # Usamos keyword arguments para máxima compatibilidad entre versiones de gspread
-            sheet.update(values=[expected_headers], range_name='A1')
-            print("DEBUG: Cabeceras de PERFILES sincronizadas en Google Sheets.")
+            # Forzamos la estructura correcta (Sintaxis universal gspread)
+            sheet.update(range_name='A1', values=[expected_headers], value_input_option='USER_ENTERED')
+            print(f"DEBUG: Cabeceras de PERFILES sincronizadas.")
             
         return sheet
     except gspread.exceptions.WorksheetNotFound:
@@ -42,7 +46,19 @@ def get_perfiles():
     """Devuelve todos los perfiles de usuario y sus permisos."""
     try:
         sheet = get_perfiles_sheet()
-        records = sheet.get_all_records()
+        # Usamos get_all_values y mapeamos manualmente para evitar errores de celdas vacías
+        all_v = sheet.get_all_values()
+        if not all_v or len(all_v) < 2:
+            return jsonify([])
+
+        headers = [str(h).strip().upper() for h in all_v[0]]
+        records = []
+        for row in all_v[1:]:
+            if any(str(cell).strip() for cell in row): # Solo filas con algún dato
+                item = {}
+                for i, h in enumerate(headers):
+                    item[h] = row[i] if i < len(row) else ""
+                records.append(item)
         return jsonify(records)
     except Exception as e:
         print(f"Error al obtener perfiles: {e}")

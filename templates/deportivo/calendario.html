@@ -186,6 +186,46 @@
         width: 95vw; height: 92vh; border-radius: 30px;
         background: #f4f7f6; display: flex; flex-direction: column; padding: 0;
     }
+
+        /* Botón Circular Cronograma */
+        .btn-cronograma-float {
+            position: fixed;
+            top: 15px;
+            right: 180px;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: #E31E24;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            box-shadow: 0 4px 15px rgba(227,30,36,0.4);
+            z-index: 10001;
+            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .btn-cronograma-float:hover { transform: scale(1.1) rotate(10deg); background: #1a1a1a; }
+
+        /* Estilos Perfiles */
+        .btn-profile {
+            padding: 10px; background: #f1f5f9; color: #64748b; border: 2px solid transparent; border-radius: 10px;
+            font-weight: 800; font-size: 10px; cursor: pointer; transition: 0.3s;
+        }
+        .btn-profile.selected { background: #E31E24; color: white; border-color: #E31E24; }
+        
+        .pill-checkbox {
+            display: flex; align-items: center; gap: 8px; background: #fff; border: 2px solid #eee; padding: 8px 16px; 
+            border-radius: 30px; font-size: 11px; font-weight: 800; cursor: pointer; transition: 0.3s; color: #666; user-select: none;
+        }
+        .pill-checkbox:hover { border-color: #E31E24; background: #fff5f5; }
+        .pill-checkbox input { display: none; }
+        .pill-checkbox.checked { 
+            background: #E31E24 !important; color: white !important; border-color: #E31E24 !important; 
+            box-shadow: 0 4px 10px rgba(227, 30, 36, 0.3); 
+        }
     </style>
 
     <div class="calendario-wrapper">
@@ -412,6 +452,51 @@
                 <div style="border: 2px solid #000; border-top: none; padding: 10px 15px; display: flex; align-items: center; justify-content: center; background: #fff;">
                     <input type="text" value="CORE + SUPERIOR Y ESTIRAMIENTOS" style="border:none; width: 100%; text-align: center; font-weight: 900; font-size: 14px; text-transform: uppercase; color: #000; letter-spacing: 1px; outline: none;" placeholder="NOTAS FINALES / TRABAJO POST-SESIÓN">
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL UNIFICADO CRONOGRAMA -->
+    <div id="modalCronogramaUnified" class="modal">
+        <div class="modal-content" style="width: 450px; padding: 0; border-radius: 20px; position: relative; transition: width 0.3s ease;">
+            <span onclick="closeCronogramaModal()" style="position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #999; z-index: 10002;">&times;</span>
+            
+            <div id="cronogramaEntryView" style="padding: 40px;">
+                <h3 style="margin-top: 0; font-weight: 900; color: #333; margin-bottom: 30px; text-align: center; text-transform: uppercase;">Cronograma Deportivo</h3>
+                
+                <div style="margin-bottom: 25px;">
+                    <label style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 12px; text-transform: uppercase;">1. Perfil</label>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                        <button class="btn-profile" onclick="selectCronoProfile('Gonzalo', this)">GONZALO</button>
+                        <button class="btn-profile" onclick="selectCronoProfile('Raul', this)">RAÚL</button>
+                        <button class="btn-profile" onclick="selectCronoProfile('Ruben', this)">RUBÉN</button>
+                    </div>
+                </div>
+
+                <div id="cronoPasswordSection" style="display: none; margin-bottom: 25px;">
+                    <label style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 8px; text-transform: uppercase;">Contraseña</label>
+                    <input type="password" id="cronoPasswordInput" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; text-align: center; font-size: 18px; letter-spacing: 5px;">
+                </div>
+
+                <div style="margin-bottom: 30px;">
+                    <label style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 12px; text-transform: uppercase;">2. Vista</label>
+                    <div style="display: flex; gap: 10px;">
+                        <label class="pill-checkbox checked" id="pillSemanal" style="flex:1; justify-content:center;">
+                            <input type="radio" name="cronoView" value="semanal" checked onchange="updateViewPill()"> SEMANAL
+                        </label>
+                        <label class="pill-checkbox" id="pillAnual" style="flex:1; justify-content:center;">
+                            <input type="radio" name="cronoView" value="anual" onchange="updateViewPill()"> ANUAL
+                        </label>
+                    </div>
+                </div>
+
+                <button class="btn-foto" style="height: 50px; font-size: 12px; background: #E31E24;" onclick="accederCronograma()">
+                    <i class="fas fa-calendar-check"></i> VER CRONOGRAMA
+                </button>
+            </div>
+
+            <div id="cronogramaIframeView" style="display: none; height: 92vh; width: 100%; background: white; border-radius: 20px; overflow: hidden;">
+                <iframe id="cronogramaIframe" src="" style="width: 100%; height: 100%; border: none;"></iframe>
             </div>
         </div>
     </div>
@@ -837,6 +922,62 @@
     const usuario = "{{ usuario }}";
     // Esta línea es la que recupera los "verdes" del archivo JSON al recargar
     let itemsCompletados = {{ objetivos.completados|tojson|safe if objetivos.completados else [] }};
+
+    let selectedCronoUser = null;
+
+    function openCronogramaAuth() {
+        document.getElementById('modalCronogramaUnified').style.display = 'flex';
+        updateViewPill();
+    }
+
+    function selectCronoProfile(user, btn) {
+        selectedCronoUser = user;
+        document.querySelectorAll('.btn-profile').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        const pwdSection = document.getElementById('cronoPasswordSection');
+        if (user === 'Raul' || user === 'Ruben') {
+            pwdSection.style.display = 'block';
+            document.getElementById('cronoPasswordInput').focus();
+        } else {
+            pwdSection.style.display = 'none';
+            document.getElementById('cronoPasswordInput').value = '';
+        }
+    }
+
+    function updateViewPill() {
+        const view = document.querySelector('input[name="cronoView"]:checked').value;
+        document.getElementById('pillSemanal').classList.toggle('checked', view === 'semanal');
+        document.getElementById('pillAnual').classList.toggle('checked', view === 'anual');
+    }
+
+    function accederCronograma() {
+        if (!selectedCronoUser) return alert("Selecciona un perfil.");
+        if ((selectedCronoUser === 'Raul' || selectedCronoUser === 'Ruben') && 
+            document.getElementById('cronoPasswordInput').value !== '2204') {
+            return alert("Contraseña incorrecta.");
+        }
+        const view = document.querySelector('input[name="cronoView"]:checked').value;
+        document.getElementById('cronogramaIframe').src = `/cronograma?view=${view}`;
+        document.getElementById('cronogramaEntryView').style.display = 'none';
+        document.getElementById('cronogramaIframeView').style.display = 'block';
+        document.getElementById('modalCronogramaUnified').querySelector('.modal-content').style.width = '95vw';
+    }
+
+    function closeCronogramaModal() {
+        const modal = document.getElementById('modalCronogramaUnified');
+        if (!modal) return;
+        modal.style.display = 'none';
+        document.getElementById('cronogramaEntryView').style.display = 'block';
+        document.getElementById('cronogramaIframeView').style.display = 'none';
+        document.getElementById('modalCronogramaUnified').querySelector('.modal-content').style.width = '450px';
+        document.getElementById('cronogramaIframe').src = '';
+        selectedCronoUser = null;
+        document.querySelectorAll('.btn-profile').forEach(b => b.classList.remove('selected'));
+        document.getElementById('cronoPasswordSection').style.display = 'none';
+        document.getElementById('cronoPasswordInput').value = '';
+    }
+
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCronogramaModal(); });
 
         // Sincronizar inputs superiores con tarjetas
         function syncInputs() {

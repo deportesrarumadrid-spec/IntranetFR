@@ -1,0 +1,38 @@
+{
+    "fecha": "11/05/2026",
+    "equipo": "BENJAMIN_B",
+    "usuario": "admin",
+    "notas": "",
+    "ejercicios": [
+        {
+            "nombre": "TIRO",
+            "obj": "",
+            "desc": "ROJO"
+        },
+        {
+            "nombre": "",
+            "obj": "",
+            "desc": ""
+        },
+        {
+            "nombre": "",
+            "obj": "",
+            "desc": ""
+        },
+        {
+            "nombre": "",
+            "obj": "",
+            "desc": ""
+        },
+        {
+            "nombre": "",
+            "obj": "",
+            "desc": ""
+        },
+        {
+            "nombre": "",
+            "obj": "",
+            "desc": ""
+        }
+    ]
+}
