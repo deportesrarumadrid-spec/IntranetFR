@@ -205,9 +205,10 @@
             font-size: 18px;
             box-shadow: 0 4px 15px rgba(227,30,36,0.4);
             z-index: 10001;
-            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.3s ease;
         }
-        .btn-cronograma-float:hover { transform: scale(1.1) rotate(10deg); background: #1a1a1a; }
+        .btn-cronograma-fixed:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(227, 30, 36, 0.5); filter: brightness(1.1); }
+        .btn-cronograma-fixed:active { transform: scale(0.95); }
 
         /* Estilos Perfiles */
         .btn-profile {
@@ -452,51 +453,6 @@
                 <div style="border: 2px solid #000; border-top: none; padding: 10px 15px; display: flex; align-items: center; justify-content: center; background: #fff;">
                     <input type="text" value="CORE + SUPERIOR Y ESTIRAMIENTOS" style="border:none; width: 100%; text-align: center; font-weight: 900; font-size: 14px; text-transform: uppercase; color: #000; letter-spacing: 1px; outline: none;" placeholder="NOTAS FINALES / TRABAJO POST-SESIÓN">
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL UNIFICADO CRONOGRAMA -->
-    <div id="modalCronogramaUnified" class="modal">
-        <div class="modal-content" style="width: 450px; padding: 0; border-radius: 20px; position: relative; transition: width 0.3s ease;">
-            <span onclick="closeCronogramaModal()" style="position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #999; z-index: 10002;">&times;</span>
-            
-            <div id="cronogramaEntryView" style="padding: 40px;">
-                <h3 style="margin-top: 0; font-weight: 900; color: #333; margin-bottom: 30px; text-align: center; text-transform: uppercase;">Cronograma Deportivo</h3>
-                
-                <div style="margin-bottom: 25px;">
-                    <label style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 12px; text-transform: uppercase;">1. Perfil</label>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                        <button class="btn-profile" onclick="selectCronoProfile('Gonzalo', this)">GONZALO</button>
-                        <button class="btn-profile" onclick="selectCronoProfile('Raul', this)">RAÚL</button>
-                        <button class="btn-profile" onclick="selectCronoProfile('Ruben', this)">RUBÉN</button>
-                    </div>
-                </div>
-
-                <div id="cronoPasswordSection" style="display: none; margin-bottom: 25px;">
-                    <label style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 8px; text-transform: uppercase;">Contraseña</label>
-                    <input type="password" id="cronoPasswordInput" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; text-align: center; font-size: 18px; letter-spacing: 5px;">
-                </div>
-
-                <div style="margin-bottom: 30px;">
-                    <label style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 12px; text-transform: uppercase;">2. Vista</label>
-                    <div style="display: flex; gap: 10px;">
-                        <label class="pill-checkbox checked" id="pillSemanal" style="flex:1; justify-content:center;">
-                            <input type="radio" name="cronoView" value="semanal" checked onchange="updateViewPill()"> SEMANAL
-                        </label>
-                        <label class="pill-checkbox" id="pillAnual" style="flex:1; justify-content:center;">
-                            <input type="radio" name="cronoView" value="anual" onchange="updateViewPill()"> ANUAL
-                        </label>
-                    </div>
-                </div>
-
-                <button class="btn-foto" style="height: 50px; font-size: 12px; background: #E31E24;" onclick="accederCronograma()">
-                    <i class="fas fa-calendar-check"></i> VER CRONOGRAMA
-                </button>
-            </div>
-
-            <div id="cronogramaIframeView" style="display: none; height: 92vh; width: 100%; background: white; border-radius: 20px; overflow: hidden;">
-                <iframe id="cronogramaIframe" src="" style="width: 100%; height: 100%; border: none;"></iframe>
             </div>
         </div>
     </div>
@@ -878,7 +834,6 @@
     </div>
 
 {% include 'modales_fotos.html' %}
-
     <!-- MODAL VER EJERCICIO SEMANAL -->
     <div id="modalVerEjercicio" class="modal">
         <div class="modal-content" style="width: 75vw; max-height: 85vh; border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; background: #fff; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
@@ -923,67 +878,11 @@
     // Esta línea es la que recupera los "verdes" del archivo JSON al recargar
     let itemsCompletados = {{ objetivos.completados|tojson|safe if objetivos.completados else [] }};
 
-    let selectedCronoUser = null;
-
-    function openCronogramaAuth() {
-        document.getElementById('modalCronogramaUnified').style.display = 'flex';
-        updateViewPill();
-    }
-
-    function selectCronoProfile(user, btn) {
-        selectedCronoUser = user;
-        document.querySelectorAll('.btn-profile').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        const pwdSection = document.getElementById('cronoPasswordSection');
-        if (user === 'Raul' || user === 'Ruben') {
-            pwdSection.style.display = 'block';
-            document.getElementById('cronoPasswordInput').focus();
-        } else {
-            pwdSection.style.display = 'none';
-            document.getElementById('cronoPasswordInput').value = '';
-        }
-    }
-
-    function updateViewPill() {
-        const view = document.querySelector('input[name="cronoView"]:checked').value;
-        document.getElementById('pillSemanal').classList.toggle('checked', view === 'semanal');
-        document.getElementById('pillAnual').classList.toggle('checked', view === 'anual');
-    }
-
-    function accederCronograma() {
-        if (!selectedCronoUser) return alert("Selecciona un perfil.");
-        if ((selectedCronoUser === 'Raul' || selectedCronoUser === 'Ruben') && 
-            document.getElementById('cronoPasswordInput').value !== '2204') {
-            return alert("Contraseña incorrecta.");
-        }
-        const view = document.querySelector('input[name="cronoView"]:checked').value;
-        document.getElementById('cronogramaIframe').src = `/cronograma?view=${view}`;
-        document.getElementById('cronogramaEntryView').style.display = 'none';
-        document.getElementById('cronogramaIframeView').style.display = 'block';
-        document.getElementById('modalCronogramaUnified').querySelector('.modal-content').style.width = '95vw';
-    }
-
-    function closeCronogramaModal() {
-        const modal = document.getElementById('modalCronogramaUnified');
-        if (!modal) return;
-        modal.style.display = 'none';
-        document.getElementById('cronogramaEntryView').style.display = 'block';
-        document.getElementById('cronogramaIframeView').style.display = 'none';
-        document.getElementById('modalCronogramaUnified').querySelector('.modal-content').style.width = '450px';
-        document.getElementById('cronogramaIframe').src = '';
-        selectedCronoUser = null;
-        document.querySelectorAll('.btn-profile').forEach(b => b.classList.remove('selected'));
-        document.getElementById('cronoPasswordSection').style.display = 'none';
-        document.getElementById('cronoPasswordInput').value = '';
-    }
-
-    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCronogramaModal(); });
-
         // Sincronizar inputs superiores con tarjetas
         function syncInputs() {
             // Los objetivos ahora son de solo lectura aquí (se gestionan desde Dirección Deportiva)
-            const tacVal = "{{ objetivos.tactico }}".split(',').map(s => s.trim()).filter(s => s);
-            const tecVal = "{{ objetivos.tecnico }}".split(',').map(s => s.trim()).filter(s => s);
+            const tacVal = ({{ objetivos.tactico | tojson }} || "").split(',').map(s => s.trim()).filter(s => s);
+            const tecVal = ({{ objetivos.tecnico | tojson }} || "").split(',').map(s => s.trim()).filter(s => s);
 
             document.querySelectorAll('.day').forEach(dayDiv => {
                 const diaNum = dayDiv.querySelector('.day-num').innerText;
@@ -1067,7 +966,10 @@
         }
 
         function updateStats() {
-            const conceptos = "{{ objetivos.tactico }},{{ objetivos.tecnico }}".split(',').map(s => s.trim()).filter(s => s !== "");
+            const tac = {{ objetivos.tactico | tojson }} || "";
+            const tec = {{ objetivos.tecnico | tojson }} || "";
+            const combined = tac + (tac && tec ? ',' : '') + tec;
+            const conceptos = combined.split(',').map(s => s.trim()).filter(s => s !== "");
 
             const container = document.getElementById('dotContainer');
             container.innerHTML = ""; 
@@ -1761,12 +1663,14 @@ function viewPhoto(dia) {
     }
 }
 
-// Reemplaza tu window.onload por este:
-window.onload = function() {
-    syncInputs();
-    aplicarResaltadoAutomatico();
-    hideLoader();
-};
+// Usamos addEventListener para no pisar dashboard.html
+window.addEventListener('load', function() {
+    try {
+        syncInputs();
+        aplicarResaltadoAutomatico();
+    } catch(e) { console.error("Error en inicialización:", e); }
+    if (typeof hideLoader === 'function') hideLoader();
+});
 
 function marcarColumnaSi(colIndex) {
     // Busca todas las filas del cuerpo de la tabla

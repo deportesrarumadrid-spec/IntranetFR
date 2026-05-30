@@ -183,7 +183,8 @@
             width: 100%;
             height: 100%;
             background: rgba(244, 247, 246, 0.6); /* Fondo semi-transparente */
-            backdrop-filter: blur(4px); /* Efecto difuminado reducido */
+            backdrop-filter: blur(6px); 
+            pointer-events: all; /* Bloquea clics mientras carga */
             -webkit-backdrop-filter: blur(4px); /* Soporte para navegadores basados en Safari/iOS */
             display: flex;
             justify-content: center;
@@ -207,6 +208,28 @@
             100% { transform: rotate(360deg); }
         }
         .loader-hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+/* Botón Cronograma Universal Mejorado */
+.btn-cronograma-fixed {
+    position: fixed; top: 28px; right: 205px; width: 40px; height: 40px;
+    border-radius: 50%; background: white; color: #E31E24;
+    border: 2px solid #E31E24; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; font-size: 16px;
+    z-index: 10001; /* Asegurar que esté siempre encima */
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+        .btn-cronograma-fixed:hover { background: #E31E24; color: white; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(227, 30, 36, 0.3); }
+        .badge-crono {
+            display: none; position: absolute; top: -5px; right: -5px; background: #28a745;
+            color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 10px;
+            font-weight: 900; align-items: center; justify-content: center; border: 2px solid white;
+        }
+        .modal-crono { display: none; position: fixed; z-index: 10005; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .btn-profile { padding: 10px; background: #f1f5f9; color: #64748b; border: 2px solid transparent; border-radius: 10px; font-weight: 800; font-size: 10px; cursor: pointer; transition: 0.3s; }
+        .btn-profile.selected { background: #E31E24; color: white; border-color: #E31E24; }
+        .pill-checkbox { display: flex; align-items: center; gap: 8px; background: #fff; border: 2px solid #eee; padding: 8px 16px; border-radius: 30px; font-size: 11px; font-weight: 800; cursor: pointer; transition: 0.3s; color: #666; user-select: none; }
+        .pill-checkbox.checked { background: #E31E24 !important; color: white !important; border-color: #E31E24 !important; }
     </style>
 </head>
 <body>
@@ -258,6 +281,14 @@
             <a href="/logout" class="btn-salir" onclick="showLoader()">CERRAR SESIÓN</a>
         </div>
 
+        <!-- Botón Flotante e Indicador -->
+        {% if usuario|lower == 'admin' or session.get('permisos', {}).get('CRONOGRAMA') == 'SI' %}
+        <button class="btn-cronograma-fixed" onclick="openCronogramaAuth()" title="Ver Cronograma (Alt+1)">
+            <i class="fas fa-calendar-days"></i>
+            <span id="badgeCronoGlobal" class="badge-crono">1</span>
+        </button>
+        {% endif %}
+
         <div class="render-area">
             {% block content %}
             <!-- Esto se sobreescribirá -->
@@ -265,27 +296,118 @@
         </div>
     </div>
 
+    <!-- MODAL UNIFICADO CRONOGRAMA -->
+    <div id="modalCronogramaGlobal" class="modal-crono">
+        <div class="modal-content" style="width: 450px; background: white; border-radius: 20px; position: relative; transition: width 0.3s ease; overflow: hidden;">
+            <span onclick="closeCronogramaModal()" style="position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #999; z-index: 10002;">&times;</span>
+            
+            <div id="cronoEntryView" style="padding: 40px;">
+                <h3 style="margin-top: 0; font-weight: 900; color: #333; margin-bottom: 30px; text-align: center; text-transform: uppercase;">Cronograma Deportivo</h3>
+                <div style="margin-bottom: 25px;">
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                        <button class="btn-profile" onclick="selectCronoProfile('Gonzalo', this)">GONZALO</button>
+                        <button class="btn-profile" onclick="selectCronoProfile('Raul', this)">RAÚL</button>
+                        <button class="btn-profile" onclick="selectCronoProfile('Ruben', this)">RUBÉN</button>
+                    </div>
+                </div>
+                <div id="cronoPwdSec" style="display: none; margin-bottom: 25px;">
+                    <input type="password" id="cronoPwdInp" placeholder="****" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; text-align: center; font-size: 18px; letter-spacing: 5px;" onkeyup="if(event.key==='Enter') accederCronograma()">
+                </div>
+                <button class="btn-salir" style="width: 100%; height: 45px; border-radius: 10px;" onclick="accederCronograma()">ACCEDER</button>
+            </div>
+
+            <div id="cronoIframeView" style="display: none; height: 90vh; width: 100%;">
+                <iframe id="cronoIframe" src="" style="width: 100%; height: 100%; border: none;"></iframe>
+            </div>
+        </div>
+    </div>
+
     <script>
+        let selectedCronoUser = null;
+
+        function selectCronoProfile(user, btn) {
+            selectedCronoUser = user;
+            document.querySelectorAll('.btn-profile').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            document.getElementById('cronoPwdSec').style.display = (user === 'Raul' || user === 'Ruben') ? 'block' : 'none';
+        }
+
+        function accederCronograma() {
+            if (!selectedCronoUser) return alert("Selecciona perfil");
+            if ((selectedCronoUser === 'Raul' || selectedCronoUser === 'Ruben') && document.getElementById('cronoPwdInp').value !== '2204') return alert("Contraseña incorrecta");
+            
+            const url = `/cronograma?view=semanal&user=${encodeURIComponent(selectedCronoUser)}`;
+            document.getElementById('cronoIframe').src = url;
+            document.getElementById('cronoEntryView').style.display = 'none';
+            document.getElementById('cronoIframeView').style.display = 'block';
+            document.getElementById('modalCronogramaGlobal').querySelector('.modal-content').style.width = '95vw';
+            
+            sessionStorage.setItem('crono_active', 'true');
+            sessionStorage.setItem('crono_url', url);
+        }
+
+        function openCronogramaAuth() {
+            document.getElementById('modalCronogramaGlobal').style.display = 'flex';
+            document.getElementById('badgeCronoGlobal').style.display = 'none';
+            sessionStorage.setItem('crono_minimized', 'false');
+        }
+
+        function closeCronogramaModal() {
+            document.getElementById('modalCronogramaGlobal').style.display = 'none';
+            document.getElementById('cronoIframe').src = '';
+            sessionStorage.removeItem('crono_active');
+            sessionStorage.removeItem('crono_url');
+            sessionStorage.removeItem('crono_minimized');
+        }
+
+        window.addEventListener('message', function(e) {
+            if (e.data === 'minimizeCronograma') {
+                document.getElementById('modalCronogramaGlobal').style.display = 'none';
+                document.getElementById('badgeCronoGlobal').style.display = 'flex';
+                sessionStorage.setItem('crono_minimized', 'true');
+            }
+        });
+
+        // Persistencia al cambiar de página
+        window.addEventListener('DOMContentLoaded', () => {
+            if (sessionStorage.getItem('crono_active') === 'true' && sessionStorage.getItem('crono_minimized') === 'true') {
+                document.getElementById('badgeCronoGlobal').style.display = 'flex';
+                document.getElementById('cronoIframe').src = sessionStorage.getItem('crono_url');
+                document.getElementById('cronoEntryView').style.display = 'none';
+                document.getElementById('cronoIframeView').style.display = 'block';
+                document.getElementById('modalCronogramaGlobal').querySelector('.modal-content').style.width = '95vw';
+            }
+        });
+
         // Función global para ocultar el cargador
         function showLoader() {
             const loader = document.getElementById('loader-wrapper');
             if (loader) {
+                loader.style.display = 'flex';
                 loader.classList.remove('loader-hidden');
+                // Fail-safe: si en 10 segundos no se ha ocultado (por error de red o JS), lo forzamos.
+                setTimeout(hideLoader, 10000);
             }
         }
 
         function hideLoader() {
             const loader = document.getElementById('loader-wrapper');
             if (loader && !loader.classList.contains('loader-hidden')) {
-                setTimeout(() => { loader.classList.add('loader-hidden'); }, 400);
+                loader.classList.add('loader-hidden');
+                // Forzado de seguridad por si falla la transición CSS
+                setTimeout(() => { loader.style.display = 'none'; }, 600);
             }
         }
 
-        // Fallback de seguridad: Si en 10 segundos no se ha ocultado (por error en datos), lo quitamos
-        window.addEventListener('load', function() {
+        // Fallback de seguridad: Ocultar el cargador cuando la página esté lista
+        window.addEventListener('load', () => {
+            hideLoader();
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => {
                 hideLoader();
-            }, 10000);
+            }, 2500); // Failsafe agresivo: 2.5s máximo
         });
     </script>
 </body>

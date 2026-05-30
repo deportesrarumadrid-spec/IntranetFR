@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Cronograma Club - {{ usuario_sesion }}</title>
+    <title>Cronograma Deportivo - {{ persona_seleccionada }}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
@@ -12,34 +12,123 @@
         .btn-view { padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-weight: 900; text-transform: uppercase; transition: 0.3s; background: #eee; color: #666; }
         .btn-view.active { background: #E31E24; color: white; }
         
+        /* Pantalla de Carga Global */
+        #loader-wrapper {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(244, 247, 246, 0.8); backdrop-filter: blur(4px);
+            display: none; justify-content: center; align-items: center; z-index: 9999;
+        }
+        .loader-container { position: relative; display: flex; align-items: center; justify-content: center; width: 150px; height: 150px; }
+        .loader-escudo { width: 80px; height: auto; z-index: 10; }
+        .loader-spinner {
+            position: absolute; width: 130px; height: 130px;
+            border: 4px solid rgba(227, 30, 36, 0.1); border-top: 4px solid #E31E24;
+            border-radius: 50%; animation: spin-loader 1s linear infinite;
+        }
+        @keyframes spin-loader { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Modal Moderno Estilo Intranet */
+        .modal { display: none; position: fixed; z-index: 5000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; backdrop-filter: blur(8px); }
+        .modal-content { background: white; padding: 0; border-radius: 25px; width: 500px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); overflow: hidden; border: 1px solid rgba(255,255,255,0.2); }
+
         .view-container { display: none; }
         .view-container.active { display: block; }
 
+        /* Estilos para los días de la semana en el modal y cabeceras */
+        .day-pill-group { display: flex; gap: 5px; margin-bottom: 15px; justify-content: center; }
+        .day-pill {
+            width: 32px; height: 32px; border-radius: 10px; border: 2px solid #f1f5f9;
+            background: #f8fafc; color: #64748b; font-weight: 900; font-size: 12px;
+            display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s;
+        }
+        .day-pill.selected {
+            background: #E31E24; border-color: #E31E24; color: white;
+            box-shadow: 0 4px 10px rgba(227,30,36,0.3);
+        }
+        .day-pill:hover:not(.selected) { border-color: #E31E24; color: #E31E24; }
+
         /* Estilos Vista Anual */
-        .grid-anual { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
-        .mes-card { background: white; padding: 15px; border-radius: 12px; border-top: 5px solid #E31E24; min-height: 150px; }
+        .grid-anual { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .mes-card { background: white; padding: 15px; border-radius: 12px; border-top: 5px solid #E31E24; min-height: 180px; position: relative; }
         .mes-card h3 { margin: 0 0 10px 0; font-size: 14px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .btn-add-anual { position: absolute; top: 12px; right: 12px; background: transparent; border: none; color: #999; cursor: pointer; transition: 0.3s; }
+        .btn-add-anual:hover { color: #E31E24; transform: scale(1.2); }
 
         /* Estilos Vista Semanal */
-        .grid-semanal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; background: white; padding: 15px; border-radius: 15px; overflow-x: auto; }
-        .dia-col { border-right: 1px solid #eee; padding: 10px; min-height: 400px; }
+        .grid-semanal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; background: white; padding: 15px; border-radius: 15px; overflow-x: auto; min-width: 1000px; }
+        .dia-col { border-right: 1px solid #f1f5f9; padding: 10px; min-height: 500px; }
         .dia-col:last-child { border-right: none; }
-        .dia-header { text-align: center; border-bottom: 2px solid #E31E24; margin-bottom: 15px; padding-bottom: 10px; }
-        .dia-header .nombre { display: block; font-weight: 900; font-size: 12px; color: #E31E24; }
-        .dia-header .fecha { font-size: 10px; color: #999; }
+        .dia-header { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 10px; 
+            border-bottom: 3px solid #E31E24; 
+            margin-bottom: 15px; 
+            padding-bottom: 12px; 
+        }
+        .dia-header .nombre { 
+            font-weight: 900; 
+            font-size: 13px; 
+            color: #333; 
+            text-transform: uppercase;
+        }
+        .btn-plus-dia {
+            background: #E31E24;
+            color: white;
+            border: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            transition: 0.2s;
+            box-shadow: 0 2px 5px rgba(227,30,36,0.2);
+        }
+        .btn-plus-dia:hover { transform: scale(1.1); background: #333; }
 
-        .evento { background: #fff5f5; border-left: 3px solid #E31E24; padding: 8px; margin-bottom: 8px; border-radius: 4px; font-size: 11px; }
+        /* Botones de Opción (Pills) */
+        .pill-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
+        .pill-opt { padding: 8px 15px; border-radius: 12px; border: 2px solid #f1f5f9; background: #f8fafc; font-size: 10px; font-weight: 900; cursor: pointer; transition: 0.3s; color: #64748b; text-transform: uppercase; }
+        .pill-opt:hover { border-color: #E31E24; color: #E31E24; }
+        .pill-opt.selected { background: #E31E24; border-color: #E31E24; color: white; box-shadow: 0 4px 12px rgba(227,30,36,0.2); }
+        .btn-add-cat { background: #333; color: white; padding: 8px 12px; border-radius: 12px; font-size: 10px; border: none; cursor: pointer; font-weight: 900; }
+
+        .cat-title { font-size: 9px; font-weight: 900; margin: 15px 0 5px 0; border-bottom: 1px solid #eee; padding-bottom: 2px; }
+        .evento { padding: 6px 10px; margin-bottom: 4px; border-radius: 6px; font-size: 11px; font-weight: 600; border-left: 4px solid #ddd; }
+        /* Tonos Suaves / Pastel */
+        .ev-deportivo { background: #fff1f2; border-left-color: #fda4af; color: #9f1239; }
+        .ev-deportiva { background: #fff1f2; border-left-color: #fda4af; color: #9f1239; }
+        .ev-mk { background: #eff6ff; border-left-color: #93c5fd; color: #1e40af; }
+        .ev-oficina { background: #f8fafc; border-left-color: #cbd5e1; color: #334155; }
+        .ev-otros { background: #f1f5f9; border-left-color: #d1d5db; color: #475569; }
+
+        .btn-fin { border: none; padding: 12px; border-radius: 12px; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 11px; text-transform: uppercase; }
+        .form-control { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; font-family: inherit; font-size: 13px; font-weight: 600; outline: none; transition: 0.3s; }
+        .form-control:focus { border-color: #E31E24; box-shadow: 0 0 0 3px rgba(227,30,36,0.1); }
     </style>
 </head>
 <body>
+    <!-- Cargador -->
+    <div id="loader-wrapper">
+        <div class="loader-container">
+            <div class="loader-spinner"></div>
+            <img src="/static/ESCUDO SIN FONDO.png" class="loader-escudo">
+        </div>
+    </div>
+
     <div class="header-cronograma">
         <div style="display:flex; align-items:center; gap:15px;">
-            <img src="/static/escudo.png" style="height:40px;">
-            <h2 style="margin:0; font-size:18px;">CRONOGRAMA DEPORTIVO</h2>
+            <img src="/static/ESCUDO SIN FONDO.png" style="height:40px;">
+            <h2 id="crono-title-header" style="margin:0; font-size:18px;">CRONOGRAMA DEPORTIVO</h2>
         </div>
         <div class="btn-group">
             <button class="btn-view" onclick="changeView('semanal', this)">SEMANAL</button>
             <button class="btn-view active" onclick="changeView('anual', this)">ANUAL</button>
+            <button class="btn-view" onclick="minimizeCrono()" title="Minimizar"><i class="fas fa-window-minimize"></i></button>
         </div>
     </div>
 
@@ -47,11 +136,75 @@
     <div id="view-anual" class="view-container active">
         <div class="grid-anual">
             {% for m in meses_anual %}
-            <div class="mes-card" data-mes="{{ m.num }}" data-anio="{{ m.anio }}">
+            <div class="mes-card" data-mes="{{ m.num }}" data-anio="{{ m.anio }}" data-iso="{{ m.anio }}-{{ "%02d"|format(m.num) }}-01">
                 <h3>{{ m.label }}</h3>
+                <button class="btn-add-anual" onclick="nuevaTareaCronograma('{{ m.anio }}-{{ "%02d"|format(m.num) }}-01')" title="Añadir a este mes">
+                    <i class="fas fa-plus-circle"></i>
+                </button>
                 <div class="lista-eventos" id="events-anual-{{ m.num }}-{{ m.anio }}"></div>
             </div>
             {% endfor %}
+        </div>
+    </div>
+
+    <!-- MODAL NUEVA TAREA MODERNO -->
+    <div id="modalTarea" class="modal">
+        <div class="modal-content" style="position: relative;">
+            <span onclick="closeTaskModal()" style="position: absolute; top: 22px; right: 25px; color: white; font-size: 32px; cursor: pointer; z-index: 1000; font-weight: 900; transition: 0.3s; line-height: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.2);" onmouseover="this.style.transform='scale(1.2) rotate(90deg)'" onmouseout="this.style.transform='scale(1) rotate(0deg)'">&times;</span>
+            <div style="background: #E31E24; color: white; padding: 25px 20px; text-align: center;">
+                <h3 id="modalTaskTitle" style="margin: 0; text-transform: uppercase; font-size: 14px; letter-spacing: 1px;">Nueva Planificación</h3>
+            </div>
+            
+            <div style="padding: 30px;">
+                <div style="margin-bottom: 20px;">
+                    <label style="font-size: 9px; font-weight: 900; color: #999; text-transform: uppercase; display: block; margin-bottom: 8px;">Descripción de la tarea</label>
+                    <input type="text" id="taskName" class="form-control" placeholder="Ej: Revisión de material...">
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label style="font-size: 9px; font-weight: 900; color: #999; text-transform: uppercase;">Categoría (Obligatoria)</label>
+                        <button class="btn-add-cat" onclick="addCustomCategory()">+ NUEVA</button>
+                    </div>
+                    <div class="pill-group" id="groupCat">
+                        <button class="pill-opt" onclick="selectPill('taskCat', 'DEPORTIVA', this)">DEPORTIVA</button>
+                        <button class="pill-opt" onclick="selectPill('taskCat', 'MK', this)">MK</button>
+                        <button class="pill-opt" onclick="selectPill('taskCat', 'OFICINA', this)">OFICINA</button>
+                        <button class="pill-opt" onclick="selectPill('taskCat', 'OTROS', this)">OTROS</button>
+                    </div>
+                    <input type="hidden" id="taskCat" value="DEPORTIVA">
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="font-size: 9px; font-weight: 900; color: #999; text-transform: uppercase; display: block; margin-bottom: 8px;">Repetición semanal (Opcional):</label>
+                    <div class="day-pill-group" id="groupFreq">
+                        <div class="day-pill" onclick="toggleDayPill(this, 'L')">L</div>
+                        <div class="day-pill" onclick="toggleDayPill(this, 'M')">M</div>
+                        <div class="day-pill" onclick="toggleDayPill(this, 'X')">X</div>
+                        <div class="day-pill" onclick="toggleDayPill(this, 'J')">J</div>
+                        <div class="day-pill" onclick="toggleDayPill(this, 'V')">V</div>
+                        <div class="day-pill" onclick="toggleDayPill(this, 'S')">S</div>
+                        <div class="day-pill" onclick="toggleDayPill(this, 'D')">D</div>
+                    </div>
+                </div>
+
+                {% if usuario_sesion|lower in ['ruben', 'raul', 'admin'] %}
+                <div style="margin-bottom: 25px;">
+                    <label style="font-size: 9px; font-weight: 900; color: #999; text-transform: uppercase; display: block; margin-bottom: 8px;">Responsable</label>
+                    <div class="pill-group" id="groupOwner">
+                        <button class="pill-opt" onclick="selectPill('taskOwner', 'Gonzalo', this)">GONZALO</button>
+                        <button class="pill-opt" onclick="selectPill('taskOwner', 'Raul', this)">RAÚL</button>
+                        <button class="pill-opt" onclick="selectPill('taskOwner', 'Ruben', this)">RUBÉN</button>
+                    </div>
+                    <input type="hidden" id="taskOwner" value="">
+                </div>
+                {% endif %}
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+                    <button class="btn-fin" onclick="closeTaskModal()" style="background: #f1f5f9; color: #64748b;">CANCELAR</button>
+                    <button id="btnSaveTask" class="btn-fin" onclick="guardarTareaDefinitiva()" style="background: #E31E24; color: white; box-shadow: 0 8px 15px rgba(227,30,36,0.2);">GUARDAR TAREA</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -60,31 +213,49 @@
         <div class="grid-semanal">
             {% for d in semana_actual %}
             <div class="dia-col">
-                <div class="dia-header">
-                    <span class="nombre">{{ d.nombre }}</span>
-                    <span class="fecha">{{ d.fecha_full }}</span>
+                <div class="dia-header" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <span class="nombre" style="margin: 0;">{{ d.nombre }}</span>
+                    <button class="btn-plus-dia" onclick="nuevaTareaCronograma('{{ d.fecha_iso }}')" title="Añadir tarea">
+                        <i class="fas fa-plus"></i>
+                    </button>
                 </div>
                 <div class="lista-eventos" id="events-week-{{ d.fecha_iso }}"></div>
-                <!-- Botón para añadir tareas -->
-                <button class="btn-fin" onclick="nuevaTareaCronograma('{{ d.fecha_iso }}')" style="width: 100%; padding: 8px; font-size: 9px; margin-top: 10px; background: #f8fafc; border: 1px dashed #cbd5e1; color: #64748b;">
-                    <i class="fas fa-plus"></i> AÑADIR TAREA
-                </button>
             </div>
             {% endfor %}
         </div>
     </div>
 
     <script>
+        let currentIsoFecha = '';
+        let CATEGORIAS = ['DEPORTIVO', 'MK', 'OFICINA', 'OTROS'];
+        const urlParams = new URLSearchParams(window.location.search);
+        const PERSONA_MOSTRADA = urlParams.get('user') || '{{ usuario_sesion }}';
+        const SECCION_VIEW = '{{ view }}';
+        let currentView = SECCION_VIEW || 'anual';
+
+        let editingOriginal = null; // Para rastrear si estamos modificando una tarea existente
+
+        function showLoader() { document.getElementById('loader-wrapper').style.display = 'flex'; }
+        function hideLoader() { document.getElementById('loader-wrapper').style.display = 'none'; }
+
+        function toggleDayPill(el, day) { el.classList.toggle('selected'); }
+        function getSelectedDays() { return Array.from(document.querySelectorAll('.day-pill.selected')).map(el => el.innerText).join(','); }
+
         function changeView(view, btn) {
+            currentView = view;
             document.querySelectorAll('.view-container').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.btn-view').forEach(b => b.classList.remove('active'));
             document.getElementById('view-' + view).classList.add('active');
             btn.classList.add('active');
         }
 
+        function minimizeCrono() {
+            // Enviar mensaje al padre para ocultar el modal y mostrar el indicador
+            window.parent.postMessage('minimizeCronograma', '*');
+        }
+
         // Inicialización basada en la URL al cargar la página
         window.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
             const viewParam = urlParams.get('view');
             if (viewParam) {
                 const btn = (viewParam === 'semanal') ? 
@@ -92,6 +263,9 @@
                             document.querySelector('button[onclick*="anual"]');
                 if (btn) changeView(viewParam, btn);
             }
+
+            // Título con el nombre en rojo
+            document.getElementById('crono-title-header').innerHTML = `CRONOGRAMA DEPORTIVO - <span style="color: #E31E24;">${PERSONA_MOSTRADA.toUpperCase()}</span>`;
         });
 
         // Lógica para el rango Sep-Ago en Anual
@@ -107,35 +281,340 @@
             cards.forEach(c => container.appendChild(c));
         }
 
-        function nuevaTareaCronograma(fecha) {
-            const tarea = prompt("Escribe la nueva tarea para el día " + fecha);
-            if (tarea) {
-                // Aquí iría la llamada al API para guardar
-                console.log("Guardando tarea:", tarea, "en fecha:", fecha);
-                location.reload(); 
+        function selectPill(inputId, value, element) {
+            document.getElementById(inputId).value = value;
+            // Quitar 'selected' de los hermanos
+            const parent = element.parentElement;
+            parent.querySelectorAll('.pill-opt').forEach(p => p.classList.remove('selected'));
+            element.classList.add('selected');
+        }
+
+        function closeTaskModal() {
+            document.getElementById('modalTarea').style.display = 'none';
+        }
+
+        function addCustomCategory() {
+            const nueva = prompt("Nombre de la nueva categoría:");
+            if (nueva) {
+                const upper = nueva.toUpperCase().trim();
+                if (!CATEGORIAS.includes(upper)) {
+                    CATEGORIAS.push(upper);
+                    const btn = document.createElement('button');
+                    btn.className = 'pill-opt';
+                    btn.innerText = upper;
+                    btn.onclick = function() { selectPill('taskCat', upper, this); };
+                    document.getElementById('groupCat').insertBefore(btn, document.querySelector('.btn-add-cat'));
+                    btn.click();
+                }
             }
         }
 
-        // Cargar datos desde la API
-        fetch('/api/cronograma_data')
-            .then(res => res.json())
-            .then(data => {
-                data.forEach(ev => {
-                    const div = document.createElement('div');
-                    div.className = 'evento';
-                    div.innerHTML = `<strong>${ev.tarea}</strong><br><small>${ev.tipo}</small>`;
-                    
-                    // Ubicar en Semanal
-                    const containerSemana = document.getElementById(`events-week-${ev.fecha_iso}`);
-                    if (containerSemana) containerSemana.appendChild(div.cloneNode(true));
+        function nuevaTareaCronograma(fecha) {
+            editingOriginal = null; // Es una tarea nueva
+            document.getElementById('modalTaskTitle').innerText = "Nueva Planificación";
+            document.getElementById('btnSaveTask').innerText = "GUARDAR TAREA";
 
-                    // Ubicar en Anual (basado en mes de la fecha DD/MM/YYYY)
-                    const [d, m, y] = ev.fecha.split('/');
-                    const containerAnual = document.getElementById(`events-anual-${parseInt(m)}-${y}`);
-                    if (containerAnual) containerAnual.appendChild(div.cloneNode(true));
+            currentIsoFecha = fecha;
+            document.getElementById('taskName').value = '';
+
+            // Pre-seleccionar responsable actual en el modal
+            const ownerInp = document.getElementById('taskOwner');
+            if (ownerInp) {
+                ownerInp.value = PERSONA_MOSTRADA;
+                const ownerBtn = Array.from(document.querySelectorAll('#groupOwner .pill-opt')).find(b => b.innerText.toLowerCase() === PERSONA_MOSTRADA.toLowerCase());
+                if (ownerBtn) selectPill('taskOwner', PERSONA_MOSTRADA, ownerBtn);
+            }
+            
+            // Detectar día de la semana de la fecha clickeada (0=D, 1=L...)
+            const [y, m, d] = fecha.split('-').map(Number);
+            const dateObj = new Date(y, m-1, d);
+            const dayMapInv = { 1: 'L', 2: 'M', 3: 'X', 4: 'J', 5: 'V', 6: 'S', 0: 'D' };
+            const dayChar = dayMapInv[dateObj.getDay()];
+
+            // Reset pills
+            document.querySelectorAll('.pill-opt').forEach(p => p.classList.remove('selected'));
+            document.querySelectorAll('.day-pill').forEach(p => p.classList.remove('selected'));
+            
+            // Preseleccionar DEPORTIVA por defecto
+            const depBtn = Array.from(document.querySelectorAll('#groupCat .pill-opt')).find(b => b.innerText === 'DEPORTIVA');
+            if (depBtn) depBtn.classList.add('selected');
+            document.getElementById('taskCat').value = 'DEPORTIVA';
+
+            // Autoseleccionar el día correspondiente para que se guarde por "día de la semana"
+            if (d !== 1) { // Si no es el día 1 (que viene de la vista anual)
+                const dayBtn = Array.from(document.querySelectorAll('.day-pill')).find(b => b.innerText === dayChar);
+                if (dayBtn) dayBtn.classList.add('selected');
+            }
+
+            // Forzar selección de responsable si es admin/ruben/raul
+            if (document.getElementById('taskOwner')) document.getElementById('taskOwner').value = '';
+
+            // MOSTRAR EL MODAL (Faltaba esta línea)
+            document.getElementById('modalTarea').style.display = 'flex';
+        }
+
+        async function guardarTareaDefinitiva() {
+            const tarea = document.getElementById('taskName').value.trim();
+            const tipo = document.getElementById('taskCat').value;
+            const frecuencia = getSelectedDays(); // Ahora enviamos L,M,X...
+            
+            // Si existe el selector de responsable, debe ser obligatorio elegir uno (no hay default "yo")
+            const ownerInp = document.getElementById('taskOwner');
+            const owner = ownerInp ? ownerInp.value : PERSONA_MOSTRADA;
+
+            if (!tarea || !tipo) return alert("Tarea y Categoría son obligatorias.");
+            if (ownerInp && !owner) return alert("Selecciona un responsable para la tarea.");
+
+            // Si estamos en modo edición, primero eliminamos la tarea antigua
+            if (editingOriginal) {
+                try {
+                    await fetch('/api/cronograma_delete', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ 
+                            user: PERSONA_MOSTRADA,
+                            fecha: editingOriginal.fecha,
+                            tarea: editingOriginal.tarea
+                        })
+                    });
+                } catch(e) { console.error("Error al actualizar tarea:", e); }
+            }
+
+            // Definir qué texto guardar en la columna de FECHA
+            let fechaParaGuardar = currentIsoFecha;
+            if (frecuencia) {
+                const nombresDias = { 'L': 'LUNES', 'M': 'MARTES', 'X': 'MIERCOLES', 'J': 'JUEVES', 'V': 'VIERNES', 'S': 'SABADO', 'D': 'DOMINGO' };
+                fechaParaGuardar = frecuencia.split(',').map(d => nombresDias[d]).join(', ');
+            }
+
+            showLoader();
+            try {
+                const res = await fetch('/api/cronograma_save', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ fecha: fechaParaGuardar, tarea, tipo, responsable: owner, frecuencia, vista: currentView.toUpperCase() })
                 });
+
+                if (res.ok) { 
+                    location.reload(); 
+                }
+                else {
+                    hideLoader();
+                    let errorMsg = "Error desconocido";
+                    try {
+                        const errorJson = await res.json();
+                        errorMsg = errorJson.message || errorJson.status;
+                    } catch(e) {
+                        errorMsg = await res.text();
+                    }
+                    alert("Error al guardar la tarea: " + errorMsg);
+                    console.error("Error al guardar la tarea:", res.status, errorMsg);
+                }
+            } catch (e) {
+                hideLoader();
+                alert("Error de conexión al intentar guardar la tarea: " + e.message);
+            } finally { hideLoader(); }
+        }
+
+        const MAPPING_DIAS = { 'L': 1, 'M': 2, 'X': 3, 'J': 4, 'V': 5, 'S': 6, 'D': 0 };
+
+        const sanitizeClass = (str) => "cat-sec-" + (str || 'otros').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+
+        // Cargar datos desde la API
+        async function initCargaCronograma() {
+            try {
+                const res = await fetch(`/api/cronograma_data?user=${PERSONA_MOSTRADA}&_t=${new Date().getTime()}`);
+                const data = await res.json();
+                
+                if (!Array.isArray(data)) return;
+
+                // Limpiar contenedores
+                document.querySelectorAll('.lista-eventos').forEach(el => el.innerHTML = '');
+
+                const containerIds = Array.from(document.querySelectorAll('#view-semanal .lista-eventos'))
+                                          .map(el => el.id)
+                                          .filter(id => id.startsWith('events-week-'));
+                
+                data.forEach(ev => {
+                    const diasRepeticion = (ev.FRECUENCIA || "").split(',').map(s => s.trim()).filter(x => x);
+                    const tipoLimpio = (ev.TIPO || 'OTROS').toUpperCase();
+                    const tareaLimpia = (ev.TAREA || '').trim();
+                    
+                    if (!tareaLimpia) return;
+
+                    containerIds.forEach(id => {
+                        const isoDate = id.replace('events-week-', '');
+                        
+                        // Normalización de fechas para comparación segura
+                        const normalizeDateStr = (s) => (s || "").split('T')[0].trim();
+                        const evFechaIso = normalizeDateStr(ev.FECHA_ISO);
+
+                        const [y, m, dNum] = isoDate.split('-').map(Number);
+                        const diaSemanaNum = new Date(y, m-1, dNum).getDay();
+                        
+                        let mostrar = false;
+                        const nombresDiasLargo = { 'LUNES': 1, 'MARTES': 2, 'MIERCOLES': 3, 'JUEVES': 4, 'VIERNES': 5, 'SABADO': 6, 'DOMINGO': 0 };
+
+                        if (diasRepeticion.length === 0) {
+                            if (isoDate === evFechaIso) mostrar = true;
+                            else if (nombresDiasLargo[evFechaIso.toUpperCase()] === diaSemanaNum) mostrar = true;
+                        } else {
+                            const diasNums = diasRepeticion.map(d => MAPPING_DIAS[d]);
+                            if (diasNums.includes(diaSemanaNum)) mostrar = true;
+                        }
+
+                        if (mostrar) {
+                            const container = document.getElementById(id);
+                            const catClassName = sanitizeClass(tipoLimpio);
+                            // Buscar o crear sección de categoría
+                            let section = container.querySelector('.' + catClassName);
+                            if (!section) {
+                                section = document.createElement('div');
+                                section.className = catClassName;
+                                section.innerHTML = `<div class="cat-title">${tipoLimpio}</div>`;
+                                container.appendChild(section);
+                            }
+                            
+                            const isDone = (ev.ESTADO || '').toUpperCase() === 'COMPLETADO';
+                            const evDiv = document.createElement('div');
+                            evDiv.className = `evento ev-${tipoLimpio.toLowerCase()}`;
+                            evDiv.style.display = 'flex';
+                            evDiv.style.alignItems = 'center';
+                            evDiv.style.justifyContent = 'space-between';
+                            evDiv.style.gap = '5px';
+                            
+                            const tareaEscapada = tareaLimpia.replace(/'/g, "\\'");
+                            const estadoActual = (ev.ESTADO || 'PENDIENTE').toUpperCase();
+
+                            evDiv.innerHTML = `
+                                <span style="${isDone ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${tareaLimpia}</span>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <i class="fas fa-pencil-alt" style="cursor:pointer; color: #999; font-size: 11px;" onclick="abrirEdicionTarea('${ev.FECHA_ISO}', '${tareaEscapada}', '${tipoLimpio}', '${ev.RESPONSABLE}', '${ev.FRECUENCIA}')" title="Modificar"></i>
+                                    <i class="fas fa-trash-alt" style="cursor:pointer; color: #ffcccc; font-size: 11px;" onclick="eliminarTareaCronograma('${ev.FECHA_ISO}', '${tareaEscapada}')"></i>
+                                    <i class="${isDone ? 'fas fa-circle-check' : 'far fa-circle'}" 
+                                       style="cursor:pointer; color: ${isDone ? '#28a745' : '#ccc'}; font-size: 16px;" 
+                                       onclick="toggleEstadoTarea('${ev.FECHA_ISO}', '${tareaEscapada}', '${estadoActual}')" title="${isDone ? 'Marcar como pendiente' : 'Marcar como terminada'}"></i>
+                                </div>
+                            `;
+                            section.appendChild(evDiv);
+                        }
+                    });
+                });
+
+                // Renderizar en Anual (simplificado)
+                data.forEach(ev => {
+                    let containerAnual = null;
+                    if (ev.FECHA_ISO && ev.FECHA_ISO.includes('-')) {
+                        const [y, m, d] = ev.FECHA_ISO.split('-');
+                        containerAnual = document.getElementById(`events-anual-${parseInt(m)}-${y}`);
+                    } else if (ev.FRECUENCIA) {
+                        // Mostrar tareas repetitivas en todos los meses de la vista anual
+                        document.querySelectorAll('.mes-card .lista-eventos').forEach(cardList => {
+                            const dot = document.createElement('span');
+                            dot.style = `display:inline-block; width:6px; height:6px; border-radius:50%; margin:1px; cursor:help; opacity: 0.6; background-color: ${getCatColor((ev.TIPO || 'OTROS').toUpperCase())};`;
+                            dot.title = `REPETITIVO (${ev.FRECUENCIA}): ${ev.TAREA}`;
+                            cardList.appendChild(dot);
+                        });
+                        return;
+                    }
+
+                    if (containerAnual) {
+                        const dot = document.createElement('span');
+                        dot.style = `display:inline-block; width:8px; height:8px; border-radius:50%; margin:2px; cursor:help;`;
+                        dot.style.backgroundColor = getCatColor((ev.TIPO || 'OTROS').toUpperCase());
+                        dot.title = `${ev.FECHA_ISO}: ${ev.TAREA || 'Tarea'}`;
+                        containerAnual.appendChild(dot);
+                    }
+                });
+
                 ordenarMesesTemporada();
-            });
+            } catch (err) {
+                console.error("Error cargando cronograma:", err);
+            }
+        }
+
+        initCargaCronograma();
+
+        async function toggleEstadoTarea(fecha, tarea, estadoActual) {
+            const nuevoEstado = (estadoActual || '').toUpperCase() === 'COMPLETADO' ? 'PENDIENTE' : 'COMPLETADO';
+            showLoader();
+            try {
+                const res = await fetch('/api/cronograma_update_status', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        user: PERSONA_MOSTRADA,
+                        fecha: fecha,
+                        tarea: tarea,
+                        estado: nuevoEstado
+                    })
+                });
+                if (res.ok) {
+                    initCargaCronograma(); // Recargar datos frescos
+                }
+            } catch (e) {
+                console.error("Error al actualizar estado:", e);
+            } finally { hideLoader(); }
+        }
+
+        function abrirEdicionTarea(fecha, tarea, tipo, responsable, frecuencia) {
+            editingOriginal = { fecha, tarea }; // Guardamos referencia para el reemplazo
+            document.getElementById('modalTaskTitle').innerText = "Modificar Tarea";
+            document.getElementById('btnSaveTask').innerText = "ACTUALIZAR CAMBIOS";
+
+            currentIsoFecha = fecha;
+            document.getElementById('taskName').value = tarea;
+            
+            // Seleccionar Categoría
+            const catBtn = Array.from(document.querySelectorAll('#groupCat .pill-opt')).find(b => b.innerText.toUpperCase() === tipo.toUpperCase());
+            if (catBtn) selectPill('taskCat', tipo, catBtn);
+            
+            // Seleccionar Responsable
+            const ownerBtn = Array.from(document.querySelectorAll('#groupOwner .pill-opt')).find(b => b.innerText.toLowerCase() === responsable.toLowerCase());
+            if (ownerBtn) selectPill('taskOwner', responsable, ownerBtn);
+            
+            // Seleccionar Días
+            document.querySelectorAll('.day-pill').forEach(p => p.classList.remove('selected'));
+            if (frecuencia) {
+                frecuencia.split(',').forEach(d => {
+                    const dayBtn = Array.from(document.querySelectorAll('.day-pill')).find(b => b.innerText === d.trim());
+                    if (dayBtn) dayBtn.classList.add('selected');
+                });
+            }
+
+            // Al editar, si guardamos una "nueva" tarea con el mismo nombre y fecha, se duplicará.
+            // Lo ideal es que el usuario sepa que puede borrar la anterior o simplemente estamos re-usando el modal.
+            document.getElementById('modalTarea').style.display = 'flex';
+        }
+
+        async function eliminarTareaCronograma(fecha, tarea) {
+            if (!confirm(`¿Seguro que quieres eliminar la tarea "${tarea}"?`)) return;
+            
+            showLoader();
+            try {
+                const res = await fetch('/api/cronograma_delete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        user: PERSONA_MOSTRADA,
+                        fecha: fecha,
+                        tarea: tarea
+                    })
+                });
+                if (res.ok) {
+                    initCargaCronograma();
+                } else {
+                    alert("No se pudo eliminar la tarea.");
+                }
+            } catch (e) {
+                console.error("Error al eliminar:", e);
+            } finally { hideLoader(); }
+        }
+
+        function getCatColor(cat) {
+            const colors = { 'DEPORTIVO': '#fda4af', 'DEPORTIVA': '#fda4af', 'MK': '#93c5fd', 'OFICINA': '#cbd5e1', 'OTROS': '#d1d5db' };
+            return colors[cat] || '#ccc';
+        }
     </script>
 </body>
 </html>

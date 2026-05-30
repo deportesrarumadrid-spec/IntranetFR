@@ -107,24 +107,25 @@ def parse_dias_entreno(texto):
         if d in mapping: res.append(mapping[d])
     return res
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
+DATA_FOLDER = os.path.join(BASE_DIR, 'static', 'data')
+
 # --- CONFIGURACIÓN GOOGLE SHEETS ---
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name("secretos.json", scope)
+creds = ServiceAccountCredentials.from_json_keyfile_name(os.path.join(BASE_DIR, "secretos.json"), scope)
 client = gspread.authorize(creds)
-NOMBRE_EXCEL = "Control Asistencia Club" 
+NOMBRE_EXCEL = "Control Asistencia Club"
 app.gs_client = client
 app.gs_name = NOMBRE_EXCEL
 # ----------------------------------
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
-DATA_FOLDER = os.path.join(BASE_DIR, 'static', 'data')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['DATA_FOLDER'] = DATA_FOLDER
 
 def normalizar_cabecera_universal(h):
     """Limpia cabeceras de forma agresiva para comparaciones seguras."""
-    return str(h).strip().upper().replace('Ó','O').replace('Í','I').replace('É','E').replace('Á','A').replace('Ú','U').replace(' ','').replace('_', '').replace('.', '')
+    return str(h).strip().upper().replace('Ó','O').replace('Í','I').replace('É','E').replace('Á','A').replace('Ú','U').replace(' ','').replace('_', '').replace('.', '').replace('/', '')
 
 for p in [UPLOAD_FOLDER, DATA_FOLDER]: os.makedirs(p, exist_ok=True)
 
@@ -394,6 +395,7 @@ def login():
         session['usuario'] = 'admin'
         session['permisos'] = {
             'ENTRENAMIENTOS': 'SI', 'ASISTENCIAS': 'SI', 'FINANCIERO': 'SI', 'D.DEPORTIVA': 'SI', 'USUARIOS': 'SI'
+            , 'CRONOGRAMA': 'SI' # Admin master always has Cronograma access
         }
         return redirect(url_for('deportivo_bp.direccion_deportiva'))
 
@@ -427,7 +429,8 @@ def login():
                     'ENTRENAMIENTOS': check_p('ENTRENAMIENTOS'),
                     'ASISTENCIAS': check_p('ASISTENCIAS'),
                     'FINANCIERO': check_p('FINANCIERO'),
-                    'D.DEPORTIVA': check_p('D.DEPORTIVA')
+                    'D.DEPORTIVA': check_p('D.DEPORTIVA'),
+                    'CRONOGRAMA': check_p('CRONOGRAMA') # New permission
                 }
                 session['permisos'] = perms
                 
@@ -1071,8 +1074,11 @@ def recordatorio_individual():
 def cronograma():
     if not session.get('usuario'): return redirect(url_for('index'))
     
-    # Vista solicitada (semanal o anual)
+    # Obtenemos la persona de la URL (prioridad), de la sesión o por defecto
     view = request.args.get('view', 'semanal')
+    persona_raw = request.args.get('user') or request.args.get('persona') or session.get('usuario') or 'ADMIN'
+    # Normalizamos para mostrar en el título (ej: RUBEN)
+    persona_display = str(persona_raw).strip().upper()
     
     # Lógica para generar los meses de la temporada (Sep a Ago)
     hoy = datetime.now()
@@ -1106,16 +1112,256 @@ def cronograma():
                            meses_anual=meses_anual, 
                            semana_actual=semana_actual, 
                            usuario_sesion=session.get('usuario'),
+                           persona_seleccionada=persona_display,
                            view=view)
 
 @app.route('/api/cronograma_data')
 def api_cronograma_data():
+    # Capturamos parámetros de búsqueda con normalización agresiva
+    raw_u = request.args.get('user') or request.args.get('usuario') or session.get('usuario', 'admin')
+    user_req = normalizar_id(raw_u)
+    raw_view = request.args.get('view') or request.args.get('vista')
+    view_req = normalizar_id(raw_view) if raw_view else None
+
     try:
-        sheet = client.open(NOMBRE_EXCEL).worksheet("CRONOGRAMA")
-        records = sheet.get_all_records()
-        return jsonify(records)
-    except:
-        return jsonify([])
+        client = app.gs_client
+        nombre_excel = app.gs_name
+        spreadsheet = client.open(nombre_excel)
+
+        todas_hojas = {s.title.upper().strip(): s for s in spreadsheet.worksheets()}
+        if "TAREAS CRONOGRAMA" not in todas_hojas:
+            return jsonify([])
+            
+        sheet = todas_hojas["TAREAS CRONOGRAMA"]
+        all_v = sheet.get_all_values()
+        if not all_v or len(all_v) < 1:
+            return jsonify([])
+
+        # Usamos la primera fila como llaves, normalizándolas para la lógica interna
+        raw_headers = all_v[0]
+        records = []
+        for row in all_v[1:]:
+            # Saltamos filas totalmente vacías
+            if not any(str(c).strip() for c in row): continue
+            
+            item = {}
+            for i, h in enumerate(raw_headers):
+                val = str(row[i]).strip() if i < len(row) else ""
+                h_norm = normalizar_cabecera_universal(h)
+                
+                if h_norm in ['DIAMES', 'FECHAISO', 'FECHA', 'DATE', 'START', 'DIA', 'MES']:
+                    item['FECHA_ISO'] = val
+                    item['fecha'] = val
+                    item['start'] = val
+                elif h_norm in ['TAREA', 'TAREAS', 'TITLE', 'TITULO', 'NOMBRE', 'ACTIVIDAD', 'EVENTO', 'DESCRIPCION', 'DESCRIPTION', 'CONTENIDO', 'TEXT', 'CONTENT']:
+                    item['TAREA'] = val
+                    item['tarea'] = val
+                    item['title'] = val
+                    item['titulo'] = val
+                elif h_norm in ['SEMANALANUAL', 'VISTA', 'VIEW']:
+                    item['VISTA'] = val
+                    item['vista'] = val
+                elif h_norm in ['PERSONA', 'RESPONSABLE', 'USER', 'COACH', 'ENTRENADOR']:
+                    item['RESPONSABLE'] = val
+                    item['responsable'] = val
+                elif h_norm in ['FRECUENCIA', 'REPETICION', 'REPEAT']:
+                    item['FRECUENCIA'] = val
+                    item['frecuencia'] = val
+                elif h_norm in ['CATEGORIA', 'TIPO', 'CAT', 'DIRECCIONDEPORTIVA']:
+                    item['TIPO'] = val
+                    item['tipo'] = val
+                    item['categoria'] = val
+                elif h_norm in ['ESTADO', 'STATUS', 'COMPLETADO']:
+                    item['ESTADO'] = val
+                    item['estado'] = val
+                
+                # Mantenemos la clave original por compatibilidad con cualquier otra lógica
+                item[h] = val
+            records.append(item)
+
+        # FILTRADO PROFESIONAL: Por Persona y por Vista (Semanal/Anual)
+        # Esto garantiza que si estás en el cronograma semanal de Ruben, solo veas sus tareas semanales.
+        filtered = []
+        for r in records:
+            match_user = normalizar_id(r.get('RESPONSABLE', '')) == user_req
+            match_view = True
+            if view_req:
+                # Comparamos la vista (SEMANAL/ANUAL) normalizando ambos lados
+                match_view = normalizar_id(r.get('VISTA', '')) == view_req
+            
+            if match_user and match_view:
+                filtered.append(r)
+
+        resp = jsonify(filtered)
+        
+        resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        return resp
+    except Exception as e:
+        print(f"Error en api_cronograma_data: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/cronograma_save', methods=['POST'])
+def api_cronograma_save():
+    data = request.json
+    if not data:
+        return jsonify({"status": "error", "message": "No se recibieron datos"}), 400
+
+    client = app.gs_client
+    nombre_excel = app.gs_name
+    try:
+        spreadsheet = client.open(nombre_excel)
+        # Búsqueda robusta de la pestaña TAREAS (evita duplicados por mayúsculas/minúsculas)
+        todas_hojas = {s.title.upper().strip(): s for s in spreadsheet.worksheets()}
+        
+        if "TAREAS CRONOGRAMA" in todas_hojas:
+            sheet = todas_hojas["TAREAS CRONOGRAMA"]
+        else:
+            # Creamos la pestaña con el orden solicitado
+            sheet = spreadsheet.add_worksheet(title="TAREAS CRONOGRAMA", rows="1000", cols="7")
+            sheet.append_row(["SEMANAL/ANUAL", "PERSONA", "DIA/MES", "CATEGORIA", "TAREA", "FRECUENCIA", "ESTADO"])
+
+        all_v = sheet.get_all_values()
+        if not all_v:
+            headers_list = ["SEMANAL/ANUAL", "PERSONA", "DIA/MES", "CATEGORIA", "TAREA", "FRECUENCIA", "ESTADO"]
+            sheet.append_row(headers_list)
+            norm_headers = [normalizar_cabecera_universal(h) for h in headers_list]
+        else:
+            raw_headers = all_v[0]
+            norm_headers = [normalizar_cabecera_universal(h) for h in raw_headers]
+
+        # Soporte robusto para alias de llaves (asegura que val_fecha no esté vacío)
+        val_fecha = data.get('fecha') or data.get('dia/mes') or data.get('fecha_iso') or data.get('date') or data.get('start') or data.get('dia') or data.get('mes') or ""
+        val_tarea = data.get('tarea') or data.get('title') or data.get('nombre') or data.get('titulo') or data.get('actividad') or data.get('descripcion') or data.get('description') or data.get('text') or data.get('content') or ""
+        val_resp = data.get('responsable') or data.get('persona') or session.get('usuario', 'admin')
+        val_tipo = data.get('categoria') or data.get('tipo') or data.get('cat') or ""
+        val_vista = data.get('vista') or data.get('semanal/anual') or data.get('view') or "SEMANAL"
+        val_estado = data.get('estado') or data.get('status') or "PENDIENTE"
+
+        # Mapeo expandido con alias para que coincida con cualquier variante de cabecera
+        row_map = {
+            "DIAMES": str(val_fecha).strip(),
+            "FECHA": str(val_fecha).strip(),
+            "FECHAISO": str(val_fecha).strip(),
+            "TAREAS": str(val_tarea).strip(),
+            "TAREA": str(val_tarea).strip(),
+            "CATEGORIA": str(val_tipo).strip(),
+            "TIPO": str(val_tipo).strip(),
+            "PERSONA": str(val_resp).strip(),
+            "RESPONSABLE": str(val_resp).strip(),
+            "SEMANALANUAL": str(val_vista).strip().upper(),
+            "VISTA": str(val_vista).strip().upper(),
+            "FRECUENCIA": str(data.get('frecuencia', '')).strip(),
+            "ESTADO": str(val_estado).strip().upper()
+        }
+
+        nueva_fila = []
+        for h_norm in norm_headers:
+            val_a_insertar = row_map.get(h_norm, "")
+            nueva_fila.append(val_a_insertar)
+
+        # Verificación de seguridad: si la fila está casi vacía, algo falló en el mapeo
+        if not val_fecha or not val_tarea:
+            print(f"ERROR: Datos incompletos. Datos: {data}")
+            return jsonify({"status": "error", "message": "Fecha y Tarea son campos obligatorios"}), 400
+
+        print(f"DEBUG: Guardando en TAREAS -> {nueva_fila}")
+        sheet.append_row(nueva_fila)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error guardando en TAREAS: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/cronograma_update_status', methods=['POST'])
+def api_cronograma_update_status():
+    data = request.json
+    if not data: return jsonify({"status": "error"}), 400
+    
+    user_req = normalizar_id(data.get('user'))
+    fecha_req = str(data.get('fecha')).strip()
+    tarea_req = str(data.get('tarea')).strip()
+    nuevo_estado = str(data.get('estado', 'PENDIENTE')).upper()
+
+    try:
+        client = app.gs_client
+        spreadsheet = client.open(app.gs_name)
+        sheet = spreadsheet.worksheet("TAREAS CRONOGRAMA")
+        all_v = sheet.get_all_values()
+        if not all_v: return jsonify({"status": "error"}), 404
+
+        headers = [normalizar_cabecera_universal(h) for h in all_v[0]]
+        idx_user = headers.index('PERSONA') if 'PERSONA' in headers else -1
+        idx_fecha = headers.index('DIAMES') if 'DIAMES' in headers else -1
+        idx_tarea = headers.index('TAREA') if 'TAREA' in headers else -1
+        idx_estado = headers.index('ESTADO') if 'ESTADO' in headers else -1
+
+        if -1 in [idx_user, idx_fecha, idx_tarea, idx_estado]:
+            return jsonify({"status": "error", "message": "Columnas no encontradas"}), 500
+
+        fila_idx = -1
+        for i, row in enumerate(all_v):
+            if i == 0: continue
+            if len(row) > max(idx_user, idx_fecha, idx_tarea):
+                u = normalizar_id(row[idx_user])
+                f = str(row[idx_fecha]).strip()
+                t = str(row[idx_tarea]).strip()
+                
+                if u == user_req and f == fecha_req and t == tarea_req:
+                    fila_idx = i + 1
+                    break
+        
+        if fila_idx != -1:
+            sheet.update_cell(fila_idx, idx_estado + 1, nuevo_estado)
+            return jsonify({"status": "success"})
+        
+        return jsonify({"status": "error", "message": "Tarea no encontrada"}), 404
+    except Exception as e:
+        print(f"Error actualizando estado cronograma: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/cronograma_delete', methods=['POST'])
+def api_cronograma_delete():
+    data = request.json
+    if not data: return jsonify({"status": "error"}), 400
+    
+    user_req = normalizar_id(data.get('user'))
+    fecha_req = str(data.get('fecha')).strip()
+    tarea_req = str(data.get('tarea')).strip()
+
+    try:
+        client = app.gs_client
+        spreadsheet = client.open(app.gs_name)
+        sheet = spreadsheet.worksheet("TAREAS CRONOGRAMA")
+        all_v = sheet.get_all_values()
+        if not all_v: return jsonify({"status": "error"}), 404
+
+        headers = [normalizar_cabecera_universal(h) for h in all_v[0]]
+        idx_user = headers.index('PERSONA') if 'PERSONA' in headers else -1
+        idx_fecha = headers.index('DIAMES') if 'DIAMES' in headers else -1
+        idx_tarea = headers.index('TAREA') if 'TAREA' in headers else -1
+
+        if -1 in [idx_user, idx_fecha, idx_tarea]:
+            return jsonify({"status": "error", "message": "Columnas no encontradas"}), 500
+
+        fila_idx = -1
+        for i, row in enumerate(all_v):
+            if i == 0: continue
+            if len(row) > max(idx_user, idx_fecha, idx_tarea):
+                u = normalizar_id(row[idx_user])
+                f = str(row[idx_fecha]).strip()
+                t = str(row[idx_tarea]).strip()
+                
+                if u == user_req and f == fecha_req and t == tarea_req:
+                    fila_idx = i + 1
+                    break
+        
+        if fila_idx != -1:
+            sheet.delete_rows(fila_idx)
+            return jsonify({"status": "success"})
+        
+        return jsonify({"status": "error", "message": "Tarea no encontrada"}), 404
+    except Exception as e:
+        print(f"Error eliminando tarea cronograma: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # --- REGISTRO DE BLUEPRINTS ---
 from financiero import financiero_bp

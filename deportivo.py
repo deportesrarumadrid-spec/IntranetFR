@@ -93,7 +93,8 @@ def deportivo():
             if len(row) < 2: continue
             fecha_row = row[0].strip() # "DD/MM/YYYY"
             if '/' not in fecha_row: continue
-            d, m, y = fecha_row.split('/')
+            # Normalizamos partes de la fecha (ej: '5' -> '05') para asegurar match con target_m
+            d, m, y = [p.zfill(2) if p.isdigit() else p for p in fecha_row.split('/')]
             if m == target_m and y == target_y and row[1].strip().upper() == equipo_activo.upper():
                 # La planificación mensual suele estar en el día 01
                 if d == "01" or not objetivos["tactico"]:

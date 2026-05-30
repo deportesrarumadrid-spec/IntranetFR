@@ -4,7 +4,7 @@ import gspread
 perfiles_bp = Blueprint('perfiles_bp', __name__)
 
 # Definición de las cabeceras esperadas en la hoja "PERFILES"
-PERFILES_HEADERS = ["USUARIO", "CONTRASEÑA", "ENTRENAMIENTOS", "ASISTENCIAS", "FINANCIERO", "D.DEPORTIVA", "SEL. EQ."]
+PERFILES_HEADERS = ["USUARIO", "CONTRASEÑA", "ENTRENAMIENTOS", "ASISTENCIAS", "FINANCIERO", "D.DEPORTIVA", "SEL. EQ.", "CRONOGRAMA"]
 
 def get_perfiles_sheet():
     """
@@ -97,7 +97,8 @@ def add_perfil():
             str(data.get('ASISTENCIAS', 'NO')).upper(),
             str(data.get('FINANCIERO', 'NO')).upper(),
             str(data.get('D.DEPORTIVA', 'NO')).upper(),
-            str(data.get('SEL. EQ.', data.get('ELEGIR_EQUIPO', 'NO'))).upper()
+            str(data.get('SEL. EQ.', data.get('ELEGIR_EQUIPO', 'NO'))).upper(),
+            str(data.get('CRONOGRAMA', 'NO')).upper() # New permission
         ]
         sheet.append_row(new_row)
         return jsonify({"status": "success", "message": "Perfil añadido correctamente."})
@@ -142,13 +143,13 @@ def update_perfil(username):
             str(data_norm.get('ENTRENAMIENTOS', found_row_data[2] if len(found_row_data) > 2 else "NO")).upper(),
             str(data_norm.get('ASISTENCIAS', found_row_data[3] if len(found_row_data) > 3 else "NO")).upper(),
             str(data_norm.get('FINANCIERO', found_row_data[4] if len(found_row_data) > 4 else "NO")).upper(),
-            str(data_norm.get('D.DEPORTIVA', found_row_data[5] if len(found_row_data) > 5 else "NO")).upper(),
-            str(data_norm.get('SEL. EQ.', found_row_data[6] if len(found_row_data) > 6 else "NO")).upper()
+            str(data_norm.get('D.DEPORTIVA', found_row_data[5] if len(found_row_data) > 5 else "NO")).upper(), # Index 5
+            str(data_norm.get('SEL. EQ.', found_row_data[6] if len(found_row_data) > 6 else "NO")).upper(), # Index 6
+            str(data_norm.get('CRONOGRAMA', found_row_data[7] if len(found_row_data) > 7 else "NO")).upper() # New permission, Index 7
         ]
 
         # Actualizamos el rango completo de la fila (B hasta G) en una sola operación
-        # Esto garantiza que todos los cambios se guarden de forma atómica y fiable
-        rango_a_actualizar = f"B{row_index}:G{row_index}"
+        rango_a_actualizar = f"B{row_index}:H{row_index}" # Updated range to H
         print(f"DEBUG: Guardando cambios para {username} en fila {row_index}: {nuevos_valores_fila}")
         
         # Usamos keyword arguments para evitar problemas de orden entre versiones de gspread

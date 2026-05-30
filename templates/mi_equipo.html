@@ -151,6 +151,12 @@ function renderBalones(d) {
         options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
     });
 }
-window.onload = cargarEstadisticas;
+
+window.onload = async () => {
+    await cargarEstadisticas();
+    if (typeof hideLoader === 'function') {
+        hideLoader();
+    }
+};
 </script>
 {% endblock %}

@@ -12,7 +12,7 @@
     .coordinacion-layout { display: grid; grid-template-columns: 280px 1fr; gap: 20px; align-items: start; }
 
     /* Estilos para Modales */
-    .modal { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+    .modal { display: none; position: fixed; z-index: 10005; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; backdrop-filter: blur(5px); }
     .modal-content { background: white; padding: 0; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); overflow: hidden; }
 
     .card-coord { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
@@ -386,29 +386,32 @@
     }
     .calendar-week-row.selected-week { background: #ffebeb; }
 
-    /* Botón Circular Cronograma Estilo Moderno */
-    .btn-cronograma-float {
+    /* Botón Cronograma Circular */
+    .btn-cronograma-fixed {
         position: fixed;
-        top: 15px;
-        right: 180px;
-        width: 45px;
-        height: 45px;
+        top: 28px;
+        right: 205px;
+        width: 40px;
+        height: 40px;
         border-radius: 50%;
-        background: #E31E24;
-        color: white;
-        border: none;
+        background: transparent;
+        color: #E31E24;
+        border: 2px solid #E31E24;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 18px;
-        box-shadow: 0 4px 15px rgba(227,30,36,0.4);
-        z-index: 10001;
-        transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        font-size: 16px;
+        z-index: 1000;
+        transition: all 0.3s ease;
     }
-    .btn-cronograma-float:hover { transform: scale(1.1) rotate(10deg); background: #1a1a1a; }
+    .btn-cronograma-fixed:hover { background: #E31E24; color: white; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(227, 30, 36, 0.3); }
+    .btn-cronograma-fixed:active { transform: scale(0.95); }
+    
     
     /* Estilos para Perfiles en Cronograma */
+    /* ... (existing styles) ... */
+
     .btn-profile {
         padding: 10px;
         background: #f1f5f9;
@@ -444,10 +447,13 @@
 </style>
 
 <!-- Botón Cronograma junto a Cerrar Sesión con Autenticación -->
-<button class="btn-cronograma-float" onclick="openCronogramaAuth()" title="Ver Cronograma">
+{% if usuario|lower == 'admin' or session.get('permisos', {}).get('CRONOGRAMA') == 'SI' %}
+<button class="btn-cronograma-fixed" onclick="openCronogramaAuth()" title="Ver Cronograma (Alt+1)">
     <i class="fas fa-calendar-days"></i>
+    <span id="badgeCrono" style="display: none; position: absolute; top: -5px; right: -5px; background: #28a745; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; font-weight: 900; align-items: center; justify-content: center; border: 2px solid white; z-index: 10;">1</span>
 </button>
-
+{% endif %}
+ 
 <div style="padding: 10px;">
     <div class="tabs-container">
         <div class="tab-item active" onclick="switchTab(event, 'tab-coordinacion')">COORDINACIÓN</div>
@@ -470,7 +476,7 @@
                     {% endfor %}
                 </select>
             </div>
-            <div style="flex: 1; max-width: 250px;" id="containerBusquedaJug" style="display: none;">
+            <div style="flex: 1; max-width: 250px; display: none;" id="containerBusquedaJug">
                 <label style="font-size: 10px; font-weight: 900; color: #999; display: block; margin-bottom: 5px;">FILTRAR JUGADOR</label>
                 <div style="position: relative;">
                     <input type="text" id="busquedaJugadorCoord" oninput="filtrarJugadoresCoord()" placeholder="Buscar..." style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-weight: 700; outline: none;">
@@ -542,7 +548,6 @@
 
     </div>
 
-    <!-- SUBPESTAÑA: D. DEPORTIVA -->
     <!-- SUBPESTAÑA: D. DEPORTIVA -->
     <div id="tab-d-deportiva" class="tab-content">
         <div style="display: grid; grid-template-columns: 1fr 350px; gap: 20px;">
@@ -736,7 +741,7 @@
 
             <div id="cronoPasswordSection" style="display: none; margin-bottom: 25px;">
                 <label style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 8px; text-transform: uppercase;">Contraseña</label>
-                <input type="password" id="cronoPasswordInput" class="input-coord" placeholder="****" style="text-align: center; font-size: 18px; letter-spacing: 5px;">
+                <input type="password" id="cronoPasswordInput" class="input-coord" placeholder="****" style="text-align: center; font-size: 18px; letter-spacing: 5px;" onkeyup="if(event.key==='Enter') accederCronograma()">
             </div>
 
             <div style="margin-bottom: 30px;">
@@ -903,62 +908,6 @@
     const jugadoresRaw = {{ jugadores_raw | tojson if jugadores_raw else '[]' }};
     const equiposList = {{ equipos | tojson if equipos else '[]' }};
     const isAdminUser = '{{ usuario|lower }}' === 'admin';
-
-    let selectedCronoUser = null;
-
-    function openCronogramaAuth() {
-        document.getElementById('modalCronogramaUnified').style.display = 'flex';
-        updateViewPill();
-    }
-
-    function selectCronoProfile(user, btn) {
-        selectedCronoUser = user;
-        document.querySelectorAll('.btn-profile').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        const pwdSection = document.getElementById('cronoPasswordSection');
-        if (user === 'Raul' || user === 'Ruben') {
-            pwdSection.style.display = 'block';
-            document.getElementById('cronoPasswordInput').focus();
-        } else {
-            pwdSection.style.display = 'none';
-            document.getElementById('cronoPasswordInput').value = '';
-        }
-    }
-
-    function updateViewPill() {
-        const view = document.querySelector('input[name="cronoView"]:checked').value;
-        document.getElementById('pillSemanal').classList.toggle('checked', view === 'semanal');
-        document.getElementById('pillAnual').classList.toggle('checked', view === 'anual');
-    }
-
-    function accederCronograma() {
-        if (!selectedCronoUser) return alert("Selecciona un perfil.");
-        if ((selectedCronoUser === 'Raul' || selectedCronoUser === 'Ruben') && 
-            document.getElementById('cronoPasswordInput').value !== '2204') {
-            return alert("Contraseña incorrecta.");
-        }
-        const view = document.querySelector('input[name="cronoView"]:checked').value;
-        document.getElementById('cronogramaIframe').src = `/cronograma?view=${view}`;
-        document.getElementById('cronogramaEntryView').style.display = 'none';
-        document.getElementById('cronogramaIframeView').style.display = 'block';
-        document.getElementById('modalCronogramaUnified').querySelector('.modal-content').style.width = '95vw';
-    }
-
-    function closeCronogramaModal() {
-        const modal = document.getElementById('modalCronogramaUnified');
-        if (!modal) return;
-        modal.style.display = 'none';
-        document.getElementById('cronogramaEntryView').style.display = 'block';
-        document.getElementById('cronogramaIframeView').style.display = 'none';
-        document.getElementById('modalCronogramaUnified').querySelector('.modal-content').style.width = '450px';
-        document.getElementById('cronogramaIframe').src = '';
-        selectedCronoUser = null;
-        document.querySelectorAll('.btn-profile').forEach(b => b.classList.remove('selected'));
-        document.getElementById('cronoPasswordSection').style.display = 'none';
-        document.getElementById('cronoPasswordInput').value = '';
-    }
-
-    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCronogramaModal(); });
 
     // --- LÓGICA TECNIFICACIONES (Restaurada) ---
     async function renderTecCalendar() {
@@ -1808,38 +1757,47 @@
         const fechaStr = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
         
         showLoader();
-        // Mostrar loader al iniciar la petición
-        const res = await fetch("{{ url_for('deportivo_bp.api_seguimiento_coordinacion') }}?equipo=" + equipo + "&fecha=" + fechaStr);
-        const data = await res.json();
-        hideLoader();
+        try {
+            const res = await fetch("{{ url_for('deportivo_bp.api_seguimiento_coordinacion') }}?equipo=" + equipo + "&fecha=" + fechaStr);
+            if (!res.ok) throw new Error("Error en la comunicación con el servidor");
+            const data = await res.json();
 
-        // Resetear todos los campos primero
-        document.querySelectorAll('.check-coord').forEach(cb => cb.checked = false);
-        document.querySelectorAll('.select-tipo-coord').forEach(sel => sel.value = "");
-        document.querySelectorAll('.input-coord').forEach(inp => inp.value = "");
-        document.querySelectorAll('.historial-mini').forEach(div => div.innerText = "");
+            // Resetear todos los campos primero
+            document.querySelectorAll('.check-coord').forEach(cb => cb.checked = false);
+            document.querySelectorAll('.select-tipo-coord').forEach(sel => sel.value = "");
+            document.querySelectorAll('.input-coord').forEach(inp => inp.value = "");
+            document.querySelectorAll('.historial-mini').forEach(div => div.innerText = "");
 
-        // Aplicar datos actuales
-        data.actual.forEach(s => {
-            const fila = Array.from(document.querySelectorAll('#cuerpoCoordinacion tr')).find(tr => tr.dataset.jugador === s.jugador);
-            if (fila) {
-                fila.querySelector('.check-coord').checked = s.reunion;
-                fila.querySelector('.select-tipo-coord').value = s.tipo || "";
-                fila.querySelector('.input-coord').value = s.obs;
+            // Aplicar datos actuales
+            if (data.actual) {
+                data.actual.forEach(s => {
+                    const fila = Array.from(document.querySelectorAll('#cuerpoCoordinacion tr')).find(tr => tr.dataset.jugador === s.jugador);
+                    if (fila) {
+                        fila.querySelector('.check-coord').checked = s.reunion;
+                        fila.querySelector('.select-tipo-coord').value = s.tipo || "";
+                        fila.querySelector('.input-coord').value = s.obs;
+                    }
+                });
             }
-        });
 
-        // Aplicar historial (último comentario)
-        Object.keys(data.historial).forEach(jugador => {
-            const fila = Array.from(document.querySelectorAll('#cuerpoCoordinacion tr')).find(tr => tr.dataset.jugador === jugador);
-            if (fila) {
-                const histDiv = fila.querySelector('.historial-mini');
-                if (histDiv) {
-                    const h = data.historial[jugador];
-                    histDiv.innerText = `${h.tipo} : ${h.obs}`;
-                }
+            // Aplicar historial (último comentario)
+            if (data.historial) {
+                Object.keys(data.historial).forEach(jugador => {
+                    const fila = Array.from(document.querySelectorAll('#cuerpoCoordinacion tr')).find(tr => tr.dataset.jugador === jugador);
+                    if (fila) {
+                        const histDiv = fila.querySelector('.historial-mini');
+                        if (histDiv) {
+                            const h = data.historial[jugador];
+                            histDiv.innerText = `${h.tipo} : ${h.obs}`;
+                        }
+                    }
+                });
             }
-        });
+        } catch (e) {
+            console.error("Error en cargarDatosDia:", e);
+        } finally {
+            hideLoader();
+        }
     }
 
     function filtrarJugadoresCoord() {
@@ -2111,21 +2069,19 @@
         }
     }
 
-    // Sobreescribimos las funciones de navegación para actualizar ambos calendarios
-    const oldGoPrev = goToPrevMonth;
-    goToPrevMonth = () => {
-        currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
-        renderFullCalendar();
-        renderTecCalendar();
-    };
-    const oldGoNext = goToNextMonth;
-    goToNextMonth = () => {
-        currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
-        renderFullCalendar();
-        renderTecCalendar();
-    };
+    // Funciones de navegación actualizadas para Direccion Deportiva
+    function navPrev() { currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1); renderFullCalendar(); renderTecCalendar(); }
+    function navNext() { currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1); renderFullCalendar(); renderTecCalendar(); }
 
-    window.onload = () => {
+    // Usamos addEventListener para no sobreescribir la lógica de dashboard.html
+    window.addEventListener('load', () => {
+        try {
+            initDireccionDeportiva();
+        } catch(e) { console.error("Error en inicialización:", e); }
+        if (typeof hideLoader === 'function') hideLoader();
+    });
+
+    function initDireccionDeportiva() {
         renderFullCalendar();
         renderTecCalendar();
 
@@ -2136,8 +2092,6 @@
         const d = today.getDate().toString().padStart(2, '0');
         const todayEl = document.querySelector(`.calendar-day[data-date="${y}-${m}-${d}"]`);
         if (todayEl) todayEl.click();
-
-        hideLoader();
-    };
+    }
 </script>
 {% endblock %}
