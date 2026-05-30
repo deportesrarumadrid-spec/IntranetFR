@@ -313,7 +313,7 @@
                 <div id="cronoPwdSec" style="display: none; margin-bottom: 25px;">
                     <input type="password" id="cronoPwdInp" placeholder="****" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; text-align: center; font-size: 18px; letter-spacing: 5px;" onkeyup="if(event.key==='Enter') accederCronograma()">
                 </div>
-                <button class="btn-salir" style="width: 100%; height: 45px; border-radius: 10px;" onclick="accederCronograma()">ACCEDER</button>
+                <button class="btn-salir" style="width: 100%; height: 45px; border-radius: 10px; cursor:pointer;" onclick="accederCronograma()">ACCEDER</button>
             </div>
 
             <div id="cronoIframeView" style="display: none; height: 90vh; width: 100%;">
@@ -329,7 +329,17 @@
             selectedCronoUser = user;
             document.querySelectorAll('.btn-profile').forEach(b => b.classList.remove('selected'));
             btn.classList.add('selected');
-            document.getElementById('cronoPwdSec').style.display = (user === 'Raul' || user === 'Ruben') ? 'block' : 'none';
+            
+            const isProtected = (user === 'Raul' || user === 'Ruben');
+            const pwdSec = document.getElementById('cronoPwdSec');
+            const pwdInp = document.getElementById('cronoPwdInp');
+
+            pwdSec.style.display = isProtected ? 'block' : 'none';
+            if (isProtected) {
+                setTimeout(() => pwdInp.focus(), 50); // El pequeño retardo asegura que el input sea visible antes de enfocarlo
+            } else {
+                pwdInp.value = ''; // Limpiamos el campo por seguridad si se cambia a un usuario sin clave
+            }
         }
 
         function accederCronograma() {
@@ -353,11 +363,22 @@
         }
 
         function closeCronogramaModal() {
-            document.getElementById('modalCronogramaGlobal').style.display = 'none';
+            const modal = document.getElementById('modalCronogramaGlobal');
+            modal.style.display = 'none';
             document.getElementById('cronoIframe').src = '';
+            
+            // RESET TOTAL DEL MODAL PARA EVITAR PANTALLA GRIS AL VOLVER
+            document.getElementById('cronoEntryView').style.display = 'block';
+            document.getElementById('cronoIframeView').style.display = 'none';
+            modal.querySelector('.modal-content').style.width = '450px';
+            
+            selectedCronoUser = null;
+            document.querySelectorAll('.btn-profile').forEach(b => b.classList.remove('selected'));
+            document.getElementById('cronoPwdSec').style.display = 'none';
+            document.getElementById('cronoPwdInp').value = '';
+
             sessionStorage.removeItem('crono_active');
             sessionStorage.removeItem('crono_url');
-            sessionStorage.removeItem('crono_minimized');
         }
 
         window.addEventListener('message', function(e) {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Cronograma Deportivo - {{ persona_seleccionada }}</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Montserrat', sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
@@ -51,8 +51,6 @@
         .grid-anual { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
         .mes-card { background: white; padding: 15px; border-radius: 12px; border-top: 5px solid #E31E24; min-height: 180px; position: relative; }
         .mes-card h3 { margin: 0 0 10px 0; font-size: 14px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .btn-add-anual { position: absolute; top: 12px; right: 12px; background: transparent; border: none; color: #999; cursor: pointer; transition: 0.3s; }
-        .btn-add-anual:hover { color: #E31E24; transform: scale(1.2); }
 
         /* Estilos Vista Semanal */
         .grid-semanal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; background: white; padding: 15px; border-radius: 15px; overflow-x: auto; min-width: 1000px; }
@@ -74,21 +72,18 @@
             text-transform: uppercase;
         }
         .btn-plus-dia {
-            background: #E31E24;
-            color: white;
+            background: transparent;
             border: none;
-            width: 22px;
-            height: 22px;
-            border-radius: 6px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 10px;
-            transition: 0.2s;
-            box-shadow: 0 2px 5px rgba(227,30,36,0.2);
+            transition: 0.3s;
+            padding: 0;
+            color: #E31E24;
+            font-size: 20px;
         }
-        .btn-plus-dia:hover { transform: scale(1.1); background: #333; }
+        .btn-plus-dia:hover { transform: scale(1.2); color: #000; }
 
         /* Botones de Opción (Pills) */
         .pill-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
@@ -97,8 +92,10 @@
         .pill-opt.selected { background: #E31E24; border-color: #E31E24; color: white; box-shadow: 0 4px 12px rgba(227,30,36,0.2); }
         .btn-add-cat { background: #333; color: white; padding: 8px 12px; border-radius: 12px; font-size: 10px; border: none; cursor: pointer; font-weight: 900; }
 
-        .cat-title { font-size: 9px; font-weight: 900; margin: 15px 0 5px 0; border-bottom: 1px solid #eee; padding-bottom: 2px; }
-        .evento { padding: 6px 10px; margin-bottom: 4px; border-radius: 6px; font-size: 11px; font-weight: 600; border-left: 4px solid #ddd; }
+        .cat-title { font-size: 9px; font-weight: 900; margin: 10px 0 4px 0; border-bottom: 1px solid #eee; padding-bottom: 2px; }
+        .evento { padding: 6px 10px; margin-bottom: 4px; border-radius: 8px; font-size: 11px; font-weight: 700; border-left: 4px solid #ddd; transition: 0.2s; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; position: relative; }
+        .evento:hover { transform: translateX(4px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+
         /* Tonos Suaves / Pastel */
         .ev-deportivo { background: #fff1f2; border-left-color: #fda4af; color: #9f1239; }
         .ev-deportiva { background: #fff1f2; border-left-color: #fda4af; color: #9f1239; }
@@ -126,21 +123,23 @@
             <h2 id="crono-title-header" style="margin:0; font-size:18px;">CRONOGRAMA DEPORTIVO</h2>
         </div>
         <div class="btn-group">
-            <button class="btn-view" onclick="changeView('semanal', this)">SEMANAL</button>
-            <button class="btn-view active" onclick="changeView('anual', this)">ANUAL</button>
+            <button class="btn-view active" onclick="changeView('semanal', this)">SEMANAL</button>
+            <button class="btn-view" onclick="changeView('anual', this)">ANUAL</button>
             <button class="btn-view" onclick="minimizeCrono()" title="Minimizar"><i class="fas fa-window-minimize"></i></button>
         </div>
     </div>
 
     <!-- VISTA ANUAL -->
-    <div id="view-anual" class="view-container active">
+    <div id="view-anual" class="view-container">
         <div class="grid-anual">
             {% for m in meses_anual %}
             <div class="mes-card" data-mes="{{ m.num }}" data-anio="{{ m.anio }}" data-iso="{{ m.anio }}-{{ "%02d"|format(m.num) }}-01">
-                <h3>{{ m.label }}</h3>
-                <button class="btn-add-anual" onclick="nuevaTareaCronograma('{{ m.anio }}-{{ "%02d"|format(m.num) }}-01')" title="Añadir a este mes">
-                    <i class="fas fa-plus-circle"></i>
-                </button>
+                <div class="dia-header" style="display: flex; align-items: center; justify-content: center; gap: 10px; border-bottom: 3px solid #E31E24; margin-bottom: 15px; padding-bottom: 12px;">
+                    <h3 style="margin: 0; font-size: 13px; font-weight: 900; border: none; padding: 0; color: #333; text-transform: uppercase;">{{ m.label }}</h3>
+                    <button class="btn-plus-dia" onclick="nuevaTareaCronograma('{{ m.anio }}-{{ "%02d"|format(m.num) }}-01')" title="Añadir tarea">
+                        <i class="fa-solid fa-circle-plus"></i>
+                    </button>
+                </div>
                 <div class="lista-eventos" id="events-anual-{{ m.num }}-{{ m.anio }}"></div>
             </div>
             {% endfor %}
@@ -209,14 +208,14 @@
     </div>
 
     <!-- VISTA SEMANAL -->
-    <div id="view-semanal" class="view-container">
+    <div id="view-semanal" class="view-container active">
         <div class="grid-semanal">
             {% for d in semana_actual %}
             <div class="dia-col">
                 <div class="dia-header" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                     <span class="nombre" style="margin: 0;">{{ d.nombre }}</span>
                     <button class="btn-plus-dia" onclick="nuevaTareaCronograma('{{ d.fecha_iso }}')" title="Añadir tarea">
-                        <i class="fas fa-plus"></i>
+                        <i class="fa-solid fa-circle-plus"></i>
                     </button>
                 </div>
                 <div class="lista-eventos" id="events-week-{{ d.fecha_iso }}"></div>
@@ -466,7 +465,6 @@
                         if (mostrar) {
                             const container = document.getElementById(id);
                             const catClassName = sanitizeClass(tipoLimpio);
-                            // Buscar o crear sección de categoría
                             let section = container.querySelector('.' + catClassName);
                             if (!section) {
                                 section = document.createElement('div');
@@ -483,17 +481,33 @@
                             evDiv.style.justifyContent = 'space-between';
                             evDiv.style.gap = '5px';
                             
-                            const tareaEscapada = tareaLimpia.replace(/'/g, "\\'");
-                            const estadoActual = (ev.ESTADO || 'PENDIENTE').toUpperCase();
+                            // Escapado para JS y atributos HTML
+                            const tEsc = tareaLimpia.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, " ");
+                            const fEsc = (ev.FECHA_ISO || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                            const rEsc = (ev.RESPONSABLE || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                            const frEsc = (ev.FRECUENCIA || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                            const catEsc = tipoLimpio.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                            const estAct = (ev.ESTADO || 'PENDIENTE').toUpperCase();
 
                             evDiv.innerHTML = `
-                                <span style="${isDone ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${tareaLimpia}</span>
-                                <div style="display: flex; gap: 8px; align-items: center;">
-                                    <i class="fas fa-pencil-alt" style="cursor:pointer; color: #999; font-size: 11px;" onclick="abrirEdicionTarea('${ev.FECHA_ISO}', '${tareaEscapada}', '${tipoLimpio}', '${ev.RESPONSABLE}', '${ev.FRECUENCIA}')" title="Modificar"></i>
-                                    <i class="fas fa-trash-alt" style="cursor:pointer; color: #ffcccc; font-size: 11px;" onclick="eliminarTareaCronograma('${ev.FECHA_ISO}', '${tareaEscapada}')"></i>
-                                    <i class="${isDone ? 'fas fa-circle-check' : 'far fa-circle'}" 
-                                       style="cursor:pointer; color: ${isDone ? '#28a745' : '#ccc'}; font-size: 16px;" 
-                                       onclick="toggleEstadoTarea('${ev.FECHA_ISO}', '${tareaEscapada}', '${estadoActual}')" title="${isDone ? 'Marcar como pendiente' : 'Marcar como terminada'}"></i>
+                                <div style="display: flex; flex-direction: column; flex: 1; min-width: 0; padding-right: 5px;">
+                                    <span style="${isDone ? 'text-decoration: line-through; opacity: 0.4;' : ''} white-space: normal; word-break: break-word; line-height: 1.2; font-size: 11px; color: #1e293b; font-weight: 700;">${tareaLimpia}</span>
+                                </div>
+                                <div class="task-actions" style="display: flex; gap: 0; align-items: center; flex-shrink: 0; margin-right: -10px; justify-content: flex-end;">
+                                    <button onclick="event.stopPropagation(); toggleEstadoTarea('${fEsc}', '${tEsc}', '${estAct}')" 
+                                         style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; border: 1.5px solid ${isDone ? '#28a745' : '#cbd5e1'}; background: ${isDone ? '#f0fdf4' : '#fff'}; color: ${isDone ? '#28a745' : '#cbd5e1'}; transition: 0.2s; flex-shrink: 0; padding: 0;" title="${isDone ? 'Pendiente' : 'Completar'}">
+                                        <i class="fa-solid fa-check" style="font-size: 10px; font-weight: 900; opacity: ${isDone ? '1' : '0.3'};"></i>
+                                    </button>
+                                    <button onclick="event.stopPropagation(); abrirEdicionTarea('${fEsc}', '${tEsc}', '${catEsc}', '${rEsc}', '${frEsc}')" 
+                                            style="border:none; background:transparent; color:#1e293b; width:22px; height:22px; border-radius:4px; cursor:pointer; transition:0.2s; display: flex; align-items: center; justify-content: center; padding: 0;"
+                                            onmouseover="this.style.color='#E31E24'; this.style.background='#fff'" onmouseout="this.style.color='#1e293b'; this.style.background='#f1f5f9'" title="Editar">
+                                        <i class="fa-solid fa-pencil" style="font-size:10px;"></i>
+                                    </button>
+                                    <button onclick="event.stopPropagation(); eliminarTareaCronograma('${fEsc}', '${tEsc}')" 
+                                            style="border:none; background:transparent; color:#dc3545; width:22px; height:22px; border-radius:4px; cursor:pointer; transition:0.2s; display: flex; align-items: center; justify-content: center; padding: 0;"
+                                            onmouseover="this.style.transform='scale(1.2)'; this.style.background='#fff'" onmouseout="this.style.transform='scale(1)'; this.style.background='transparent'" title="Eliminar">
+                                        <i class="fa-solid fa-trash" style="font-size:10px;"></i>
+                                    </button>
                                 </div>
                             `;
                             section.appendChild(evDiv);
@@ -504,26 +518,24 @@
                 // Renderizar en Anual (simplificado)
                 data.forEach(ev => {
                     let containerAnual = null;
+                    const tEsc = (ev.TAREA || '').replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                    const fEsc = (ev.FECHA_ISO || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                    const rEsc = (ev.RESPONSABLE || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                    const frEsc = (ev.FRECUENCIA || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                    const catEsc = (ev.TIPO || 'OTROS').toUpperCase().replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+
                     if (ev.FECHA_ISO && ev.FECHA_ISO.includes('-')) {
-                        const [y, m, d] = ev.FECHA_ISO.split('-');
-                        containerAnual = document.getElementById(`events-anual-${parseInt(m)}-${y}`);
+                        const partes = ev.FECHA_ISO.split('-');
+                        containerAnual = document.getElementById(`events-anual-${parseInt(partes[1])}-${partes[0]}`);
                     } else if (ev.FRECUENCIA) {
-                        // Mostrar tareas repetitivas en todos los meses de la vista anual
                         document.querySelectorAll('.mes-card .lista-eventos').forEach(cardList => {
-                            const dot = document.createElement('span');
-                            dot.style = `display:inline-block; width:6px; height:6px; border-radius:50%; margin:1px; cursor:help; opacity: 0.6; background-color: ${getCatColor((ev.TIPO || 'OTROS').toUpperCase())};`;
-                            dot.title = `REPETITIVO (${ev.FRECUENCIA}): ${ev.TAREA}`;
-                            cardList.appendChild(dot);
+                            renderTaskItemAnual(cardList, ev, tEsc, fEsc, catEsc, rEsc, frEsc);
                         });
                         return;
                     }
 
                     if (containerAnual) {
-                        const dot = document.createElement('span');
-                        dot.style = `display:inline-block; width:8px; height:8px; border-radius:50%; margin:2px; cursor:help;`;
-                        dot.style.backgroundColor = getCatColor((ev.TIPO || 'OTROS').toUpperCase());
-                        dot.title = `${ev.FECHA_ISO}: ${ev.TAREA || 'Tarea'}`;
-                        containerAnual.appendChild(dot);
+                        renderTaskItemAnual(containerAnual, ev, tEsc, fEsc, catEsc, rEsc, frEsc);
                     }
                 });
 
@@ -531,6 +543,31 @@
             } catch (err) {
                 console.error("Error cargando cronograma:", err);
             }
+        }
+
+        // Función auxiliar para renderizar tareas en los meses de la vista anual
+        function renderTaskItemAnual(container, ev, tEsc, fEsc, catEsc, rEsc, frEsc) {
+            const isDone = (ev.ESTADO || '').toUpperCase() === 'COMPLETADO';
+            const estAct = (ev.ESTADO || 'PENDIENTE').toUpperCase();
+            const evDiv = document.createElement('div');
+            evDiv.className = `evento ev-${(ev.TIPO || 'OTROS').toLowerCase()}`;
+            evDiv.style.padding = '6px 10px';
+            evDiv.style.fontSize = '10px';
+            evDiv.style.margin = '4px 0';
+            evDiv.style.display = 'flex';
+            evDiv.style.alignItems = 'center';
+            evDiv.style.justifyContent = 'space-between';
+            evDiv.style.gap = '5px';
+
+            evDiv.innerHTML = `
+                <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight: 700; ${isDone ? 'text-decoration: line-through; opacity: 0.5;' : ''}" title="${ev.TAREA}">${ev.TAREA}</span>
+                <div class="actions-anual" style="display:flex; gap:0; margin-right: -10px; justify-content: flex-end;">
+                    <button onclick="event.stopPropagation(); toggleEstadoTarea('${fEsc}', '${tEsc}', '${estAct}')" style="border:1px solid ${isDone ? '#28a745' : '#cbd5e1'}; background:${isDone ? '#f0fdf4' : '#fff'}; color:${isDone ? '#28a745' : '#cbd5e1'}; width:18px; height:18px; border-radius:3px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s; padding: 0;" title="${isDone ? 'Pendiente' : 'Completar'}"><i class="fa-solid fa-check" style="font-size:8px; font-weight:900; opacity:${isDone ? '1' : '0.3'}"></i></button>
+                    <button onclick="event.stopPropagation(); abrirEdicionTarea('${fEsc}', '${tEsc}', '${catEsc}', '${rEsc}', '${frEsc}')" style="border:none; background:transparent; color:#1e293b; width:18px; height:18px; border-radius:3px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s; padding: 0;" onmouseover="this.style.background='#fff'; this.style.color='#E31E24'" onmouseout="this.style.background='transparent'; this.style.color='#1e293b'" title="Editar"><i class="fa-solid fa-pencil" style="font-size:9px;"></i></button>
+                    <button onclick="event.stopPropagation(); eliminarTareaCronograma('${fEsc}', '${tEsc}')" style="border:none; background:transparent; color:#dc3545; width:18px; height:18px; border-radius:3px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s; padding: 0;" onmouseover="this.style.transform='scale(1.2)'; this.style.background='#fff'" onmouseout="this.style.transform='scale(1)'; this.style.background='transparent'" title="Eliminar"><i class="fa-solid fa-trash" style="font-size:9px;"></i></button>
+                </div>
+            `;
+            container.appendChild(evDiv);
         }
 
         initCargaCronograma();
@@ -550,10 +587,15 @@
                     })
                 });
                 if (res.ok) {
-                    initCargaCronograma(); // Recargar datos frescos
+                    await initCargaCronograma(); // Recargar datos frescos
+                }
+                else {
+                    console.error("API Error al actualizar estado:", res.status, await res.text());
+                    alert("Error al actualizar el estado de la tarea.");
                 }
             } catch (e) {
-                console.error("Error al actualizar estado:", e);
+                console.error("Network Error al actualizar estado:", e);
+                alert("Error de conexión al actualizar el estado de la tarea.");
             } finally { hideLoader(); }
         }
 
@@ -576,7 +618,7 @@
             // Seleccionar Días
             document.querySelectorAll('.day-pill').forEach(p => p.classList.remove('selected'));
             if (frecuencia) {
-                frecuencia.split(',').forEach(d => {
+                frecuencia.split(',').map(d => d.trim()).forEach(d => { // Trim each day
                     const dayBtn = Array.from(document.querySelectorAll('.day-pill')).find(b => b.innerText === d.trim());
                     if (dayBtn) dayBtn.classList.add('selected');
                 });

@@ -1235,7 +1235,7 @@ def api_cronograma_save():
         val_resp = data.get('responsable') or data.get('persona') or session.get('usuario', 'admin')
         val_tipo = data.get('categoria') or data.get('tipo') or data.get('cat') or ""
         val_vista = data.get('vista') or data.get('semanal/anual') or data.get('view') or "SEMANAL"
-        val_estado = data.get('estado') or data.get('status') or "PENDIENTE"
+        val_estado = data.get('estado') or data.get('status') or data.get('completado') or "PENDIENTE"
 
         # Mapeo expandido con alias para que coincida con cualquier variante de cabecera
         row_map = {
@@ -1251,7 +1251,8 @@ def api_cronograma_save():
             "SEMANALANUAL": str(val_vista).strip().upper(),
             "VISTA": str(val_vista).strip().upper(),
             "FRECUENCIA": str(data.get('frecuencia', '')).strip(),
-            "ESTADO": str(val_estado).strip().upper()
+            "ESTADO": str(val_estado).strip().upper(),
+            "COMPLETADO": str(val_estado).strip().upper()
         }
 
         nueva_fila = []
@@ -1276,9 +1277,12 @@ def api_cronograma_update_status():
     data = request.json
     if not data: return jsonify({"status": "error"}), 400
     
-    user_req = normalizar_id(data.get('user'))
+    def normalizar_comp(val):
+        return " ".join(str(val).split()).lower().strip()
+
+    user_norm = normalizar_id(data.get('user'))
     fecha_req = str(data.get('fecha')).strip()
-    tarea_req = str(data.get('tarea')).strip()
+    tarea_norm_req = normalizar_comp(data.get('tarea'))
     nuevo_estado = str(data.get('estado', 'PENDIENTE')).upper()
 
     try:
@@ -1289,10 +1293,14 @@ def api_cronograma_update_status():
         if not all_v: return jsonify({"status": "error"}), 404
 
         headers = [normalizar_cabecera_universal(h) for h in all_v[0]]
-        idx_user = headers.index('PERSONA') if 'PERSONA' in headers else -1
-        idx_fecha = headers.index('DIAMES') if 'DIAMES' in headers else -1
-        idx_tarea = headers.index('TAREA') if 'TAREA' in headers else -1
-        idx_estado = headers.index('ESTADO') if 'ESTADO' in headers else -1
+        
+        def find_col(aliases):
+            return next((headers.index(a) for a in aliases if a in headers), -1)
+
+        idx_user = find_col(['PERSONA', 'RESPONSABLE', 'USER', 'COACH', 'ENTRENADOR'])
+        idx_fecha = find_col(['DIAMES', 'FECHAISO', 'FECHA', 'DATE', 'START', 'DIA', 'MES'])
+        idx_tarea = find_col(['TAREA', 'TAREAS', 'TITLE', 'TITULO', 'NOMBRE', 'ACTIVIDAD', 'EVENTO', 'DESCRIPCION', 'DESCRIPTION', 'CONTENIDO', 'TEXT', 'CONTENT'])
+        idx_estado = find_col(['COMPLETADO', 'ESTADO', 'STATUS'])
 
         if -1 in [idx_user, idx_fecha, idx_tarea, idx_estado]:
             return jsonify({"status": "error", "message": "Columnas no encontradas"}), 500
@@ -1303,9 +1311,9 @@ def api_cronograma_update_status():
             if len(row) > max(idx_user, idx_fecha, idx_tarea):
                 u = normalizar_id(row[idx_user])
                 f = str(row[idx_fecha]).strip()
-                t = str(row[idx_tarea]).strip()
+                t = normalizar_comp(row[idx_tarea])
                 
-                if u == user_req and f == fecha_req and t == tarea_req:
+                if u == user_norm and f == fecha_req and t == tarea_norm_req:
                     fila_idx = i + 1
                     break
         
@@ -1322,10 +1330,13 @@ def api_cronograma_update_status():
 def api_cronograma_delete():
     data = request.json
     if not data: return jsonify({"status": "error"}), 400
+
+    def normalizar_comp(val):
+        return " ".join(str(val).split()).lower().strip()
     
     user_req = normalizar_id(data.get('user'))
     fecha_req = str(data.get('fecha')).strip()
-    tarea_req = str(data.get('tarea')).strip()
+    tarea_norm_req = normalizar_comp(data.get('tarea'))
 
     try:
         client = app.gs_client
@@ -1335,9 +1346,13 @@ def api_cronograma_delete():
         if not all_v: return jsonify({"status": "error"}), 404
 
         headers = [normalizar_cabecera_universal(h) for h in all_v[0]]
-        idx_user = headers.index('PERSONA') if 'PERSONA' in headers else -1
-        idx_fecha = headers.index('DIAMES') if 'DIAMES' in headers else -1
-        idx_tarea = headers.index('TAREA') if 'TAREA' in headers else -1
+        
+        def find_col(aliases):
+            return next((headers.index(a) for a in aliases if a in headers), -1)
+
+        idx_user = find_col(['PERSONA', 'RESPONSABLE', 'USER', 'COACH', 'ENTRENADOR'])
+        idx_fecha = find_col(['DIAMES', 'FECHAISO', 'FECHA', 'DATE', 'START', 'DIA', 'MES'])
+        idx_tarea = find_col(['TAREA', 'TAREAS', 'TITLE', 'TITULO', 'NOMBRE', 'ACTIVIDAD', 'EVENTO', 'DESCRIPCION', 'DESCRIPTION', 'CONTENIDO', 'TEXT', 'CONTENT'])
 
         if -1 in [idx_user, idx_fecha, idx_tarea]:
             return jsonify({"status": "error", "message": "Columnas no encontradas"}), 500
@@ -1348,9 +1363,9 @@ def api_cronograma_delete():
             if len(row) > max(idx_user, idx_fecha, idx_tarea):
                 u = normalizar_id(row[idx_user])
                 f = str(row[idx_fecha]).strip()
-                t = str(row[idx_tarea]).strip()
+                t = normalizar_comp(row[idx_tarea])
                 
-                if u == user_req and f == fecha_req and t == tarea_req:
+                if u == user_req and f == fecha_req and t == tarea_norm_req:
                     fila_idx = i + 1
                     break
         

@@ -722,50 +722,6 @@
     <input type="file" id="inputImgEje" style="display:none" accept="image/*, .pdf" onchange="subirArchivoEjercicio(this)">
 </div>
 
-<!-- MODAL UNIFICADO CRONOGRAMA -->
-<div id="modalCronogramaUnified" class="modal">
-    <div class="modal-content" style="width: 450px; padding: 0; border-radius: 20px; position: relative; transition: width 0.3s ease;">
-        <span onclick="closeCronogramaModal()" style="position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #999; z-index: 10002;">&times;</span>
-        
-        <div id="cronogramaEntryView" style="padding: 40px;">
-            <h3 style="margin-top: 0; font-weight: 900; color: #333; margin-bottom: 30px; text-align: center; text-transform: uppercase;">Cronograma Deportivo</h3>
-            
-            <div style="margin-bottom: 25px;">
-                <label style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 12px; text-transform: uppercase;">1. Perfil</label>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                    <button class="btn-profile" onclick="selectCronoProfile('Gonzalo', this)">GONZALO</button>
-                    <button class="btn-profile" onclick="selectCronoProfile('Raul', this)">RAÚL</button>
-                    <button class="btn-profile" onclick="selectCronoProfile('Ruben', this)">RUBÉN</button>
-                </div>
-            </div>
-
-            <div id="cronoPasswordSection" style="display: none; margin-bottom: 25px;">
-                <label style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 8px; text-transform: uppercase;">Contraseña</label>
-                <input type="password" id="cronoPasswordInput" class="input-coord" placeholder="****" style="text-align: center; font-size: 18px; letter-spacing: 5px;" onkeyup="if(event.key==='Enter') accederCronograma()">
-            </div>
-
-            <div style="margin-bottom: 30px;">
-                <label style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 12px; text-transform: uppercase;">2. Vista</label>
-                <div style="display: flex; gap: 10px;">
-                    <label class="pill-checkbox checked" id="pillSemanal" style="flex:1; justify-content:center;">
-                        <input type="radio" name="cronoView" value="semanal" checked onchange="updateViewPill()"> SEMANAL
-                    </label>
-                    <label class="pill-checkbox" id="pillAnual" style="flex:1; justify-content:center;">
-                        <input type="radio" name="cronoView" value="anual" onchange="updateViewPill()"> ANUAL
-                    </label>
-                </div>
-            </div>
-
-            <button class="btn-premium" style="width: 100%;" onclick="accederCronograma()">
-                <i class="fas fa-calendar-check"></i> VER CRONOGRAMA
-            </button>
-        </div>
-
-        <div id="cronogramaIframeView" style="display: none; height: 92vh; width: 100%; background: white; border-radius: 20px; overflow: hidden;">
-            <iframe id="cronogramaIframe" src="" style="width: 100%; height: 100%; border: none;"></iframe>
-        </div>
-    </div>
-</div>
 
 <!-- MODAL VER EJERCICIO -->
 <div id="modalVerEjercicio" class="modal">
