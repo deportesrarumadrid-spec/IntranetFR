@@ -1360,7 +1360,11 @@ def api_cronograma_save():
         # Prioridad de alias: campos de usuario (fecha, dia) sobre campos de sistema (start, date)
         val_fecha_raw = data.get('fecha') or data.get('dia/mes') or data.get('dia') or data.get('mes') or data.get('fecha_iso') or data.get('start') or data.get('date') or ""
         val_tarea = data.get('tarea') or data.get('title') or data.get('nombre') or data.get('titulo') or data.get('actividad') or data.get('descripcion') or data.get('description') or data.get('text') or data.get('content') or ""
-        val_resp = data.get('responsable') or data.get('persona') or data.get('user') or session.get('usuario', 'admin')
+        val_resp_raw = data.get('responsable') or data.get('persona') or data.get('user') or session.get('usuario', 'admin')
+        # Soporte para múltiples responsables (separados por coma)
+        responsables = [r.strip() for r in str(val_resp_raw).replace(';', ',').split(',') if r.strip()]
+        if not responsables: responsables = [session.get('usuario', 'admin')]
+
         val_tipo = data.get('categoria') or data.get('tipo') or data.get('cat') or ""
         val_vista = data.get('vista') or data.get('semanal/anual') or data.get('view') or "SEMANAL"
         val_estado = data.get('estado') or data.get('status') or data.get('completado') or "PENDIENTE"
@@ -1388,19 +1392,20 @@ def api_cronograma_save():
             else:
                 instancias_final.append(f_inst)
 
-        for f_inst in instancias_final:
-            f_inst_norm = normalizar_dia_cronograma(f_inst, vista=val_vista)
-            row_map = {
-                "DIAMES": f_inst_norm, "FECHA": f_inst_norm, "FECHAISO": f_inst_norm, "DATE": f_inst_norm, "START": f_inst_norm, "DIA": f_inst_norm, "MES": f_inst_norm, "DIA/MES": f_inst_norm, "LUNES": f_inst_norm, "MARTES": f_inst_norm, "MIERCOLES": f_inst_norm, "JUEVES": f_inst_norm, "VIERNES": f_inst_norm, "SABADO": f_inst_norm, "DOMINGO": f_inst_norm,
-                "TAREAS": str(val_tarea).strip(), "TAREA": str(val_tarea).strip(), "TITLE": str(val_tarea).strip(), "TITULO": str(val_tarea).strip(), "NOMBRE": str(val_tarea).strip(), "ACTIVIDAD": str(val_tarea).strip(), "TAREASCRONOGRAMA": str(val_tarea).strip(),
-                "CATEGORIA": str(val_tipo).strip(), "TIPO": str(val_tipo).strip(), "CAT": str(val_tipo).strip(), "DIRECCIONDEPORTIVA": str(val_tipo).strip(),
-                "PERSONA": str(val_resp).strip(), "RESPONSABLE": str(val_resp).strip(), "USER": str(val_resp).strip(), "COACH": str(val_resp).strip(), "ENTRENADOR": str(val_resp).strip(),
-                "SEMANALANUAL": str(val_vista).strip().upper(), "VISTA": str(val_vista).strip().upper(), "VIEW": str(val_vista).strip().upper(),
-                "FRECUENCIA": str(data.get('frecuencia') or "").strip(), "REPETICION": str(data.get('frecuencia') or "").strip(), "REPEAT": str(data.get('frecuencia') or "").strip(),
-                "ESTADO": str(val_estado).strip().upper(), "COMPLETADO": str(val_estado).strip().upper(), "STATUS": str(val_estado).strip().upper()
-            }
-            nueva_fila = [row_map.get(h_norm, "") for h_norm in norm_headers]
-            sheet.append_row(nueva_fila, value_input_option='USER_ENTERED')
+        for resp_name in responsables:
+            for f_inst in instancias_final:
+                f_inst_norm = normalizar_dia_cronograma(f_inst, vista=val_vista)
+                row_map = {
+                    "DIAMES": f_inst_norm, "FECHA": f_inst_norm, "FECHAISO": f_inst_norm, "DATE": f_inst_norm, "START": f_inst_norm, "DIA": f_inst_norm, "MES": f_inst_norm, "DIA/MES": f_inst_norm, "LUNES": f_inst_norm, "MARTES": f_inst_norm, "MIERCOLES": f_inst_norm, "JUEVES": f_inst_norm, "VIERNES": f_inst_norm, "SABADO": f_inst_norm, "DOMINGO": f_inst_norm,
+                    "TAREAS": str(val_tarea).strip(), "TAREA": str(val_tarea).strip(), "TITLE": str(val_tarea).strip(), "TITULO": str(val_tarea).strip(), "NOMBRE": str(val_tarea).strip(), "ACTIVIDAD": str(val_tarea).strip(), "TAREASCRONOGRAMA": str(val_tarea).strip(),
+                    "CATEGORIA": str(val_tipo).strip(), "TIPO": str(val_tipo).strip(), "CAT": str(val_tipo).strip(), "DIRECCIONDEPORTIVA": str(val_tipo).strip(),
+                    "PERSONA": str(resp_name).strip(), "RESPONSABLE": str(resp_name).strip(), "USER": str(resp_name).strip(), "COACH": str(resp_name).strip(), "ENTRENADOR": str(resp_name).strip(),
+                    "SEMANALANUAL": str(val_vista).strip().upper(), "VISTA": str(val_vista).strip().upper(), "VIEW": str(val_vista).strip().upper(),
+                    "FRECUENCIA": str(data.get('frecuencia') or "").strip(), "REPETICION": str(data.get('frecuencia') or "").strip(), "REPEAT": str(data.get('frecuencia') or "").strip(),
+                    "ESTADO": str(val_estado).strip().upper(), "COMPLETADO": str(val_estado).strip().upper(), "STATUS": str(val_estado).strip().upper()
+                }
+                nueva_fila = [row_map.get(h_norm, "") for h_norm in norm_headers]
+                sheet.append_row(nueva_fila, value_input_option='USER_ENTERED')
 
         return jsonify({"status": "success"})
     except Exception as e:

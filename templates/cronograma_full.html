@@ -131,12 +131,12 @@
 
     <!-- VISTA ANUAL -->
     <div id="view-anual" class="view-container">
-        <div class="grid-anual">
+        <div id="main-grid-anual" class="grid-anual">
             {% for m in meses_anual %}
             <div class="mes-card" data-mes="{{ m.num }}" data-anio="{{ m.anio }}" data-iso="{{ m.anio }}-{{ "%02d"|format(m.num) }}-01">
                 <div class="dia-header" style="display: flex; align-items: center; justify-content: center; gap: 10px; border-bottom: 3px solid #E31E24; margin-bottom: 15px; padding-bottom: 12px;">
                     <h3 style="margin: 0; font-size: 13px; font-weight: 900; border: none; padding: 0; color: #333; text-transform: uppercase;">{{ m.label }}</h3>
-                    <button class="btn-plus-dia" onclick="nuevaTareaCronograma('{{ m.anio }}-{{ "%02d"|format(m.num) }}-01')" title="Añadir tarea">
+                    <button class="btn-plus-dia" onclick="nuevaTareaCronograma('{{ m.anio }}-{{ "%02d"|format(m.num) }}-01', null)" title="Añadir tarea">
                         <i class="fa-solid fa-circle-plus"></i>
                     </button>
                 </div>
@@ -144,6 +144,7 @@
             </div>
             {% endfor %}
         </div>
+        <div id="extra-anual-container"></div>
     </div>
 
     <!-- MODAL NUEVA TAREA MODERNO -->
@@ -183,13 +184,12 @@
 
                 {% if usuario_sesion|lower in ['ruben', 'raul', 'admin'] %}
                 <div style="margin-bottom: 25px;">
-                    <label style="font-size: 9px; font-weight: 900; color: #999; text-transform: uppercase; display: block; margin-bottom: 8px;">Responsable</label>
+                    <label style="font-size: 9px; font-weight: 900; color: #999; text-transform: uppercase; display: block; margin-bottom: 8px;">Responsables (Varios):</label>
                     <div class="pill-group" id="groupOwner">
-                        <button class="pill-opt" onclick="selectPill('taskOwner', 'Gonzalo', this)">GONZALO</button>
-                        <button class="pill-opt" onclick="selectPill('taskOwner', 'Raul', this)">RAÚL</button>
-                        <button class="pill-opt" onclick="selectPill('taskOwner', 'Ruben', this)">RUBÉN</button>
+                        <button class="pill-opt" onclick="toggleMultiPill(this, 'Gonzalo')">GONZALO</button>
+                        <button class="pill-opt" onclick="toggleMultiPill(this, 'Raul')">RAÚL</button>
+                        <button class="pill-opt" onclick="toggleMultiPill(this, 'Ruben')">RUBÉN</button>
                     </div>
-                    <input type="hidden" id="taskOwner" value="">
                 </div>
                 {% endif %}
 
@@ -203,12 +203,12 @@
 
     <!-- VISTA SEMANAL -->
     <div id="view-semanal" class="view-container active">
-        <div class="grid-semanal">
+        <div id="main-grid-semanal" class="grid-semanal">
             {% for d in semana_actual %}
             <div class="dia-col">
                 <div class="dia-header" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                     <span class="nombre" style="margin: 0;">{{ d.nombre }}</span>
-                    <button class="btn-plus-dia" onclick="nuevaTareaCronograma('{{ d.fecha_iso }}')" title="Añadir tarea">
+                    <button class="btn-plus-dia" onclick="nuevaTareaCronograma('{{ d.fecha_iso }}', null)" title="Añadir tarea">
                         <i class="fa-solid fa-circle-plus"></i>
                     </button>
                 </div>
@@ -216,6 +216,7 @@
             </div>
             {% endfor %}
         </div>
+        <div id="extra-semanal-container"></div>
     </div>
 
     <script>
@@ -342,6 +343,10 @@
                             document.querySelector('button[onclick*="anual"]');
                 if (btn) changeView(viewParam, btn);
             }
+            
+            if (PERSONA_MOSTRADA.toUpperCase() === 'RUBEN') {
+                prepareRubenExtraViews();
+            }
 
             // Título con el nombre en rojo
             document.getElementById('crono-title-header').innerHTML = `CRONOGRAMA DEPORTIVO - <span style="color: #E31E24;">${PERSONA_MOSTRADA.toUpperCase()}</span>`;
@@ -368,6 +373,65 @@
             element.classList.add('selected');
         }
 
+        function toggleMultiPill(element, value) { 
+            element.classList.toggle('selected'); 
+        }
+
+        function getSelectedOwners() {
+            const pills = document.querySelectorAll('#groupOwner .pill-opt.selected');
+            if (pills.length === 0) return PERSONA_MOSTRADA;
+            return Array.from(pills).map(p => p.innerText.trim()).join(',');
+        }
+
+        function prepareRubenExtraViews() {
+            const anualCont = document.getElementById('extra-anual-container');
+            const semanalCont = document.getElementById('extra-semanal-container');
+            if (!anualCont || !semanalCont) return;
+
+            const others = [
+                { name: 'Raul', label: 'Raúl', suffix: '-raul' },
+                { name: 'Gonzalo', label: 'Gonzalo', suffix: '-gonzalo' }
+            ];
+
+            others.forEach(user => {
+                const hSem = document.createElement('h2');
+                hSem.style.cssText = "margin-top: 50px; padding: 10px 20px; background: #eee; border-radius: 10px; font-size: 16px; text-transform: uppercase;";
+                hSem.innerText = `Cronograma ${user.label}`;
+                semanalCont.appendChild(hSem);
+
+                const gridSem = document.createElement('div');
+                gridSem.className = 'grid-semanal';
+                gridSem.style.marginTop = '10px';
+                gridSem.innerHTML = document.getElementById('main-grid-semanal').innerHTML;
+                gridSem.querySelectorAll('.lista-eventos').forEach(el => {
+                    el.id = el.id + user.suffix;
+                    el.innerHTML = '';
+                });
+                gridSem.querySelectorAll('.btn-plus-dia').forEach(btn => {
+                    btn.setAttribute('onclick', btn.getAttribute('onclick').replace(', null', `, '${user.name}'`));
+                });
+                semanalCont.appendChild(gridSem);
+
+                const hAnu = document.createElement('h2');
+                hAnu.style.cssText = "margin-top: 50px; padding: 10px 20px; background: #eee; border-radius: 10px; font-size: 16px; text-transform: uppercase;";
+                hAnu.innerText = `Cronograma ${user.label}`;
+                anualCont.appendChild(hAnu);
+
+                const gridAnu = document.createElement('div');
+                gridAnu.className = 'grid-anual'; gridAnu.style.marginTop = '10px';
+                gridAnu.innerHTML = document.getElementById('main-grid-anual').innerHTML;
+                gridAnu.querySelectorAll('.mes-card').forEach(el => {
+                    el.className += ' ' + user.suffix;
+                    const list = el.querySelector('.lista-eventos');
+                    if (list) { list.id = list.id + user.suffix; list.innerHTML = ''; }
+                });
+                gridAnu.querySelectorAll('.btn-plus-dia').forEach(btn => {
+                    btn.setAttribute('onclick', btn.getAttribute('onclick').replace(', null', `, '${user.name}'`));
+                });
+                anualCont.appendChild(gridAnu);
+            });
+        }
+
         function closeTaskModal() {
             document.getElementById('modalTarea').style.display = 'none';
         }
@@ -388,23 +452,20 @@
             }
         }
 
-        function nuevaTareaCronograma(fecha) {
+        function nuevaTareaCronograma(fecha, forcedOwner = null) {
             editingOriginal = null; // Es una tarea nueva
             document.getElementById('modalTaskTitle').innerText = "Nueva Planificación";
             document.getElementById('btnSaveTask').innerText = "GUARDAR TAREA";
 
             currentIsoFecha = fecha;
             document.getElementById('taskName').value = '';
-
             renderFrequencyPills(currentView);
 
-            // Pre-seleccionar responsable actual en el modal
-            const ownerInp = document.getElementById('taskOwner');
-            if (ownerInp) {
-                ownerInp.value = PERSONA_MOSTRADA;
-                const ownerBtn = Array.from(document.querySelectorAll('#groupOwner .pill-opt')).find(b => b.innerText.toLowerCase() === PERSONA_MOSTRADA.toLowerCase());
-                if (ownerBtn) selectPill('taskOwner', PERSONA_MOSTRADA, ownerBtn);
-            }
+            // Pre-seleccionar responsables
+            document.querySelectorAll('#groupOwner .pill-opt').forEach(p => p.classList.remove('selected'));
+            const targetOwner = forcedOwner || PERSONA_MOSTRADA;
+            const ownerBtn = Array.from(document.querySelectorAll('#groupOwner .pill-opt')).find(b => b.innerText.toLowerCase() === targetOwner.toLowerCase());
+            if (ownerBtn) ownerBtn.classList.add('selected');
             
             // Detectar día de la semana de la fecha clickeada (0=D, 1=L...)
             const [y, m, d] = fecha.split('-').map(Number);
@@ -427,11 +488,16 @@
                 if (dayBtn) dayBtn.classList.add('selected');
             }
 
-            // Forzar selección de responsable si es admin/ruben/raul
-            if (document.getElementById('taskOwner')) document.getElementById('taskOwner').value = '';
-
             // MOSTRAR EL MODAL (Faltaba esta línea)
             document.getElementById('modalTarea').style.display = 'flex';
+        }
+
+        function toggleMultiPill(element, value) { element.classList.toggle('selected'); }
+
+        function getSelectedOwners() {
+            const pills = document.querySelectorAll('#groupOwner .pill-opt.selected');
+            if (pills.length === 0) return PERSONA_MOSTRADA;
+            return Array.from(pills).map(p => p.innerText.trim()).join(',');
         }
 
         async function guardarTareaDefinitiva() {
@@ -439,12 +505,10 @@
             const tipo = document.getElementById('taskCat').value;
             const frecuencia = getSelectedDays(); // Ahora enviamos L,M,X...
             
-            // Si existe el selector de responsable, debe ser obligatorio elegir uno (no hay default "yo")
-            const ownerInp = document.getElementById('taskOwner');
-            const owner = ownerInp ? ownerInp.value : PERSONA_MOSTRADA;
+            const owner = getSelectedOwners(); // Soporte multi-responsable
 
             if (!tarea || !tipo) return alert("Tarea y Categoría son obligatorias.");
-            if (ownerInp && !owner) return alert("Selecciona un responsable para la tarea.");
+            if (!owner) return alert("Selecciona al menos un responsable para la tarea.");
 
             showLoader();
 
@@ -508,139 +572,174 @@
 
         // Cargar datos desde la API
         async function initCargaCronograma() {
+            await renderUserSchedule(PERSONA_MOSTRADA, '');
+            if (PERSONA_MOSTRADA.toUpperCase() === 'RUBEN') {
+                await renderUserSchedule('Raul', '-raul');
+                await renderUserSchedule('Gonzalo', '-gonzalo');
+            }
+            ordenarMesesTemporada();
+        }
+
+        async function renderUserSchedule(user, suffix) {
             try {
-                const res = await fetch(`/api/cronograma_data?user=${PERSONA_MOSTRADA}&_t=${new Date().getTime()}`);
+                const res = await fetch(`/api/cronograma_data?user=${user}&_t=${new Date().getTime()}`);
                 const data = await res.json();
-                
                 if (!Array.isArray(data)) return;
 
-                // Limpiar contenedores
-                document.querySelectorAll('.lista-eventos').forEach(el => el.innerHTML = '');
-
-                const containerIds = Array.from(document.querySelectorAll('#view-semanal .lista-eventos'))
-                                          .map(el => el.id)
-                                          .filter(id => id.startsWith('events-week-'));
+                document.querySelectorAll(`.lista-eventos[id$="${suffix}"]`).forEach(el => el.innerHTML = '');
                 
                 data.forEach(ev => {
                     const diasRepeticion = (ev.FRECUENCIA || "").split(',').map(s => s.trim()).filter(x => x);
                     const tipoLimpio = (ev.TIPO || 'OTROS').toUpperCase();
                     const tareaLimpia = (ev.TAREA || '').trim();
-                    
                     if (!tareaLimpia) return;
-
-                    containerIds.forEach(id => {
-                        const isoDate = id.replace('events-week-', '');
-                        
-                        // Normalización de fechas para comparación segura
-                        const normalizeDateStr = (s) => (s || "").split('T')[0].trim();
-                        const evFechaIso = normalizeDateStr(ev.FECHA_ISO);
-
-                        const [y, m, dNum] = isoDate.split('-').map(Number);
-                        const dtObj = new Date(y, m-1, dNum);
-                        const diaSemanaNum = dtObj.getDay();
-                        
-                        let mostrar = false;
-                        const nombresDiasLargo = { 'LUNES': 1, 'MARTES': 2, 'MÁRTES': 2, 'MAR': 2, 'MART': 2, 'MA': 2, 'MIERCOLES': 3, 'MIÉRCOLES': 3, 'JUEVES': 4, 'VIERNES': 5, 'SABADO': 6, 'SÁBADO': 6, 'DOMINGO': 0, 'M': 2, 'X': 3, 'J': 4, 'V': 5, 'S': 6, 'D': 0 };
-
-                        if (diasRepeticion.length === 0) {
-                            if (isoDate === evFechaIso) mostrar = true;
-                            else if (nombresDiasLargo[evFechaIso.toUpperCase()] === diaSemanaNum) mostrar = true;
-                        } else {
-                            if (diasRepeticion.includes('TODOS')) mostrar = true;
-                            const diasNums = diasRepeticion.map(d => MAPPING_DIAS[d.toUpperCase()]).filter(n => n !== undefined);
-                            if (diasNums.includes(diaSemanaNum)) mostrar = true;
-                        }
-
-                        if (mostrar) {
-                            const container = document.getElementById(id);
-                            const catClassName = sanitizeClass(tipoLimpio);
-                            let section = container.querySelector('.' + catClassName);
-                            if (!section) {
-                                section = document.createElement('div');
-                                section.className = catClassName;
-                                section.innerHTML = `<div class="cat-title">${tipoLimpio}</div>`;
-                                container.appendChild(section);
-                            }
-                            
-                            const isDone = (ev.ESTADO || '').toUpperCase() === 'COMPLETADO';
-                            const evDiv = document.createElement('div');
-                            evDiv.className = `evento ev-${tipoLimpio.toLowerCase()}`;
-                            evDiv.style.display = 'flex';
-                            evDiv.style.alignItems = 'center';
-                            evDiv.style.justifyContent = 'space-between';
-                            evDiv.style.gap = '5px';
-                            
-                            // Escapado para JS y atributos HTML
-                            const tEsc = tareaLimpia.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, " ");
-                            const fEsc = (ev.FECHA_ISO || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                            const rEsc = (ev.RESPONSABLE || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                            const frEsc = (ev.FRECUENCIA || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;").trim();
-                            const catEsc = tipoLimpio.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                            const estAct = (ev.ESTADO || 'PENDIENTE').toUpperCase();
-
-                            evDiv.innerHTML = `
-                                <div style="display: flex; flex-direction: column; flex: 1; min-width: 0; padding-right: 5px;">
-                                    <span style="${isDone ? 'text-decoration: line-through; opacity: 0.4;' : ''} white-space: normal; word-break: break-word; line-height: 1.2; font-size: 11px; color: #1e293b; font-weight: 700;">${tareaLimpia}</span>
-                                </div>
-                                <div class="task-actions" style="display: flex; gap: 0; align-items: center; flex-shrink: 0; margin-right: -10px; justify-content: flex-end;">
-                                    <button onclick="event.stopPropagation(); toggleEstadoTarea('${fEsc}', '${tEsc}', '${estAct}')" 
-                                         style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; border: 1.5px solid ${isDone ? '#28a745' : '#cbd5e1'}; background: ${isDone ? '#f0fdf4' : '#fff'}; color: ${isDone ? '#28a745' : '#cbd5e1'}; transition: 0.2s; flex-shrink: 0; padding: 0;" title="${isDone ? 'Pendiente' : 'Completar'}">
-                                        <i class="fa-solid fa-check" style="font-size: 10px; font-weight: 900; opacity: ${isDone ? '1' : '0.3'};"></i>
-                                    </button>
-                                    <button onclick="event.stopPropagation(); abrirEdicionTarea('${fEsc}', '${tEsc}', '${catEsc}', '${rEsc}', '${frEsc}')" 
-                                            style="border:none; background:transparent; color:#1e293b; width:22px; height:22px; border-radius:4px; cursor:pointer; transition:0.2s; display: flex; align-items: center; justify-content: center; padding: 0;"
-                                            onmouseover="this.style.color='#E31E24'; this.style.background='#fff'" onmouseout="this.style.color='#1e293b'; this.style.background='#f1f5f9'" title="Editar">
-                                        <i class="fa-solid fa-pencil" style="font-size:10px;"></i>
-                                    </button>
-                                    <button onclick="event.stopPropagation(); eliminarTareaCronograma('${fEsc}', '${tEsc}')" 
-                                            style="border:none; background:transparent; color:#dc3545; width:22px; height:22px; border-radius:4px; cursor:pointer; transition:0.2s; display: flex; align-items: center; justify-content: center; padding: 0;"
-                                            onmouseover="this.style.transform='scale(1.2)'; this.style.background='#fff'" onmouseout="this.style.transform='scale(1)'; this.style.background='transparent'" title="Eliminar">
-                                        <i class="fa-solid fa-trash" style="font-size:10px;"></i>
-                                    </button>
-                                </div>
-                            `;
-                            section.appendChild(evDiv);
-                        }
-                    });
+                    processTaskForUser(ev, user, suffix, tipoLimpio, tareaLimpia, diasRepeticion);
                 });
+            } catch (err) { console.error("Error rendering schedule for " + user, err); }
+        }
 
-                // Renderizar en Anual (simplificado)
-                data.forEach(ev => {
-                    let containerAnual = null;
-                    const tEsc = (ev.TAREA || '').replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                    const fEsc = (ev.FECHA_ISO || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                    const rEsc = (ev.RESPONSABLE || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                    const frEsc = (ev.FRECUENCIA || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                    const catEsc = (ev.TIPO || 'OTROS').toUpperCase().replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+        function processTaskForUser(ev, user, suffix, tipoLimpio, tareaLimpia, diasRepeticion) {
+            const weekContainerIds = Array.from(document.querySelectorAll(`#view-semanal .lista-eventos`))
+                                        .map(el => el.id).filter(id => id.startsWith('events-week-') && id.endsWith(suffix));
+            
+            weekContainerIds.forEach(id => {
+                const isoDate = id.replace('events-week-', '').replace(suffix, '');
+                if (shouldShowTask(ev, isoDate, diasRepeticion)) renderTaskItemWeekly(document.getElementById(id), ev, tipoLimpio, tareaLimpia);
+            });
 
-                    if (ev.FECHA_ISO && ev.FECHA_ISO.includes('-')) {
-                        const partes = ev.FECHA_ISO.split('-');
-                        const mesNum = parseInt(partes[1]);
-                        containerAnual = document.getElementById(`events-anual-${mesNum}-${partes[0]}`);
-                    } else {
-                        const freqParts = (ev.FRECUENCIA || "").split(',').map(s => s.trim().toUpperCase()).filter(x => x);
-                        const mesTarget = ev.FECHA_ISO ? ev.FECHA_ISO.toUpperCase() : null;
-                        
-                        document.querySelectorAll('.mes-card').forEach(card => {
-                            const mNum = parseInt(card.dataset.mes);
-                            const mLabelFull = card.querySelector('h3').innerText.split(' ')[0].toUpperCase();
-                            
-                            if (freqParts.includes('TODOS') || freqParts.some(f => MAPPING_MESES[f] === mNum) || MAPPING_MESES[mesTarget] === mNum) {
-                                const list = card.querySelector('.lista-eventos');
-                                renderTaskItemAnual(list, ev, tEsc, fEsc, catEsc, rEsc, frEsc);
-                            }
-                        });
-                    }
+            const tEsc = tareaLimpia.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+            const fEsc = (ev.FECHA_ISO || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+            const rEsc = (ev.RESPONSABLE || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+            const frEsc = (ev.FRECUENCIA || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+            const catEsc = tipoLimpio.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
 
-                    if (containerAnual) {
-                        renderTaskItemAnual(containerAnual, ev, tEsc, fEsc, catEsc, rEsc, frEsc);
+            if (ev.FECHA_ISO && ev.FECHA_ISO.includes('-')) {
+                const partes = ev.FECHA_ISO.split('-');
+                const containerAnual = document.getElementById(`events-anual-${parseInt(partes[1])}-${partes[0]}${suffix}`);
+                if (containerAnual) renderTaskItemAnual(containerAnual, ev, tEsc, fEsc, catEsc, rEsc, frEsc);
+            } else {
+                const freqParts = (ev.FRECUENCIA || "").split(',').map(s => s.trim().toUpperCase()).filter(x => x);
+                const mesTarget = ev.FECHA_ISO ? ev.FECHA_ISO.toUpperCase() : null;
+                document.querySelectorAll(`.mes-card${suffix}`).forEach(card => {
+                    const mNum = parseInt(card.dataset.mes);
+                    if (freqParts.includes('TODOS') || freqParts.some(f => MAPPING_MESES[f] === mNum) || MAPPING_MESES[mesTarget] === mNum) {
+                        renderTaskItemAnual(card.querySelector('.lista-eventos'), ev, tEsc, fEsc, catEsc, rEsc, frEsc);
                     }
                 });
-
-                ordenarMesesTemporada();
-            } catch (err) {
-                console.error("Error cargando cronograma:", err);
             }
+        }
+
+        function shouldShowTask(ev, isoDate, diasRepeticion) {
+            const normalizeDateStr = (s) => (s || "").split('T')[0].trim();
+            const evFechaIso = normalizeDateStr(ev.FECHA_ISO);
+            const [y, m, dNum] = isoDate.split('-').map(Number);
+            const diaSemanaNum = new Date(y, m-1, dNum).getDay();
+            const nombresDiasLargo = { 'LUNES': 1, 'MARTES': 2, 'MÁRTES': 2, 'MAR': 2, 'MART': 2, 'MA': 2, 'MIERCOLES': 3, 'MIÉRCOLES': 3, 'JUEVES': 4, 'VIERNES': 5, 'SABADO': 6, 'SÁBADO': 6, 'DOMINGO': 0, 'M': 2, 'X': 3, 'J': 4, 'V': 5, 'S': 6, 'D': 0 };
+            
+            if (diasRepeticion.length === 0) {
+                return isoDate === evFechaIso || nombresDiasLargo[evFechaIso.toUpperCase()] === diaSemanaNum;
+            } else {
+                if (diasRepeticion.includes('TODOS')) return true;
+                const diasNums = diasRepeticion.map(d => MAPPING_DIAS[d.toUpperCase()]).filter(n => n !== undefined);
+                return diasNums.includes(diaSemanaNum);
+            }
+        }
+
+        function renderTaskItemWeekly(container, ev, tipoLimpio, tareaLimpia) {
+            const catClassName = sanitizeClass(tipoLimpio);
+            let section = container.querySelector('.' + catClassName);
+            if (!section) {
+                section = document.createElement('div');
+                section.className = catClassName;
+                section.innerHTML = `<div class="cat-title">${tipoLimpio}</div>`;
+                container.appendChild(section);
+            }
+            
+            const isDone = (ev.ESTADO || '').toUpperCase() === 'COMPLETADO';
+            const evDiv = document.createElement('div');
+            evDiv.className = `evento ev-${tipoLimpio.toLowerCase()}`;
+            evDiv.style.display = 'flex';
+            evDiv.style.alignItems = 'center';
+            evDiv.style.justifyContent = 'space-between';
+            evDiv.style.gap = '5px';
+            
+            const tEsc = tareaLimpia.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, " ");
+            const fEsc = (ev.FECHA_ISO || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+            const rEsc = (ev.RESPONSABLE || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+            const frEsc = (ev.FRECUENCIA || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;").trim();
+            const catEsc = tipoLimpio.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+            const estAct = (ev.ESTADO || 'PENDIENTE').toUpperCase();
+
+            evDiv.innerHTML = `
+                <div style="display: flex; flex-direction: column; flex: 1; min-width: 0; padding-right: 5px;">
+                    <span style="${isDone ? 'text-decoration: line-through; opacity: 0.4;' : ''} white-space: normal; word-break: break-word; line-height: 1.2; font-size: 11px; color: #1e293b; font-weight: 700;">${tareaLimpia}</span>
+                </div>
+                <div class="task-actions" style="display: flex; gap: 0; align-items: center; flex-shrink: 0; margin-right: -10px; justify-content: flex-end;">
+                    <button onclick="event.stopPropagation(); toggleEstadoTarea('${fEsc}', '${tEsc}', '${estAct}')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; border: 1.5px solid ${isDone ? '#28a745' : '#cbd5e1'}; background: ${isDone ? '#f0fdf4' : '#fff'}; color: ${isDone ? '#28a745' : '#cbd5e1'}; transition: 0.2s; flex-shrink: 0; padding: 0;" title="${isDone ? 'Pendiente' : 'Completar'}"><i class="fa-solid fa-check" style="font-size: 10px; font-weight: 900; opacity: ${isDone ? '1' : '0.3'};"></i></button>
+                    <button onclick="event.stopPropagation(); abrirEdicionTarea('${fEsc}', '${tEsc}', '${catEsc}', '${rEsc}', '${frEsc}')" style="border:none; background:transparent; color:#1e293b; width:22px; height:22px; border-radius:4px; cursor:pointer; display: flex; align-items: center; justify-content: center; padding: 0;"><i class="fa-solid fa-pencil" style="font-size:10px;"></i></button>
+                    <button onclick="event.stopPropagation(); eliminarTareaCronograma('${fEsc}', '${tEsc}')" style="border:none; background:transparent; color:#dc3545; width:22px; height:22px; border-radius:4px; cursor:pointer; display: flex; align-items: center; justify-content: center; padding: 0;"><i class="fa-solid fa-trash" style="font-size:10px;"></i></button>
+                </div>
+            `;
+            section.appendChild(evDiv);
+        }
+
+        function prepareRubenExtraViews() {
+            const anualCont = document.getElementById('extra-anual-container');
+            const semanalCont = document.getElementById('extra-semanal-container');
+            if (!anualCont || !semanalCont) return;
+
+            const others = [
+                { name: 'Raul', label: 'Raúl', suffix: '-raul' },
+                { name: 'Gonzalo', label: 'Gonzalo', suffix: '-gonzalo' }
+            ];
+
+            others.forEach(user => {
+                // Header Semanal
+                const hSem = document.createElement('h2');
+                hSem.style.cssText = "margin-top: 50px; padding: 10px 20px; background: #eee; border-radius: 10px; font-size: 16px; text-transform: uppercase;";
+                hSem.innerText = `Cronograma ${user.label}`;
+                semanalCont.appendChild(hSem);
+
+                const gridSem = document.createElement('div');
+                gridSem.className = 'grid-semanal';
+                gridSem.style.marginTop = '10px';
+                gridSem.innerHTML = document.getElementById('main-grid-semanal').innerHTML;
+                gridSem.querySelectorAll('.lista-eventos').forEach(el => {
+                    el.id = el.id + user.suffix;
+                    el.innerHTML = '';
+                });
+                gridSem.querySelectorAll('.btn-plus-dia').forEach(btn => {
+                    const currentOnclick = btn.getAttribute('onclick');
+                    const newOnclick = currentOnclick.replace(', null', `, '${user.name}'`);
+                    btn.setAttribute('onclick', newOnclick);
+                });
+                semanalCont.appendChild(gridSem);
+
+                // Header Anual
+                const hAnu = document.createElement('h2');
+                hAnu.style.cssText = "margin-top: 50px; padding: 10px 20px; background: #eee; border-radius: 10px; font-size: 16px; text-transform: uppercase;";
+                hAnu.innerText = `Cronograma ${user.label}`;
+                anualCont.appendChild(hAnu);
+
+                const gridAnu = document.createElement('div');
+                gridAnu.className = 'grid-anual';
+                gridAnu.style.marginTop = '10px';
+                gridAnu.innerHTML = document.getElementById('main-grid-anual').innerHTML;
+                gridAnu.querySelectorAll('.mes-card').forEach(el => {
+                    el.className += ' ' + user.suffix;
+                    const list = el.querySelector('.lista-eventos');
+                    if (list) {
+                        list.id = list.id + user.suffix;
+                        list.innerHTML = '';
+                    }
+                });
+                gridAnu.querySelectorAll('.btn-plus-dia').forEach(btn => {
+                    const currentOnclick = btn.getAttribute('onclick');
+                    const newOnclick = currentOnclick.replace(', null', `, '${user.name}'`);
+                    btn.setAttribute('onclick', newOnclick);
+                });
+                anualCont.appendChild(gridAnu);
+            });
         }
 
         // Función auxiliar para renderizar tareas en los meses de la vista anual
