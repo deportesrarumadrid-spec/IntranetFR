@@ -156,13 +156,20 @@
             
             <div style="padding: 30px;">
                 <div style="margin-bottom: 20px;">
-                    <label style="font-size: 9px; font-weight: 900; color: #999; text-transform: uppercase; display: block; margin-bottom: 8px;">Descripción de la tarea</label>
+                    <label style="font-size: 9px; font-weight: 900; color: #999; text-transform: uppercase; display: block; margin-bottom: 8px;">Tarea / Actividad</label>
                     <input type="text" id="taskName" class="form-control" placeholder="Ej: Revisión de material...">
                 </div>
 
                 <div style="margin-bottom: 20px;">
+                    <label id="labelFreq" style="font-size: 9px; font-weight: 900; color: #999; text-transform: uppercase; display: block; margin-bottom: 8px;">Repetición:</label>
+                    <div class="day-pill-group" id="groupFreq">
+                        <!-- Se genera dinámicamente según la vista -->
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <label style="font-size: 9px; font-weight: 900; color: #999; text-transform: uppercase;">Categoría (Obligatoria)</label>
+                        <label style="font-size: 9px; font-weight: 900; color: #999; text-transform: uppercase;">Categoría</label>
                         <button class="btn-add-cat" onclick="addCustomCategory()">+ NUEVA</button>
                     </div>
                     <div class="pill-group" id="groupCat">
@@ -172,19 +179,6 @@
                         <button class="pill-opt" onclick="selectPill('taskCat', 'OTROS', this)">OTROS</button>
                     </div>
                     <input type="hidden" id="taskCat" value="DEPORTIVA">
-                </div>
-
-                <div style="margin-bottom: 20px;">
-                    <label style="font-size: 9px; font-weight: 900; color: #999; text-transform: uppercase; display: block; margin-bottom: 8px;">Repetición semanal (Opcional):</label>
-                    <div class="day-pill-group" id="groupFreq">
-                        <div class="day-pill" onclick="toggleDayPill(this, 'L')">L</div>
-                        <div class="day-pill" onclick="toggleDayPill(this, 'M')">M</div>
-                        <div class="day-pill" onclick="toggleDayPill(this, 'X')">X</div>
-                        <div class="day-pill" onclick="toggleDayPill(this, 'J')">J</div>
-                        <div class="day-pill" onclick="toggleDayPill(this, 'V')">V</div>
-                        <div class="day-pill" onclick="toggleDayPill(this, 'S')">S</div>
-                        <div class="day-pill" onclick="toggleDayPill(this, 'D')">D</div>
-                    </div>
                 </div>
 
                 {% if usuario_sesion|lower in ['ruben', 'raul', 'admin'] %}
@@ -234,11 +228,97 @@
 
         let editingOriginal = null; // Para rastrear si estamos modificando una tarea existente
 
+        const MAPPING_DIAS = {
+            'L': 1, 'LUNES': 1,
+            'M': 2, 'MARTES': 2, 'MAR': 2, 'MART': 2, 'MA': 2, 'MÁRTES': 2,
+            'X': 3, 'MIERCOLES': 3, 'MIÉRCOLES': 3, 'MIE': 3,
+            'J': 4, 'JUEVES': 4, 'JUE': 4,
+            'V': 5, 'VIERNES': 5, 'VIE': 5,
+            'S': 6, 'SABADO': 6, 'SÁBADO': 6, 'SAB': 6,
+            'D': 0, 'DOMINGO': 0, 'DOM': 0
+        };
+
+        const MAPPING_MESES = {
+            'ENE': 1, 'ENERO': 1, 'E': 1,
+            'FEB': 2, 'FEBRERO': 2, 'F': 2,
+            'MAR': 3, 'MARZO': 3,
+            'ABR': 4, 'ABRIL': 4, 'A': 4,
+            'MAY': 5, 'MAYO': 5,
+            'JUN': 6, 'JUNIO': 6, 'J': 6,
+            'JUL': 7, 'JULIO': 7,
+            'AGO': 8, 'AGOSTO': 8,
+            'SEP': 9, 'SEPTIEMBRE': 9, 'S': 9,
+            'OCT': 10, 'OCTUBRE': 10, 'O': 10,
+            'NOV': 11, 'NOVIEMBRE': 11, 'N': 11,
+            'DIC': 12, 'DICIEMBRE': 12, 'D': 12
+        };
+
+        const MESES_INFO = [
+            {v:'ENE', l:'E'}, {v:'FEB', l:'F'}, {v:'MAR', l:'M'}, {v:'ABR', l:'A'}, 
+            {v:'MAY', l:'M'}, {v:'JUN', l:'J'}, {v:'JUL', l:'J'}, {v:'AGO', l:'A'}, 
+            {v:'SEP', l:'S'}, {v:'OCT', l:'O'}, {v:'NOV', l:'N'}, {v:'DIC', l:'D'}
+        ];
+
         function showLoader() { document.getElementById('loader-wrapper').style.display = 'flex'; }
         function hideLoader() { document.getElementById('loader-wrapper').style.display = 'none'; }
 
-        function toggleDayPill(el, day) { el.classList.toggle('selected'); }
-        function getSelectedDays() { return Array.from(document.querySelectorAll('.day-pill.selected')).map(el => el.innerText).join(','); }
+        function toggleDayPill(el, val) {
+            if (val === 'TODOS') {
+                const isNowSelected = !el.classList.contains('selected');
+                document.querySelectorAll('.day-pill').forEach(p => p.classList.toggle('selected', isNowSelected));
+            } else {
+                el.classList.toggle('selected');
+                if (!el.classList.contains('selected')) {
+                    const pillAll = document.querySelector('.day-pill[data-value="TODOS"]');
+                    if (pillAll) pillAll.classList.remove('selected');
+                }
+            }
+        }
+
+        function getSelectedDays() { 
+            const pills = Array.from(document.querySelectorAll('.day-pill.selected:not([data-value="TODOS"])'));
+            const pillAll = document.querySelector('.day-pill[data-value="TODOS"].selected');
+            if (pillAll) return 'TODOS';
+            return pills.map(el => el.dataset.value).join(','); 
+        }
+
+        function renderFrequencyPills(view) {
+            const container = document.getElementById('groupFreq');
+            const label = document.getElementById('labelFreq');
+            container.innerHTML = '';
+            
+            if (view === 'anual') {
+                label.innerText = "Meses de repetición:";
+                MESES_INFO.forEach(m => {
+                    const div = document.createElement('div');
+                    div.className = 'day-pill';
+                    div.innerText = m.l;
+                    div.dataset.value = m.v;
+                    div.onclick = () => toggleDayPill(div, m.v);
+                    container.appendChild(div);
+                });
+            } else {
+                label.innerText = "Días de repetición:";
+                ['L','M','X','J','V','S','D'].forEach(d => {
+                    const div = document.createElement('div');
+                    div.className = 'day-pill';
+                    div.innerText = d;
+                    div.dataset.value = d;
+                    div.onclick = () => toggleDayPill(div, d);
+                    container.appendChild(div);
+                });
+            }
+            
+            // Botón TODOS
+            const btnAll = document.createElement('div');
+            btnAll.className = 'day-pill';
+            btnAll.style.width = 'auto';
+            btnAll.style.padding = '0 10px';
+            btnAll.innerText = 'TODOS';
+            btnAll.dataset.value = 'TODOS';
+            btnAll.onclick = () => toggleDayPill(btnAll, 'TODOS');
+            container.appendChild(btnAll);
+        }
 
         function changeView(view, btn) {
             currentView = view;
@@ -316,6 +396,8 @@
             currentIsoFecha = fecha;
             document.getElementById('taskName').value = '';
 
+            renderFrequencyPills(currentView);
+
             // Pre-seleccionar responsable actual en el modal
             const ownerInp = document.getElementById('taskOwner');
             if (ownerInp) {
@@ -340,8 +422,8 @@
             document.getElementById('taskCat').value = 'DEPORTIVA';
 
             // Autoseleccionar el día correspondiente para que se guarde por "día de la semana"
-            if (d !== 1) { // Si no es el día 1 (que viene de la vista anual)
-                const dayBtn = Array.from(document.querySelectorAll('.day-pill')).find(b => b.innerText === dayChar);
+            if (d !== 1 && currentView === 'semanal') { 
+                const dayBtn = Array.from(document.querySelectorAll('.day-pill')).find(b => b.dataset.value === dayChar);
                 if (dayBtn) dayBtn.classList.add('selected');
             }
 
@@ -364,10 +446,12 @@
             if (!tarea || !tipo) return alert("Tarea y Categoría son obligatorias.");
             if (ownerInp && !owner) return alert("Selecciona un responsable para la tarea.");
 
-            // Si estamos en modo edición, primero eliminamos la tarea antigua
+            showLoader();
+
+            // Lógica de Edición: Eliminar antigua y crear nueva (Propuesta del usuario)
             if (editingOriginal) {
                 try {
-                    await fetch('/api/cronograma_delete', {
+                    const delRes = await fetch('/api/cronograma_delete', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ 
@@ -376,17 +460,22 @@
                             tarea: editingOriginal.tarea
                         })
                     });
-                } catch(e) { console.error("Error al actualizar tarea:", e); }
+                    if (!delRes.ok) console.warn("Aviso: No se pudo localizar la tarea original para borrar, se creará una nueva.");
+                } catch(e) { console.error("Error en fase de borrado:", e); }
             }
 
-            // Definir qué texto guardar en la columna de FECHA
             let fechaParaGuardar = currentIsoFecha;
             if (frecuencia) {
-                const nombresDias = { 'L': 'LUNES', 'M': 'MARTES', 'X': 'MIERCOLES', 'J': 'JUEVES', 'V': 'VIERNES', 'S': 'SABADO', 'D': 'DOMINGO' };
-                fechaParaGuardar = frecuencia.split(',').map(d => nombresDias[d]).join(', ');
+                if (frecuencia === 'TODOS') {
+                    fechaParaGuardar = 'TODOS';
+                } else {
+                    const nombresDias = { 'L': 'LUNES', 'M': 'MARTES', 'X': 'MIERCOLES', 'J': 'JUEVES', 'V': 'VIERNES', 'S': 'SABADO', 'D': 'DOMINGO' };
+                    const nombresMeses = { 'ENE': 'ENERO', 'FEB': 'FEBRERO', 'MAR': 'MARZO', 'ABR': 'ABRIL', 'MAY': 'MAYO', 'JUN': 'JUNIO', 'JUL': 'JULIO', 'AGO': 'AGOSTO', 'SEP': 'SEPTIEMBRE', 'OCT': 'OCTUBRE', 'NOV': 'NOVIEMBRE', 'DIC': 'DICIEMBRE' };
+                    const mapping = currentView === 'anual' ? nombresMeses : nombresDias;
+                    fechaParaGuardar = frecuencia.split(',').map(v => mapping[v.toUpperCase()] || v).join(', ');
+                }
             }
 
-            showLoader();
             try {
                 const res = await fetch('/api/cronograma_save', {
                     method: 'POST',
@@ -414,8 +503,6 @@
                 alert("Error de conexión al intentar guardar la tarea: " + e.message);
             } finally { hideLoader(); }
         }
-
-        const MAPPING_DIAS = { 'L': 1, 'M': 2, 'X': 3, 'J': 4, 'V': 5, 'S': 6, 'D': 0 };
 
         const sanitizeClass = (str) => "cat-sec-" + (str || 'otros').replace(/[^a-z0-9]/gi, '-').toLowerCase();
 
@@ -449,16 +536,18 @@
                         const evFechaIso = normalizeDateStr(ev.FECHA_ISO);
 
                         const [y, m, dNum] = isoDate.split('-').map(Number);
-                        const diaSemanaNum = new Date(y, m-1, dNum).getDay();
+                        const dtObj = new Date(y, m-1, dNum);
+                        const diaSemanaNum = dtObj.getDay();
                         
                         let mostrar = false;
-                        const nombresDiasLargo = { 'LUNES': 1, 'MARTES': 2, 'MIERCOLES': 3, 'JUEVES': 4, 'VIERNES': 5, 'SABADO': 6, 'DOMINGO': 0 };
+                        const nombresDiasLargo = { 'LUNES': 1, 'MARTES': 2, 'MÁRTES': 2, 'MAR': 2, 'MART': 2, 'MA': 2, 'MIERCOLES': 3, 'MIÉRCOLES': 3, 'JUEVES': 4, 'VIERNES': 5, 'SABADO': 6, 'SÁBADO': 6, 'DOMINGO': 0, 'M': 2, 'X': 3, 'J': 4, 'V': 5, 'S': 6, 'D': 0 };
 
                         if (diasRepeticion.length === 0) {
                             if (isoDate === evFechaIso) mostrar = true;
                             else if (nombresDiasLargo[evFechaIso.toUpperCase()] === diaSemanaNum) mostrar = true;
                         } else {
-                            const diasNums = diasRepeticion.map(d => MAPPING_DIAS[d]);
+                            if (diasRepeticion.includes('TODOS')) mostrar = true;
+                            const diasNums = diasRepeticion.map(d => MAPPING_DIAS[d.toUpperCase()]).filter(n => n !== undefined);
                             if (diasNums.includes(diaSemanaNum)) mostrar = true;
                         }
 
@@ -485,7 +574,7 @@
                             const tEsc = tareaLimpia.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, " ");
                             const fEsc = (ev.FECHA_ISO || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
                             const rEsc = (ev.RESPONSABLE || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                            const frEsc = (ev.FRECUENCIA || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                            const frEsc = (ev.FRECUENCIA || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;").trim();
                             const catEsc = tipoLimpio.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
                             const estAct = (ev.ESTADO || 'PENDIENTE').toUpperCase();
 
@@ -526,12 +615,21 @@
 
                     if (ev.FECHA_ISO && ev.FECHA_ISO.includes('-')) {
                         const partes = ev.FECHA_ISO.split('-');
-                        containerAnual = document.getElementById(`events-anual-${parseInt(partes[1])}-${partes[0]}`);
-                    } else if (ev.FRECUENCIA) {
-                        document.querySelectorAll('.mes-card .lista-eventos').forEach(cardList => {
-                            renderTaskItemAnual(cardList, ev, tEsc, fEsc, catEsc, rEsc, frEsc);
+                        const mesNum = parseInt(partes[1]);
+                        containerAnual = document.getElementById(`events-anual-${mesNum}-${partes[0]}`);
+                    } else {
+                        const freqParts = (ev.FRECUENCIA || "").split(',').map(s => s.trim().toUpperCase()).filter(x => x);
+                        const mesTarget = ev.FECHA_ISO ? ev.FECHA_ISO.toUpperCase() : null;
+                        
+                        document.querySelectorAll('.mes-card').forEach(card => {
+                            const mNum = parseInt(card.dataset.mes);
+                            const mLabelFull = card.querySelector('h3').innerText.split(' ')[0].toUpperCase();
+                            
+                            if (freqParts.includes('TODOS') || freqParts.some(f => MAPPING_MESES[f] === mNum) || MAPPING_MESES[mesTarget] === mNum) {
+                                const list = card.querySelector('.lista-eventos');
+                                renderTaskItemAnual(list, ev, tEsc, fEsc, catEsc, rEsc, frEsc);
+                            }
                         });
-                        return;
                     }
 
                     if (containerAnual) {
@@ -600,32 +698,68 @@
         }
 
         function abrirEdicionTarea(fecha, tarea, tipo, responsable, frecuencia) {
-            editingOriginal = { fecha, tarea }; // Guardamos referencia para el reemplazo
+            // Decodificar para que el nombre coincida exactamente al buscar para borrar
+            const txtTemp = document.createElement("textarea");
+            txtTemp.innerHTML = tarea;
+            const tareaReal = txtTemp.value;
+
+            editingOriginal = { fecha, tarea: tareaReal }; 
             document.getElementById('modalTaskTitle').innerText = "Modificar Tarea";
             document.getElementById('btnSaveTask').innerText = "ACTUALIZAR CAMBIOS";
 
+            const vistaActualEv = (tipo || '').toUpperCase().includes('DEPORTIVA') ? currentView : 'semanal'; 
+            renderFrequencyPills(currentView);
+
             currentIsoFecha = fecha;
-            document.getElementById('taskName').value = tarea;
+            document.getElementById('taskName').value = tareaReal;
             
+            // Reset general de selecciones
+            document.querySelectorAll('.pill-opt').forEach(p => p.classList.remove('selected'));
+            document.querySelectorAll('.day-pill').forEach(p => p.classList.remove('selected'));
+
+            // Función de ayuda para comparar texto ignorando tildes y mayúsculas
+            const norm = (t) => t.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
             // Seleccionar Categoría
-            const catBtn = Array.from(document.querySelectorAll('#groupCat .pill-opt')).find(b => b.innerText.toUpperCase() === tipo.toUpperCase());
+            const catBtn = Array.from(document.querySelectorAll('#groupCat .pill-opt')).find(b => norm(b.innerText) === norm(tipo));
             if (catBtn) selectPill('taskCat', tipo, catBtn);
+            else {
+                document.getElementById('taskCat').value = tipo;
+                // Si es una categoría personalizada que no está en los botones, podrías añadirla aquí si quisieras
+            }
             
             // Seleccionar Responsable
-            const ownerBtn = Array.from(document.querySelectorAll('#groupOwner .pill-opt')).find(b => b.innerText.toLowerCase() === responsable.toLowerCase());
-            if (ownerBtn) selectPill('taskOwner', responsable, ownerBtn);
+            const inputOwner = document.getElementById('taskOwner');
+            if (inputOwner) {
+                inputOwner.value = responsable;
+                const ownerBtn = Array.from(document.querySelectorAll('#groupOwner .pill-opt')).find(b => norm(b.innerText) === norm(responsable));
+                if (ownerBtn) selectPill('taskOwner', responsable, ownerBtn);
+            }
             
-            // Seleccionar Días
-            document.querySelectorAll('.day-pill').forEach(p => p.classList.remove('selected'));
-            if (frecuencia) {
-                frecuencia.split(',').map(d => d.trim()).forEach(d => { // Trim each day
-                    const dayBtn = Array.from(document.querySelectorAll('.day-pill')).find(b => b.innerText === d.trim());
-                    if (dayBtn) dayBtn.classList.add('selected');
+            // --- LÓGICA DE CELDAS MARCADAS (DÍAS) ---
+            if (frecuencia && frecuencia.trim() !== "") {
+                // Si ya es recurrente, marcamos los días que vienen de la base de datos
+                frecuencia.split(',').forEach(d => {
+                    const pill = Array.from(document.querySelectorAll('.day-pill')).find(p => p.innerText === d.trim());
+                    if (pill) pill.classList.add('selected');
                 });
+            } else if (fecha && fecha.includes('-')) {
+                // Si es una tarea puntual, inferimos el día de la semana para que la celda aparezca marcada
+                const [y, m, dNum] = fecha.split('-').map(Number);
+                const dayMapInv = { 1: 'L', 2: 'M', 3: 'X', 4: 'J', 5: 'V', 6: 'S', 0: 'D' };
+                const diaCalculado = dayMapInv[new Date(y, m-1, dNum).getDay()];
+                const pill = Array.from(document.querySelectorAll('.day-pill')).find(p => p.innerText === diaCalculado);
+                if (pill) pill.classList.add('selected');
+            } else {
+                // Si la fecha es un nombre (LUNES, etc), marcamos la inicial correspondiente
+                const dayMapNombres = { 'LUNES': 'L', 'MARTES': 'M', 'MIERCOLES': 'X', 'JUEVES': 'J', 'VIERNES': 'V', 'SABADO': 'S', 'DOMINGO': 'D' };
+                const inicial = dayMapNombres[fecha.toUpperCase().trim()];
+                if (inicial) {
+                    const pill = Array.from(document.querySelectorAll('.day-pill')).find(p => p.innerText === inicial);
+                    if (pill) pill.classList.add('selected');
+                }
             }
 
-            // Al editar, si guardamos una "nueva" tarea con el mismo nombre y fecha, se duplicará.
-            // Lo ideal es que el usuario sepa que puede borrar la anterior o simplemente estamos re-usando el modal.
             document.getElementById('modalTarea').style.display = 'flex';
         }
 

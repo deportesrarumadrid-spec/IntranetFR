@@ -15,16 +15,82 @@ except ImportError:
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 
 from perfiles import get_perfiles_sheet # Importamos la función para obtener la hoja de perfiles
+
 app = Flask(__name__)
 app.secret_key = "club_intranet_secret_key_2024" # Necesario para las sesiones
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Límite de 16MB para subidas
 
+# --- LISTAS MAESTRAS DE IDENTIFICACIÓN ---
+DIAS_MESES_IDENT = [
+    'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO',
+    'L', 'M', 'X', 'J', 'V', 'S', 'D', 'LU', 'MA', 'MI', 'JU', 'VI', 'SA', 'DO', 'MA.', 'MAR.', 'MART.',
+    'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM', 'MART', 'MIER', 'SABA', 'MARS', 'MÁRTES',
+    'MARTE', 'MARTES', 'TUE', 'TUES', 'TUESDAY', 'DT',
+    'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE',
+    'ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC',
+    'E', 'F', 'A', 'MY', 'JL', 'AG', 'O', 'N', 'MR', 'MZ', 'AB', 'MY', 'JN', 'JL', 'AG', 'S', 'O', 'N', 'D', 'M',
+    'TODOS', 'TODO', 'TOTAL', 'ALL', 'SELECCIONARTODOS'
+]
+
 # --- UTILIDADES DE NOTIFICACIÓN ---
 def normalizar_id(texto):
+    """Normaliza IDs de usuario quitando tildes, pasando a minúsculas y colapsando espacios."""
     if not texto: return ""
-    # Convierte a minúsculas, quita tildes y limpia espacios
     s = "".join(c for c in unicodedata.normalize('NFD', str(texto)) if unicodedata.category(c) != 'Mn')
-    return s.lower().strip()
+    # Colapsar múltiples espacios internos para mayor robustez en búsquedas
+    return " ".join(s.lower().split()).strip()
+
+def es_dia_valido_crono(texto):
+    """Verifica si un texto corresponde a un día de la semana de forma robusta."""
+    if not texto: return False
+    # Normalización extrema: quitamos tildes, espacios y caracteres no imprimibles
+    t = "".join(c for c in unicodedata.normalize('NFD', str(texto).upper().strip().replace('\xa0', ' ')) if unicodedata.category(c) != 'Mn')
+    return t in DIAS_MESES_IDENT
+
+def normalizar_dia_cronograma(val, vista='SEMANAL'):
+    """Asegura formato estándar para visualización (MAYÚSCULAS, sin espacios). Soporta meses para vista ANUAL."""
+    if not val: return ""
+    # Limpieza agresiva: quitamos puntos, espacios y normalizamos a mayúsculas
+    t = str(val).strip().upper().replace('\xa0', ' ').replace('.', '')
+    # Normalizamos para comparar sin acentos pero devolver con acentos correctos
+    base = "".join(c for c in unicodedata.normalize('NFD', t) if unicodedata.category(c) != 'Mn')
+    
+    if str(vista).upper() == 'ANUAL':
+        mapping_meses = {
+            "E": "ENERO", "ENE": "ENERO",
+            "F": "FEBRERO", "FEB": "FEBRERO",
+            "M": "MARZO", "MAR": "MARZO", "MR": "MARZO", "MZ": "MARZO", # En anual M es Marzo por defecto
+            "A": "ABRIL", "ABR": "ABRIL", "AB": "ABRIL", 
+            "MY": "MAYO", "MAY": "MAYO", "MA": "MAYO",
+            "J": "JUNIO", "JUN": "JUNIO", "JN": "JUNIO",
+            "JL": "JULIO", "JUL": "JULIO", "JY": "JULIO", "JULI": "JULIO",
+            "AG": "AGOSTO", "AGO": "AGOSTO",
+            "S": "SEPTIEMBRE", "SEP": "SEPTIEMBRE",
+            "O": "OCTUBRE", "OCT": "OCTUBRE",
+            "N": "NOVIEMBRE", "NOV": "NOVIEMBRE",
+            "D": "DICIEMBRE", "DIC": "DICIEMBRE"
+        }
+        res = mapping_meses.get(base, mapping_meses.get(t))
+        return res if res else base
+
+    mapping = {
+        "L": "LUNES", "LU": "LUNES", "LUN": "LUNES", "LUNES": "LUNES",
+        "M": "MARTES", "MA": "MARTES", "MAR": "MARTES", "MART": "MARTES", "MARTE": "MARTES", "MARTES": "MARTES", "MARS": "MARTES", "TUESDAY": "MARTES",
+        "TUE": "MARTES", "TUES": "MARTES", "DT": "MARTES", "MÁRTES": "MARTES",
+        "X": "MIERCOLES", "MI": "MIERCOLES", "MIE": "MIERCOLES", "MIER": "MIERCOLES", "MIERCOLES": "MIERCOLES", "MIÉRCOLES": "MIERCOLES",
+        "J": "JUEVES", "JU": "JUEVES", "JUE": "JUEVES", "JUEVES": "JUEVES",
+        "V": "VIERNES", "VI": "VIERNES", "VIE": "VIERNES", "VIERNES": "VIERNES",
+        "S": "SABADO", "SA": "SABADO", "SAB": "SABADO", "SABA": "SABADO", "SABADO": "SABADO", "SÁBADO": "SABADO",
+        "D": "DOMINGO", "DO": "DOMINGO", "DOM": "DOMINGO", "DOMINGO": "DOMINGO", "DI": "DOMINGO", "DIM": "DOMINGO", "DOMI": "DOMINGO"
+    }
+    res = mapping.get(base, mapping.get(t))
+    return res if res else base
+
+def normalizar_crono_busqueda(val):
+    """Normalización profunda para buscar tareas en el cronograma."""
+    if not val: return ""
+    s = "".join(c for c in unicodedata.normalize('NFD', str(val)) if unicodedata.category(c) != 'Mn')
+    return " ".join(s.lower().split()).strip()
 
 def enviar_whatsapp(numero, mensaje):
     """
@@ -125,7 +191,8 @@ app.config['DATA_FOLDER'] = DATA_FOLDER
 
 def normalizar_cabecera_universal(h):
     """Limpia cabeceras de forma agresiva para comparaciones seguras."""
-    return str(h).strip().upper().replace('Ó','O').replace('Í','I').replace('É','E').replace('Á','A').replace('Ú','U').replace(' ','').replace('_', '').replace('.', '').replace('/', '')
+    s = "".join(c for c in unicodedata.normalize('NFD', str(h).upper().strip()) if unicodedata.category(c) != 'Mn')
+    return s.replace(' ', '').replace('_', '').replace('.', '').replace('/', '')
 
 for p in [UPLOAD_FOLDER, DATA_FOLDER]: os.makedirs(p, exist_ok=True)
 
@@ -1099,7 +1166,7 @@ def cronograma():
     # Lógica para la semana actual
     start_of_week = hoy - timedelta(days=hoy.weekday())
     semana_actual = []
-    dias_nombres = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO", "DOMINGO"]
+    dias_nombres = ["LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO", "DOMINGO"]
     for i in range(7):
         d = start_of_week + timedelta(days=i)
         semana_actual.append({
@@ -1137,11 +1204,13 @@ def api_cronograma_data():
         if not all_v or len(all_v) < 1:
             return jsonify([])
 
-        # Usamos la primera fila como llaves, normalizándolas para la lógica interna
         raw_headers = all_v[0]
+        date_headers_list_mode = ['DIAMES', 'FECHAISO', 'FECHA', 'DATE', 'START', 'DIA', 'MES', 'DIA/MES'] + DIAS_MESES_IDENT
+        # Buscamos qué cabeceras originales del Excel mapean a estos alias de fecha
+        date_keys_found = [h for h in raw_headers if normalizar_cabecera_universal(h) in date_headers_list_mode]
+
         records = []
         for row in all_v[1:]:
-            # Saltamos filas totalmente vacías
             if not any(str(c).strip() for c in row): continue
             
             item = {}
@@ -1149,45 +1218,104 @@ def api_cronograma_data():
                 val = str(row[i]).strip() if i < len(row) else ""
                 h_norm = normalizar_cabecera_universal(h)
                 
-                if h_norm in ['DIAMES', 'FECHAISO', 'FECHA', 'DATE', 'START', 'DIA', 'MES']:
+                if h_norm in date_headers_list_mode and val:
                     item['FECHA_ISO'] = val
                     item['fecha'] = val
                     item['start'] = val
-                elif h_norm in ['TAREA', 'TAREAS', 'TITLE', 'TITULO', 'NOMBRE', 'ACTIVIDAD', 'EVENTO', 'DESCRIPCION', 'DESCRIPTION', 'CONTENIDO', 'TEXT', 'CONTENT']:
+                elif h_norm in ['TAREA', 'TAREAS', 'TITLE', 'TITULO', 'NOMBRE', 'ACTIVIDAD', 'EVENTO', 'DESCRIPCION', 'DESCRIPTION', 'CONTENIDO', 'TEXT', 'CONTENT', 'TAREASCRONOGRAMA'] and val:
                     item['TAREA'] = val
                     item['tarea'] = val
                     item['title'] = val
                     item['titulo'] = val
-                elif h_norm in ['SEMANALANUAL', 'VISTA', 'VIEW']:
+                elif h_norm in ['SEMANALANUAL', 'VISTA', 'VIEW'] and val:
                     item['VISTA'] = val
                     item['vista'] = val
-                elif h_norm in ['PERSONA', 'RESPONSABLE', 'USER', 'COACH', 'ENTRENADOR']:
+                elif h_norm in ['PERSONA', 'RESPONSABLE', 'USER', 'COACH', 'ENTRENADOR'] and val:
                     item['RESPONSABLE'] = val
                     item['responsable'] = val
-                elif h_norm in ['FRECUENCIA', 'REPETICION', 'REPEAT']:
+                elif h_norm in ['FRECUENCIA', 'REPETICION', 'REPEAT'] and val:
                     item['FRECUENCIA'] = val
                     item['frecuencia'] = val
-                elif h_norm in ['CATEGORIA', 'TIPO', 'CAT', 'DIRECCIONDEPORTIVA']:
+                elif h_norm in ['CATEGORIA', 'TIPO', 'CAT', 'DIRECCIONDEPORTIVA'] and val:
                     item['TIPO'] = val
                     item['tipo'] = val
                     item['categoria'] = val
-                elif h_norm in ['ESTADO', 'STATUS', 'COMPLETADO']:
+                elif h_norm in ['ESTADO', 'STATUS', 'COMPLETADO'] and val:
                     item['ESTADO'] = val
                     item['estado'] = val
                 
                 # Mantenemos la clave original por compatibilidad con cualquier otra lógica
                 item[h] = val
-            records.append(item)
+
+            # Lógica corregida: Grid (Lunes, Martes...) vs Columna Única (Fecha)
+            grid_days = []
+            val_f_extracted = ""
+            dias_ident = DIAS_MESES_IDENT
+
+            vista_val = item.get('VISTA') or item.get('vista') or 'SEMANAL'
+            for dk in date_keys_found:
+                h_n = normalizar_cabecera_universal(dk)
+                v = item.get(dk, "").strip().upper()
+                if not v: continue
+                
+                # Si la columna es un día y el valor es un marcador o algo que no es un día desdoblado
+                if h_n in dias_ident and (v in ['X', 'SI', 'OK', 'V'] or not es_dia_valido_crono(v)):
+                    # Normalizamos el nombre del día de la columna inmediatamente
+                    grid_days.append(normalizar_dia_cronograma(h_n, vista=vista_val))
+                else:
+                    if not val_f_extracted: val_f_extracted = v
+
+            val_f = ",".join(grid_days) if grid_days else val_f_extracted
+
+            # LÓGICA DE DESDOBLAMIENTO: Soporte para comas, punto y coma, 'y', o espacios (lunes martes)
+            s_f = val_f.replace(';', ',').replace(' y ', ',')
+            partes = [x.strip() for x in s_f.split(',') if x.strip()]
+            
+            if len(partes) == 1:
+                tokens = [tk.strip() for tk in partes[0].split() if tk.strip()]
+                if tokens and all(es_dia_valido_crono(t) for t in tokens):
+                    partes = tokens
+
+            # Procesamos cada parte para generar registros individuales limpios
+            if not partes and val_f: partes = [val_f]
+            
+            for p in partes:
+                p_norm = normalizar_dia_cronograma(p, vista=vista_val)
+                v_item = item.copy()
+                
+                # REFUERZO DE ALIAS: Sincronizamos todas las llaves que el frontend JS consulta para pintar el calendario
+                v_item['FECHA_ISO'] = p_norm
+                v_item['fecha'] = p_norm
+                v_item['start'] = p_norm
+                v_item['dia'] = p_norm
+                v_item['dia/mes'] = p_norm
+                v_item['DIA/MES'] = p_norm
+                v_item['DIAMES'] = p_norm
+                
+                # Sincronizamos también los nombres originales de las columnas del Excel
+                for dk in date_keys_found:
+                    v_item[dk] = p_norm
+                
+                # Aseguramos que Responsable y Vista existan con valores sólidos para el filtrado posterior
+                resp_val = v_item.get('RESPONSABLE') or v_item.get('responsable') or v_item.get('PERSONA') or v_item.get('persona') or ""
+                v_item['RESPONSABLE'] = resp_val
+                
+                vista_val = v_item.get('VISTA') or v_item.get('vista') or v_item.get('SEMANAL/ANUAL') or 'SEMANAL'
+                v_item['VISTA'] = vista_val
+                
+                records.append(v_item)
 
         # FILTRADO PROFESIONAL: Por Persona y por Vista (Semanal/Anual)
         # Esto garantiza que si estás en el cronograma semanal de Ruben, solo veas sus tareas semanales.
         filtered = []
+        user_req_norm = normalizar_id(user_req)
         for r in records:
-            match_user = normalizar_id(r.get('RESPONSABLE', '')) == user_req
+            resp_val = r.get('RESPONSABLE') or r.get('responsable') or r.get('PERSONA') or r.get('persona') or ""
+            match_user = normalizar_id(resp_val) == user_req_norm
             match_view = True
             if view_req:
-                # Comparamos la vista (SEMANAL/ANUAL) normalizando ambos lados
-                match_view = normalizar_id(r.get('VISTA', '')) == view_req
+                v_val = r.get('VISTA') or r.get('vista') or r.get('SEMANAL/ANUAL') or 'SEMANAL'
+                match_view = normalizar_id(v_val) == view_req
             
             if match_user and match_view:
                 filtered.append(r)
@@ -1229,44 +1357,51 @@ def api_cronograma_save():
             raw_headers = all_v[0]
             norm_headers = [normalizar_cabecera_universal(h) for h in raw_headers]
 
-        # Soporte robusto para alias de llaves (asegura que val_fecha no esté vacío)
-        val_fecha = data.get('fecha') or data.get('dia/mes') or data.get('fecha_iso') or data.get('date') or data.get('start') or data.get('dia') or data.get('mes') or ""
+        # Prioridad de alias: campos de usuario (fecha, dia) sobre campos de sistema (start, date)
+        val_fecha_raw = data.get('fecha') or data.get('dia/mes') or data.get('dia') or data.get('mes') or data.get('fecha_iso') or data.get('start') or data.get('date') or ""
         val_tarea = data.get('tarea') or data.get('title') or data.get('nombre') or data.get('titulo') or data.get('actividad') or data.get('descripcion') or data.get('description') or data.get('text') or data.get('content') or ""
-        val_resp = data.get('responsable') or data.get('persona') or session.get('usuario', 'admin')
+        val_resp = data.get('responsable') or data.get('persona') or data.get('user') or session.get('usuario', 'admin')
         val_tipo = data.get('categoria') or data.get('tipo') or data.get('cat') or ""
         val_vista = data.get('vista') or data.get('semanal/anual') or data.get('view') or "SEMANAL"
         val_estado = data.get('estado') or data.get('status') or data.get('completado') or "PENDIENTE"
 
-        # Mapeo expandido con alias para que coincida con cualquier variante de cabecera
-        row_map = {
-            "DIAMES": str(val_fecha).strip(),
-            "FECHA": str(val_fecha).strip(),
-            "FECHAISO": str(val_fecha).strip(),
-            "TAREAS": str(val_tarea).strip(),
-            "TAREA": str(val_tarea).strip(),
-            "CATEGORIA": str(val_tipo).strip(),
-            "TIPO": str(val_tipo).strip(),
-            "PERSONA": str(val_resp).strip(),
-            "RESPONSABLE": str(val_resp).strip(),
-            "SEMANALANUAL": str(val_vista).strip().upper(),
-            "VISTA": str(val_vista).strip().upper(),
-            "FRECUENCIA": str(data.get('frecuencia', '')).strip(),
-            "ESTADO": str(val_estado).strip().upper(),
-            "COMPLETADO": str(val_estado).strip().upper()
-        }
-
-        nueva_fila = []
-        for h_norm in norm_headers:
-            val_a_insertar = row_map.get(h_norm, "")
-            nueva_fila.append(val_a_insertar)
-
-        # Verificación de seguridad: si la fila está casi vacía, algo falló en el mapeo
-        if not val_fecha or not val_tarea:
-            print(f"ERROR: Datos incompletos. Datos: {data}")
+        if not val_fecha_raw or not val_tarea:
             return jsonify({"status": "error", "message": "Fecha y Tarea son campos obligatorios"}), 400
 
-        print(f"DEBUG: Guardando en TAREAS -> {nueva_fila}")
-        sheet.append_row(nueva_fila)
+        # GENERAR VARIOS ASIENTOS: Soporte para múltiples días/fechas
+        s_f = str(val_fecha_raw).replace(';', ',').replace(' y ', ',')
+        instancias = [x.strip() for x in s_f.split(',') if x.strip()]
+        
+        if len(instancias) == 1:
+            tokens = [tk.strip() for tk in instancias[0].split() if tk.strip()]
+            if tokens and all(es_dia_valido_crono(t) for t in tokens):
+                instancias = tokens
+
+        # Soporte para "Seleccionar Todos"
+        instancias_final = []
+        for f_inst in instancias:
+            if f_inst.upper() in ["TODOS", "TODO", "TOTAL", "ALL", "*", "SELECCIONAR TODOS"]:
+                if str(val_vista).upper() == "ANUAL":
+                    instancias_final.extend(["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"])
+                else:
+                    instancias_final.extend(["LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO", "DOMINGO"])
+            else:
+                instancias_final.append(f_inst)
+
+        for f_inst in instancias_final:
+            f_inst_norm = normalizar_dia_cronograma(f_inst, vista=val_vista)
+            row_map = {
+                "DIAMES": f_inst_norm, "FECHA": f_inst_norm, "FECHAISO": f_inst_norm, "DATE": f_inst_norm, "START": f_inst_norm, "DIA": f_inst_norm, "MES": f_inst_norm, "DIA/MES": f_inst_norm, "LUNES": f_inst_norm, "MARTES": f_inst_norm, "MIERCOLES": f_inst_norm, "JUEVES": f_inst_norm, "VIERNES": f_inst_norm, "SABADO": f_inst_norm, "DOMINGO": f_inst_norm,
+                "TAREAS": str(val_tarea).strip(), "TAREA": str(val_tarea).strip(), "TITLE": str(val_tarea).strip(), "TITULO": str(val_tarea).strip(), "NOMBRE": str(val_tarea).strip(), "ACTIVIDAD": str(val_tarea).strip(), "TAREASCRONOGRAMA": str(val_tarea).strip(),
+                "CATEGORIA": str(val_tipo).strip(), "TIPO": str(val_tipo).strip(), "CAT": str(val_tipo).strip(), "DIRECCIONDEPORTIVA": str(val_tipo).strip(),
+                "PERSONA": str(val_resp).strip(), "RESPONSABLE": str(val_resp).strip(), "USER": str(val_resp).strip(), "COACH": str(val_resp).strip(), "ENTRENADOR": str(val_resp).strip(),
+                "SEMANALANUAL": str(val_vista).strip().upper(), "VISTA": str(val_vista).strip().upper(), "VIEW": str(val_vista).strip().upper(),
+                "FRECUENCIA": str(data.get('frecuencia') or "").strip(), "REPETICION": str(data.get('frecuencia') or "").strip(), "REPEAT": str(data.get('frecuencia') or "").strip(),
+                "ESTADO": str(val_estado).strip().upper(), "COMPLETADO": str(val_estado).strip().upper(), "STATUS": str(val_estado).strip().upper()
+            }
+            nueva_fila = [row_map.get(h_norm, "") for h_norm in norm_headers]
+            sheet.append_row(nueva_fila, value_input_option='USER_ENTERED')
+
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error guardando en TAREAS: {e}")
@@ -1277,12 +1412,9 @@ def api_cronograma_update_status():
     data = request.json
     if not data: return jsonify({"status": "error"}), 400
     
-    def normalizar_comp(val):
-        return " ".join(str(val).split()).lower().strip()
-
     user_norm = normalizar_id(data.get('user'))
-    fecha_req = str(data.get('fecha')).strip()
-    tarea_norm_req = normalizar_comp(data.get('tarea'))
+    fecha_norm_req = normalizar_crono_busqueda(data.get('fecha'))
+    tarea_norm_req = normalizar_crono_busqueda(data.get('tarea'))
     nuevo_estado = str(data.get('estado', 'PENDIENTE')).upper()
 
     try:
@@ -1298,9 +1430,11 @@ def api_cronograma_update_status():
             return next((headers.index(a) for a in aliases if a in headers), -1)
 
         idx_user = find_col(['PERSONA', 'RESPONSABLE', 'USER', 'COACH', 'ENTRENADOR'])
-        idx_fecha = find_col(['DIAMES', 'FECHAISO', 'FECHA', 'DATE', 'START', 'DIA', 'MES'])
+        idx_fecha = find_col(['DIAMES', 'FECHAISO', 'FECHA', 'DATE', 'START', 'DIA', 'MES', 'DIA/MES'] + DIAS_MESES_IDENT)
         idx_tarea = find_col(['TAREA', 'TAREAS', 'TITLE', 'TITULO', 'NOMBRE', 'ACTIVIDAD', 'EVENTO', 'DESCRIPCION', 'DESCRIPTION', 'CONTENIDO', 'TEXT', 'CONTENT'])
+        idx_vista = find_col(['SEMANALANUAL', 'VISTA', 'VIEW'])
         idx_estado = find_col(['COMPLETADO', 'ESTADO', 'STATUS'])
+        vista_req = normalizar_id(data.get('vista'))
 
         if -1 in [idx_user, idx_fecha, idx_tarea, idx_estado]:
             return jsonify({"status": "error", "message": "Columnas no encontradas"}), 500
@@ -1308,12 +1442,18 @@ def api_cronograma_update_status():
         fila_idx = -1
         for i, row in enumerate(all_v):
             if i == 0: continue
-            if len(row) > max(idx_user, idx_fecha, idx_tarea):
+            if len(row) > max(idx_user, idx_fecha, idx_tarea, idx_vista):
                 u = normalizar_id(row[idx_user])
-                f = str(row[idx_fecha]).strip()
-                t = normalizar_comp(row[idx_tarea])
+                f_raw = str(row[idx_fecha]).replace(';', ',').replace(' y ', ',')
+                parts_row = [normalizar_crono_busqueda(x) for x in f_raw.split(',') if x.strip()]
+                if len(parts_row) == 1 and ' ' in parts_row[0]:
+                    parts_row = [x.strip() for x in parts_row[0].split() if x.strip()]
                 
-                if u == user_norm and f == fecha_req and t == tarea_norm_req:
+                match_f = (fecha_norm_req in parts_row)
+                t = normalizar_crono_busqueda(row[idx_tarea])
+                v = normalizar_id(row[idx_vista]) if idx_vista != -1 else ""
+
+                if u == user_norm and match_f and t == tarea_norm_req and (not vista_req or v == vista_req):
                     fila_idx = i + 1
                     break
         
@@ -1330,13 +1470,10 @@ def api_cronograma_update_status():
 def api_cronograma_delete():
     data = request.json
     if not data: return jsonify({"status": "error"}), 400
-
-    def normalizar_comp(val):
-        return " ".join(str(val).split()).lower().strip()
     
     user_req = normalizar_id(data.get('user'))
-    fecha_req = str(data.get('fecha')).strip()
-    tarea_norm_req = normalizar_comp(data.get('tarea'))
+    fecha_norm_req = normalizar_crono_busqueda(data.get('fecha'))
+    tarea_norm_req = normalizar_crono_busqueda(data.get('tarea'))
 
     try:
         client = app.gs_client
@@ -1351,8 +1488,10 @@ def api_cronograma_delete():
             return next((headers.index(a) for a in aliases if a in headers), -1)
 
         idx_user = find_col(['PERSONA', 'RESPONSABLE', 'USER', 'COACH', 'ENTRENADOR'])
-        idx_fecha = find_col(['DIAMES', 'FECHAISO', 'FECHA', 'DATE', 'START', 'DIA', 'MES'])
+        idx_fecha = find_col(['DIAMES', 'FECHAISO', 'FECHA', 'DATE', 'START', 'DIA', 'MES', 'DIA/MES'] + DIAS_MESES_IDENT)
         idx_tarea = find_col(['TAREA', 'TAREAS', 'TITLE', 'TITULO', 'NOMBRE', 'ACTIVIDAD', 'EVENTO', 'DESCRIPCION', 'DESCRIPTION', 'CONTENIDO', 'TEXT', 'CONTENT'])
+        idx_vista = find_col(['SEMANALANUAL', 'VISTA', 'VIEW'])
+        vista_req = normalizar_id(data.get('vista'))
 
         if -1 in [idx_user, idx_fecha, idx_tarea]:
             return jsonify({"status": "error", "message": "Columnas no encontradas"}), 500
@@ -1360,12 +1499,18 @@ def api_cronograma_delete():
         fila_idx = -1
         for i, row in enumerate(all_v):
             if i == 0: continue
-            if len(row) > max(idx_user, idx_fecha, idx_tarea):
+            if len(row) > max(idx_user, idx_fecha, idx_tarea, idx_vista):
                 u = normalizar_id(row[idx_user])
-                f = str(row[idx_fecha]).strip()
-                t = normalizar_comp(row[idx_tarea])
+                f_raw = str(row[idx_fecha]).replace(';', ',').replace(' y ', ',')
+                parts_row = [normalizar_crono_busqueda(x) for x in f_raw.split(',') if x.strip()]
+                if len(parts_row) == 1 and ' ' in parts_row[0]:
+                    parts_row = [x.strip() for x in parts_row[0].split() if x.strip()]
                 
-                if u == user_req and f == fecha_req and t == tarea_norm_req:
+                match_f = (fecha_norm_req in parts_row)
+                t = normalizar_crono_busqueda(row[idx_tarea])
+                v = normalizar_id(row[idx_vista]) if idx_vista != -1 else ""
+
+                if u == user_req and match_f and t == tarea_norm_req and (not vista_req or v == vista_req):
                     fila_idx = i + 1
                     break
         
@@ -1376,6 +1521,136 @@ def api_cronograma_delete():
         return jsonify({"status": "error", "message": "Tarea no encontrada"}), 404
     except Exception as e:
         print(f"Error eliminando tarea cronograma: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/cronograma_edit', methods=['POST'])
+def api_cronograma_edit():
+    """Permite editar cualquier campo de una tarea existente buscando por sus valores originales."""
+    data = request.json
+    if not data: return jsonify({"status": "error", "message": "No se recibieron datos"}), 400
+
+    # Valores originales para identificar la fila (ID compuesto)
+    old_u = normalizar_id(data.get('old_user') or data.get('user'))
+    old_f = normalizar_crono_busqueda(data.get('old_fecha') or data.get('fecha'))
+    old_t = normalizar_crono_busqueda(data.get('old_tarea') or data.get('tarea'))
+    old_v = normalizar_id(data.get('old_vista') or data.get('vista'))
+
+    try:
+        client = app.gs_client
+        spreadsheet = client.open(app.gs_name)
+        sheet = spreadsheet.worksheet("TAREAS CRONOGRAMA")
+        all_v = sheet.get_all_values()
+        if not all_v: return jsonify({"status": "error", "message": "Hoja vacía"}), 404
+
+        headers_raw = all_v[0]
+        headers = [normalizar_cabecera_universal(h) for h in headers_raw]
+        
+        def find_col(aliases):
+            return next((headers.index(a) for a in aliases if a in headers), -1)
+
+        idx_user = find_col(['PERSONA', 'RESPONSABLE', 'USER', 'COACH', 'ENTRENADOR'])
+        idx_fecha = find_col(['DIAMES', 'FECHAISO', 'FECHA', 'DATE', 'START', 'DIA', 'MES', 'DIA/MES'] + DIAS_MESES_IDENT)
+        idx_tarea = find_col(['TAREA', 'TAREAS', 'TITLE', 'TITULO', 'NOMBRE', 'ACTIVIDAD', 'TAREASCRONOGRAMA', 'EVENTO', 'DESCRIPCION'])
+        idx_vista = find_col(['SEMANALANUAL', 'VISTA', 'VIEW'])
+        idx_tipo = find_col(['CATEGORIA', 'TIPO', 'CAT', 'DIRECCIONDEPORTIVA'])
+        idx_freq = find_col(['FRECUENCIA', 'REPETICION', 'REPEAT'])
+        idx_estado = find_col(['ESTADO', 'COMPLETADO', 'STATUS'])
+
+        if -1 in [idx_user, idx_fecha, idx_tarea]:
+            return jsonify({"status": "error", "message": "Columnas de búsqueda no encontradas"}), 500
+
+        fila_idx = -1
+        for i, row in enumerate(all_v):
+            if i == 0: continue
+            if len(row) > max(idx_user, idx_fecha, idx_tarea, idx_vista):
+                u = normalizar_id(row[idx_user])
+                f_raw = str(row[idx_fecha]).replace(';', ',').replace(' y ', ',')
+                parts_row = [normalizar_crono_busqueda(x) for x in f_raw.split(',') if x.strip()]
+                if len(parts_row) == 1 and ' ' in parts_row[0]:
+                    parts_row = [x.strip() for x in parts_row[0].split() if x.strip()]
+                
+                match_f = (old_f in parts_row)
+                t = normalizar_crono_busqueda(row[idx_tarea])
+                v = normalizar_id(row[idx_vista]) if idx_vista != -1 else ""
+
+                if u == old_u and match_f and t == old_t and (not old_v or v == old_v):
+                    fila_idx = i + 1
+                    break
+        
+        if fila_idx == -1:
+            return jsonify({"status": "error", "message": "Tarea no encontrada para editar"}), 404
+
+        val_fecha_raw = data.get('fecha') or data.get('new_fecha') or data.get('dia/mes') or data.get('dia') or data.get('mes') or data.get('fecha_iso') or data.get('start') or ""
+        val_tarea = data.get('tarea') or data.get('new_tarea') or data.get('title') or data.get('nombre') or data.get('titulo') or ""
+        val_resp = data.get('responsable') or data.get('persona') or data.get('new_user') or data.get('user') or session.get('usuario', 'admin')
+        val_tipo = data.get('categoria') or data.get('tipo') or data.get('cat') or ""
+        val_vista = data.get('vista') or data.get('view') or data.get('semanal/anual') or "SEMANAL"
+        val_freq = data.get('frecuencia')
+        val_estado = data.get('estado') or data.get('status')
+
+        # GENERAR VARIOS ASIENTOS AL EDITAR:
+        s_f = str(val_fecha_raw).replace(';', ',').replace(' y ', ',')
+        instancias = [x.strip() for x in s_f.split(',') if x.strip()]
+        
+        if len(instancias) == 1:
+            tokens = [tk.strip() for tk in instancias[0].split() if tk.strip()]
+            if tokens and all(es_dia_valido_crono(t) for t in tokens):
+                instancias = tokens
+
+        if not instancias:
+            return jsonify({"status": "error", "message": "Fecha obligatoria"}), 400
+
+        # Soporte para "Seleccionar Todos" en edición
+        instancias_final = []
+        for f_inst in instancias:
+            if f_inst.upper() in ["TODOS", "TODO", "TOTAL", "ALL", "*", "SELECCIONAR TODOS"]:
+                if str(val_vista).upper() == "ANUAL":
+                    instancias_final.extend(["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"])
+                else:
+                    instancias_final.extend(["LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO", "DOMINGO"])
+            else:
+                instancias_final.append(f_inst)
+
+        # 1. Actualizamos la fila original con la primera instancia (asiento) de forma masiva
+        f_first = normalizar_dia_cronograma(instancias_final[0], vista=val_vista)
+        row_update = list(all_v[fila_idx-1]) # Copia del contenido actual de la fila
+        
+        # Aseguramos que la lista sea lo suficientemente larga para evitar IndexError si hay celdas vacías al final
+        max_needed_idx = max(idx_user, idx_fecha, idx_tarea, idx_vista, idx_tipo, idx_freq, idx_estado)
+        if len(row_update) <= max_needed_idx:
+            row_update.extend([""] * (max_needed_idx - len(row_update) + 1))
+        
+        for i, h_raw in enumerate(headers_raw):
+            h = normalizar_cabecera_universal(h_raw)
+            if h in ['PERSONA', 'RESPONSABLE', 'USER', 'COACH', 'ENTRENADOR'] and val_resp is not None: row_update[i] = str(val_resp).strip()
+            elif normalizar_cabecera_universal(h_raw) in (['DIAMES', 'FECHAISO', 'FECHA', 'DATE', 'START', 'DIA', 'MES', 'DIA/MES'] + DIAS_MESES_IDENT) and f_first is not None: row_update[i] = f_first
+            elif h in ['TAREA', 'TAREAS', 'TITLE', 'TITULO', 'NOMBRE', 'ACTIVIDAD', 'TAREASCRONOGRAMA'] and val_tarea is not None: row_update[i] = str(val_tarea).strip()
+            elif h in ['SEMANALANUAL', 'VISTA', 'VIEW'] and val_vista is not None: row_update[i] = str(val_vista).strip().upper()
+            elif h in ['CATEGORIA', 'TIPO', 'CAT', 'DIRECCIONDEPORTIVA'] and val_tipo is not None: row_update[i] = str(val_tipo).strip()
+            elif h in ['FRECUENCIA', 'REPETICION', 'REPEAT'] and val_freq is not None: row_update[i] = str(val_freq).strip()
+            elif h in ['ESTADO', 'STATUS', 'COMPLETADO'] and val_estado is not None: row_update[i] = str(val_estado).strip().upper()
+
+        sheet.update(range_name=f'A{fila_idx}', values=[row_update], value_input_option='USER_ENTERED')
+
+        # 2. Si se añadieron más días/opciones, generamos nuevos "asientos" (filas)
+        if len(instancias_final) > 1:
+            for f_extra in instancias_final[1:]:
+                f_norm_ex = normalizar_dia_cronograma(f_extra, vista=val_vista)
+                row_map = {
+                    "DIAMES": f_norm_ex, "FECHA": f_norm_ex, "FECHAISO": f_norm_ex, "DATE": f_norm_ex, "START": f_norm_ex, "DIA": f_norm_ex, "MES": f_norm_ex, "DIA/MES": f_norm_ex, "LUNES": f_norm_ex, "MARTES": f_norm_ex, "MIERCOLES": f_norm_ex, "JUEVES": f_norm_ex, "VIERNES": f_norm_ex, "SABADO": f_norm_ex, "DOMINGO": f_norm_ex,
+                    "TAREAS": str(val_tarea).strip(), "TAREA": str(val_tarea).strip(), "TITLE": str(val_tarea).strip(), "TITULO": str(val_tarea).strip(), "NOMBRE": str(val_tarea).strip(), "ACTIVIDAD": str(val_tarea).strip(), "TAREASCRONOGRAMA": str(val_tarea).strip(),
+                    "CATEGORIA": str(val_tipo).strip(), "TIPO": str(val_tipo).strip(), "CAT": str(val_tipo).strip(), "DIRECCIONDEPORTIVA": str(val_tipo).strip(),
+                    "PERSONA": str(val_resp).strip(), "RESPONSABLE": str(val_resp).strip(), "USER": str(val_resp).strip(), "COACH": str(val_resp).strip(), "ENTRENADOR": str(val_resp).strip(),
+                    "SEMANALANUAL": str(val_vista).strip().upper(), "VISTA": str(val_vista).strip().upper(), "VIEW": str(val_vista).strip().upper(),
+                    "FRECUENCIA": str(val_freq or "").strip(), "REPETICION": str(val_freq or "").strip(), "REPEAT": str(val_freq or "").strip(),
+                    "ESTADO": str(val_estado).strip().upper(), "COMPLETADO": str(val_estado).strip().upper(), "STATUS": str(val_estado).strip().upper()
+                }
+                nueva_fila = [row_map.get(h_norm, "") for h_norm in headers]
+                sheet.append_row(nueva_fila, value_input_option='USER_ENTERED')
+
+        return jsonify({"status": "success", "message": "Tarea actualizada correctamente"})
+    except Exception as e:
+        print(f"Error en api_cronograma_edit: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 # --- REGISTRO DE BLUEPRINTS ---
