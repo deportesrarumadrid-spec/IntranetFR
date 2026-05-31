@@ -215,7 +215,7 @@
     border-radius: 50%; background: white; color: #E31E24;
     border: 2px solid #E31E24; cursor: pointer; display: flex;
     align-items: center; justify-content: center; font-size: 16px;
-    z-index: 10001; /* Asegurar que esté siempre encima */
+    z-index: 20000; /* Prioridad máxima */
     transition: all 0.3s ease;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
@@ -223,9 +223,9 @@
         .badge-crono {
             display: none; position: absolute; top: -5px; right: -5px; background: #28a745;
             color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 10px;
-            font-weight: 900; align-items: center; justify-content: center; border: 2px solid white;
+            font-weight: 900; align-items: center; justify-content: center; border: 2px solid white; z-index: 100;
         }
-        .modal-crono { display: none; position: fixed; z-index: 10005; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .modal-crono { display: none; position: fixed; z-index: 30000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; backdrop-filter: blur(5px); }
         .btn-profile { padding: 10px; background: #f1f5f9; color: #64748b; border: 2px solid transparent; border-radius: 10px; font-weight: 800; font-size: 10px; cursor: pointer; transition: 0.3s; }
         .btn-profile.selected { background: #E31E24; color: white; border-color: #E31E24; }
         .pill-checkbox { display: flex; align-items: center; gap: 8px; background: #fff; border: 2px solid #eee; padding: 8px 16px; border-radius: 30px; font-size: 11px; font-weight: 800; cursor: pointer; transition: 0.3s; color: #666; user-select: none; }
@@ -359,6 +359,11 @@
         function openCronogramaAuth() {
             document.getElementById('modalCronogramaGlobal').style.display = 'flex';
             document.getElementById('badgeCronoGlobal').style.display = 'none';
+            
+            // Ocultar el botón circular mientras el cronograma está abierto
+            const btn = document.querySelector('.btn-cronograma-fixed');
+            if (btn) btn.style.display = 'none';
+            
             sessionStorage.setItem('crono_minimized', 'false');
         }
 
@@ -366,6 +371,10 @@
             const modal = document.getElementById('modalCronogramaGlobal');
             modal.style.display = 'none';
             document.getElementById('cronoIframe').src = '';
+            
+            // Mostrar el botón circular al cerrar
+            const btn = document.querySelector('.btn-cronograma-fixed');
+            if (btn) btn.style.display = 'flex';
             
             // RESET TOTAL DEL MODAL PARA EVITAR PANTALLA GRIS AL VOLVER
             document.getElementById('cronoEntryView').style.display = 'block';
@@ -385,6 +394,11 @@
             if (e.data === 'minimizeCronograma') {
                 document.getElementById('modalCronogramaGlobal').style.display = 'none';
                 document.getElementById('badgeCronoGlobal').style.display = 'flex';
+                
+                // Asegurar que el botón circular sea visible al minimizar
+                const btn = document.querySelector('.btn-cronograma-fixed');
+                if (btn) btn.style.display = 'flex';
+                
                 sessionStorage.setItem('crono_minimized', 'true');
             }
         });

@@ -518,8 +518,8 @@
                     const delRes = await fetch('/api/cronograma_delete', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ 
-                            user: PERSONA_MOSTRADA,
+                        body: JSON.stringify({
+                            user: editingOriginal.user || PERSONA_MOSTRADA,
                             fecha: editingOriginal.fecha,
                             tarea: editingOriginal.tarea
                         })
@@ -645,7 +645,7 @@
             }
         }
 
-        function renderTaskItemWeekly(container, ev, tipoLimpio, tareaLimpia) {
+        function renderTaskItemWeekly(container, ev, tipoLimpio, tareaLimpia, taskOwner) {
             const catClassName = sanitizeClass(tipoLimpio);
             let section = container.querySelector('.' + catClassName);
             if (!section) {
@@ -656,6 +656,7 @@
             }
             
             const isDone = (ev.ESTADO || '').toUpperCase() === 'COMPLETADO';
+            const ownerVal = taskOwner || ev.RESPONSABLE || PERSONA_MOSTRADA;
             const evDiv = document.createElement('div');
             evDiv.className = `evento ev-${tipoLimpio.toLowerCase()}`;
             evDiv.style.display = 'flex';
@@ -665,7 +666,7 @@
             
             const tEsc = tareaLimpia.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, " ");
             const fEsc = (ev.FECHA_ISO || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
-            const rEsc = (ev.RESPONSABLE || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+            const rEsc = ownerVal.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
             const frEsc = (ev.FRECUENCIA || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;").trim();
             const catEsc = tipoLimpio.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
             const estAct = (ev.ESTADO || 'PENDIENTE').toUpperCase();
@@ -675,9 +676,9 @@
                     <span style="${isDone ? 'text-decoration: line-through; opacity: 0.4;' : ''} white-space: normal; word-break: break-word; line-height: 1.2; font-size: 11px; color: #1e293b; font-weight: 700;">${tareaLimpia}</span>
                 </div>
                 <div class="task-actions" style="display: flex; gap: 0; align-items: center; flex-shrink: 0; margin-right: -10px; justify-content: flex-end;">
-                    <button onclick="event.stopPropagation(); toggleEstadoTarea('${fEsc}', '${tEsc}', '${estAct}')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; border: 1.5px solid ${isDone ? '#28a745' : '#cbd5e1'}; background: ${isDone ? '#f0fdf4' : '#fff'}; color: ${isDone ? '#28a745' : '#cbd5e1'}; transition: 0.2s; flex-shrink: 0; padding: 0;" title="${isDone ? 'Pendiente' : 'Completar'}"><i class="fa-solid fa-check" style="font-size: 10px; font-weight: 900; opacity: ${isDone ? '1' : '0.3'};"></i></button>
-                    <button onclick="event.stopPropagation(); abrirEdicionTarea('${fEsc}', '${tEsc}', '${catEsc}', '${rEsc}', '${frEsc}')" style="border:none; background:transparent; color:#1e293b; width:22px; height:22px; border-radius:4px; cursor:pointer; display: flex; align-items: center; justify-content: center; padding: 0;"><i class="fa-solid fa-pencil" style="font-size:10px;"></i></button>
-                    <button onclick="event.stopPropagation(); eliminarTareaCronograma('${fEsc}', '${tEsc}')" style="border:none; background:transparent; color:#dc3545; width:22px; height:22px; border-radius:4px; cursor:pointer; display: flex; align-items: center; justify-content: center; padding: 0;"><i class="fa-solid fa-trash" style="font-size:10px;"></i></button>
+                    <button onclick="event.stopPropagation(); toggleEstadoTarea('${rEsc}', '${fEsc}', '${tEsc}', '${estAct}')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; border: 1.5px solid ${isDone ? '#28a745' : '#cbd5e1'}; background: ${isDone ? '#f0fdf4' : '#fff'}; color: ${isDone ? '#28a745' : '#cbd5e1'}; transition: 0.2s; flex-shrink: 0; padding: 0;" title="${isDone ? 'Pendiente' : 'Completar'}"><i class="fa-solid fa-check" style="font-size: 10px; font-weight: 900; opacity: ${isDone ? '1' : '0.3'};"></i></button>
+                    <button onclick="event.stopPropagation(); abrirEdicionTarea('${rEsc}', '${fEsc}', '${tEsc}', '${catEsc}', '${rEsc}', '${frEsc}')" style="border:none; background:transparent; color:#1e293b; width:22px; height:22px; border-radius:4px; cursor:pointer; display: flex; align-items: center; justify-content: center; padding: 0;"><i class="fa-solid fa-pencil" style="font-size:10px;"></i></button>
+                    <button onclick="event.stopPropagation(); eliminarTareaCronograma('${rEsc}', '${fEsc}', '${tEsc}')" style="border:none; background:transparent; color:#dc3545; width:22px; height:22px; border-radius:4px; cursor:pointer; display: flex; align-items: center; justify-content: center; padding: 0;"><i class="fa-solid fa-trash" style="font-size:10px;"></i></button>
                 </div>
             `;
             section.appendChild(evDiv);
@@ -759,9 +760,9 @@
             evDiv.innerHTML = `
                 <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight: 700; ${isDone ? 'text-decoration: line-through; opacity: 0.5;' : ''}" title="${ev.TAREA}">${ev.TAREA}</span>
                 <div class="actions-anual" style="display:flex; gap:0; margin-right: -10px; justify-content: flex-end;">
-                    <button onclick="event.stopPropagation(); toggleEstadoTarea('${fEsc}', '${tEsc}', '${estAct}')" style="border:1px solid ${isDone ? '#28a745' : '#cbd5e1'}; background:${isDone ? '#f0fdf4' : '#fff'}; color:${isDone ? '#28a745' : '#cbd5e1'}; width:18px; height:18px; border-radius:3px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s; padding: 0;" title="${isDone ? 'Pendiente' : 'Completar'}"><i class="fa-solid fa-check" style="font-size:8px; font-weight:900; opacity:${isDone ? '1' : '0.3'}"></i></button>
-                    <button onclick="event.stopPropagation(); abrirEdicionTarea('${fEsc}', '${tEsc}', '${catEsc}', '${rEsc}', '${frEsc}')" style="border:none; background:transparent; color:#1e293b; width:18px; height:18px; border-radius:3px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s; padding: 0;" onmouseover="this.style.background='#fff'; this.style.color='#E31E24'" onmouseout="this.style.background='transparent'; this.style.color='#1e293b'" title="Editar"><i class="fa-solid fa-pencil" style="font-size:9px;"></i></button>
-                    <button onclick="event.stopPropagation(); eliminarTareaCronograma('${fEsc}', '${tEsc}')" style="border:none; background:transparent; color:#dc3545; width:18px; height:18px; border-radius:3px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s; padding: 0;" onmouseover="this.style.transform='scale(1.2)'; this.style.background='#fff'" onmouseout="this.style.transform='scale(1)'; this.style.background='transparent'" title="Eliminar"><i class="fa-solid fa-trash" style="font-size:9px;"></i></button>
+                    <button onclick="event.stopPropagation(); toggleEstadoTarea('${rEsc}', '${fEsc}', '${tEsc}', '${estAct}')" style="border:1px solid ${isDone ? '#28a745' : '#cbd5e1'}; background:${isDone ? '#f0fdf4' : '#fff'}; color:${isDone ? '#28a745' : '#cbd5e1'}; width:18px; height:18px; border-radius:3px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s; padding: 0;" title="${isDone ? 'Pendiente' : 'Completar'}"><i class="fa-solid fa-check" style="font-size:8px; font-weight:900; opacity:${isDone ? '1' : '0.3'}"></i></button>
+                    <button onclick="event.stopPropagation(); abrirEdicionTarea('${rEsc}', '${fEsc}', '${tEsc}', '${catEsc}', '${rEsc}', '${frEsc}')" style="border:none; background:transparent; color:#1e293b; width:18px; height:18px; border-radius:3px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s; padding: 0;" onmouseover="this.style.background='#fff'; this.style.color='#E31E24'" onmouseout="this.style.background='transparent'; this.style.color='#1e293b'" title="Editar"><i class="fa-solid fa-pencil" style="font-size:9px;"></i></button>
+                    <button onclick="event.stopPropagation(); eliminarTareaCronograma('${rEsc}', '${fEsc}', '${tEsc}')" style="border:none; background:transparent; color:#dc3545; width:18px; height:18px; border-radius:3px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s; padding: 0;" onmouseover="this.style.transform='scale(1.2)'; this.style.background='#fff'" onmouseout="this.style.transform='scale(1)'; this.style.background='transparent'" title="Eliminar"><i class="fa-solid fa-trash" style="font-size:9px;"></i></button>
                 </div>
             `;
             container.appendChild(evDiv);
@@ -769,7 +770,7 @@
 
         initCargaCronograma();
 
-        async function toggleEstadoTarea(fecha, tarea, estadoActual) {
+        async function toggleEstadoTarea(user, fecha, tarea, estadoActual) {
             const nuevoEstado = (estadoActual || '').toUpperCase() === 'COMPLETADO' ? 'PENDIENTE' : 'COMPLETADO';
             showLoader();
             try {
@@ -777,7 +778,7 @@
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ 
-                        user: PERSONA_MOSTRADA,
+                        user: user || PERSONA_MOSTRADA,
                         fecha: fecha,
                         tarea: tarea,
                         estado: nuevoEstado
@@ -796,13 +797,13 @@
             } finally { hideLoader(); }
         }
 
-        function abrirEdicionTarea(fecha, tarea, tipo, responsable, frecuencia) {
+        function abrirEdicionTarea(user, fecha, tarea, tipo, responsable, frecuencia) {
             // Decodificar para que el nombre coincida exactamente al buscar para borrar
             const txtTemp = document.createElement("textarea");
             txtTemp.innerHTML = tarea;
             const tareaReal = txtTemp.value;
 
-            editingOriginal = { fecha, tarea: tareaReal }; 
+            editingOriginal = { user: user, fecha, tarea: tareaReal };
             document.getElementById('modalTaskTitle').innerText = "Modificar Tarea";
             document.getElementById('btnSaveTask').innerText = "ACTUALIZAR CAMBIOS";
 
@@ -828,11 +829,14 @@
             }
             
             // Seleccionar Responsable
-            const inputOwner = document.getElementById('taskOwner');
-            if (inputOwner) {
-                inputOwner.value = responsable;
-                const ownerBtn = Array.from(document.querySelectorAll('#groupOwner .pill-opt')).find(b => norm(b.innerText) === norm(responsable));
-                if (ownerBtn) selectPill('taskOwner', responsable, ownerBtn);
+            const groupOwner = document.getElementById('groupOwner');
+            if (groupOwner) {
+                document.querySelectorAll('#groupOwner .pill-opt').forEach(p => p.classList.remove('selected'));
+                const respList = (responsable || "").split(',').map(s => s.trim());
+                respList.forEach(r => {
+                    const ownerBtn = Array.from(document.querySelectorAll('#groupOwner .pill-opt')).find(b => norm(b.innerText) === norm(r));
+                    if (ownerBtn) ownerBtn.classList.add('selected');
+                });
             }
             
             // --- LÓGICA DE CELDAS MARCADAS (DÍAS) ---
@@ -862,7 +866,7 @@
             document.getElementById('modalTarea').style.display = 'flex';
         }
 
-        async function eliminarTareaCronograma(fecha, tarea) {
+        async function eliminarTareaCronograma(user, fecha, tarea) {
             if (!confirm(`¿Seguro que quieres eliminar la tarea "${tarea}"?`)) return;
             
             showLoader();
@@ -871,7 +875,7 @@
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ 
-                        user: PERSONA_MOSTRADA,
+                        user: user || PERSONA_MOSTRADA,
                         fecha: fecha,
                         tarea: tarea
                     })

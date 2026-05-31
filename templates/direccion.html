@@ -386,32 +386,7 @@
     }
     .calendar-week-row.selected-week { background: #ffebeb; }
 
-    /* Botón Cronograma Circular */
-    .btn-cronograma-fixed {
-        position: fixed;
-        top: 28px;
-        right: 205px;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: transparent;
-        color: #E31E24;
-        border: 2px solid #E31E24;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 16px;
-        z-index: 1000;
-        transition: all 0.3s ease;
-    }
-    .btn-cronograma-fixed:hover { background: #E31E24; color: white; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(227, 30, 36, 0.3); }
-    .btn-cronograma-fixed:active { transform: scale(0.95); }
-    
-    
     /* Estilos para Perfiles en Cronograma */
-    /* ... (existing styles) ... */
-
     .btn-profile {
         padding: 10px;
         background: #f1f5f9;
@@ -446,14 +421,6 @@
     }
 </style>
 
-<!-- Botón Cronograma junto a Cerrar Sesión con Autenticación -->
-{% if usuario|lower == 'admin' or session.get('permisos', {}).get('CRONOGRAMA') == 'SI' %}
-<button class="btn-cronograma-fixed" onclick="openCronogramaAuth()" title="Ver Cronograma (Alt+1)">
-    <i class="fas fa-calendar-days"></i>
-    <span id="badgeCrono" style="display: none; position: absolute; top: -5px; right: -5px; background: #28a745; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; font-weight: 900; align-items: center; justify-content: center; border: 2px solid white; z-index: 10;">1</span>
-</button>
-{% endif %}
- 
 <div style="padding: 10px;">
     <div class="tabs-container">
         <div class="tab-item active" onclick="switchTab(event, 'tab-coordinacion')">COORDINACIÓN</div>
