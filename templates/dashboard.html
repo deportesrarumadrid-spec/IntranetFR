@@ -258,6 +258,9 @@
     
     <div class="menu-container">
         {% if session.get('permisos', {}).get('ENTRENAMIENTOS') == 'SI' %}
+        <a href="/mi-equipo" class="menu-item {{ 'active' if request.path == '/mi-equipo' }}" onclick="showLoader()">MI EQUIPO</a>
+        {% endif %}
+        {% if session.get('permisos', {}).get('ENTRENAMIENTOS') == 'SI' %}
         <a href="/deportivo" class="menu-item {{ 'active' if request.path == '/deportivo' }}" onclick="showLoader()">ENTRENAMIENTOS</a>
         {% endif %}
         {% if session.get('permisos', {}).get('ASISTENCIAS') == 'SI' %}

@@ -1,162 +1,290 @@
 {% extends 'dashboard.html' %}
 
 {% block content %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
 <style>
-    .stats-container { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; padding: 10px; }
-    .card-chart { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 1px solid #eee; }
-    .card-chart h3 { margin-top: 0; font-size: 15px; font-weight: 900; color: #333; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; margin-bottom: 25px; }
-    .card-chart h3 i { color: #E31E24; }
-    .full-width { grid-column: span 2; }
-    .chart-info { margin-top: 20px; padding-top: 15px; border-top: 1px solid #f1f5f9; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .info-box { padding: 12px; border-radius: 12px; background: #f8fafc; border: 1px solid #f1f5f9; }
-    .info-box label { display: block; font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; }
-    .info-box span { font-size: 12px; font-weight: 700; color: #1e293b; }
+    .mi-equipo-layout { display: flex; flex-direction: column; gap: 25px; }
+    .card-modern { background: white; border-radius: 24px; padding: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; position: relative; }
+    .card-title { font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; font-size: 0.9rem; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .card-title i { color: #E31E24; }
+
+    /* Main grid for chart + monthly rankings and overall ranking */
+    .main-stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 240px 360px 0.6fr; /* Evolución más estrecha */
+        gap: 12px; /* Reducimos el gap para más espacio */
+        align-items: stretch;
+    }
+
+    /* Altura igual para todos los bloques */
+    .main-stats-grid .card-modern { 
+        height: 600px; 
+        display: flex; 
+        flex-direction: column; 
+    }
+
+    .player-rank-item {
+        font-size: 10px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        margin-top: 5px;
+        white-space: nowrap; /* Prevent wrapping */
+    }
+    .player-rank-item.top { color: #15803d; }
+    .player-rank-item.bottom { color: #b91c1c; }
+    .player-rank-icon { font-size: 8px; }
+    .player-rank-name { overflow: hidden; text-overflow: ellipsis; max-width: 60px; } /* Prevent long names from breaking layout */
+    .player-rank-perc { font-size: 9px; font-weight: 900; }
+
+    /* Full Ranking Table */
+    .rank-grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .rank-item-card { background: #fdfdfd; border-radius: 12px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; border: 1px solid #f1f5f9; transition: 0.2s; }
+    .rank-item-card:hover { border-color: #E31E24; background: #fff; box-shadow: 0 4px 12px rgba(227, 30, 36, 0.08); }
+    
+    .rank-table { width: 100%; border-collapse: collapse; }
+    .rank-table td { padding: 6px; font-size: 10px; font-weight: 700; }
+    
+    .rank-avatar { width: 32px; height: 32px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; border: 2px solid #e2e8f0; }
+    .rank-badge { font-size: 11px; font-weight: 900; padding: 5px 12px; border-radius: 30px; display: inline-block; }
+
+    .badge-top { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .badge-bottom { background: #fee2e2; color: #b91c1c; border: 1px solid #fecdd3; }
+    .badge-neutral { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+
+    .table-val { width: 100%; border-collapse: collapse; }
+    .table-val th { text-align: left; font-size: 10px; color: #94a3b8; padding: 12px; text-transform: uppercase; }
+    .table-val td { padding: 10px 2px; font-size: 10px; font-weight: 800; border-bottom: 1px solid #f8fafc; text-align: center; } /* Padding más pequeño */
+    .table-val td:first-child { text-align: left; padding-left: 10px; }
+
+    .month-rank-box { margin-bottom: 12px; padding: 10px; background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9; }
+    .month-rank-title { font-size: 10px; font-weight: 900; color: #E31E24; margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 4px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* Evita que el título se salga */
+    
+    .rank-mini-item {
+        display: flex; align-items: center; gap: 6px; font-size: 10px; /* Más pequeño para optimizar */
+        font-weight: 700; margin-bottom: 2px; 
+    }
+    .rank-mini-item.top { color: #15803d; }
+    .rank-mini-item.bottom { color: #b91c1c; }
+    
+    .scroll-v { overflow-y: auto; padding-right: 5px; }
+    .scroll-v::-webkit-scrollbar { width: 4px; }
+    .scroll-v::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+
+    /* Tooltip Profesional */
+    [title] { position: relative; }
+    .custom-tooltip { cursor: help; border-bottom: 1px dashed #ccc; }
+    
+    /* Compactar columnas de rendimiento */
+    .col-compact { width: 60px; text-align: center; }
 </style>
 
-<div style="padding: 20px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-        <h2 style="font-weight: 900; color: #E31E24; text-transform: uppercase; margin: 0; letter-spacing: -0.5px; font-size: 24px;">
-            <i class="fas fa-chart-line"></i> Estadísticas de Mi Equipo: {{ equipo }}
-        </h2>
-    </div>
-    
-    <div class="stats-container">
-        <!-- GRÁFICO ASISTENCIAS -->
-        <div class="card-chart">
-            <h3><i class="fas fa-calendar-check"></i> Porcentaje de Asistencia</h3>
-            <div style="height: 280px; position: relative;"><canvas id="chartAsistencia"></canvas></div>
-            <div class="chart-info">
-                <div class="info-box"><label>Más Asistente (Último Mes)</label><span id="txtMaxAsis">-</span></div>
-                <div class="info-box"><label>Menos Asistente (Último Mes)</label><span id="txtMinAsis">-</span></div>
+<div style="margin-bottom: 40px; display: flex; justify-content: space-between; align-items: flex-end;">
+    <h1 style="font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: -1px; display: flex; align-items: center; gap: 15px;">
+        <i class="fas fa-shield-halved" style="color: #E31E24;"></i> MI EQUIPO: <span style="color: #E31E24;">{{ equipo }}</span>
+    </h1>
+    <div style="font-size: 11px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Temporada 25-26</div>
+</div>
+
+<div class="mi-equipo-layout">
+    <div class="main-stats-grid">
+        <!-- Bloque 1: Gráfico -->
+        <div class="card-modern">
+            <div class="card-title"><i class="fas fa-chart-line"></i> EVOLUCIÓN ASISTENCIA</div>
+            <div style="flex: 1; min-height: 0;">
+                <canvas id="chartAsistencia"></canvas>
             </div>
         </div>
 
-        <!-- GRÁFICO VALORACIONES -->
-        <div class="card-chart">
-            <h3><i class="fas fa-star"></i> Rendimiento en Entrenamientos</h3>
-            <div style="height: 280px; position: relative;"><canvas id="chartValoracion"></canvas></div>
-            <div class="chart-info">
-                <div class="info-box"><label>Mejor Valorado (Último Mes)</label><span id="txtMaxVal">-</span></div>
-                <div class="info-box"><label>Peor Valorado (Último Mes)</label><span id="txtMinVal">-</span></div>
+        <!-- Bloque 2: Rankings Mensuales -->
+        <div class="card-modern">
+            <div class="card-title" style="margin-bottom: 10px;"><i class="fas fa-calendar-alt"></i> ASISTENCIA MES</div>
+            <div id="containerMonthlyRankings" class="scroll-v" style="flex: 1;"></div>
+        </div>
+
+        <!-- Bloque 3: Ranking Global (Multi-columna) -->
+        <div class="card-modern">
+            <div class="card-title" style="margin-bottom: 10px;"><i class="fas fa-trophy"></i> RANKING GLOBAL</div>
+            <div class="scroll-v" style="flex: 1;">
+                <div id="tbodyFullRanking" class="rank-grid-container"></div>
             </div>
         </div>
 
-        <!-- GRÁFICO BALONES -->
-        <div class="card-chart full-width">
-            <h3><i class="fas fa-futbol"></i> Gestión de Material (Inicio vs Final Diario)</h3>
-            <div style="height: 300px; position: relative;"><canvas id="chartBalones"></canvas></div>
+        <!-- Bloque 4: Rendimiento Flechas -->
+        <div class="card-modern">
+            <div class="card-title" style="margin-bottom: 10px;"><i class="fas fa-arrows-up-down"></i> RENDIMIENTO</div>
+            <table class="table-val">
+                <thead>
+                    <tr>
+                        <th>MES</th>
+                        <th><i class="fas fa-arrow-up" style="color:#22c55e"></i> ARRIBA</th>
+                        <th><i class="fas fa-arrow-right" style="color:#f59e0b"></i> NORMAL</th>
+                        <th><i class="fas fa-arrow-down" style="color:#ef4444"></i> ABAJO</th>
+                        <th style="text-align: center;"><i class="fas fa-bullhorn" style="color:#4f46e5;"></i></th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyValoracion"></tbody>
+            </table>
         </div>
     </div>
 </div>
 
 <script>
-async function cargarEstadisticas() {
-    try {
+    let chartAsistencia = null;
+    Chart.register(ChartDataLabels); // Register the datalabels plugin
+
+    async function cargarStats() {
         const res = await fetch('/api/stats/mi-equipo');
         const data = await res.json();
-        
-        renderAsistencia(data.asistencia);
-        renderValoracion(data.valoracion);
-        renderBalones(data.balones);
-    } catch (e) { console.error(e); }
-}
 
-function renderAsistencia(d) {
-    if (!d.labels.length) return;
-    const lastIdx = d.labels.length - 1;
-    document.getElementById('txtMaxAsis').innerText = d.max_player[lastIdx];
-    document.getElementById('txtMinAsis').innerText = d.min_player[lastIdx];
-
-    new Chart(document.getElementById('chartAsistencia'), {
-        type: 'bar',
-        data: {
-            labels: d.labels,
-            datasets: [{
-                label: 'Asistencia %',
-                data: d.media,
-                backgroundColor: 'rgba(227, 30, 36, 0.7)',
-                borderColor: '#E31E24',
-                borderWidth: 2,
-                borderRadius: 8
-            }]
-        },
-        options: {
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: { afterBody: (ctx) => `\nMáx: ${d.max_player[ctx[0].dataIndex]}\nMín: ${d.min_player[ctx[0].dataIndex]}` }
-                }
-            }
+        if (data.error) {
+            console.error("Error en la API de estadísticas:", data.error);
+            return;
         }
-    });
-}
 
-function renderValoracion(d) {
-    if (!d.labels.length) return;
-    const lastIdx = d.labels.length - 1;
-    document.getElementById('txtMaxVal').innerText = d.max_player[lastIdx];
-    document.getElementById('txtMinVal').innerText = d.min_player[lastIdx];
-
-    new Chart(document.getElementById('chartValoracion'), {
-        type: 'line',
-        data: {
-            labels: d.labels,
-            datasets: [{
-                label: 'Media (0-10)',
-                data: d.media,
-                borderColor: '#28a745',
-                backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                fill: true,
-                tension: 0.4,
-                pointRadius: 6,
-                pointBackgroundColor: '#28a745'
-            }]
-        },
-        options: {
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true, max: 10 } },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: { afterBody: (ctx) => `\nMejor: ${d.max_player[ctx[0].dataIndex]}\nPeor: ${d.min_player[ctx[0].dataIndex]}` }
-                }
-            }
-        }
-    });
-}
-
-function renderBalones(d) {
-    new Chart(document.getElementById('chartBalones'), {
-        type: 'bar',
-        data: {
-            labels: d.labels,
-            datasets: [
-                {
-                    label: 'Balones Inicio',
-                    data: d.inicio,
-                    backgroundColor: '#333',
-                    borderRadius: 4
-                },
-                {
-                    label: 'Balones Final',
-                    data: d.final,
-                    backgroundColor: '#E31E24',
-                    borderRadius: 4
-                }
-            ]
-        },
-        options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-    });
-}
-
-window.onload = async () => {
-    await cargarEstadisticas();
-    if (typeof hideLoader === 'function') {
-        hideLoader();
+        allAsistenciaData = data.asistencia;
+        renderChart(allAsistenciaData);
+        renderValoracion(data.tabla_valoracion); // This function is still needed for the bottom-left card
+        renderFullRanking(data.total_ranking); // New call
+        renderMonthlyRankings(allAsistenciaData); // New call
     }
-};
+
+    function renderChart(asis) {
+        const ctx = document.getElementById('chartAsistencia').getContext('2d');
+        
+        chartAsistencia = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: asis.labels,
+                datasets: [
+                    {
+                        label: 'Media Asistencia %',
+                        data: asis.media,
+                        borderColor: '#E31E24',
+                        backgroundColor: 'rgba(227, 30, 36, 0.05)',
+                        borderWidth: 4,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#E31E24',
+                        pointBorderWidth: 3,
+                        pointRadius: 6,
+                        pointHoverRadius: 9,
+                        tension: 0.4,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false, // Removed legend as per request
+                    },
+                    datalabels: {
+                        display: true,
+                        align: 'top',
+                        anchor: 'end',
+                        offset: 5,
+                        color: '#E31E24',
+                        font: { weight: 'bold', size: 10 },
+                        formatter: (val) => val + '%'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => ` Asistencia: ${ctx.raw}% (${asis.ratio[ctx.dataIndex]})`
+                        }
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true, max: 100, ticks: { font: { weight: 'bold' } }, grid: { color: '#f1f5f9' } },
+                    x: { grid: { display: false }, ticks: { font: { weight: 'bold' } } }
+                } // Removed onClick handler as monthly ranking card is removed
+            }
+        });
+    }
+
+    function renderMonthlyRankings(asis) {
+        const container = document.getElementById('containerMonthlyRankings');
+        container.innerHTML = '';
+        // Mapeamos los datos y los invertimos para que el mes más reciente (Junio) esté arriba
+        const html = asis.labels.map((lbl, idx) => {
+            const players = asis.monthly_player_rankings[idx];
+            if (!players || players.length === 0) return '';
+            
+            // Copiamos y ordenamos para no afectar el original
+            const sorted = [...players].sort((a, b) => b.perc - a.perc);
+            const top2 = sorted.slice(0, 2);
+            const bottom2 = sorted.length > 2 ? sorted.slice(-2).reverse() : [];
+            
+            return `
+                <div class="month-rank-box">
+                <div class="month-rank-title">${lbl}</div>
+                <div style="margin-bottom: 6px;">
+                    ${top2.map(p => `
+                        <div class="rank-mini-item top">
+                            <i class="fas fa-arrow-up"></i>
+                            <span style="flex:1; overflow:hidden; text-overflow:ellipsis;">${p.nombre}</span>
+                            <span style="font-weight:900;">${p.perc}%</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div>
+                        ${bottom2.map(p => `
+                            <div class="rank-mini-item bottom">
+                                <i class="fas fa-arrow-down"></i>
+                                <span style="flex:1; overflow:hidden; text-overflow:ellipsis;">${p.nombre}</span>
+                                <span style="font-weight:900;">${p.perc}%</span>
+                            </div>
+                        `).join('')}
+                </div></div>
+            `;
+        }).reverse().join('');
+
+        container.innerHTML = html;
+        // Forzar scroll arriba para ver Junio y Mayo inmediatamente
+        container.scrollTop = 0;
+    }
+
+    function renderFullRanking(ranking) {
+        const tbody = document.getElementById('tbodyFullRanking');
+        tbody.innerHTML = ranking.map((p, i) => {
+            const badgeClass = i < 3 ? 'badge-top' : (i >= ranking.length - 3 ? 'badge-bottom' : 'badge-neutral');
+            return `
+                <div class="rank-item-card">
+                    <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+                        <div class="rank-avatar" style="width:24px; height:24px; font-size:9px; color:${i<3?'#E31E24':'#666'}">#${i+1}</div>
+                        <span style="font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${p.nombre}">${p.nombre.split(' ')[0]}</span>
+                    </div>
+                    <span style="font-size:10px; font-weight:900; color:${i<3?'#15803d':'#444'}">${p.perc}%</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderValoracion(tabla_valoracion) {
+        const tbody = document.getElementById('tbodyValoracion');
+        tbody.innerHTML = '';
+        if (tabla_valoracion && tabla_valoracion.length > 0) {
+            tabla_valoracion.forEach(row => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${row.mes}</td>
+                        <td class="cell-perc" style="color:#22c55e;" title="${row.n_arriba} flechas">${row.arriba}%</td>
+                        <td class="cell-perc" style="color:#f59e0b;" title="${row.n_medio} flechas">${row.medio}%</td>
+                        <td class="cell-perc" style="color:#ef4444;" title="${row.n_abajo} flechas">${row.abajo}%</td>
+                        <td class="charlas-col">${row.charlas}</td>
+                    </tr>
+                `;
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #999;">No hay datos de valoración.</td></tr>';
+        }
+    }
+
+    window.onload = cargarStats;
 </script>
 {% endblock %}

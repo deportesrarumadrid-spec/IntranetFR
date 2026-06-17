@@ -166,7 +166,10 @@ def enviar_push(usuario, mensaje):
 
 def parse_dias_entreno(texto):
     """Convierte 'L,X,V' en lista de números [0, 2, 4]"""
-    mapping = {'L':0, 'M':1, 'X':2, 'J':3, 'V':4, 'S':5, 'D':6}
+    mapping = {
+        'L':0, 'LUNES':0, 'M':1, 'MARTES':1, 'X':2, 'MIERCOLES':2, 'MIÉRCOLES':2,
+        'J':3, 'JUEVES':3, 'V':4, 'VIERNES':4, 'S':5, 'SABADO':5, 'SÁBADO':5, 'D':6, 'DOMINGO':6
+    }
     res = []
     if not texto: return res
     for d in texto.upper().replace(' ', '').split(','):
@@ -954,6 +957,36 @@ def marcar_baja():
         sheet.update_cell(fila_idx, idx_baja, fecha_baja)
         if idx_alta != -1:
             sheet.update_cell(fila_idx, idx_alta, "") # Limpiamos el alta
+
+        # --- AUTOMATIZACIÓN DE 'X' EN ASISTENCIAS ---
+        try:
+            headers_norm = [normalizar_cabecera_universal(h) for h in headers]
+            idx_eq_col = next((i for i, h in enumerate(headers_norm) if h in ["EQUIPO", "CATEGORIA", "GRUPO", "EQUIPOS"]), -1)
+            equipo = all_rows[fila_idx-1][idx_eq_col].strip() if idx_eq_col != -1 else ""
+            
+            staff_sheet = client.open(NOMBRE_EXCEL).worksheet("STAFF")
+            staff_records = staff_sheet.get_all_records()
+            dias_prog = []
+            target_eq_norm = normalizar_cabecera_universal(equipo)
+            for s in staff_records:
+                if normalizar_cabecera_universal(s.get('EQUIPO', '')) == target_eq_norm:
+                    dias_prog = parse_dias_entreno(s.get('DIAS ENTRENAMIENTO', ''))
+                    break
+            
+            if dias_prog:
+                dt_start = datetime.strptime(fecha_baja, "%d/%m/%Y")
+                season_end_year = dt_start.year if dt_start.month <= 8 else dt_start.year + 1
+                dt_end = datetime(season_end_year, 8, 31)
+                nuevas_filas = []
+                curr = dt_start
+                while curr <= dt_end:
+                    if curr.weekday() in dias_prog:
+                        nuevas_filas.append([curr.strftime("%d/%m/%Y"), equipo, nombre, "", "X", "-", "BAJA", "NO"])
+                    curr += timedelta(days=1)
+                if nuevas_filas:
+                    client.open(NOMBRE_EXCEL).worksheet("ASISTENCIAS").append_rows(nuevas_filas)
+        except Exception as e: print(f"Error auto-baja: {e}")
+
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error en marcar_baja: {e}")
@@ -995,6 +1028,31 @@ def marcar_alta():
         sheet.update_cell(fila_idx, idx_alta, fecha_alta)
         if idx_baja != -1:
             sheet.update_cell(fila_idx, idx_baja, "") # Limpiamos la baja
+
+        # --- AUTOMATIZACIÓN DE ELIMINAR 'X' EN ASISTENCIAS ---
+        try:
+            headers_norm = [normalizar_cabecera_universal(h) for h in headers]
+            idx_eq_col = next((i for i, h in enumerate(headers_norm) if h in ["EQUIPO", "CATEGORIA", "GRUPO", "EQUIPOS"]), -1)
+            equipo = all_rows[fila_idx-1][idx_eq_col].strip() if idx_eq_col != -1 else ""
+            
+            asis_sheet = client.open(NOMBRE_EXCEL).worksheet("ASISTENCIAS")
+            all_asis = asis_sheet.get_all_values()
+            dt_alta = datetime.strptime(fecha_alta, "%d/%m/%Y")
+            
+            rows_to_delete = []
+            for i, row in enumerate(all_asis):
+                if i == 0: continue
+                if len(row) >= 5 and row[4].strip().upper() == 'X':
+                    try:
+                        dt_row = datetime.strptime(row[0].strip(), "%d/%m/%Y")
+                        if dt_row >= dt_alta and row[1].strip().upper() == equipo.upper() and row[2].strip().upper() == nombre.upper():
+                            rows_to_delete.append(i + 1)
+                    except: continue
+            
+            if rows_to_delete:
+                for r_idx in sorted(rows_to_delete, reverse=True): asis_sheet.delete_rows(r_idx)
+        except Exception as e: print(f"Error auto-alta: {e}")
+
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error en marcar_alta: {e}")
@@ -1664,11 +1722,13 @@ from deportivo import deportivo_bp
 from jugadores_datos import jugadores_datos_bp
 from perfiles import perfiles_bp
 from ropa import ropa_bp
+from mi_equipo import mi_equipo_bp
 app.register_blueprint(financiero_bp)
 app.register_blueprint(deportivo_bp)
 app.register_blueprint(jugadores_datos_bp)
 app.register_blueprint(perfiles_bp)
 app.register_blueprint(ropa_bp)
+app.register_blueprint(mi_equipo_bp)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001, use_reloader=True)
