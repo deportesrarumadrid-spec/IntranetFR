@@ -219,6 +219,18 @@
     transition: all 0.3s ease;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
+.btn-change-team-fixed {
+    position: fixed; top: 28px; right: 255px; width: 40px; height: 40px;
+    border-radius: 50%; background: white; color: #E31E24;
+    border: 2px solid #E31E24; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; font-size: 16px;
+    z-index: 20000;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    text-decoration: none;
+}
+.btn-change-team-fixed:hover { background: #E31E24; color: white; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(227, 30, 36, 0.3); }
+
         .btn-cronograma-fixed:hover { background: #E31E24; color: white; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(227, 30, 36, 0.3); }
         .badge-crono {
             display: none; position: absolute; top: -5px; right: -5px; background: #28a745;
@@ -281,7 +293,12 @@
             <a href="/logout" class="btn-salir" onclick="showLoader()">CERRAR SESIÓN</a>
         </div>
 
-        <!-- Botón Flotante e Indicador -->
+        <!-- Botones Flotantes -->
+        {% if session.get('permisos', {}).get('SEL. EQ.') == 'SI' or usuario|lower == 'admin' %}
+        <a href="/seleccionar_equipo" class="btn-change-team-fixed" title="Cambiar de Equipo" onclick="showLoader()">
+            <i class="fas fa-users"></i>
+        </a>
+        {% endif %}
         {% if usuario|lower == 'admin' or session.get('permisos', {}).get('CRONOGRAMA') == 'SI' %}
         <button class="btn-cronograma-fixed" onclick="openCronogramaAuth()" title="Ver Cronograma (Alt+1)">
             <i class="fas fa-calendar-days"></i>
@@ -363,6 +380,8 @@
             // Ocultar el botón circular mientras el cronograma está abierto
             const btn = document.querySelector('.btn-cronograma-fixed');
             if (btn) btn.style.display = 'none';
+            const btnTeam = document.querySelector('.btn-change-team-fixed');
+            if (btnTeam) btnTeam.style.display = 'none';
             
             sessionStorage.setItem('crono_minimized', 'false');
         }
@@ -375,6 +394,8 @@
             // Mostrar el botón circular al cerrar
             const btn = document.querySelector('.btn-cronograma-fixed');
             if (btn) btn.style.display = 'flex';
+            const btnTeam = document.querySelector('.btn-change-team-fixed');
+            if (btnTeam) btnTeam.style.display = 'flex';
             
             // RESET TOTAL DEL MODAL PARA EVITAR PANTALLA GRIS AL VOLVER
             document.getElementById('cronoEntryView').style.display = 'block';
@@ -398,6 +419,8 @@
                 // Asegurar que el botón circular sea visible al minimizar
                 const btn = document.querySelector('.btn-cronograma-fixed');
                 if (btn) btn.style.display = 'flex';
+                const btnTeam = document.querySelector('.btn-change-team-fixed');
+                if (btnTeam) btnTeam.style.display = 'flex';
                 
                 sessionStorage.setItem('crono_minimized', 'true');
             }
