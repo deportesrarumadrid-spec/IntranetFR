@@ -6,15 +6,15 @@
 
 <style>
     .mi-equipo-layout { display: flex; flex-direction: column; gap: 25px; }
-    .card-modern { background: white; border-radius: 24px; padding: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; position: relative; }
-    .card-title { font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; font-size: 0.9rem; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .card-modern { background: white; border-radius: 24px; padding: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; position: relative; }
+    .card-title { font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: 1px; font-size: 1.2rem; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
     .card-title i { color: #E31E24; }
 
     /* Main grid for chart + monthly rankings and overall ranking */
     .main-stats-grid {
         display: grid;
-        grid-template-columns: 1fr 240px 360px 0.6fr; /* Evolución más estrecha */
-        gap: 12px; /* Reducimos el gap para más espacio */
+        grid-template-columns: 1.8fr 1.1fr 1.4fr 1fr; /* Evolución al doble de ancho, resto fluido */
+        gap: 8px;
         align-items: stretch;
     }
 
@@ -26,7 +26,7 @@
     }
 
     .player-rank-item {
-        font-size: 10px;
+        font-size: 14px;
         font-weight: 700;
         display: flex;
         align-items: center;
@@ -38,34 +38,34 @@
     .player-rank-item.top { color: #15803d; }
     .player-rank-item.bottom { color: #b91c1c; }
     .player-rank-icon { font-size: 8px; }
-    .player-rank-name { overflow: hidden; text-overflow: ellipsis; max-width: 60px; } /* Prevent long names from breaking layout */
-    .player-rank-perc { font-size: 9px; font-weight: 900; }
+    .player-rank-name { overflow: hidden; text-overflow: ellipsis; max-width: 90px; } /* Prevent long names from breaking layout */
+    .player-rank-perc { font-size: 15px; font-weight: 900; }
 
     /* Full Ranking Table */
-    .rank-grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .rank-grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
     .rank-item-card { background: #fdfdfd; border-radius: 12px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; border: 1px solid #f1f5f9; transition: 0.2s; }
     .rank-item-card:hover { border-color: #E31E24; background: #fff; box-shadow: 0 4px 12px rgba(227, 30, 36, 0.08); }
     
     .rank-table { width: 100%; border-collapse: collapse; }
-    .rank-table td { padding: 6px; font-size: 10px; font-weight: 700; }
+    .rank-table td { padding: 6px; font-size: 14px; font-weight: 700; }
     
-    .rank-avatar { width: 32px; height: 32px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; border: 2px solid #e2e8f0; }
-    .rank-badge { font-size: 11px; font-weight: 900; padding: 5px 12px; border-radius: 30px; display: inline-block; }
+    .rank-avatar { width: 40px; height: 40px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; border: 2px solid #e2e8f0; }
+    .rank-badge { font-size: 15px; font-weight: 900; padding: 5px 12px; border-radius: 30px; display: inline-block; }
 
     .badge-top { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
     .badge-bottom { background: #fee2e2; color: #b91c1c; border: 1px solid #fecdd3; }
     .badge-neutral { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
 
     .table-val { width: 100%; border-collapse: collapse; }
-    .table-val th { text-align: left; font-size: 10px; color: #94a3b8; padding: 12px; text-transform: uppercase; }
-    .table-val td { padding: 10px 2px; font-size: 10px; font-weight: 800; border-bottom: 1px solid #f8fafc; text-align: center; } /* Padding más pequeño */
+    .table-val th { text-align: left; font-size: 12px; color: #94a3b8; padding: 10px; text-transform: uppercase; }
+    .table-val td { padding: 10px 4px; font-size: 16px; font-weight: 800; border-bottom: 1px solid #f8fafc; text-align: center; } /* Números más grandes */
     .table-val td:first-child { text-align: left; padding-left: 10px; }
 
-    .month-rank-box { margin-bottom: 12px; padding: 10px; background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9; }
-    .month-rank-title { font-size: 10px; font-weight: 900; color: #E31E24; margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 4px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* Evita que el título se salga */
+    .month-rank-box { margin-bottom: 10px; padding: 8px; background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9; }
+    .month-rank-title { font-size: 16px; font-weight: 900; color: #E31E24; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     
     .rank-mini-item {
-        display: flex; align-items: center; gap: 6px; font-size: 10px; /* Más pequeño para optimizar */
+        display: flex; align-items: center; gap: 6px; font-size: 16px; /* Números más grandes */
         font-weight: 700; margin-bottom: 2px; 
     }
     .rank-mini-item.top { color: #15803d; }
@@ -190,7 +190,7 @@
                         anchor: 'end',
                         offset: 5,
                         color: '#E31E24',
-                        font: { weight: 'bold', size: 10 },
+                        font: { weight: 'bold', size: 12 },
                         formatter: (val) => val + '%'
                     },
                     tooltip: {
@@ -256,10 +256,10 @@
             return `
                 <div class="rank-item-card">
                     <div style="display:flex; align-items:center; gap:8px; min-width:0;">
-                        <div class="rank-avatar" style="width:24px; height:24px; font-size:9px; color:${i<3?'#E31E24':'#666'}">#${i+1}</div>
-                        <span style="font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${p.nombre}">${p.nombre.split(' ')[0]}</span>
+                        <div class="rank-avatar" style="width:38px; height:38px; font-size:15px; color:${i<3?'#E31E24':'#666'}">#${i+1}</div>
+                        <span style="font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${p.nombre}">${p.nombre.split(' ')[0]}</span>
                     </div>
-                    <span style="font-size:10px; font-weight:900; color:${i<3?'#15803d':'#444'}">${p.perc}%</span>
+                    <span style="font-size:18px; font-weight:900; color:${i<3?'#15803d':'#444'}">${p.perc}%</span>
                 </div>
             `;
         }).join('');
