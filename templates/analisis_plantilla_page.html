@@ -93,13 +93,73 @@
         font-weight: 600;
         color: #475569;
         resize: vertical; /* Permite redimensionar verticalmente */
-        text-align: center; /* Alinea el texto en el centro */
+        text-align: left; /* Alineamos a la izquierda para las listas con viñetas */
     }
     /* Borde rojo entre categorías de stats */
     .main-stat-header.stat-category-fisicas-start, .main-stat-header.stat-category-tecnicas-start,
     .main-stat-header.stat-category-tacticas-start, .main-stat-header.stat-category-psicologicas-start {
         border-left: 2px solid #E31E24;
     }
+    /* Aplicar el borde rojo a las celdas de datos también */
+    .table-val td.stat-category-fisicas-start,
+    .table-val td.stat-category-tecnicas-start,
+    .table-val td.stat-category-tacticas-start,
+    .table-val td.stat-category-psicologicas-start {
+        border-left: 2px solid #E31E24;
+    }
+
+    /* Estilos para el nuevo selector de pierna */
+    .pierna-selector { display: flex; justify-content: center; gap: 4px; }
+    .pierna-btn {
+        width: 28px; height: 28px; border-radius: 8px; border: 2px solid #e2e8f0;
+        background: #f8fafc; color: #94a3b8; font-weight: 900; font-size: 12px;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; transition: 0.2s;
+    }
+    .pierna-btn.selected {
+        background: #E31E24; color: white; border-color: #E31E24;
+        transform: scale(1.1); box-shadow: 0 2px 8px rgba(227,30,36,0.2);
+    }
+    .pierna-btn:not(.selected):hover { background: #e2e8f0; }
+
+    /* Estilos para el botón del gráfico de araña */
+    .spider-chart-btn {
+        background: none; border: none; color: #cbd5e1; cursor: pointer;
+        font-size: 14px; transition: 0.3s; padding: 5px;
+        vertical-align: middle; margin-left: 5px;
+    }
+    .spider-chart-btn:hover {
+        color: #E31E24;
+        transform: scale(1.2);
+    }
+</style>
+<style>
+    /* Estilos para el botón de análisis y el popup */
+    .analysis-btn {
+        background: none; border: none; color: #94a3b8; cursor: pointer;
+        font-size: 16px; transition: 0.3s; padding: 5px;
+        vertical-align: middle;
+    }
+    .analysis-btn:hover { color: #E31E24; transform: scale(1.2); }
+    .modal-fort-deb .textarea-fort-deb { width: 100%; height: 200px; resize: none; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; font-family: inherit; font-size: 13px; font-weight: 600; color: #475569; outline: none; transition: 0.2s; }
+    .modal-fort-deb .textarea-fort-deb:focus { border-color: #E31E24; box-shadow: 0 0 0 3px rgba(227,30,36,0.1); }
+
+    /* Estilos para el nuevo Popover de Análisis */
+    .analysis-popover {
+        position: absolute; display: none; z-index: 10010;
+        width: 350px; background: white; border-radius: 18px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2); border: 1px solid #e2e8f0;
+        padding: 20px;
+    }
+    .analysis-popover::before { /* La flecha del bocadillo */
+        content: ''; position: absolute; top: 50%; left: -10px;
+        transform: translateY(-50%); border-top: 10px solid transparent;
+        border-bottom: 10px solid transparent; border-right: 10px solid white;
+    }
+</style>
+<style>
+    /* Estilos para Modales (copiado de direccion.html para asegurar consistencia) */
+    .modal { display: none; position: fixed; z-index: 10005; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; backdrop-filter: blur(5px); }
 </style>
 
 <!-- SECCIÓN: Detalles de Jugadores -->
@@ -116,10 +176,10 @@
             
             <!-- Botones de selección de stats centrados -->
             <div class="stats-toggles" style="flex-grow: 1; justify-content: flex-end;">
-            <div class="stat-pill" data-category="fisicas" onclick="toggleStatCategory('fisicas', this)"><i class="fas fa-bolt"></i> STATS FÍSICAS</div>
-            <div class="stat-pill" data-category="tecnicas" onclick="toggleStatCategory('tecnicas', this)"><i class="fas fa-magic"></i> STATS TÉCNICAS</div>
-            <div class="stat-pill" data-category="tacticas" onclick="toggleStatCategory('tacticas', this)"><i class="fas fa-chess-board"></i> STATS TÁCTICAS</div>
-            <div class="stat-pill" data-category="psicologicas" onclick="toggleStatCategory('psicologicas', this)"><i class="fas fa-brain"></i> STATS PSICOLÓGICAS</div>
+            <div class="stat-pill active" data-category="fisicas" onclick="toggleStatCategory('fisicas', this)"><i class="fas fa-bolt"></i> STATS FÍSICAS</div>
+            <div class="stat-pill active" data-category="tecnicas" onclick="toggleStatCategory('tecnicas', this)"><i class="fas fa-magic"></i> STATS TÉCNICAS</div>
+            <div class="stat-pill active" data-category="tacticas" onclick="toggleStatCategory('tacticas', this)"><i class="fas fa-chess-board"></i> STATS TÁCTICAS</div>
+            <div class="stat-pill active" data-category="psicologicas" onclick="toggleStatCategory('psicologicas', this)"><i class="fas fa-brain"></i> STATS PSICOLÓGICAS</div>
         </div>
 
         </div>
@@ -130,40 +190,39 @@
                         <th rowspan="2">JUGADOR</th>
                         <th rowspan="2" style="width: 50px;">PIERNA</th>
                         <th rowspan="2" style="width: 80px;">POSICIÓN</th>                        
+                        <th rowspan="2" style="width: 120px;">FORTALEZAS/<br>DEBILIDADES</th>
                         <th rowspan="2">COMENTARIOS</th>
-                        <th colspan="2" class="main-stat-header stat-category-fisicas-start hidden-stat-col" data-category="fisicas" style="text-align: center; border-bottom: 1px solid #f1f5f9;">STATS FÍSICAS</th>
-                        <th colspan="10" class="main-stat-header stat-category-tecnicas-start hidden-stat-col" data-category="tecnicas" style="text-align: center; border-bottom: 1px solid #f1f5f9;">STATS TÉCNICAS</th>
-                        <th colspan="5" class="main-stat-header stat-category-tacticas-start hidden-stat-col" data-category="tacticas" style="text-align: center; border-bottom: 1px solid #f1f5f9;">STATS TÁCTICAS</th>
-                        <th colspan="4" class="main-stat-header stat-category-psicologicas-start hidden-stat-col" data-category="psicologicas" style="text-align: center; border-bottom: 1px solid #f1f5f9;">STATS PSICOLÓGICAS</th>
-                        <th rowspan="2">DEBILIDADES</th>
-                        <th rowspan="2">FORTALEZAS</th>
+                        <th colspan="2" class="main-stat-header stat-category-fisicas-start" data-category="fisicas" style="text-align: center; border-bottom: 1px solid #f1f5f9;">STATS FÍSICAS</th>
+                        <th colspan="10" class="main-stat-header stat-category-tecnicas-start" data-category="tecnicas" style="text-align: center; border-bottom: 1px solid #f1f5f9;">STATS TÉCNICAS</th>
+                        <th colspan="5" class="main-stat-header stat-category-tacticas-start" data-category="tacticas" style="text-align: center; border-bottom: 1px solid #f1f5f9;">STATS TÁCTICAS</th>
+                        <th colspan="4" class="main-stat-header stat-category-psicologicas-start" data-category="psicologicas" style="text-align: center; border-bottom: 1px solid #f1f5f9;">STATS PSICOLÓGICAS</th>
                     </tr>
                     <tr>
                         <!-- FÍSICAS -->
-                        <th class="sub-header stat-category-fisicas-start hidden-stat-col" data-category="fisicas" style="min-width: 60px;">Velocidad</th>
-                        <th class="sub-header hidden-stat-col" data-category="fisicas" style="min-width: 60px;">Resistencia</th>
+                        <th class="sub-header stat-category-fisicas-start" data-category="fisicas" style="min-width: 60px;">Velocidad</th>
+                        <th class="sub-header" data-category="fisicas" style="min-width: 60px;">Resistencia</th>
                         <!-- TÉCNICAS -->
-                        <th class="sub-header stat-category-tecnicas-start hidden-stat-col" data-category="tecnicas" style="min-width: 80px;">Precision pase corto</th>
-                        <th class="sub-header hidden-stat-col" data-category="tecnicas" style="min-width: 80px;">Precision pase largo</th>
-                        <th class="sub-header hidden-stat-col" data-category="tecnicas" style="min-width: 80px;">Capacidad de robo</th>
-                        <th class="sub-header hidden-stat-col" data-category="tecnicas" style="min-width: 80px;">Juego de cabeza</th>
-                        <th class="sub-header hidden-stat-col" data-category="tecnicas" style="min-width: 80px;">Regate/desborde</th>
-                        <th class="sub-header hidden-stat-col" data-category="tecnicas" style="min-width: 60px;">Tiro</th>
-                        <th class="sub-header hidden-stat-col" data-category="tecnicas" style="min-width: 60px;">Control</th>
-                        <th class="sub-header hidden-stat-col" data-category="tecnicas" style="min-width: 60px;">Conduccion</th>
-                        <th class="sub-header hidden-stat-col" data-category="tecnicas" style="min-width: 60px;">Definicion</th>
-                        <th class="sub-header hidden-stat-col" data-category="tecnicas" style="min-width: 80px;">Creatividad con balon</th>
+                        <th class="sub-header stat-category-tecnicas-start" data-category="tecnicas" style="min-width: 80px;">Precision pase corto</th>
+                        <th class="sub-header" data-category="tecnicas" style="min-width: 80px;">Precision pase largo</th>
+                        <th class="sub-header" data-category="tecnicas" style="min-width: 80px;">Capacidad de robo</th>
+                        <th class="sub-header" data-category="tecnicas" style="min-width: 80px;">Juego de cabeza</th>
+                        <th class="sub-header" data-category="tecnicas" style="min-width: 80px;">Regate/<br>desborde</th>
+                        <th class="sub-header" data-category="tecnicas" style="min-width: 60px;">Tiro</th>
+                        <th class="sub-header" data-category="tecnicas" style="min-width: 60px;">Control</th>
+                        <th class="sub-header" data-category="tecnicas" style="min-width: 60px;">Conduccion</th>
+                        <th class="sub-header" data-category="tecnicas" style="min-width: 60px;">Definicion</th>
+                        <th class="sub-header" data-category="tecnicas" style="min-width: 80px;">Creatividad con balon</th>
                         <!-- TÁCTICAS -->
-                        <th class="sub-header stat-category-tacticas-start hidden-stat-col" data-category="tacticas" style="min-width: 80px;">Vision de juego</th>
-                        <th class="sub-header hidden-stat-col" data-category="tacticas" style="min-width: 80px;">Toma de decisiones</th>
-                        <th class="sub-header hidden-stat-col" data-category="tacticas" style="min-width: 80px;">Agresividad/Intensidad</th>
-                        <th class="sub-header hidden-stat-col" data-category="tacticas" style="min-width: 80px;">Sacrificio defensivo</th>
-                        <th class="sub-header hidden-stat-col" data-category="tacticas" style="min-width: 80px;">Posicionamiento</th>
+                        <th class="sub-header stat-category-tacticas-start" data-category="tacticas" style="min-width: 80px;">Vision de juego</th>
+                        <th class="sub-header" data-category="tacticas" style="min-width: 80px;">Toma de decisiones</th>
+                        <th class="sub-header" data-category="tacticas" style="min-width: 80px;">Agresividad/<br>Intensidad</th>
+                        <th class="sub-header" data-category="tacticas" style="min-width: 80px;">Sacrificio defensivo</th>
+                        <th class="sub-header" data-category="tacticas" style="min-width: 80px;">Posicionamiento</th>
                         <!-- PSICOLÓGICAS -->
-                        <th class="sub-header stat-category-psicologicas-start hidden-stat-col" data-category="psicologicas" style="min-width: 80px;">Concentracion</th>
-                        <th class="sub-header hidden-stat-col" data-category="psicologicas" style="min-width: 60px;">Liderazgo</th>
-                        <th class="sub-header hidden-stat-col" data-category="psicologicas" style="min-width: 80px;">Actitud entrenamientos</th>
-                        <th class="sub-header hidden-stat-col" data-category="psicologicas" style="min-width: 80px;">Actitud partidos</th>
+                        <th class="sub-header stat-category-psicologicas-start" data-category="psicologicas" style="min-width: 80px;">Concentracion</th>
+                        <th class="sub-header" data-category="psicologicas" style="min-width: 60px;">Liderazgo</th>
+                        <th class="sub-header" data-category="psicologicas" style="min-width: 80px;">Actitud entrenamientos</th>
+                        <th class="sub-header" data-category="psicologicas" style="min-width: 80px;">Actitud partidos</th>
                     </tr>
                 </thead>
                 <tbody id="tbodyJugadoresDetalles">
@@ -172,11 +231,49 @@
                         JUGADOR (1) + COMENTARIOS (1) + FÍSICAS (2) + TÉCNICAS (10) + TÁCTICAS (5) + PSICOLÓGICAS (4) + DEBILIDADES (1) + FORTALEZAS (1) + POSICIÓN (1) + PIERNA (1) = 27
                     -->
                     <tr><td colspan="27" style="text-align: center; padding: 20px; color: #999;">Selecciona una o más categorías de estadísticas para visualizarlas.</td></tr>
-                </tbody>
+                </tbody> 
             </table>
         </div>
     </div>
 </div>
+
+<!-- MODAL GRÁFICO ARAÑA -->
+<div id="modalSpiderChart" class="modal" style="display:none; z-index: 10002;">
+    <!-- ... contenido del modal de gráfico sin cambios ... -->
+</div>
+
+<!-- MODAL GRÁFICO ARAÑA (original) -->
+<div id="modalSpiderChart" class="modal" style="display:none; z-index: 10002;">
+    <div class="modal-content" style="width: 90vw; max-width: 1200px; height: 90vh; background: #f8fafc; border-radius: 24px; padding: 0; display: flex; flex-direction: column;">
+        <div style="padding: 20px 30px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: #fff; border-radius: 24px 24px 0 0;">
+            <h3 id="spiderChartTitle" style="margin: 0; font-weight: 900; color: #1e293b; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 0.5px;">Perfil de Jugador</h3>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <label style="font-size: 11px; font-weight: 800; color: #94a3b8;">COMPARAR CON:</label>
+                <select id="spiderCompareSelect" onchange="updateSpiderChart()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-weight: 700; min-width: 200px;"></select>
+                <span style="cursor: pointer; font-size: 32px; font-weight: 300; color: #94a3b8; line-height: 1; transition: 0.2s;" onmouseover="this.style.color='#E31E24'" onmouseout="this.style.color='#94a3b8'" onclick="document.getElementById('modalSpiderChart').style.display='none'">&times;</span>
+            </div>
+        </div>
+        <div style="flex: 1; padding: 30px; display: flex; align-items: center; justify-content: center;">
+            <canvas id="spiderChartCanvas"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- POPOVER FORTALEZAS / DEBILIDADES -->
+<div id="popoverFortalezasDebilidades" class="analysis-popover modal-fort-deb">
+    <h3 id="fortDebTitle" style="margin: 0 0 20px 0; font-weight: 900; color: #1e293b; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">Fortalezas y Debilidades</h3>
+    <div style="display: flex; flex-direction: column; gap: 15px;">
+        <div>
+            <label style="font-size: 10px; font-weight: 900; color: #16a34a; text-transform: uppercase; display: block; margin-bottom: 10px;">FORTALEZAS</label>
+            <textarea id="textareaFortalezas" class="textarea-fort-deb" onkeydown="handleTextareaEnter(event)"></textarea>
+        </div>
+        <div>
+            <label style="font-size: 10px; font-weight: 900; color: #dc2626; text-transform: uppercase; display: block; margin-bottom: 10px;">DEBILIDADES</label>
+            <textarea id="textareaDebilidades" class="textarea-fort-deb" onkeydown="handleTextareaEnter(event)"></textarea>
+        </div>
+    </div>
+</div>
+
 
 <!-- Toast para mensajes de autoguardado -->
 <div id="toast-autoguardado" style="position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: white; padding: 12px 25px; border-radius: 30px; font-weight: 800; font-size: 11px; z-index: 10001; transition: 0.4s; opacity: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 10px; border: 1px solid #333;"></div>
@@ -185,6 +282,7 @@
 <script>
     async function cargarJugadoresDetalles() {
         console.log("DEBUG: Iniciando cargarJugadoresDetalles()");
+        window.jugadoresData = []; // Store data globally for the spider chart
         const tbody = document.getElementById('tbodyJugadoresDetalles');
         tbody.innerHTML = '<tr><td colspan="27" style="text-align: center; padding: 20px; color: #999;"><i class="fas fa-spinner fa-spin"></i> Cargando jugadores...</td></tr>';
         
@@ -197,6 +295,7 @@
                 return;
             }
             const data = await res.json();
+            window.jugadoresData = data.jugadores || []; // Store for later use
             // console.log("DEBUG: Datos de jugadores_detalles recibidos:", data); // Desactivado para evitar spam en consola
 
             if (data.error) {
@@ -260,8 +359,8 @@
                         const val = statsObj[k] || '';
                         const isFirstInCat = keys.indexOf(k) === 0;
                         const borderClass = isFirstInCat ? `stat-category-${categoryName}-start` : '';
-                        return `<td class="stat-cell ${borderClass} hidden-stat-col" data-category="${categoryName}" style="text-align: center; min-width: 60px;">
-                                    <input type="number" class="stat-input" value="${val}" placeholder="-" onchange="guardarStatDirecta('${player.nombre}', '${k}', this.value)">
+                        return `<td class="stat-cell ${borderClass}" data-category="${categoryName}" style="text-align: center; min-width: 60px;">
+                                    <input type="number" class="stat-input" value="${val}" placeholder="-" min="1" max="10" onchange="guardarStatDirecta('${player.nombre}', '${k}', this.value)">
                                 </td>`;
                     }).join('');
                 };
@@ -274,33 +373,38 @@
                 // Generar opciones de posición
                 const playerPositionOptions = positionOptions[currentTeamCategory] || positionOptions['avanzado'];
                 const positionSelectHtml = `
-                    <select class="stat-input" onchange="guardarStatDirecta('${player.nombre}', 'POSICION', this.value)" style="min-width: 70px;">
-                        <option value="" disabled selected>${player.posicion || '-'}</option>
+                    <select class="stat-input" onchange="guardarStatDirecta('${player.nombre}', 'POSICION', this.value)" style="min-width: 70px; text-align: center;">
+                        <option value="" disabled ${!player.posicion ? 'selected' : ''}>-</option>
                         ${playerPositionOptions.map(opt => `<option value="${opt}" ${player.posicion === opt ? 'selected' : ''}>${opt}</option>`).join('')}
                     </select>
                 `;
 
                 // Generar opciones de pierna
                 const piernaSelectHtml = `
-                    <select class="stat-input" onchange="guardarStatDirecta('${player.nombre}', 'PIERNA', this.value)" style="min-width: 40px;">
-                        <option value="" disabled selected>${player.pierna || '-'}</option>
-                        <option value="D" ${player.pierna === 'D' ? 'selected' : ''}>D</option>
-                        <option value="Z" ${player.pierna === 'Z' ? 'selected' : ''}>Z</option>
-                    </select>
+                    <div class="pierna-selector">
+                        <div class="pierna-btn ${player.pierna === 'D' ? 'selected' : ''}" onclick="seleccionarPierna(this, '${player.nombre}', 'D')">D</div>
+                        <div class="pierna-btn ${player.pierna === 'Z' ? 'selected' : ''}" onclick="seleccionarPierna(this, '${player.nombre}', 'Z')">Z</div>
+                    </div>
                 `;
 
                 return `
                     <tr>
-                        <td style="font-weight: 800; color: #333;">${player.nombre}</td>
+                        <td style="font-weight: 800; color: #333;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">
+                                <span style="flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${player.nombre}</span>
+                                <button class="spider-chart-btn" title="Ver perfil de estadísticas" onclick='openSpiderChart(${JSON.stringify(player)})'><i class="fas fa-chart-pie"></i></button>
+                            </div>
+                        </td>
                         <td>${piernaSelectHtml}</td>
                         <td>${positionSelectHtml}</td>
+                        <td style="text-align: center;">
+                            <button class="analysis-btn" title="Ver análisis de Fortalezas y Debilidades" onclick='toggleAnalysisPopover(event, ${JSON.stringify(player)})'><i class="fas fa-clipboard-list"></i></button>
+                        </td>
                         <td>${comentariosHtml}</td>
                         ${fisicasCellsHtml}
                         ${tecnicasCellsHtml}
                         ${tacticasCellsHtml}
                         ${psicologicasCellsHtml}
-                        <td><textarea class="stat-input" onchange="guardarStatDirecta('${player.nombre}', 'DEBILIDADES', this.value)">${player.debilidades || ''}</textarea></td>
-                        <td><textarea class="stat-input" onchange="guardarStatDirecta('${player.nombre}', 'FORTALEZAS', this.value)">${player.fortalezas || ''}</textarea></td>
                     </tr>
                 `;
             }).join('');
@@ -314,7 +418,7 @@
     // Usamos addEventListener para evitar conflictos con otros scripts de carga
     document.addEventListener('DOMContentLoaded', function() {
         // Al cargar la página, siempre cargamos los jugadores.
-        cargarJugadoresDetalles();
+        cargarJugadoresDetalles().then(() => updateStatsInfoMessage());
         // Eliminado: mostrarToastAutoguardado("Selecciona una o más categorías para ver las estadísticas.", false, false, 5000);
     });
 
@@ -352,12 +456,179 @@
         }
     }
 
+    // --- SPIDER CHART LOGIC ---
+    let spiderChartInstance = null;
+
+    function openSpiderChart(player) {
+        const modal = document.getElementById('modalSpiderChart');
+        const title = document.getElementById('spiderChartTitle');
+        const select = document.getElementById('spiderCompareSelect');
+
+        title.innerText = `Perfil de Jugador: ${player.nombre}`;
+        
+        // Populate comparator dropdown
+        select.innerHTML = '<option value="">Seleccionar para comparar...</option>';
+        window.jugadoresData.forEach(p => {
+            if (p.nombre !== player.nombre) {
+                const option = document.createElement('option');
+                option.value = p.nombre;
+                option.innerText = p.nombre;
+                select.appendChild(option);
+            }
+        });
+        select.dataset.currentPlayer = JSON.stringify(player);
+
+        renderSpiderChart(player);
+        modal.style.display = 'flex';
+    }
+
+    function updateSpiderChart() {
+        const select = document.getElementById('spiderCompareSelect');
+        const player1 = JSON.parse(select.dataset.currentPlayer);
+        const player2Name = select.value;
+        
+        if (player2Name) {
+            const player2 = window.jugadoresData.find(p => p.nombre === player2Name);
+            renderSpiderChart(player1, player2);
+        } else {
+            renderSpiderChart(player1); // Render only player 1 if no comparison is selected
+        }
+    }
+
+    function renderSpiderChart(player1, player2 = null) {
+        const canvas = document.getElementById('spiderChartCanvas');
+        const ctx = canvas.getContext('2d');
+
+        if (spiderChartInstance) {
+            spiderChartInstance.destroy();
+        }
+
+        const allStats = { ...player1.stats.fisicas, ...player1.stats.tecnicas, ...player1.stats.tacticas, ...player1.stats.psicologicas };
+        const labels = Object.keys(allStats);
+        const data1 = labels.map(label => parseInt(allStats[label]) || 0);
+
+        const datasets = [{
+            label: player1.nombre,
+            data: data1,
+            backgroundColor: 'rgba(227, 30, 36, 0.2)',
+            borderColor: '#E31E24',
+            pointBackgroundColor: '#E31E24',
+            pointBorderColor: '#fff',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: '#E31E24',
+            borderWidth: 2
+        }];
+
+        if (player2) {
+            const allStats2 = { ...player2.stats.fisicas, ...player2.stats.tecnicas, ...player2.stats.tacticas, ...player2.stats.psicologicas };
+            const data2 = labels.map(label => parseInt(allStats2[label]) || 0);
+            datasets.push({
+                label: player2.nombre,
+                data: data2,
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: '#36A2EB',
+                pointBackgroundColor: '#36A2EB',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: '#36A2EB',
+                borderWidth: 2
+            });
+        }
+
+        spiderChartInstance = new Chart(ctx, {
+            type: 'radar',
+            data: { labels, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                elements: { line: { tension: 0.1 } },
+                scales: {
+                    r: {
+                        angleLines: { color: '#e2e8f0' },
+                        grid: { color: '#e2e8f0' },
+                        pointLabels: { font: { size: 10, weight: 'bold' }, color: '#475569' },
+                        ticks: { backdropColor: '#f8fafc', color: '#64748b', stepSize: 2 },
+                        min: 0, max: 10
+                    }
+                }
+            }
+        });
+    }
+
+    function toggleAnalysisPopover(event, player) {
+        event.stopPropagation(); // Evita que el listener de cierre se active inmediatamente
+        const popover = document.getElementById('popoverFortalezasDebilidades');
+        const title = document.getElementById('fortDebTitle');
+        const fortalezasTextarea = document.getElementById('textareaFortalezas');
+        const debilidadesTextarea = document.getElementById('textareaDebilidades');
+        
+        // Si el popover ya está visible y es para el mismo jugador, lo cerramos
+        if (popover.style.display === 'block' && popover.dataset.currentPlayer === player.nombre) {
+            popover.style.display = 'none';
+            return;
+        }
+        
+        popover.dataset.currentPlayer = player.nombre;
+        title.innerText = `Fortalezas y Debilidades: ${player.nombre}`;
+        fortalezasTextarea.onchange = null;
+        debilidadesTextarea.onchange = null;
+        fortalezasTextarea.value = player.fortalezas || '';
+        debilidadesTextarea.value = player.debilidades || '';
+        fortalezasTextarea.onchange = () => guardarStatDirecta(player.nombre, 'FORTALEZAS', fortalezasTextarea.value);
+        debilidadesTextarea.onchange = () => guardarStatDirecta(player.nombre, 'DEBILIDADES', debilidadesTextarea.value);
+
+        const btnRect = event.currentTarget.getBoundingClientRect();
+        popover.style.display = 'block';
+        popover.style.top = `${btnRect.top + window.scrollY - (popover.offsetHeight / 2) + (btnRect.height / 2)}px`;
+        popover.style.left = `${btnRect.right + window.scrollX + 15}px`;
+    }
+
+    function seleccionarPierna(btn, nombre, pierna) {
+        const container = btn.parentElement;
+        // Deseleccionar el otro botón
+        container.querySelectorAll('.pierna-btn').forEach(b => b.classList.remove('selected'));
+        // Seleccionar el actual
+        btn.classList.add('selected');
+        // Guardar el dato
+        guardarStatDirecta(nombre, 'PIERNA', pierna);
+    }
+
+    function handleTextareaEnter(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault(); // Prevenir el salto de línea por defecto
+            const textarea = event.target;
+            const cursorPosition = textarea.selectionStart;
+            const text = textarea.value;
+            
+            // Insertar un salto de línea y una viñeta
+            const newText = text.substring(0, cursorPosition) + '\n• ' + text.substring(cursorPosition);
+            textarea.value = newText;
+            
+            // Mover el cursor después de la viñeta
+            textarea.selectionStart = textarea.selectionEnd = cursorPosition + 3;
+        }
+    }
 
     async function guardarStatDirecta(nombre, statName, valor) {
         console.log(`DEBUG: Guardando para ${nombre}: ${statName} = ${valor}`);
-        // Aquí irá la llamada a la API en el futuro para persistir en Google Sheets
-        // Por ahora lo dejamos logueado para confirmar que el input funciona
-        mostrarToastAutoguardado(`Actualizando ${statName}...`);
+        mostrarToastAutoguardado(`Guardando ${statName}...`, false, true); // Muestra spinner
+
+        try {
+            const res = await fetch('/api/jugadores_detalles/update', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ nombre, statName, valor })
+            });
+
+            if (res.ok) {
+                mostrarToastAutoguardado(`${statName} de ${nombre} actualizado.`);
+            } else {
+                const errorData = await res.json();
+                mostrarToastAutoguardado(`Error: ${errorData.message}`, true, false, 4000);
+            }
+        } catch (e) {
+            mostrarToastAutoguardado(`Error de conexión: ${e.message}`, true, false, 4000);
+        }
     }
 
     // Función de toast global (copiada de deportivo.py para consistencia)
@@ -370,9 +641,9 @@
             document.body.appendChild(toast);
         }
 
-        toast.style.background = isError ? '#dc3545' : '#1a1a1a';
+        toast.style.background = isError ? '#dc3545' : '#E31E24'; // Color de éxito ahora es el rojo corporativo
         
-        let icon = '<i class="fas fa-check-circle" style="color: #2eb85c;"></i>';
+        let icon = '<i class="fas fa-check-circle" style="color: white;"></i>'; // Icono de éxito en blanco
         if (isError) icon = '<i class="fas fa-exclamation-circle" style="color: white;"></i>';
         if (isLoading) icon = '<i class="fas fa-sync fa-spin" style="color: #ffc107;"></i>';
         

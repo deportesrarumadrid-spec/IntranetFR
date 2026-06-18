@@ -39,51 +39,34 @@ def api_jugadores_detalles():
     print(f"DEBUG: api_jugadores_detalles - Equipo seleccionado: '{equipo_sess}', Normalizado: '{target_norm}'")
 
     try:
-        # 1. Obtener datos de JUGADORES (nombre, equipo, posicion, pierna, fortalezas, debilidades)
-        print("DEBUG: api_jugadores_detalles - Intentando abrir hoja 'JUGADORES'")
-        sheet_jug = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
-        all_jug = sheet_jug.get_all_values()
-        if not all_jug: return jsonify({"error": "Hoja de jugadores vacía"}), 404
+        # 1. Obtener la lista de jugadores para el equipo desde la hoja "JUGADORES" (misma fuente que ASISTENCIAS)
+        print("DEBUG: api_jugadores_detalles - Leyendo jugadores desde la hoja 'JUGADORES'")
+        sheet_jugadores = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
+        all_jugadores = sheet_jugadores.get_all_values()
+        if not all_jugadores: return jsonify({"error": "Hoja 'JUGADORES' vacía"}), 404
 
-        h_jug = [_limpiar_h(h) for h in all_jug[0]]
-        idx_nom_jug = next((i for i, h in enumerate(h_jug) if h == "NOMBRE"), -1)
-        idx_eq_jug = next((i for i, h in enumerate(h_jug) if h in ["EQUIPO", "CATEGORIA", "GRUPO", "EQUIPOS"]), -1)
-        idx_pos_jug = next((i for i, h in enumerate(h_jug) if h == "POSICION"), -1)
-        idx_pierna_jug = next((i for i, h in enumerate(h_jug) if h in ["PIERNA", "DIESTROZURDO"]), -1)
-        idx_fort_jug = next((i for i, h in enumerate(h_jug) if h == "FORTALEZAS"), -1)
-        idx_deb_jug = next((i for i, h in enumerate(h_jug) if h == "DEBILIDADES"), -1)
+        h_jugadores = [_limpiar_h(h) for h in all_jugadores[0]]
+        idx_nom_jug = next((i for i, h in enumerate(h_jugadores) if h == "NOMBRE"), -1)
+        idx_eq_jug = next((i for i, h in enumerate(h_jugadores) if h in ["EQUIPO", "CATEGORIA", "GRUPO", "EQUIPOS"]), -1)
 
         if idx_nom_jug == -1 or idx_eq_jug == -1:
-            print(f"ERROR: api_jugadores_detalles - Columnas 'NOMBRE' ({idx_nom_jug}) o 'EQUIPO' ({idx_eq_jug}) no encontradas en hoja JUGADORES.")
-            return jsonify({"error": "Columnas 'NOMBRE' o 'EQUIPO' no encontradas en hoja JUGADORES"}), 400
+            return jsonify({"error": "Columnas 'NOMBRE' o 'EQUIPO' no encontradas en 'JUGADORES'"}), 400
 
+        # 2. Crear el diccionario de detalles para los jugadores del equipo seleccionado
         jugadores_detalles = {} # {nombre_upper: {data}}
-        for i, row in enumerate(all_jug[1:]):
-            if len(row) > idx_eq_jug and _limpiar_h(row[idx_eq_jug]) == target_norm:
+        for row in all_jugadores[1:]:
+            if len(row) > max(idx_nom_jug, idx_eq_jug) and _limpiar_h(row[idx_eq_jug].strip()) == target_norm:
                 nombre = row[idx_nom_jug].strip()
                 if nombre:
                     jugadores_detalles[nombre.upper()] = {
                         "nombre": nombre,
-                        "posicion": row[idx_pos_jug].strip() if idx_pos_jug != -1 and len(row) > idx_pos_jug else "",
-                        "pierna": row[idx_pierna_jug].strip() if idx_pierna_jug != -1 and len(row) > idx_pierna_jug else "",
-                        "fortalezas": row[idx_fort_jug].strip() if idx_fort_jug != -1 and len(row) > idx_fort_jug else "",
-                        "debilidades": row[idx_deb_jug].strip() if idx_deb_jug != -1 and len(row) > idx_deb_jug else "",
+                        "posicion": "", "pierna": "", "fortalezas": "", "debilidades": "",
                         "comentarios": [],
-                        "stats": { # Initialize stats with categories
-                            "fisicas": {},
-                            "tecnicas": {},
-                            "tacticas": {},
-                            "psicologicas": {}
-                        }
+                        "stats": { "fisicas": {}, "tecnicas": {}, "tacticas": {}, "psicologicas": {} }
                     }
-                    print(f"DEBUG: api_jugadores_detalles - Jugador '{nombre}' del equipo '{row[idx_eq_jug]}' añadido.")
-            elif len(row) > idx_eq_jug:
-                print(f"DEBUG: api_jugadores_detalles - Fila {i+2} de JUGADORES: Equipo '{row[idx_eq_jug]}' (normalizado: '{_limpiar_h(row[idx_eq_jug])}') no coincide con '{target_norm}'.")
-        
-        if not jugadores_detalles:
-            print(f"DEBUG: api_jugadores_detalles - No se encontraron jugadores para el equipo '{equipo_sess}' en la hoja 'JUGADORES'.")
-        
-        # 2. Obtener datos de ASISTENCIAS (charlas)
+                    print(f"DEBUG: api_jugadores_detalles - Jugador '{nombre}' del equipo '{equipo_sess}' añadido desde JUGADORES.")
+
+        # 3. Enriquecer con comentarios de ASISTENCIAS
         try: # Added try-except for WorksheetNotFound
             print("DEBUG: api_jugadores_detalles - Intentando abrir hoja 'ASISTENCIAS'")
             sheet_asis = client.open(NOMBRE_EXCEL).worksheet("ASISTENCIAS")
@@ -95,7 +78,7 @@ def api_jugadores_detalles():
             idx_fecha_asis = 0 # Asumimos que la fecha es la primera columna
 
             if idx_nom_asis != -1 and idx_eq_asis != -1 and idx_cha_asis != -1:
-                for row in all_asis[1:]:
+                for row in all_asis[1:]: # Usamos all_asis que ya leímos
                     if len(row) > idx_eq_asis and _limpiar_h(row[idx_eq_asis]) == target_norm:
                         nombre_asis = row[idx_nom_asis].strip().upper()
                         charla_val = row[idx_cha_asis].strip()
@@ -108,7 +91,7 @@ def api_jugadores_detalles():
         except Exception as e:
             print(f"Error al cargar comentarios de ASISTENCIAS: {e}")
 
-        # 3. Obtener datos de COORDINACION (observaciones)
+        # 4. Enriquecer con comentarios de COORDINACION
         try: # Added try-except for WorksheetNotFound
             print("DEBUG: api_jugadores_detalles - Intentando abrir hoja 'COORDINACION'")
             sheet_coord = client.open(NOMBRE_EXCEL).worksheet("COORDINACION")
@@ -133,7 +116,7 @@ def api_jugadores_detalles():
         except Exception as e:
             print(f"Error al cargar comentarios de COORDINACION: {e}")
         
-        # 4. Obtener datos de STATS JUGADORES (nueva hoja)
+        # 5. Enriquecer con datos de la misma hoja "MI EQUIPO" (stats, posición, etc.)
         # Cabeceras de stats solicitadas por el usuario
         stats_headers_map = {
             "FISICAS": ["Velocidad", "Resistencia"],
@@ -141,34 +124,32 @@ def api_jugadores_detalles():
             "TACTICAS": ["Vision de juego", "Toma de decisiones", "Agresividad/Intensidad", "Sacrificio defensivo", "Posicionamiento"],
             "PSICOLOGICAS": ["Concentracion", "Liderazgo", "Actitud entrenamientos", "Actitud partidos"]
         }
-        
-        try:
-            print("DEBUG: api_jugadores_detalles - Intentando abrir hoja 'STATS JUGADORES'")
-            sheet_stats = client.open(NOMBRE_EXCEL).worksheet("STATS JUGADORES")
-            all_stats = sheet_stats.get_all_values()
-            print(f"DEBUG: api_jugadores_detalles - Cabeceras de STATS JUGADORES (raw): {all_stats[0] if all_stats else 'N/A'}")
-            h_stats = [_limpiar_h(h) for h in all_stats[0]]
-            idx_nom_stats = next((i for i, h in enumerate(h_stats) if h == "NOMBRE"), -1)
-            idx_eq_stats = next((i for i, h in enumerate(h_stats) if h in ["EQUIPO", "CATEGORIA", "GRUPO", "EQUIPOS"]), -1)
 
-            if idx_nom_stats != -1 and idx_eq_stats != -1:
-                for row in all_stats[1:]:
-                    if len(row) > idx_eq_stats and _limpiar_h(row[idx_eq_stats]) == target_norm:
-                        nombre_stats = row[idx_nom_stats].strip().upper()
-                        if nombre_stats in jugadores_detalles:
-                            for category, stat_names in stats_headers_map.items():
-                                for stat_name in stat_names:
-                                    normalized_stat_name = _limpiar_h(stat_name)
-                                    idx_stat = next((i for i, h in enumerate(h_stats) if h == normalized_stat_name), -1)
-                                    if idx_stat == -1:
-                                        print(f"DEBUG: api_jugadores_detalles - Columna para stat '{stat_name}' (normalizada: '{normalized_stat_name}') NO encontrada en STATS JUGADORES.")
-                                    elif len(row) > idx_stat and row[idx_stat].strip():
-                                        jugadores_detalles[nombre_stats]["stats"][category.lower()][stat_name] = row[idx_stat].strip() # Removed extra print here
-                                        print(f"DEBUG: api_jugadores_detalles - Stat '{stat_name}' para '{nombre_stats}': '{row[idx_stat].strip()}'")
+        try:
+            sheet_miequipo = client.open(NOMBRE_EXCEL).worksheet("MI EQUIPO")
+            all_miequipo = sheet_miequipo.get_all_values()
+            h_miequipo = [_limpiar_h(h) for h in all_miequipo[0]]
+            idx_nom_me = next((i for i, h in enumerate(h_miequipo) if h == "NOMBRE"), -1)
+            idx_eq_me = next((i for i, h in enumerate(h_miequipo) if h in ["EQUIPO", "CATEGORIA", "GRUPO", "EQUIPOS"]), -1)
+
+            for row in all_miequipo[1:]:
+                if len(row) > max(idx_nom_me, idx_eq_me) and _limpiar_h(row[idx_eq_me].strip()) == target_norm:
+                    nombre_me = row[idx_nom_me].strip().upper()
+                    if nombre_me in jugadores_detalles:
+                        # Actualizar campos básicos
+                        for campo, col_name in [("posicion", "POSICION"), ("pierna", "PIERNA"), ("fortalezas", "FORTALEZAS"), ("debilidades", "DEBILIDADES")]:
+                            idx = next((i for i, h in enumerate(h_miequipo) if h == _limpiar_h(col_name)), -1)
+                            if idx != -1 and len(row) > idx:
+                                jugadores_detalles[nombre_me][campo] = row[idx].strip()
+                        
+                        # Actualizar stats
+                        for category, stat_names in stats_headers_map.items():
+                            for stat_name in stat_names:
+                                idx_stat = next((i for i, h in enumerate(h_miequipo) if h == _limpiar_h(stat_name)), -1)
+                                if idx_stat != -1 and len(row) > idx_stat and row[idx_stat].strip():
+                                    jugadores_detalles[nombre_me]["stats"][category.lower()][stat_name] = row[idx_stat].strip()
         except gspread.exceptions.WorksheetNotFound:
-            print("AVISO: La hoja 'STATS JUGADORES' no existe. No se cargarán estadísticas detalladas.")
-        except Exception as e:
-            print(f"Error al cargar STATS JUGADORES: {e}")
+            print("AVISO: La hoja 'MI EQUIPO' no existe. No se cargarán datos adicionales (posición, stats, etc.).")
 
         # Convertir el diccionario de jugadores a una lista para el frontend
         jugadores_list = list(jugadores_detalles.values())
@@ -179,3 +160,64 @@ def api_jugadores_detalles():
     except Exception as e:
         print(f"Error en api_jugadores_detalles: {e}")
         return jsonify({"error": str(e)}), 500
+
+@jugadores_detalles_bp.route('/api/jugadores_detalles/update', methods=['POST'])
+def update_jugador_detalle():
+    client = getattr(current_app, 'gs_client', None)
+    NOMBRE_EXCEL = getattr(current_app, 'gs_name', "Control Asistencia Club")
+    
+    data = request.json
+    nombre_jugador = data.get('nombre')
+    stat_name = data.get('statName')
+    valor = data.get('valor')
+    equipo_actual = session.get('equipo_defecto')
+
+    if not all([nombre_jugador, stat_name, equipo_actual]):
+        return jsonify({"status": "error", "message": "Faltan datos en la petición"}), 400
+
+    target_sheet_name = "MI EQUIPO"
+    try:
+        sheet = client.open(NOMBRE_EXCEL).worksheet(target_sheet_name)
+        all_data = sheet.get_all_values()
+        if not all_data:
+            return jsonify({"status": "error", "message": f"La hoja {target_sheet_name} está vacía."}), 404
+
+        headers = [_limpiar_h(h) for h in all_data[0]]
+        
+        # Encontrar la columna a actualizar
+        col_stat_idx = next((i for i, h in enumerate(headers) if h == _limpiar_h(stat_name)), -1)
+        if col_stat_idx == -1:
+            return jsonify({"status": "error", "message": f"Columna '{stat_name}' no encontrada en la hoja '{target_sheet_name}'"}), 404
+
+        # Encontrar la fila del jugador
+        idx_nom = next((i for i, h in enumerate(headers) if h == "NOMBRE"), -1)
+        idx_eq = next((i for i, h in enumerate(headers) if h in ["EQUIPO", "CATEGORIA", "GRUPO", "EQUIPOS"]), -1)
+        
+        if idx_nom == -1 or idx_eq == -1:
+            return jsonify({"status": "error", "message": "Columnas 'NOMBRE' o 'EQUIPO' no encontradas para buscar al jugador."}), 404
+
+        fila_idx = -1
+        for i, row in enumerate(all_data[1:]): # Empezar desde la segunda fila (datos)
+            if len(row) > max(idx_nom, idx_eq):
+                nombre_en_fila = row[idx_nom].strip().upper()
+                equipo_en_fila = _limpiar_h(row[idx_eq].strip()) # Añadido .strip() para más robustez
+                if nombre_en_fila == nombre_jugador.upper() and equipo_en_fila == _limpiar_h(equipo_actual):
+                    fila_idx = i + 2 # +1 por empezar en 0, +1 por saltar cabecera
+                    break
+        
+        if fila_idx != -1:
+            sheet.update_cell(fila_idx, col_stat_idx + 1, valor)
+            return jsonify({"status": "success", "message": f"'{stat_name}' de {nombre_jugador} actualizado a '{valor}'."})
+        else:
+            # Si no se encuentra, CREAR una nueva fila para el jugador
+            print(f"AVISO: No se encontró al jugador '{nombre_jugador}', se creará una nueva fila en 'MI EQUIPO'.")
+            nueva_fila = [''] * len(headers)
+            nueva_fila[idx_nom] = nombre_jugador
+            nueva_fila[idx_eq] = equipo_actual
+            nueva_fila[col_stat_idx] = valor
+            sheet.append_row(nueva_fila, value_input_option='USER_ENTERED')
+            return jsonify({"status": "success", "message": f"Se ha creado una nueva entrada para {nombre_jugador} y se ha guardado '{stat_name}'."})
+
+    except Exception as e:
+        print(f"Error en update_jugador_detalle: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
