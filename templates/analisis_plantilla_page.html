@@ -1,0 +1,392 @@
+<style>
+    /* Estilos para la nueva sección de detalles de jugadores */
+    .player-details-section {
+        margin-bottom: 25px;
+        min-height: 200px; /* Para asegurar visibilidad incluso si está vacío */
+        background-color: #fcfcfc; /* Fondo para depuración */
+        border-radius: 24px;
+        padding: 15px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.04);
+        border: 1px solid #f1f5f9;
+    }
+    .player-details-section .card-modern {
+        box-shadow: none;
+        border: none;
+        padding: 0;
+    }
+    .player-details-section .card-title {
+        font-weight: 900;
+        color: #1e293b;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 1.2rem;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .player-details-section .card-title i {
+        color: #E31E24;
+    }
+    .player-details-section .stats-category-title {
+        font-weight: 700;
+        color: #475569;
+        margin-top: 5px;
+        font-size: 0.9em;
+    }
+    /* New styles for stats display */
+    .player-details-section .stats-item-row {
+        display: flex;
+        justify-content: space-between;
+        margin-left: 10px; /* Indent like original stats-item */
+        font-size: 0.85em;
+    }
+    /* Ranking Table (Rendimiento) */
+    .table-val { width: 100%; border-collapse: collapse; table-layout: auto; }
+    .table-val th { text-align: left; font-size: 12px; color: #94a3b8; padding: 10px; text-transform: uppercase; }
+    .table-val td { padding: 10px 4px; font-size: 14px; font-weight: 700; border-bottom: 1px solid #f8fafc; text-align: left; }
+    .table-val td:first-child { text-align: left; padding-left: 10px; font-weight: 600; width: 150px; }
+    
+    /* Estilos para las sub-cabeceras de estadísticas */
+    .table-val .sub-header { font-size: 9px; text-align: center; color: #64748b; padding: 5px 2px; border-top: 1px solid #f1f5f9; background: #fcfcfc; }
+
+    /* Selectores de categorías superiores */
+    .stats-toggles { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .stat-pill {
+        padding: 8px 16px; border-radius: 30px; background: #f1f5f9; color: #64748b;
+        font-size: 11px; font-weight: 800; cursor: pointer; transition: 0.3s;
+        border: 2px solid transparent; text-transform: uppercase; display: flex; align-items: center; gap: 8px;
+    }
+    .stat-pill.active { background: #E31E24; color: white; box-shadow: 0 4px 12px rgba(227, 30, 36, 0.2); }
+    .stat-pill:hover:not(.active) { background: #e2e8f0; color: #1e293b; }
+
+    .stats-toggles { justify-content: center; } /* Centra los botones de stats */
+    /* Estilos para inputs de stats */
+    .stat-input {
+        width: 100%; border: none; background: transparent; text-align: center;
+        font-family: inherit; font-size: 13px; font-weight: 800; color: #E31E24;
+        outline: none; padding: 4px 0; border-radius: 4px; transition: 0.2s;
+    }
+    .stat-input:focus { background: #fff1f2; box-shadow: inset 0 0 0 1px #fecdd3; }
+    
+    /* Quitar flechas de input number */
+    .stat-input::-webkit-outer-spin-button,
+    .stat-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .stat-input[type=number] { -moz-appearance: textfield; }
+
+    .hidden-stat-col { display: none; }
+
+    /* Estilos para bordes de categorías */
+    .stat-category-fisicas-start { border-left: 1px solid #e2e8f0; }
+    .stat-category-tecnicas-start { border-left: 1px solid #e2e8f0; }
+    .stat-category-tacticas-start { border-left: 1px solid #e2e8f0; }
+    .stat-category-psicologicas-start { border-left: 1px solid #e2e8f0; }
+
+    /* Estilos para textarea y select en la tabla */
+    .table-val textarea, .table-val select, .table-val input[type="number"] {
+        width: 100%;
+        padding: 5px;
+        border: 1px solid #e0e0e0; /* Borde más suave */
+        border-radius: 5px;
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        color: #475569;
+        resize: vertical; /* Permite redimensionar verticalmente */
+        text-align: center; /* Alinea el texto en el centro */
+    }
+    /* Borde rojo entre categorías de stats */
+    .main-stat-header.stat-category-fisicas-start, .main-stat-header.stat-category-tecnicas-start,
+    .main-stat-header.stat-category-tacticas-start, .main-stat-header.stat-category-psicologicas-start {
+        border-left: 2px solid #E31E24;
+    }
+</style>
+
+<!-- SECCIÓN: Detalles de Jugadores -->
+<div class="player-details-section">
+    <div class="card-modern">
+        <div class="card-title"><i class="fas fa-users"></i> DETALLES DE JUGADORES</div>
+        
+        <!-- Contenedor para botones de selección de stats y mensaje de información -->
+        <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">
+            <!-- Mensaje de información a la izquierda -->
+            <div id="stats-info-message" style="display: flex; align-items: center; justify-content: flex-start; padding: 10px 15px; background: #f8f9fa; border-radius: 10px; color: #666; font-weight: 700; font-size: 13px; gap: 10px; border: 1px solid #f1f5f9; flex-shrink: 0;">
+                <i class="fas fa-info-circle" style="color: #E31E24;"></i> Selecciona una o más categorías de estadísticas para visualizarlas.
+            </div>
+            
+            <!-- Botones de selección de stats centrados -->
+            <div class="stats-toggles" style="flex-grow: 1; justify-content: flex-end;">
+            <div class="stat-pill" data-category="fisicas" onclick="toggleStatCategory('fisicas', this)"><i class="fas fa-bolt"></i> STATS FÍSICAS</div>
+            <div class="stat-pill" data-category="tecnicas" onclick="toggleStatCategory('tecnicas', this)"><i class="fas fa-magic"></i> STATS TÉCNICAS</div>
+            <div class="stat-pill" data-category="tacticas" onclick="toggleStatCategory('tacticas', this)"><i class="fas fa-chess-board"></i> STATS TÁCTICAS</div>
+            <div class="stat-pill" data-category="psicologicas" onclick="toggleStatCategory('psicologicas', this)"><i class="fas fa-brain"></i> STATS PSICOLÓGICAS</div>
+        </div>
+
+        </div>
+        <div style="flex: 1; overflow-x: auto;">
+            <table class="table-val">
+                <thead>
+                    <tr>
+                        <th rowspan="2">JUGADOR</th>
+                        <th rowspan="2" style="width: 50px;">PIERNA</th>
+                        <th rowspan="2" style="width: 80px;">POSICIÓN</th>                        
+                        <th rowspan="2">COMENTARIOS</th>
+                        <th colspan="2" class="main-stat-header stat-category-fisicas-start hidden-stat-col" data-category="fisicas" style="text-align: center; border-bottom: 1px solid #f1f5f9;">STATS FÍSICAS</th>
+                        <th colspan="10" class="main-stat-header stat-category-tecnicas-start hidden-stat-col" data-category="tecnicas" style="text-align: center; border-bottom: 1px solid #f1f5f9;">STATS TÉCNICAS</th>
+                        <th colspan="5" class="main-stat-header stat-category-tacticas-start hidden-stat-col" data-category="tacticas" style="text-align: center; border-bottom: 1px solid #f1f5f9;">STATS TÁCTICAS</th>
+                        <th colspan="4" class="main-stat-header stat-category-psicologicas-start hidden-stat-col" data-category="psicologicas" style="text-align: center; border-bottom: 1px solid #f1f5f9;">STATS PSICOLÓGICAS</th>
+                        <th rowspan="2">DEBILIDADES</th>
+                        <th rowspan="2">FORTALEZAS</th>
+                    </tr>
+                    <tr>
+                        <!-- FÍSICAS -->
+                        <th class="sub-header stat-category-fisicas-start hidden-stat-col" data-category="fisicas" style="min-width: 60px;">Velocidad</th>
+                        <th class="sub-header hidden-stat-col" data-category="fisicas" style="min-width: 60px;">Resistencia</th>
+                        <!-- TÉCNICAS -->
+                        <th class="sub-header stat-category-tecnicas-start hidden-stat-col" data-category="tecnicas" style="min-width: 80px;">Precision pase corto</th>
+                        <th class="sub-header hidden-stat-col" data-category="tecnicas" style="min-width: 80px;">Precision pase largo</th>
+                        <th class="sub-header hidden-stat-col" data-category="tecnicas" style="min-width: 80px;">Capacidad de robo</th>
+                        <th class="sub-header hidden-stat-col" data-category="tecnicas" style="min-width: 80px;">Juego de cabeza</th>
+                        <th class="sub-header hidden-stat-col" data-category="tecnicas" style="min-width: 80px;">Regate/desborde</th>
+                        <th class="sub-header hidden-stat-col" data-category="tecnicas" style="min-width: 60px;">Tiro</th>
+                        <th class="sub-header hidden-stat-col" data-category="tecnicas" style="min-width: 60px;">Control</th>
+                        <th class="sub-header hidden-stat-col" data-category="tecnicas" style="min-width: 60px;">Conduccion</th>
+                        <th class="sub-header hidden-stat-col" data-category="tecnicas" style="min-width: 60px;">Definicion</th>
+                        <th class="sub-header hidden-stat-col" data-category="tecnicas" style="min-width: 80px;">Creatividad con balon</th>
+                        <!-- TÁCTICAS -->
+                        <th class="sub-header stat-category-tacticas-start hidden-stat-col" data-category="tacticas" style="min-width: 80px;">Vision de juego</th>
+                        <th class="sub-header hidden-stat-col" data-category="tacticas" style="min-width: 80px;">Toma de decisiones</th>
+                        <th class="sub-header hidden-stat-col" data-category="tacticas" style="min-width: 80px;">Agresividad/Intensidad</th>
+                        <th class="sub-header hidden-stat-col" data-category="tacticas" style="min-width: 80px;">Sacrificio defensivo</th>
+                        <th class="sub-header hidden-stat-col" data-category="tacticas" style="min-width: 80px;">Posicionamiento</th>
+                        <!-- PSICOLÓGICAS -->
+                        <th class="sub-header stat-category-psicologicas-start hidden-stat-col" data-category="psicologicas" style="min-width: 80px;">Concentracion</th>
+                        <th class="sub-header hidden-stat-col" data-category="psicologicas" style="min-width: 60px;">Liderazgo</th>
+                        <th class="sub-header hidden-stat-col" data-category="psicologicas" style="min-width: 80px;">Actitud entrenamientos</th>
+                        <th class="sub-header hidden-stat-col" data-category="psicologicas" style="min-width: 80px;">Actitud partidos</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyJugadoresDetalles">
+                    <!--
+                        Total columns:
+                        JUGADOR (1) + COMENTARIOS (1) + FÍSICAS (2) + TÉCNICAS (10) + TÁCTICAS (5) + PSICOLÓGICAS (4) + DEBILIDADES (1) + FORTALEZAS (1) + POSICIÓN (1) + PIERNA (1) = 27
+                    -->
+                    <tr><td colspan="27" style="text-align: center; padding: 20px; color: #999;">Selecciona una o más categorías de estadísticas para visualizarlas.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Toast para mensajes de autoguardado -->
+<div id="toast-autoguardado" style="position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: white; padding: 12px 25px; border-radius: 30px; font-weight: 800; font-size: 11px; z-index: 10001; transition: 0.4s; opacity: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 10px; border: 1px solid #333;"></div>
+
+
+<script>
+    async function cargarJugadoresDetalles() {
+        console.log("DEBUG: Iniciando cargarJugadoresDetalles()");
+        const tbody = document.getElementById('tbodyJugadoresDetalles');
+        tbody.innerHTML = '<tr><td colspan="27" style="text-align: center; padding: 20px; color: #999;"><i class="fas fa-spinner fa-spin"></i> Cargando jugadores...</td></tr>';
+        
+        try {
+            const res = await fetch('/api/jugadores_detalles?equipo_actual={{ equipo }}'); // Pass current team to API
+            if (!res.ok) {
+                const errorText = await res.text();
+                console.error("API call for jugadores_detalles failed:", res.status, errorText);
+                tbody.innerHTML = `<tr><td colspan="27" style="text-align: center; padding: 20px; color: #ef4444;">Error al cargar jugadores: ${errorText}</td></tr>`;
+                return;
+            }
+            const data = await res.json();
+            // console.log("DEBUG: Datos de jugadores_detalles recibidos:", data); // Desactivado para evitar spam en consola
+
+            if (data.error) {
+                console.error("Error en la API de jugadores_detalles (backend):", data.error);
+                tbody.innerHTML = `<tr><td colspan="27" style="text-align: center; padding: 20px; color: #ef4444;">Error: ${data.error}</td></tr>`;
+                return;
+            }
+
+            if (!data.jugadores || data.jugadores.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="27" style="text-align: center; padding: 20px; color: #999;">No hay jugadores disponibles para este equipo.</td></tr>'; // Este mensaje sí es definitivo
+                return;
+            }
+            
+            // Mapeo de categorías de equipo a opciones de posición
+            const teamCategoryMap = {
+                'DEBUTANTE': 'base', 'CHUPETIN': 'base', 'PREBENJAMIN': 'base', 'BENJAMIN': 'base', 'ALEVIN 7': 'base',
+                'ALEVIN 11': 'avanzado', 'INFANTIL': 'avanzado', 'CADETE': 'avanzado', 'JUVENIL': 'avanzado', 'SENIOR': 'avanzado', 'AFICIONADO': 'avanzado'
+            };
+
+            const positionOptions = {
+                'base': ['PORT', 'DEF', 'MC', 'EXT', 'DEL'],
+                'avanzado': ['PORT', 'LAT', 'DEF C', 'MC', 'PIVOTE', 'MP', 'EXT', 'DEL']
+            };
+
+            // Función para determinar la categoría del equipo actual
+            function getTeamCategory(teamName) {
+                const normalizedTeamName = teamName.toUpperCase().replace(/ /g, ' ').trim();
+                for (const category in teamCategoryMap) {
+                    if (normalizedTeamName.includes(category)) {
+                        return teamCategoryMap[category];
+                    }
+                }
+                return 'avanzado'; // Default a avanzado si no se puede determinar
+            }
+
+            const currentTeamCategory = getTeamCategory('{{ equipo }}'); // Get category for the current team
+
+            tbody.innerHTML = data.jugadores.map(player => {
+                const comentariosHtml = player.comentarios && player.comentarios.length > 0 
+                    ? `<ul style="list-style: none; padding: 0; margin: 0; font-size: 0.8em;">${player.comentarios.map(c => `<li>${c}</li>`).join('')}</ul>`
+                    : '<i>Sin comentarios</i>';
+                
+                // Definición de todas las claves de estadísticas por categoría
+                const fisicasKeys = ["Velocidad", "Resistencia"];
+                const tecnicasKeys = [ // Coinciden con el casing de jugadores_detalles.py
+                    "Precision pase corto", "Precision pase largo", "Capacidad de robo", 
+                    "Juego de cabeza", "Regate/desborde", "Tiro", "Control", 
+                    "Conduccion", "Definicion", "Creatividad con balon"
+                ];
+                const tacticasKeys = [ // Coinciden con el casing de jugadores_detalles.py
+                    "Vision de juego", "Toma de decisiones", "Agresividad/Intensidad", 
+                    "Sacrificio defensivo", "Posicionamiento"
+                ];
+                const psicologicasKeys = [ // Coinciden con el casing de jugadores_detalles.py
+                    "Concentracion", "Liderazgo", "Actitud entrenamientos", "Actitud partidos"
+                ];
+                
+                // Función auxiliar para generar celdas de estadísticas con inputs
+                const generateStatCells = (statsObj, keys, categoryName) => {
+                    return keys.map(k => {
+                        const val = statsObj[k] || '';
+                        const isFirstInCat = keys.indexOf(k) === 0;
+                        const borderClass = isFirstInCat ? `stat-category-${categoryName}-start` : '';
+                        return `<td class="stat-cell ${borderClass} hidden-stat-col" data-category="${categoryName}" style="text-align: center; min-width: 60px;">
+                                    <input type="number" class="stat-input" value="${val}" placeholder="-" onchange="guardarStatDirecta('${player.nombre}', '${k}', this.value)">
+                                </td>`;
+                    }).join('');
+                };
+
+                const fisicasCellsHtml = generateStatCells(player.stats.fisicas || {}, fisicasKeys, 'fisicas');
+                const tecnicasCellsHtml = generateStatCells(player.stats.tecnicas || {}, tecnicasKeys, 'tecnicas');
+                const tacticasCellsHtml = generateStatCells(player.stats.tacticas || {}, tacticasKeys, 'tacticas');
+                const psicologicasCellsHtml = generateStatCells(player.stats.psicologicas || {}, psicologicasKeys, 'psicologicas');
+
+                // Generar opciones de posición
+                const playerPositionOptions = positionOptions[currentTeamCategory] || positionOptions['avanzado'];
+                const positionSelectHtml = `
+                    <select class="stat-input" onchange="guardarStatDirecta('${player.nombre}', 'POSICION', this.value)" style="min-width: 70px;">
+                        <option value="" disabled selected>${player.posicion || '-'}</option>
+                        ${playerPositionOptions.map(opt => `<option value="${opt}" ${player.posicion === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                    </select>
+                `;
+
+                // Generar opciones de pierna
+                const piernaSelectHtml = `
+                    <select class="stat-input" onchange="guardarStatDirecta('${player.nombre}', 'PIERNA', this.value)" style="min-width: 40px;">
+                        <option value="" disabled selected>${player.pierna || '-'}</option>
+                        <option value="D" ${player.pierna === 'D' ? 'selected' : ''}>D</option>
+                        <option value="Z" ${player.pierna === 'Z' ? 'selected' : ''}>Z</option>
+                    </select>
+                `;
+
+                return `
+                    <tr>
+                        <td style="font-weight: 800; color: #333;">${player.nombre}</td>
+                        <td>${piernaSelectHtml}</td>
+                        <td>${positionSelectHtml}</td>
+                        <td>${comentariosHtml}</td>
+                        ${fisicasCellsHtml}
+                        ${tecnicasCellsHtml}
+                        ${tacticasCellsHtml}
+                        ${psicologicasCellsHtml}
+                        <td><textarea class="stat-input" onchange="guardarStatDirecta('${player.nombre}', 'DEBILIDADES', this.value)">${player.debilidades || ''}</textarea></td>
+                        <td><textarea class="stat-input" onchange="guardarStatDirecta('${player.nombre}', 'FORTALEZAS', this.value)">${player.fortalezas || ''}</textarea></td>
+                    </tr>
+                `;
+            }).join('');
+
+        } catch (e) {
+            console.error("Error al cargar detalles de jugadores:", e);
+            tbody.innerHTML = `<tr><td colspan="27" style="text-align: center; padding: 20px; color: #ef4444;">Error de conexión o datos: ${e.message}</td></tr>`;
+        }
+    }
+
+    // Usamos addEventListener para evitar conflictos con otros scripts de carga
+    document.addEventListener('DOMContentLoaded', function() {
+        // Al cargar la página, siempre cargamos los jugadores.
+        cargarJugadoresDetalles();
+        // Eliminado: mostrarToastAutoguardado("Selecciona una o más categorías para ver las estadísticas.", false, false, 5000);
+    });
+
+    function toggleStatCategory(category, pill) {
+        const isActive = pill.classList.toggle('active');
+        const displayValue = isActive ? '' : 'none';
+
+        // Ocultar/Mostrar cabecera principal y sub-cabeceras
+        document.querySelectorAll(`.main-stat-header[data-category="${category}"], .sub-header[data-category="${category}"]`).forEach(el => {
+            if (isActive) {
+                el.classList.remove('hidden-stat-col');
+            } else {
+                el.classList.add('hidden-stat-col');
+            }
+        });
+        // Ocultar/Mostrar celdas de datos (inputs)
+        document.querySelectorAll(`.stat-cell[data-category="${category}"]`).forEach(el => {
+            if (isActive) {
+                el.classList.remove('hidden-stat-col');
+            } else {
+                el.classList.add('hidden-stat-col');
+            }
+        });
+
+        // Si no hay ninguna categoría activa, mostrar el mensaje
+        updateStatsInfoMessage(); // Actualizamos el mensaje de información
+    }
+
+    function updateStatsInfoMessage() {
+        const statsInfoMessage = document.getElementById('stats-info-message');
+        const anyActive = document.querySelectorAll('.stat-pill.active').length > 0;
+
+        if (statsInfoMessage) {
+            statsInfoMessage.style.display = anyActive ? 'none' : 'flex';
+        }
+    }
+
+
+    async function guardarStatDirecta(nombre, statName, valor) {
+        console.log(`DEBUG: Guardando para ${nombre}: ${statName} = ${valor}`);
+        // Aquí irá la llamada a la API en el futuro para persistir en Google Sheets
+        // Por ahora lo dejamos logueado para confirmar que el input funciona
+        mostrarToastAutoguardado(`Actualizando ${statName}...`);
+    }
+
+    // Función de toast global (copiada de deportivo.py para consistencia)
+    function mostrarToastAutoguardado(texto = "GUARDADO EN GOOGLE SHEETS", isError = false, isLoading = false, duration = 2000) {
+        let toast = document.getElementById('toast-autoguardado');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'toast-autoguardado';
+            toast.style.cssText = "position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: white; padding: 12px 25px; border-radius: 30px; font-weight: 800; font-size: 11px; z-index: 10001; transition: 0.4s; opacity: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 10px; border: 1px solid #333;";
+            document.body.appendChild(toast);
+        }
+
+        toast.style.background = isError ? '#dc3545' : '#1a1a1a';
+        
+        let icon = '<i class="fas fa-check-circle" style="color: #2eb85c;"></i>';
+        if (isError) icon = '<i class="fas fa-exclamation-circle" style="color: white;"></i>';
+        if (isLoading) icon = '<i class="fas fa-sync fa-spin" style="color: #ffc107;"></i>';
+        
+        toast.innerHTML = `${icon} ${texto}`;
+
+        toast.style.opacity = "1";
+        toast.style.bottom = "40px";
+
+        // Si no está cargando, lo ocultamos tras la duración especificada.
+        if (!isLoading) {
+            setTimeout(() => { 
+                toast.style.opacity = "0"; 
+                toast.style.bottom = "30px";
+            }, duration);
+        }
+    }
+</script>

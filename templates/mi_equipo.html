@@ -184,14 +184,8 @@
 
 </style>
 
-<div style="margin-bottom: 40px; display: flex; justify-content: space-between; align-items: flex-end;">
-    <h1 style="font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: -1px; display: flex; align-items: center; gap: 15px;">
-        <i class="fas fa-shield-halved" style="color: #E31E24;"></i> MI EQUIPO: <span style="color: #E31E24;">{{ equipo }}</span>
-    </h1>
-    <div style="font-size: 11px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Temporada <span id="currentSeasonDisplay"></span></div>
-</div>
-
 <div class="mi-equipo-layout">
+    {% include 'analisis_plantilla_page.html' %}
     <div class="main-stats-grid">
         <!-- Bloque 1: Gráfico -->
         <div class="card-modern">
@@ -482,6 +476,8 @@
         }
     }
 
-    window.onload = cargarStats;
+    window.addEventListener('load', function() {
+        cargarStats();
+    });
 </script>
 {% endblock %}

@@ -291,7 +291,7 @@
         <div class="top-bar">
             <div style="display: flex; align-items: center; gap: 15px;">
                 <img src="{{ url_for('static', filename='ESCUDO SIN FONDO.png') }}" alt="Escudo" style="height: 65px; width: auto;">
-                <span style="font-size: 0.9rem; color: #666;">Bienvenido, <strong id="userId" style="color: #333;">{{ usuario }}</strong></span>
+                <span style="font-size: 0.9rem; color: #666;">Bienvenido, <strong id="userId" style="color: #333;">{{ usuario }}</strong> {% if equipo_defecto %}({{ equipo_defecto }}){% endif %}</span>
             </div>
             <a href="/logout" class="btn-salir" onclick="showLoader()">CERRAR SESIÓN</a>
         </div>
