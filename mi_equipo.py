@@ -66,8 +66,13 @@ def api_stats_mi_equipo():
     periodo_req = request.args.get('periodo') 
     if not periodo_req:
         hoy = datetime.now()
-        inicio_y = hoy.year if hoy.month >= 9 else hoy.year - 1
-        periodo_req = "25-26" # Forzamos el periodo solicitado Sep 25 - Ago 26
+        # Determine the start year of the current season (Sept-Aug)
+        # If current month is Sep-Dec, season starts in current year.
+        # If current month is Jan-Aug, season starts in previous year.
+        season_start_year = hoy.year if hoy.month >= 9 else hoy.year - 1
+        season_end_year = season_start_year + 1
+        periodo_req = f"{str(season_start_year)[2:]}-{str(season_end_year)[2:]}"
+        print(f"DEBUG: Dynamic period determined: {periodo_req}") # Add debug log
     
     try:
         y_start = int(f"20{periodo_req.split('-')[0]}")
@@ -239,10 +244,16 @@ def api_stats_mi_equipo():
         
         total_stats_individual = {} # {nombre: {"si": 0, "x": 0, "total": 0}}
 
+        hoy = datetime.now() # Get current date for filtering
+
         for m_num, y_num in meses_periodo:
             m_clave = f"{m_num:02d}/{y_num}"
             lbl = f"{nombres_m[m_num-1]}{str(y_num)[2:]}"
             
+            # Filter out future months: only process months up to the current one
+            if y_num > hoy.year or (y_num == hoy.year and m_num > hoy.month):
+                continue # Skip future months
+
             asis_chart["labels"].append(lbl)
             
             # --- Estadísticas de Asistencia ---

@@ -47,9 +47,9 @@
     .rank-item-card:hover { border-color: #E31E24; background: #fff; box-shadow: 0 4px 12px rgba(227, 30, 36, 0.08); }
     
     .rank-table { width: 100%; border-collapse: collapse; }
-    .rank-table td { padding: 6px; font-size: 14px; font-weight: 700; }
+    .rank-table td { padding: 6px; font-size: 14px; font-weight: 600; }
     
-    .rank-avatar { width: 40px; height: 40px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; border: 2px solid #e2e8f0; }
+    .rank-avatar { width: 40px; height: 40px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; border: 2px solid #e2e8f0; }
     .rank-badge { font-size: 15px; font-weight: 900; padding: 5px 12px; border-radius: 30px; display: inline-block; }
 
     .badge-top { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
@@ -58,18 +58,56 @@
 
     .table-val { width: 100%; border-collapse: collapse; }
     .table-val th { text-align: left; font-size: 12px; color: #94a3b8; padding: 10px; text-transform: uppercase; }
-    .table-val td { padding: 10px 4px; font-size: 16px; font-weight: 800; border-bottom: 1px solid #f8fafc; text-align: center; } /* Números más grandes */
-    .table-val td:first-child { text-align: left; padding-left: 10px; }
+    .table-val td { padding: 10px 4px; font-size: 16px; font-weight: 700; border-bottom: 1px solid #f8fafc; text-align: center; }
+    .table-val td:first-child { text-align: left; padding-left: 10px; font-weight: 600; }
 
-    .month-rank-box { margin-bottom: 10px; padding: 8px; background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9; }
-    .month-rank-title { font-size: 16px; font-weight: 900; color: #E31E24; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Color classes for consistency */
+    .text-green-subtle { color: #15803d; } /* Consistent green */
+    .text-red-subtle { color: #ef4444; }   /* Consistent red */
+    .text-dark-gray { color: #475569; }    /* Default player name color */
+    .text-dark-blue { color: #1e293b; }    /* Default percentage color */
+
+    /* Estilos Modernos para Asistencias */
+    .month-rank-box.prominent { 
+        margin-bottom: 15px; 
+        padding: 12px; 
+        background: #f8fafc; 
+        border-radius: 16px; 
+        border: 1px solid #f1f5f9; 
+    }
+    .month-rank-title { font-size: 14px; font-weight: 900; color: #1e293b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
     
     .rank-mini-item {
-        display: flex; align-items: center; gap: 6px; font-size: 16px; /* Números más grandes */
-        font-weight: 700; margin-bottom: 2px; 
+        display: flex; align-items: center; gap: 8px; font-size: 14px; 
+        font-weight: 500; margin-bottom: 4px; /* Más fino */
     }
-    .rank-mini-item.top { color: #15803d; }
-    .rank-mini-item.bottom { color: #b91c1c; }
+    .rank-mini-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rank-mini-perc { font-weight: 700; min-width: 45px; text-align: right; }
+    
+    .history-grid-title {
+        font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase;
+        letter-spacing: 1px; margin: 20px 0 10px 0; text-align: center;
+    }
+    .history-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .history-item { background: #fff; border: 1px solid #f1f5f9; border-radius: 10px; padding: 6px 4px; text-align: center; }
+    .history-month-name { font-size: 9px; font-weight: 900; color: #1e293b; margin-bottom: 4px; text-transform: uppercase; }
+    .history-values {
+        display: flex;
+        flex-direction: column;
+        font-size: 10px;
+        font-weight: 500; /* Más fino */
+        gap: 2px;
+        text-align: left; /* Align content of history-values to the left */
+        padding-left: 4px; /* Small padding for visual balance */
+    }
+    .history-val {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        justify-content: space-between; /* Distribute name and percentage */
+    }
+    .history-player-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .history-player-perc { font-weight: 700; min-width: 35px; text-align: right; }
     
     .scroll-v { overflow-y: auto; padding-right: 5px; }
     .scroll-v::-webkit-scrollbar { width: 4px; }
@@ -87,7 +125,7 @@
     <h1 style="font-weight: 900; color: #1e293b; text-transform: uppercase; letter-spacing: -1px; display: flex; align-items: center; gap: 15px;">
         <i class="fas fa-shield-halved" style="color: #E31E24;"></i> MI EQUIPO: <span style="color: #E31E24;">{{ equipo }}</span>
     </h1>
-    <div style="font-size: 11px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Temporada 25-26</div>
+    <div style="font-size: 11px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Temporada <span id="currentSeasonDisplay"></span></div>
 </div>
 
 <div class="mi-equipo-layout">
@@ -102,7 +140,12 @@
 
         <!-- Bloque 2: Rankings Mensuales -->
         <div class="card-modern">
-            <div class="card-title" style="margin-bottom: 10px;"><i class="fas fa-calendar-alt"></i> ASISTENCIA MES</div>
+            <div class="card-title" style="margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
+                <span style="display: flex; gap: 6px;">
+                    <i class="fas fa-arrow-up" style="color:#22c55e; font-size: 12px;"></i><i class="fas fa-arrow-down" style="color:#ef4444; font-size: 12px;"></i>
+                </span>
+                ASISTENCIAS
+            </div>
             <div id="containerMonthlyRankings" class="scroll-v" style="flex: 1;"></div>
         </div>
 
@@ -210,42 +253,123 @@
     function renderMonthlyRankings(asis) {
         const container = document.getElementById('containerMonthlyRankings');
         container.innerHTML = '';
-        // Mapeamos los datos y los invertimos para que el mes más reciente (Junio) esté arriba
-        const html = asis.labels.map((lbl, idx) => {
-            const players = asis.monthly_player_rankings[idx];
-            if (!players || players.length === 0) return '';
-            
-            // Copiamos y ordenamos para no afectar el original
-            const sorted = [...players].sort((a, b) => b.perc - a.perc);
+        
+        // Recopilar meses con datos y ordenarlos (más reciente primero)
+        const validMonths = [];
+        for (let i = 0; i < asis.labels.length; i++) {
+            if (asis.monthly_player_rankings[i] && asis.monthly_player_rankings[i].length > 0) {
+                validMonths.push({
+                    label: asis.labels[i],
+                    players: asis.monthly_player_rankings[i]
+                });
+            }
+        }
+        validMonths.reverse();
+
+        if (validMonths.length === 0) return;
+
+        // Separar destacados (2 últimos) del historial
+        const prominent = validMonths.slice(0, 2);
+        const history = validMonths.slice(2);
+
+        let html = '';
+
+        // 1. Renderizar meses destacados (Junio/Mayo)
+        prominent.forEach(m => {
+            const sorted = [...m.players].sort((a, b) => b.perc - a.perc);
             const top2 = sorted.slice(0, 2);
             const bottom2 = sorted.length > 2 ? sorted.slice(-2).reverse() : [];
-            
-            return `
-                <div class="month-rank-box">
-                <div class="month-rank-title">${lbl}</div>
-                <div style="margin-bottom: 6px;">
+
+            html += `
+                <div class="month-rank-box prominent">
+                    <div class="month-rank-title">${m.label}</div>
                     ${top2.map(p => `
-                        <div class="rank-mini-item top">
-                            <i class="fas fa-arrow-up"></i>
-                            <span style="flex:1; overflow:hidden; text-overflow:ellipsis;">${p.nombre}</span>
-                            <span style="font-weight:900;">${p.perc}%</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <div>
-                        ${bottom2.map(p => `
-                            <div class="rank-mini-item bottom">
-                                <i class="fas fa-arrow-down"></i>
-                                <span style="flex:1; overflow:hidden; text-overflow:ellipsis;">${p.nombre}</span>
-                                <span style="font-weight:900;">${p.perc}%</span>
-                            </div>
-                        `).join('')}
-                </div></div>
+                        <div class="rank-mini-item">
+                            <i class="fas fa-arrow-up text-green-subtle" style="font-size: 10px;"></i>
+                            <span class="rank-mini-name text-green-subtle">${p.nombre.split(' ')[0]}</span>
+                            <span class="rank-mini-perc text-green-subtle">${p.perc}%</span>
+                        </div>
+                    `).join('')}
+                    <div style="height: 4px;"></div>
+                    ${bottom2.map(p => `
+                        <div class="rank-mini-item">
+                            <i class="fas fa-arrow-down text-red-subtle" style="font-size: 10px;"></i>
+                            <span class="rank-mini-name text-red-subtle">${p.nombre.split(' ')[0]}</span>
+                            <span class="rank-mini-perc text-red-subtle">${p.perc}%</span>
+                        </div>
+                    `).join('')}
+                </div>
             `;
-        }).reverse().join('');
+        });
+
+        // 2. Renderizar historial en 4 columnas
+        if (history.length > 0) {
+            html += `<div class="history-grid-title">Meses Anteriores</div>`;
+            html += `<div class="history-grid">`;
+            history.forEach(m => {
+                const sorted = [...m.players].sort((a, b) => b.perc - a.perc);
+                
+                let playersHtml = '';
+
+                // Top 2 players
+                if (sorted.length > 0) {
+                    playersHtml += `
+                        <div class="history-val">
+                            <i class="fas fa-arrow-up text-green-subtle" style="font-size:7px"></i>
+                            <span class="history-player-name text-green-subtle" title="${sorted[0].nombre}">${sorted[0].nombre.split(' ')[0]}</span>
+                            <span class="history-player-perc text-green-subtle">${sorted[0].perc}%</span>
+                        </div>`;
+                }
+                if (sorted.length > 1) {
+                    playersHtml += `
+                        <div class="history-val">
+                            <i class="fas fa-arrow-up text-green-subtle" style="font-size:7px"></i>
+                            <span class="history-player-name text-green-subtle" title="${sorted[1].nombre}">${sorted[1].nombre.split(' ')[0]}</span>
+                            <span class="history-player-perc text-green-subtle">${sorted[1].perc}%</span>
+                        </div>`;
+                }
+
+                // Add a separator if there are enough players to show distinct top and bottom
+                if (sorted.length > 2) {
+                    playersHtml += `<div style="height: 4px;"></div>`; // Small visual separator
+                }
+
+                // Bottom 2 players (only if they are distinct from the top 2)
+                if (sorted.length > 2) { // If 3 or more players, we can show distinct top 2 and bottom 2
+                    playersHtml += `
+                        <div class="history-val">
+                            <i class="fas fa-arrow-down text-red-subtle" style="font-size:7px"></i>
+                            <span class="history-player-name text-red-subtle" title="${sorted[sorted.length - 2].nombre}">${sorted[sorted.length - 2].nombre.split(' ')[0]}</span>
+                            <span class="history-player-perc text-red-subtle">${sorted[sorted.length - 2].perc}%</span>
+                        </div>
+                        <div class="history-val">
+                            <i class="fas fa-arrow-down text-red-subtle" style="font-size:7px"></i>
+                            <span class="history-player-name text-red-subtle" title="${sorted[sorted.length - 1].nombre}">${sorted[sorted.length - 1].nombre.split(' ')[0]}</span>
+                            <span class="history-player-perc text-red-subtle">${sorted[sorted.length - 1].perc}%</span>
+                        </div>`;
+                } else if (sorted.length === 2) { // If exactly 2 players, the second player is also the worst
+                    playersHtml += `
+                        <div class="history-val">
+                            <i class="fas fa-arrow-down text-red-subtle" style="font-size:7px"></i>
+                            <span class="history-player-name text-red-subtle" title="${sorted[1].nombre}">${sorted[1].nombre.split(' ')[0]}</span>
+                            <span class="history-player-perc text-red-subtle">${sorted[1].perc}%</span>
+                        </div>`;
+                }
+                // If sorted.length is 1, only the top 1 is shown, no separate bottom section.
+
+                html += `
+                    <div class="history-item">
+                        <div class="history-month-name">${m.label.split(' ')[0].substring(0,3)}</div>
+                        <div class="history-values">
+                            ${playersHtml}
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+        }
 
         container.innerHTML = html;
-        // Forzar scroll arriba para ver Junio y Mayo inmediatamente
         container.scrollTop = 0;
     }
 
@@ -255,11 +379,11 @@
             const badgeClass = i < 3 ? 'badge-top' : (i >= ranking.length - 3 ? 'badge-bottom' : 'badge-neutral');
             return `
                 <div class="rank-item-card">
-                    <div style="display:flex; align-items:center; gap:8px; min-width:0;">
-                        <div class="rank-avatar" style="width:38px; height:38px; font-size:15px; color:${i<3?'#E31E24':'#666'}">#${i+1}</div>
-                        <span style="font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${p.nombre}">${p.nombre.split(' ')[0]}</span>
+                    <div style="display:flex; align-items:center; gap:8px; min-width:0;"> 
+                        <div class="rank-avatar" style="width:38px; height:38px; font-size:15px; color:${i<3?'#E31E24':'#666'}; font-weight:800;">#${i+1}</div>
+                        <span style="font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:500;" title="${p.nombre}">${p.nombre.split(' ')[0]}</span>
                     </div>
-                    <span style="font-size:18px; font-weight:900; color:${i<3?'#15803d':'#444'}">${p.perc}%</span>
+                    <span style="font-size:17px; font-weight:800; color:${i<3?'#15803d':'#444'}">${p.perc}%</span>
                 </div>
             `;
         }).join('');
