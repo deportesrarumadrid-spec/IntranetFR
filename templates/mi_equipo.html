@@ -41,31 +41,84 @@
     .player-rank-name { overflow: hidden; text-overflow: ellipsis; max-width: 90px; } /* Prevent long names from breaking layout */
     .player-rank-perc { font-size: 15px; font-weight: 900; }
 
-    /* Full Ranking Table */
-    .rank-grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-    .rank-item-card { background: #fdfdfd; border-radius: 12px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; border: 1px solid #f1f5f9; transition: 0.2s; }
-    .rank-item-card:hover { border-color: #E31E24; background: #fff; box-shadow: 0 4px 12px rgba(227, 30, 36, 0.08); }
-    
-    .rank-table { width: 100%; border-collapse: collapse; }
-    .rank-table td { padding: 6px; font-size: 14px; font-weight: 600; }
-    
-    .rank-avatar { width: 40px; height: 40px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; border: 2px solid #e2e8f0; }
-    .rank-badge { font-size: 15px; font-weight: 900; padding: 5px 12px; border-radius: 30px; display: inline-block; }
-
-    .badge-top { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
-    .badge-bottom { background: #fee2e2; color: #b91c1c; border: 1px solid #fecdd3; }
-    .badge-neutral { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
-
-    .table-val { width: 100%; border-collapse: collapse; }
-    .table-val th { text-align: left; font-size: 12px; color: #94a3b8; padding: 10px; text-transform: uppercase; }
-    .table-val td { padding: 10px 4px; font-size: 16px; font-weight: 700; border-bottom: 1px solid #f8fafc; text-align: center; }
-    .table-val td:first-child { text-align: left; padding-left: 10px; font-weight: 600; }
-
     /* Color classes for consistency */
-    .text-green-subtle { color: #15803d; } /* Consistent green */
+    .text-green-subtle { color: #15803d; } /* Consistent green (darker) */
     .text-red-subtle { color: #ef4444; }   /* Consistent red */
     .text-dark-gray { color: #475569; }    /* Default player name color */
     .text-dark-blue { color: #1e293b; }    /* Default percentage color */
+
+    /* Full Ranking List (Asistencias Plantilla) */
+    .full-ranking-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .full-ranking-item {
+        display: flex;
+        align-items: center;
+        padding: 8px 15px; /* Increased padding for a finer look */
+        border-radius: 12px;
+        background: #fdfdfd;
+        border: 1px solid #f1f5f9;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.03); /* Subtle shadow */
+    }
+    .full-ranking-item:hover {
+        border-color: #E31E24;
+        box-shadow: 0 4px 12px rgba(227, 30, 36, 0.08);
+    }
+    .full-ranking-pos {
+        font-weight: 800; /* Bolder position */
+        font-size: 13px; /* Slightly larger */
+        color: #94a3b8;
+        min-width: 28px; /* Adjusted width */
+        text-align: center;
+    }
+    .full-ranking-name {
+        flex: 1;
+        font-weight: 600; /* Finer name */
+        font-size: 14px;
+        color: #1e293b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-left: 10px; /* More space */
+    }
+    .full-ranking-stats {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px; /* Smaller stats */
+        font-weight: 500; /* Finer stats */
+        color: #64748b; /* Lighter color for subtlety */
+        min-width: 80px; /* Ensure enough space */
+        justify-content: flex-end;
+    }
+    .full-ranking-perc {
+        font-weight: 800; /* Bolder percentage */
+        font-size: 16px; /* Slightly larger percentage */
+        min-width: 55px; /* Adjusted width */
+        text-align: right;
+        margin-left: 10px; /* Space from stats */
+    }
+    .full-ranking-item.top-player {
+        background: #dcfce7;
+        border-color: #bbf7d0;
+    }
+    .full-ranking-item.top-player .full-ranking-name,
+    .full-ranking-item.top-player .full-ranking-perc,
+    .full-ranking-item.top-player .full-ranking-stats {
+        color: #15803d;
+    }
+    .full-ranking-item.bottom-player {
+        background: #fee2e2;
+        border-color: #fecdd3;
+    }
+    .full-ranking-item.bottom-player .full-ranking-name,
+    .full-ranking-item.bottom-player .full-ranking-perc,
+    .full-ranking-item.bottom-player .full-ranking-stats {
+        color: #b91c1c;
+    }
 
     /* Estilos Modernos para Asistencias */
     .month-rank-box.prominent { 
@@ -85,8 +138,8 @@
     .rank-mini-perc { font-weight: 700; min-width: 45px; text-align: right; }
     
     .history-grid-title {
-        font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase;
-        letter-spacing: 1px; margin: 20px 0 10px 0; text-align: center;
+        font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; /* Reduced margin-top */
+        letter-spacing: 1px; margin: 10px 0 10px 0; text-align: center; /* Reduced margin-top */
     }
     .history-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
     .history-item { background: #fff; border: 1px solid #f1f5f9; border-radius: 10px; padding: 6px 4px; text-align: center; }
@@ -119,6 +172,16 @@
     
     /* Compactar columnas de rendimiento */
     .col-compact { width: 60px; text-align: center; }
+
+    /* Ranking Table (Rendimiento) */
+    .table-val { width: 100%; border-collapse: collapse; }
+    .table-val th { text-align: left; font-size: 12px; color: #94a3b8; padding: 10px; text-transform: uppercase; }
+    .table-val td { padding: 10px 4px; font-size: 16px; font-weight: 700; border-bottom: 1px solid #f8fafc; text-align: center; }
+    .table-val td:first-child { text-align: left; padding-left: 10px; font-weight: 600; }
+
+    /* General Ranking Item Card (Old, not used for full ranking anymore) */
+    .rank-item-card { display: none; } /* Hide old ranking item card if still present */
+
 </style>
 
 <div style="margin-bottom: 40px; display: flex; justify-content: space-between; align-items: flex-end;">
@@ -151,9 +214,9 @@
 
         <!-- Bloque 3: Ranking Global (Multi-columna) -->
         <div class="card-modern">
-            <div class="card-title" style="margin-bottom: 10px;"><i class="fas fa-trophy"></i> RANKING GLOBAL</div>
+            <div class="card-title" style="margin-bottom: 10px;">ASISTENCIAS PLANTILLA</div>
             <div class="scroll-v" style="flex: 1;">
-                <div id="tbodyFullRanking" class="rank-grid-container"></div>
+                <div id="tbodyFullRanking" class="full-ranking-list"></div>
             </div>
         </div>
 
@@ -164,10 +227,14 @@
                 <thead>
                     <tr>
                         <th>MES</th>
-                        <th><i class="fas fa-arrow-up" style="color:#22c55e"></i> ARRIBA</th>
+                        <th><i class="fas fa-arrow-up" style="color:#15803d"></i> ALTO</th>
                         <th><i class="fas fa-arrow-right" style="color:#f59e0b"></i> NORMAL</th>
-                        <th><i class="fas fa-arrow-down" style="color:#ef4444"></i> ABAJO</th>
-                        <th style="text-align: center;"><i class="fas fa-bullhorn" style="color:#4f46e5;"></i></th>
+                        <th><i class="fas fa-arrow-down" style="color:#ef4444"></i> BAJO</th>
+                        <th style="text-align: center;">
+                            <span style="display: flex; gap: 6px; justify-content: center;">
+                                <i class="fas fa-arrow-up" style="color:#15803d; font-size: 12px;"></i><i class="fas fa-arrow-down" style="color:#ef4444; font-size: 12px;"></i>
+                            </span>
+                        </th>
                     </tr>
                 </thead>
                 <tbody id="tbodyValoracion"></tbody>
@@ -374,16 +441,22 @@
     }
 
     function renderFullRanking(ranking) {
-        const tbody = document.getElementById('tbodyFullRanking');
-        tbody.innerHTML = ranking.map((p, i) => {
-            const badgeClass = i < 3 ? 'badge-top' : (i >= ranking.length - 3 ? 'badge-bottom' : 'badge-neutral');
+        const container = document.getElementById('tbodyFullRanking');
+        container.innerHTML = ranking.map((p, i) => {
+            let itemClass = '';
+            if (i < 3) {
+                itemClass = 'top-player';
+            } else if (i >= ranking.length - 3) {
+                itemClass = 'bottom-player';
+            }
             return `
-                <div class="rank-item-card">
-                    <div style="display:flex; align-items:center; gap:8px; min-width:0;"> 
-                        <div class="rank-avatar" style="width:38px; height:38px; font-size:15px; color:${i<3?'#E31E24':'#666'}; font-weight:800;">#${i+1}</div>
-                        <span style="font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:500;" title="${p.nombre}">${p.nombre.split(' ')[0]}</span>
-                    </div>
-                    <span style="font-size:17px; font-weight:800; color:${i<3?'#15803d':'#444'}">${p.perc}%</span>
+                <div class="full-ranking-item ${itemClass}">
+                    <span class="full-ranking-pos">${i+1}</span>
+                    <span class="full-ranking-name" title="${p.nombre}">${p.nombre.split(' ')[0]}</span>
+                    <span class="full-ranking-stats">
+                        ${p.si_count} SI / ${p.total_available_days}
+                    </span>
+                    <span class="full-ranking-perc">${p.perc}%</span>
                 </div>
             `;
         }).join('');
@@ -397,7 +470,7 @@
                 tbody.innerHTML += `
                     <tr>
                         <td>${row.mes}</td>
-                        <td class="cell-perc" style="color:#22c55e;" title="${row.n_arriba} flechas">${row.arriba}%</td>
+                        <td class="cell-perc" style="color:#15803d;" title="${row.n_arriba} flechas">${row.arriba}%</td>
                         <td class="cell-perc" style="color:#f59e0b;" title="${row.n_medio} flechas">${row.medio}%</td>
                         <td class="cell-perc" style="color:#ef4444;" title="${row.n_abajo} flechas">${row.abajo}%</td>
                         <td class="charlas-col">${row.charlas}</td>

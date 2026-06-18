@@ -246,7 +246,7 @@
 </head>
 <body>
     <!-- Pantalla de Carga -->
-    <div id="loader-wrapper">
+    <div id="loader-wrapper" class="loader-hidden">
         <div class="loader-container">
             <div class="loader-spinner"></div>
             <img src="{{ url_for('static', filename='ESCUDO SIN FONDO.png') }}" class="loader-escudo" alt="Cargando...">
@@ -462,6 +462,13 @@
 
         // Fallback de seguridad: Ocultar el cargador cuando la página esté lista
         window.addEventListener('load', () => {
+            // Ensure cronograma and change team buttons are visible by default on page load
+            // This fixes the issue where they might be hidden if cronograma was opened
+            // on a previous page and then navigated away without closing/minimizing.
+            const btnCrono = document.querySelector('.btn-cronograma-fixed');
+            const btnTeam = document.querySelector('.btn-change-team-fixed');
+            if (btnCrono) btnCrono.style.display = 'flex';
+            if (btnTeam) btnTeam.style.display = 'flex';
             hideLoader();
         });
 

@@ -345,7 +345,12 @@ def api_stats_mi_equipo():
             
             disp_total = total_dias_temp - s["x"]
             perc = (s["si"] / disp_total * 100) if disp_total > 0 else 0
-            total_ranking.append({"nombre": n, "perc": round(perc, 1)})
+            total_ranking.append({
+                "nombre": n,
+                "perc": round(perc, 1),
+                "si_count": s["si"],  # Add SI count
+                "total_available_days": disp_total # Add total available days
+            })
         
         total_ranking.sort(key=lambda x: x["perc"], reverse=True)
 
