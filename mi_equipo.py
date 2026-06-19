@@ -51,6 +51,43 @@ def _limpiar_h(h):
     if not h: return ""
     return str(h).strip().upper().replace('Ó','O').replace('Í','I').replace('É','E').replace('Á','A').replace('Ú','U').replace(' ','').replace('_','').replace('.','')
 
+def _normalizar_valoracion(v):
+    """Normaliza el valor de la valoración para agrupar valores y flechas antiguas."""
+    if v is None:
+        return ""
+    s = str(v).strip().upper()
+    s = s.replace('Á','A').replace('Í','I').replace('É','E').replace('Ó','O').replace('Ú','U')
+    s = s.replace('_', ' ').replace('-', ' ')
+    s = re.sub(r'\s+', ' ', s).strip()
+    if any(ch in s for ch in ['↑', '▲']):
+        return "EXCELENTE"
+    if any(ch in s for ch in ['↓', '▼']):
+        return "MAL"
+    if any(ch in s for ch in ['→', '➡', '=>', '->']):
+        return "NORMAL"
+    if s in ["EXCELENTE", "MUY BIEN", "BIEN", "MUYBIEN", "NORMAL", "REGULAR", "MAL", "MUY MAL"]:
+        return s
+    if s == "OK":
+        return "EXCELENTE"
+    return s
+
+def _normalizar_asistencia(v):
+    """Normaliza el estado de asistencia para soportar acentos y sinónimos."""
+    if v is None:
+        return ""
+    s = str(v).strip().upper()
+    s = s.replace('Á','A').replace('Í','I').replace('É','E').replace('Ó','O').replace('Ú','U')
+    s = re.sub(r'\s+', ' ', s).strip()
+    if s in ['SI', 'SÍ', 'OK', 'YES', 'ASISTIO', 'ASISTE', 'ASISTIDO']:
+        return 'SI'
+    if s in ['NO', 'AUSENTE', 'FALTA', 'NO ASISTE', 'NOASISTE']:
+        return 'NO'
+    if s in ['X', 'BAJA', 'EXC', 'EXENTADO', 'EXCUSA', 'EXCUSADO']:
+        return 'X'
+    if s in ['AV', 'AVISO', 'AVANZADO', 'AVANZADA']:
+        return 'AV'
+    return s
+
 @mi_equipo_bp.route('/api/stats/mi-equipo')
 def api_stats_mi_equipo():
     client = getattr(current_app, 'gs_client', None)
@@ -93,7 +130,7 @@ def api_stats_mi_equipo():
         idx_eq_asis = next((i for i, h in enumerate(h_asis) if h in ["EQUIPO", "CATEGORIA", "GRUPO", "EQUIPOS"]), 1)
         idx_nom_asis = next((i for i, h in enumerate(h_asis) if h == "NOMBRE"), 2)
         idx_asis_asis = next((i for i, h in enumerate(h_asis) if h == "ASISTENCIA"), 4)
-        idx_val_asis = next((i for i, h in enumerate(h_asis) if h == "VALORACION"), 5)
+        idx_val_asis = next((i for i, h in enumerate(h_asis) if h in ["VALORACION", "VALORACIONES"]), 5)
         idx_cha_asis = next((i for i, h in enumerate(h_asis) if h in ["CHARLA", "CHARLAS"]), 7)
         # 2. Obtener total de jugadores del equipo para el ratio (ej: 10 de 12)
         sheet_jug = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
@@ -147,8 +184,8 @@ def api_stats_mi_equipo():
             if len(row) > max(idx_eq_asis, idx_nom_asis, idx_asis_asis, idx_val_asis) and _limpiar_h(row[idx_eq_asis]) == target_norm:
                 fecha_str = _norm_fecha(row[0]) # Normalizamos para evitar 5/5 vs 05/05
                 nombre = row[idx_nom_asis].strip()
-                asistencia = str(row[idx_asis_asis]).strip().upper()
-                valoracion = str(row[idx_val_asis]).strip().upper()
+                asistencia = _normalizar_asistencia(row[idx_asis_asis])
+                valoracion = _normalizar_valoracion(row[idx_val_asis])
                 
                 try:
                     parts = fecha_str.split('/') # parts[0]=dia, parts[1]=mes, parts[2]=año
@@ -226,16 +263,19 @@ def api_stats_mi_equipo():
             if datos['asis'] == 'SI': # Solo 'SI' (ya resuelto de SI/OK)
                 stats_asistencia[mes_clave]["total_si"] += 1
                 stats_asistencia[mes_clave]["jugadores"][nombre_upper]["si"] += 1
-                
-                valoracion = datos['val']
-                if valoracion in ["EXCELENTE", "MUY BIEN", "BIEN", "MUYBIEN", "NORMAL", "REGULAR", "MAL", "MUY MAL"]:
-                    stats_valoracion[mes_clave]["dias_evaluados"].add(dia_clave)
-                    if valoracion in ["EXCELENTE", "MUY BIEN", "BIEN", "MUYBIEN"]: stats_valoracion[mes_clave]["ARRIBA"] += 1
-                    elif valoracion == "NORMAL": stats_valoracion[mes_clave]["MEDIO"] += 1
-                    elif valoracion in ["REGULAR", "MAL", "MUY MAL"]: stats_valoracion[mes_clave]["ABAJO"] += 1
             elif datos['asis'] == 'X':
                 stats_asistencia[mes_clave]["total_x"] += 1
                 stats_asistencia[mes_clave]["jugadores"][nombre_upper]["x"] += 1
+
+            valoracion = _normalizar_valoracion(datos['val'])
+            if valoracion in ["EXCELENTE", "MUY BIEN", "BIEN", "MUYBIEN", "NORMAL", "REGULAR", "MAL", "MUY MAL"]:
+                stats_valoracion[mes_clave]["dias_evaluados"].add(dia_clave)
+                if valoracion in ["EXCELENTE", "MUY BIEN", "BIEN", "MUYBIEN"]:
+                    stats_valoracion[mes_clave]["ARRIBA"] += 1
+                elif valoracion == "NORMAL":
+                    stats_valoracion[mes_clave]["MEDIO"] += 1
+                elif valoracion in ["REGULAR", "MAL", "MUY MAL"]:
+                    stats_valoracion[mes_clave]["ABAJO"] += 1
 
         # Formatear datos finales para Chart.js
         asis_chart = {"labels": [], "media": [], "ratio": [], "monthly_player_rankings": []}

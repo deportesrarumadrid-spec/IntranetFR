@@ -43,9 +43,6 @@
                 <label style="font-size: 9px; font-weight: 900; color: #999; display: block; text-transform: uppercase;">Entrenador Responsable</label>
                 <span id="txtNombreCoach" style="font-weight: 800; color: #333; font-size: 13px;">-</span>
             </div>
-            <button id="btnNotificarCoach" onclick="enviarAvisoManualCoach()" style="background: #333; color: white; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-weight: 800; font-size: 11px;" title="Enviar recordatorio Push al móvil">
-                <i class="fas fa-bell" style="font-size: 16px;"></i> ENVIAR PUSH
-            </button>
         </div>
         <div style="flex: 1; min-width: 200px;">
             <button id="btnGuardarTodo" onclick="enviarCambiosAlServidor()" style="width: 100%; padding: 12px; background: #6c757d; color: white; border: none; border-radius: 8px; font-weight: 900; cursor: pointer; transition: all 0.3s;">
@@ -369,24 +366,118 @@
         pointer-events: auto !important; 
     }
     .btn-charla {
-        width: 30px;
+        width: 34px;
         height: 38px;
-        background: #fdfdfd;
-        border-radius: 4px;
+        background: #f8fafc;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        border: 1px solid #eee;
+        border: 1px solid #dbeafe;
         font-size: 14px;
-        color: #ccc;
-        transition: all 0.2s;
+        color: #64748b;
+        transition: all 0.2s ease;
         flex-shrink: 0;
+    }
+    .btn-charla:hover {
+        background: #e0f2fe;
+        color: #0c4a6e;
     }
     .btn-charla.active {
         background: #38bdf8;
         color: white;
         border-color: #0ea5e9;
+        box-shadow: 0 8px 18px rgba(56,189,248,0.22);
+    }
+    .charla-bubble {
+        display: none;
+        position: absolute;
+        bottom: calc(100% + 12px);
+        right: -10px;
+        width: 320px;
+        z-index: 20;
+        background: white;
+        border: none;
+        border-radius: 14px;
+        box-shadow: 0 10px 40px rgba(15, 23, 42, 0.15);
+        padding: 16px;
+        font-size: 13px;
+        backdrop-filter: blur(10px);
+    }
+    .charla-bubble::before {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        right: 20px;
+        width: 16px;
+        height: 16px;
+        background: white;
+        transform: rotate(45deg);
+        box-shadow: 2px 2px 4px rgba(0,0,0,0.05);
+    }
+    .charla-bubble-header {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .charla-bubble-title {
+        font-size: 10px;
+        font-weight: 900;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+    }
+    .charla-bubble-player {
+        font-size: 13px;
+        font-weight: 900;
+        color: #1e293b;
+    }
+    .charla-bubble textarea {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        color: #334155;
+        font-size: 12px;
+        font-family: inherit;
+    }
+    .charla-bubble textarea:focus {
+        outline: none;
+        border-color: #0ea5e9;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(14,165,233,0.1);
+    }
+    .charla-bubble-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 10px;
+    }
+    .charla-bubble-actions button {
+        padding: 7px 14px;
+        border: none;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .charla-bubble-actions button:first-child {
+        background: #f1f5f9;
+        color: #475569;
+    }
+    .charla-bubble-actions button:first-child:hover {
+        background: #e2e8f0;
+    }
+    .charla-bubble-actions button:last-child {
+        background: #0ea5e9;
+        color: white;
+    }
+    .charla-bubble-actions button:last-child:hover {
+        background: #0284c7;
+        box-shadow: 0 4px 12px rgba(14,165,233,0.3);
     }
 </style>
 
@@ -401,6 +492,11 @@ let balonesData = {};
 let diaBalonActivo = null;
 let tipoBalonActivo = null;
 let fotoBalonBase64 = null;
+
+function esCharlaActiva(valor) {
+    const normalized = String(valor || '').trim().toUpperCase();
+    return normalized === 'SI' || normalized === 'OK';
+}
 
 // Ayudante para parsear fechas locales sin problemas de zona horaria
 function parsearFechaLocal(str) {
@@ -427,11 +523,9 @@ async function generarCalendario() {
         console.log("Entrenador encontrado:", coach.NOMBRE, "para el equipo:", coach.EQUIPO);
         document.getElementById('txtNombreCoach').innerText = coach.NOMBRE;
         infoDiv.style.display = 'flex';
-        document.getElementById('btnNotificarCoach').style.display = 'flex'; // Aseguramos que el botón se muestre
     } else {
         infoDiv.style.display = 'none';
         document.getElementById('txtNombreCoach').innerText = "No asignado"; // Feedback claro
-        document.getElementById('btnNotificarCoach').style.display = 'none'; // Ocultamos el botón si no hay coach
         console.log("No se encontró entrenador para el equipo:", equipo.toUpperCase(), "en la lista de staff.");
     }
 
@@ -570,11 +664,22 @@ async function generarCalendario() {
                 }
                 return `
                     <td class="td-asistencia">
-                        <div class="wrapper-asistencia">
+                        <div class="wrapper-asistencia" style="position: relative;">
                             <div class="celda-asistencia estado-vacio" onclick="ciclarEstado(this)">-</div>
                             <div class="btn-nota" onclick="abrirModal(this)" style="display:none;"><i class="fas fa-pencil-alt"></i></div>
                             <div class="btn-val" onclick="ciclarValoracion(this)" data-valor="-">-</div>
                             <div class="btn-charla" onclick="toggleCharla(this)" data-valor="NO" title="Charla Individual"><i class="fas fa-comments"></i></div>
+                            <div class="charla-bubble">
+                                <div class="charla-bubble-header">
+                                    <span class="charla-bubble-title">Comentario charla</span>
+                                    <span class="charla-bubble-player" data-player-name="">-</span>
+                                </div>
+                                <textarea class="txt-charla" placeholder="Escribe comentario..." style="width:100%; min-height:80px; border-radius:10px; padding:8px; font-size:12px; resize: vertical; box-sizing: border-box;"></textarea>
+                                <div class="charla-bubble-actions">
+                                    <button type="button" onclick="cancelarCharlaComentario(this)">Cancelar</button>
+                                    <button type="button" onclick="guardarCharlaComentario(this)">Guardar</button>
+                                </div>
+                            </div>
                         </div>
                     </td>`;
             }).join('')}
@@ -781,7 +886,7 @@ async function cargarAsistenciasGuardadas() {
             if (elTot) elTot.innerText = percP + '%';
 
             // Actualizar contador de charlas totales (Toda la temporada)
-            const charlasTot = recsP.filter(d => d.charla === 'SI').length;
+            const charlasTot = recsP.filter(d => esCharlaActiva(d.charla)).length;
             const elChar = fila.querySelector('.charlas-tot');
             if (elChar) elChar.innerText = charlasTot;
 
@@ -803,27 +908,43 @@ async function cargarAsistenciasGuardadas() {
                     const btnCharla = td.querySelector('.btn-charla');
                     
                     el.innerText = registro.estado;
-                    el.dataset.motivo = registro.motivo || "";
+                    el.dataset.charla = esCharlaActiva(registro.charla) ? 'SI' : 'NO';
+                    el.dataset.motivo = el.dataset.charla === 'SI' ? "" : (registro.motivo || "");
+                    el.dataset.charlaNote = el.dataset.charla === 'SI' ? (registro.motivo || '') : '';
                     el.className = 'celda-asistencia';
                     
-                    if (registro.estado === 'SI') el.classList.add('estado-si');
-                    else if (registro.estado === 'NO') { el.classList.add('estado-no'); btnNota.style.display = 'flex'; }
-                    else if (registro.estado === 'AV') { el.classList.add('estado-av'); btnNota.style.display = 'flex'; }
-                    else { el.classList.add('estado-vacio'); }
+                    if (registro.estado === 'SI') {
+                        el.classList.add('estado-si');
+                        btnNota.style.display = 'none';
+                    } else if (registro.estado === 'NO') {
+                        el.classList.add('estado-no');
+                        btnNota.style.display = el.dataset.charla === 'SI' ? 'none' : 'flex';
+                    } else if (registro.estado === 'AV') {
+                        el.classList.add('estado-av');
+                        btnNota.style.display = el.dataset.charla === 'SI' ? 'none' : 'flex';
+                    } else {
+                        el.classList.add('estado-vacio');
+                        btnNota.style.display = 'none';
+                    }
                     
-                    if (registro.motivo) btnNota.classList.add('tiene-motivo');
+                    if (el.dataset.charla !== 'SI' && registro.motivo) {
+                        el.dataset.motivo = registro.motivo;
+                        if (registro.motivo) btnNota.classList.add('tiene-motivo');
+                    }
 
                     // CARGAR VALORACIÓN (LA FLECHA)
                     if (registro.valoracion) {
+                        const rawVal = String(registro.valoracion || '').trim().toUpperCase();
+                        const normalizedVal = normalizeValoracion(rawVal);
                         const iconos = { 'NORMAL': '→', 'MAL': '↓', 'EXCELENTE': '↑', '-': '-' };
                         const clases = { 'NORMAL': 'val-normal', 'MAL': 'val-mal', 'EXCELENTE': 'val-excelente', '-': '' };
-                        btnVal.dataset.valor = registro.valoracion;
-                        btnVal.innerText = iconos[registro.valoracion] || '-';
-                        btnVal.className = 'btn-val ' + (clases[registro.valoracion] || '');
+                        btnVal.dataset.valor = normalizedVal;
+                        btnVal.innerText = iconos[normalizedVal] || '-';
+                        btnVal.className = 'btn-val ' + (clases[normalizedVal] || '');
                     }
 
                     // CARGAR CHARLA
-                    if (registro.charla === 'SI') {
+                    if (esCharlaActiva(registro.charla)) {
                         btnCharla.dataset.valor = 'SI';
                         btnCharla.classList.add('active');
                     } else {
@@ -840,6 +961,8 @@ async function cargarAsistenciasGuardadas() {
     finally { hideLoader(); } // Ahora dentro de la función
 }
 
+let modalContext = 'MOTIVO';
+
 function registrarCambioLocal(el) {
     const td = el.closest('td');
     const fila = el.closest('tr');
@@ -854,6 +977,7 @@ function registrarCambioLocal(el) {
     const elAsis = td.querySelector('.celda-asistencia');
     const estado = elAsis.innerText;
     const motivo = elAsis.dataset.motivo || "";
+    const charlaNote = elAsis.dataset.charlaNote || "";
     
     // Capturamos el valor de la flecha
     const btnVal = td.querySelector('.btn-val');
@@ -861,7 +985,8 @@ function registrarCambioLocal(el) {
     
     // Capturamos el valor de la charla
     const btnCharla = td.querySelector('.btn-charla');
-    const charla = btnCharla ? btnCharla.dataset.valor : 'NO';
+    const charla = elAsis.dataset.charla || (btnCharla ? btnCharla.dataset.valor : 'NO');
+    const observacion = charla === 'SI' ? charlaNote : motivo;
 
     elAsis.classList.add('celda-modificada');
 
@@ -869,10 +994,10 @@ function registrarCambioLocal(el) {
     if (index !== -1) {
         cambiosPendientes[index].estado = estado;
         cambiosPendientes[index].valoracion = valoracion;
-        cambiosPendientes[index].motivo = motivo;
+        cambiosPendientes[index].motivo = observacion;
         cambiosPendientes[index].charla = charla;
     } else {
-        cambiosPendientes.push({ nombre, dia, equipo, estado, valoracion, motivo, charla });
+        cambiosPendientes.push({ nombre, dia, equipo, estado, valoracion, motivo: observacion, charla });
     }
 }
 
@@ -897,15 +1022,74 @@ function ciclarValoracion(el) {
 }
 
 function toggleCharla(el) {
-    const actual = el.dataset.valor || 'NO';
-    const nuevo = (actual === 'NO') ? 'SI' : 'NO';
-    el.dataset.valor = nuevo;
-    if (nuevo === 'SI') el.classList.add('active');
-    else el.classList.remove('active');
+    const actual = String(el.dataset.valor || 'NO').trim().toUpperCase();
+    const td = el.closest('td');
+    const fila = el.closest('tr');
+    const bubble = td.querySelector('.charla-bubble');
+    const celdaAsis = td.querySelector('.celda-asistencia');
+    const texto = bubble.querySelector('.txt-charla');
+    const playerNameEl = bubble.querySelector('[data-player-name]');
     
-    const celdaAsis = el.parentElement.querySelector('.celda-asistencia');
-    registrarCambioLocal(celdaAsis);
+    // Obtener nombre del jugador
+    const spanNombre = fila.querySelector('.sticky-col span');
+    const nombreJugador = spanNombre.dataset.nombreOriginal || spanNombre.innerText.trim();
+    playerNameEl.innerText = nombreJugador;
+
+    if (actual === 'NO') {
+        el.dataset.valor = 'SI';
+        celdaAsis.dataset.charla = 'SI';
+        el.classList.add('active');
+        bubble.style.display = 'block';
+        texto.value = celdaAsis.dataset.charlaNote || '';
+        texto.focus();
+    } else {
+        bubble.style.display = bubble.style.display === 'block' ? 'none' : 'block';
+        texto.value = celdaAsis.dataset.charlaNote || '';
+    }
+}
+
+function cerrarCharlaBubble(btn) {
+    const bubble = btn.closest('.charla-bubble');
+    if (!bubble) return;
+    bubble.style.display = 'none';
+}
+
+function guardarCharlaComentario(btn) {
+    const bubble = btn.closest('.charla-bubble');
+    const td = bubble.closest('td');
+    const elAsis = td.querySelector('.celda-asistencia');
+    const btnCharla = td.querySelector('.btn-charla');
+    const texto = bubble.querySelector('.txt-charla').value.trim();
+
+    if (texto === '') {
+        elAsis.dataset.charla = 'NO';
+        elAsis.dataset.charlaNote = '';
+        btnCharla.dataset.valor = 'NO';
+        btnCharla.classList.remove('active');
+    } else {
+        elAsis.dataset.charla = 'SI';
+        elAsis.dataset.charlaNote = texto;
+        elAsis.dataset.motivo = '';
+        btnCharla.dataset.valor = 'SI';
+        btnCharla.classList.add('active');
+    }
+
+    bubble.style.display = 'none';
+    registrarCambioLocal(elAsis);
     enviarCambiosAlServidor();
+}
+
+function cancelarCharlaComentario(btn) {
+    const bubble = btn.closest('.charla-bubble');
+    const td = bubble.closest('td');
+    const btnCharla = td.querySelector('.btn-charla');
+    const texto = bubble.querySelector('.txt-charla').value.trim();
+
+    if (!texto) {
+        btnCharla.dataset.valor = 'NO';
+        btnCharla.classList.remove('active');
+    }
+    bubble.style.display = 'none';
 }
 
 async function enviarCambiosAlServidor() {
@@ -999,6 +1183,7 @@ function marcarCharlaColumna(colIndex) {
             if (!celdaAsis || !btnCharla) return;
             btnCharla.dataset.valor = 'SI';
             btnCharla.classList.add('active');
+            celdaAsis.dataset.charla = 'SI';
             registrarCambioLocal(celdaAsis);
         }
     });
@@ -1031,6 +1216,18 @@ function ciclarEstado(el) {
     actualizarAlertasVisuales();
     calcularStats();
     enviarCambiosAlServidor();
+}
+
+function normalizeValoracion(rawVal) {
+    const s = String(rawVal || '').trim().toUpperCase();
+    if (!s) return '-';
+    if (['↑', '▲'].some(ch => s.includes(ch))) return 'EXCELENTE';
+    if (['↓', '▼'].some(ch => s.includes(ch))) return 'MAL';
+    if (['→', '➡', '=>', '->'].some(ch => s.includes(ch))) return 'NORMAL';
+    if (['NORMAL', 'MAL', 'EXCELENTE', 'MUY BIEN', 'BIEN', 'REGULAR', 'MUY MAL'].includes(s)) return s;
+    if (s === 'OK') return 'EXCELENTE';
+    return s;
+
 }
 
 function actualizarAlertasCabecera(diasValidos) {
@@ -1120,15 +1317,27 @@ function actualizarAlertasVisuales() {
 }
 
 function abrirModal(btn) {
+    modalContext = 'MOTIVO';
     celdaActiva = btn.closest('.wrapper-asistencia').querySelector('.celda-asistencia');
     const spanNombre = btn.closest('tr').querySelector('.sticky-col span');
     const nombreJugador = spanNombre.dataset.nombreOriginal || spanNombre.innerText.trim();
     document.getElementById('modalSubtitulo').innerText = "Jugador: " + nombreJugador;
+    document.getElementById('textoMotivo').placeholder = "Escribe el motivo aquí...";
     document.getElementById('textoMotivo').value = celdaActiva.dataset.motivo || "";
     document.getElementById('modalMotivo').style.display = 'block';
 }
 
-function cerrarModal() { document.getElementById('modalMotivo').style.display = 'none'; }
+function cerrarModal() {
+    if (modalContext === 'CHARLA' && celdaActiva) {
+        const btnCharla = celdaActiva.parentElement.querySelector('.btn-charla');
+        if (btnCharla) {
+            btnCharla.dataset.valor = 'NO';
+            btnCharla.classList.remove('active');
+        }
+    }
+    modalContext = 'MOTIVO';
+    document.getElementById('modalMotivo').style.display = 'none';
+}
 
 function guardarMotivo() {
     const motivo = document.getElementById('textoMotivo').value;
@@ -1136,6 +1345,13 @@ function guardarMotivo() {
     celdaActiva.dataset.motivo = motivo;
     if (motivo.trim() !== "") btnNota.classList.add('tiene-motivo');
     else btnNota.classList.remove('tiene-motivo');
+
+    if (modalContext === 'CHARLA') {
+        const btnCharla = celdaActiva.parentElement.querySelector('.btn-charla');
+        btnCharla.dataset.valor = 'SI';
+        btnCharla.classList.add('active');
+    }
+
     registrarCambioLocal(celdaActiva);
     cerrarModal();
     enviarCambiosAlServidor();
@@ -1431,43 +1647,5 @@ window.onload = async function() {
     }
 };
 
-async function enviarAvisoManualCoach() {
-    const equipo = document.getElementById('selectEquipo').value;
-    const btn = document.getElementById('btnNotificarCoach');
-    const originalContent = btn.innerHTML;
-
-    if (!confirm(`¿Enviar notificación PUSH al móvil del entrenador de ${equipo}?`)) return;
-
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    btn.style.background = "#666";
-
-    try {
-        const res = await fetch('/api/notificaciones/recordatorio_individual', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ equipo: equipo })
-        });
-        const result = await res.json();
-        
-        if (res.ok) {
-            alert(result.message);
-            btn.style.background = "#28a745";
-            btn.innerHTML = '<i class="fas fa-check"></i>';
-        } else {
-            alert("Error: " + result.message);
-            btn.style.background = "#E31E24";
-            btn.innerHTML = '<i class="fas fa-times"></i>';
-        }
-    } catch (e) {
-        alert("Error de conexión");
-    } finally {
-        setTimeout(() => {
-            btn.disabled = false;
-            btn.innerHTML = originalContent;
-            btn.style.background = "#333";
-        }, 3000);
-    }
-}
 </script>
 {% endblock %}
