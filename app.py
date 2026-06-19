@@ -500,7 +500,8 @@ def login():
                     'ASISTENCIAS': check_p('ASISTENCIAS'),
                     'FINANCIERO': check_p('FINANCIERO'),
                     'D.DEPORTIVA': check_p('D.DEPORTIVA'),
-                    'CRONOGRAMA': check_p('CRONOGRAMA') # New permission
+                    'CRONOGRAMA': check_p('CRONOGRAMA'),
+                    'SEL. EQ.': 'SI' if str(user_data.get('SELEQ', user_data.get('SELEQ.', 'NO'))).strip().upper() == 'SI' else 'NO'
                 }
                 session['permisos'] = perms
                 

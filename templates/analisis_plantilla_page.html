@@ -421,6 +421,12 @@
         const title = document.getElementById('spiderChartTitle');
         const select = document.getElementById('spiderCompareSelect');
 
+        // Cerrar el otro popover si está abierto
+        const otherPopover = document.getElementById('popoverFortalezasDebilidades');
+        if (otherPopover) {
+            otherPopover.style.display = 'none';
+        }
+
         if (popover.style.display === 'block' && popover.dataset.currentPlayer === player.nombre) {
             popover.style.display = 'none';
             return;
@@ -524,6 +530,12 @@
         const fortalezasTextarea = document.getElementById('textareaFortalezas');
         const debilidadesTextarea = document.getElementById('textareaDebilidades');
         
+        // Cerrar el otro popover si está abierto
+        const otherPopover = document.getElementById('popoverSpiderChart');
+        if (otherPopover) {
+            otherPopover.style.display = 'none';
+        }
+
         // Si el popover ya está visible y es para el mismo jugador, lo cerramos
         if (popover.style.display === 'block' && popover.dataset.currentPlayer === player.nombre) {
             popover.style.display = 'none';
@@ -631,4 +643,22 @@
             }, duration);
         }
     }
+
+    // Cerrar popovers al hacer clic fuera de ellos
+    document.addEventListener('click', function(event) {
+        const popoverSpider = document.getElementById('popoverSpiderChart');
+        const popoverFort = document.getElementById('popoverFortalezasDebilidades');
+
+        if (popoverSpider && popoverSpider.style.display === 'block') {
+            if (!popoverSpider.contains(event.target)) {
+                popoverSpider.style.display = 'none';
+            }
+        }
+
+        if (popoverFort && popoverFort.style.display === 'block') {
+            if (!popoverFort.contains(event.target)) {
+                popoverFort.style.display = 'none';
+            }
+        }
+    });
 </script>
