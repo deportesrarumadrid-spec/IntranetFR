@@ -205,6 +205,49 @@ def deportivo():
         archivos_reales = []
     fotos_subidas = [f.split('_')[-1].split('.')[0] for f in archivos_reales]
 
+    # Cargar jugadores para el equipo activo
+    jugadores_equipo = []
+    try:
+        sheet_jug = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
+        all_jug = sheet_jug.get_all_values()
+        if all_jug:
+            h_j = normalizar_cabeceras_dep(all_jug[0])
+            i_n = h_j.index("NOMBRE") if "NOMBRE" in h_j else 0
+            i_b = h_j.index("BAJADESDE") if "BAJADESDE" in h_j else (h_j.index("BAJA") if "BAJA" in h_j else (h_j.index("BAJA_DESDE") if "BAJA_DESDE" in h_j else -1))
+            i_al = h_j.index("ALTADESDE") if "ALTADESDE" in h_j else (h_j.index("ALTA") if "ALTA" in h_j else (h_j.index("ALTA_DESDE") if "ALTA_DESDE" in h_j else -1))
+            
+            i_e = -1
+            for col_name in ["EQUIPO", "CATEGORIA", "GRUPO", "EQUIPOS"]:
+                if col_name in h_j:
+                    i_e = h_j.index(col_name)
+                    break
+            
+            hoy_dt = datetime.now()
+            def parse_date_simple(d_str):
+                if not d_str: return None
+                s = str(d_str).strip().replace('-', '/')
+                for fmt in ("%d/%m/%Y", "%Y/%m/%d", "%d/%m/%y"):
+                    try: return datetime.strptime(s, fmt)
+                    except: continue
+                return None
+
+            for row in all_jug[1:]:
+                if i_e != -1 and len(row) > max(i_n, i_e):
+                    if limpiar_texto_robusto(row[i_e]) == limpiar_texto_robusto(equipo_activo):
+                        nombre_jugador = row[i_n].strip()
+                        if nombre_jugador:
+                            es_baja = False
+                            baja_str = row[i_b].strip() if i_b != -1 and len(row) > i_b else ""
+                            alta_str = row[i_al].strip() if i_al != -1 and len(row) > i_al else ""
+                            baja_dt = parse_date_simple(baja_str)
+                            alta_dt = parse_date_simple(alta_str)
+                            if baja_dt and hoy_dt >= baja_dt:
+                                if not alta_dt or hoy_dt < alta_dt:
+                                    es_baja = True
+                            jugadores_equipo.append({"nombre": nombre_jugador, "es_baja": es_baja})
+    except Exception as e:
+        print(f"Error al cargar jugadores para equipo activo: {e}")
+
     return render_template('deportivo/calendario.html',
                            usuario=usuario,
                            mes_actual=mes_actual,
@@ -215,6 +258,7 @@ def deportivo():
                            dias_transcurridos=hoy.day if es_mes_actual else (30 if (anio < hoy.year or (anio == hoy.year and mes < hoy.month)) else 0),
                            equipos=equipos,
                            equipo_defecto=equipo_activo,
+                           jugadores_equipo=jugadores_equipo,
                            now=hoy
                            )
 

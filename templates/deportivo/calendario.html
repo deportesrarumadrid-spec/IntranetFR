@@ -231,42 +231,43 @@
 
     <div class="calendario-wrapper">
 
-        <!-- CABECERA DE CONTROL Y PLANTILLAS -->
-        <div style="display: flex; align-items: flex-end; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 250px; max-width: 300px;">
-                <label style="font-size: 10px; font-weight: 900; color: #444; display: block; margin-bottom: 5px;">EQUIPO ACTIVO</label>
-                <select id="selectEquipoEntrenos" onchange="showLoader(); window.location.href='?mes={{ mes_actual }}&equipo=' + encodeURIComponent(this.value.trim())" style="padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-weight: 700; width: 100%; background: white;">
-                    <option value="">Seleccionar...</option>
-                    {% for eq in equipos %}
-                    <option value="{{ eq.strip() }}" {% if equipo_defecto|string|trim == eq|string|trim %}selected{% endif %}>{{ eq.strip() }}</option>
-                    {% endfor %}
+        <div style="display: none;">
+            <select id="selectEquipoEntrenos" onchange="showLoader(); window.location.href='?mes={{ mes_actual }}&equipo=' + encodeURIComponent(this.value.trim())">
+                <option value="">Seleccionar...</option>
+                {% for eq in equipos %}
+                <option value="{{ eq.strip() }}" {% if equipo_defecto|string|trim == eq|string|trim %}selected{% endif %}>{{ eq.strip() }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="header-row" style="margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap;">
+            <div style="position: relative; background: #fff; padding: 10px 20px; border-radius: 12px; border: 2px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: inline-flex; align-items: center; gap: 10px; transition: all 0.3s ease;" onmouseover="this.style.borderColor='#E31E24'; this.style.boxShadow='0 6px 20px rgba(227,30,36,0.1)';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.05)';">
+                <i class="far fa-calendar-alt" style="color: #E31E24; font-size: 20px;"></i>
+                <select id="monthSelect" style="border:none; background:transparent; font-size:20px; font-weight:900; outline:none; cursor:pointer; color: #1e293b; appearance: none; padding-right: 25px; font-family: 'Inter', sans-serif;" onchange="showLoader(); window.location.href='?mes=' + this.value + '&equipo=' + encodeURIComponent('{{ equipo_defecto }}'.trim())">
+                    <option value="2026-05" {% if mes_actual == '2026-05' %}selected{% endif %}>MAYO 2026</option>
+                    <option value="2026-06" {% if mes_actual == '2026-06' %}selected{% endif %}>JUNIO 2026</option>
+                    <option value="2026-07" {% if mes_actual == '2026-07' %}selected{% endif %}>JULIO 2026</option>
+                    <option value="2026-08" {% if mes_actual == '2026-08' %}selected{% endif %}>AGOSTO 2026</option>
+                    <option value="2026-09" {% if mes_actual == '2026-09' %}selected{% endif %}>SEPTIEMBRE 2026</option>
+                    <option value="2026-10" {% if mes_actual == '2026-10' %}selected{% endif %}>OCTUBRE 2026</option>
+                    <option value="2026-11" {% if mes_actual == '2026-11' %}selected{% endif %}>NOVIEMBRE 2026</option>
+                    <option value="2026-12" {% if mes_actual == '2026-12' %}selected{% endif %}>DICIEMBRE 2026</option>
                 </select>
+                <i class="fas fa-chevron-down" style="position: absolute; right: 20px; color: #94a3b8; font-size: 14px; pointer-events: none;"></i>
             </div>
+            
             <div style="display: flex; gap: 10px;">
-                <a href="/static/data/plantilla_entrenamiento.pdf" download class="btn-fin" style="background: #ffffff; color: #E31E24; padding: 0 18px; font-size: 10px; border-radius: 8px; height: 42px; border: 2px solid #E31E24; cursor: pointer; font-weight: 800; text-decoration: none; display: flex; align-items: center; box-sizing: border-box;">
+                <a href="/static/data/plantilla_entrenamiento.pdf" download class="btn-fin" style="background: #ffffff; color: #E31E24; padding: 0 18px; font-size: 10px; border-radius: 8px; height: 44px; border: 2px solid #E31E24; cursor: pointer; font-weight: 800; text-decoration: none; display: flex; align-items: center; box-sizing: border-box; transition: 0.3s;" onmouseover="this.style.background='#E31E24'; this.style.color='#fff';" onmouseout="this.style.background='#ffffff'; this.style.color='#E31E24';">
                     <i class="fas fa-file-pdf" style="margin-right: 8px;"></i> PLANTILLA PDF
                 </a>
-                <button class="btn-fin" onclick="abrirModalSesionOnline()" style="background: #ffffff; color: #E31E24; padding: 0 18px; font-size: 10px; border-radius: 8px; height: 42px; border: 2px solid #E31E24; cursor: pointer; font-weight: 800; box-sizing: border-box;">
+                <button class="btn-fin" onclick="abrirModalSesionOnline()" style="background: #ffffff; color: #E31E24; padding: 0 18px; font-size: 10px; border-radius: 8px; height: 44px; border: 2px solid #E31E24; cursor: pointer; font-weight: 800; box-sizing: border-box; transition: 0.3s;" onmouseover="this.style.background='#E31E24'; this.style.color='#fff';" onmouseout="this.style.background='#ffffff'; this.style.color='#E31E24';">
                     <i class="fas fa-edit" style="margin-right: 8px;"></i> CREAR SESIÓN ONLINE
                 </button>
-                <button class="btn-fin" onclick="abrirModalMisSesiones()" style="background: #ffffff; color: #E31E24; padding: 0 18px; font-size: 10px; border-radius: 8px; height: 42px; border: 2px solid #E31E24; cursor: pointer; font-weight: 800; box-sizing: border-box;">
+                <button class="btn-fin" onclick="abrirModalMisSesiones()" style="background: #ffffff; color: #E31E24; padding: 0 18px; font-size: 10px; border-radius: 8px; height: 44px; border: 2px solid #E31E24; cursor: pointer; font-weight: 800; box-sizing: border-box; transition: 0.3s;" onmouseover="this.style.background='#E31E24'; this.style.color='#fff';" onmouseout="this.style.background='#ffffff'; this.style.color='#E31E24';">
                     <i class="fas fa-folder-open" style="margin-right: 8px;"></i> MIS SESIONES
                 </button>
             </div>
         </div>
-
-     <div class="header-row">
-    <select id="monthSelect" style="border:none; background:transparent; font-size:24px; font-weight:900; outline:none; cursor:pointer;" onchange="showLoader(); window.location.href='?mes=' + this.value + '&equipo=' + encodeURIComponent('{{ equipo_defecto }}'.trim())">
-        <option value="2026-05" {% if mes_actual == '2026-05' %}selected{% endif %}>MAYO 2026</option>
-        <option value="2026-06" {% if mes_actual == '2026-06' %}selected{% endif %}>JUNIO 2026</option>
-        <option value="2026-07" {% if mes_actual == '2026-07' %}selected{% endif %}>JULIO 2026</option>
-        <option value="2026-08" {% if mes_actual == '2026-08' %}selected{% endif %}>AGOSTO 2026</option>
-        <option value="2026-09" {% if mes_actual == '2026-09' %}selected{% endif %}>SEPTIEMBRE 2026</option>
-        <option value="2026-10" {% if mes_actual == '2026-10' %}selected{% endif %}>OCTUBRE 2026</option>
-        <option value="2026-11" {% if mes_actual == '2026-11' %}selected{% endif %}>NOVIEMBRE 2026</option>
-        <option value="2026-12" {% if mes_actual == '2026-12' %}selected{% endif %}>DICIEMBRE 2026</option>
-    </select>
-</div>
 
         <!-- Se han movido los objetivos a Dirección Deportiva -->
 
@@ -474,7 +475,7 @@
     </div>
 
     <!-- MODAL EDITOR DE NOMBRES SOBRE FORMACIÓN -->
-    <div id="modalEditorAlineacion" class="modal">
+    <div id="modalEditorAlineacion" class="modal" style="z-index: 100005;">
         <div class="modal-content" style="width: 98vw; height: 98vh; max-width: none; max-height: none; background: transparent; box-shadow: none; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: none; border-radius: 0; backdrop-filter: blur(2px);">
             <h3 style="color: white; font-weight: 900; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; font-size: 18px; width: 100%; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
                 <i class="fas fa-users" style="margin-right: 10px; color: #fff;"></i> ALINEACIÓN: <span id="txtEquipoAlineacion" style="color: #fff;"></span>
@@ -492,14 +493,16 @@
                 <button onclick="anadirJugadorExtra()" style="background: #475569; color: white; border: none; padding: 0 20px; border-radius: 8px; font-weight: 900; font-size: 11px; cursor: pointer; height: 42px; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
                     <i class="fas fa-plus-circle"></i> AÑADIR JUGADOR
                 </button>
-                <button class="btn-fin" style="background: white; color: #333; padding: 12px 30px; border-radius: 8px; font-weight: 900; border: 1px solid #ddd; cursor: pointer;" onclick="document.getElementById('modalEditorAlineacion').style.display='none'">
-                    SALIR SIN GUARDAR
-                </button>
             </div>
-
-            <div id="areaCapturaAlineacion" style="position: relative; background: #235d25; flex-shrink: 0; border: 4px solid #fff; box-shadow: 0 0 50px rgba(0,0,0,0.8); margin-left: 150px;">
-                <img id="imgFondoAlineacion" src="" style="width: 100%; height: 100%; object-fit: fill; display: block;">
-                <div id="inputsOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+            
+            <div style="position: relative; margin-left: 150px;">
+                <div id="areaCapturaAlineacion" style="position: relative; background: #235d25; flex-shrink: 0; border: 4px solid #fff; box-shadow: 0 0 50px rgba(0,0,0,0.8);">
+                    <img id="imgFondoAlineacion" src="" style="width: 100%; height: 100%; object-fit: fill; display: block;">
+                    <div id="inputsOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+                </div>
+                <button onclick="document.getElementById('modalEditorAlineacion').style.display='none'" style="position: absolute; top: -15px; right: -15px; background: var(--red); border: 2px solid white; color: white; font-size: 20px; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.3s; z-index: 105; box-shadow: 0 4px 10px rgba(0,0,0,0.5);" onmouseover="this.style.transform='scale(1.1)';" onmouseout="this.style.transform='scale(1)';">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -519,6 +522,7 @@
     </style>
 
     <script>
+        const JUGADORES_EQUIPO = {{ jugadores_equipo|tojson|safe if jugadores_equipo else '[]' }};
         let currentFormationImgName = "";
 
         function abrirSelectorFormaciones() {
@@ -591,7 +595,7 @@
             };
         }
 
-        function createPlayerWrapper(idx, x, y, scale = 1, name = "") {
+        function createPlayerWrapper(idx, x, y, scale = 1, name = "", isBaja = false) {
             const wrapper = document.createElement('div');
             wrapper.className = 'player-wrapper';
             wrapper.style.left = x;
@@ -599,8 +603,9 @@
             wrapper.style.transform = `scale(${scale})`;
             wrapper.dataset.scale = scale;
             
+            const bajaStyle = isBaja ? 'color: #dc3545; text-decoration: line-through;' : '';
             wrapper.innerHTML = `
-                <input type="text" class="input-alineacion" placeholder="JUGADOR ${idx + 1}" value="${name}">
+                <input type="text" class="input-alineacion" placeholder="JUGADOR ${idx + 1}" value="${name}" style="${bajaStyle}">
                 <div class="resize-handle-corner"></div>
             `;
             
@@ -648,13 +653,34 @@
                 const numPlayers = coords ? Math.max(25, coords.length) : 25;
                 for(let i=0; i < numPlayers; i++) {
                     let x, y, scale = 1, name = "";
+                    let isBaja = false;
+                    const defaultPlayerObj = JUGADORES_EQUIPO[i] || null;
+                    let defaultName = "";
+                    
+                    if (defaultPlayerObj) {
+                        if (typeof defaultPlayerObj === 'object') {
+                            defaultName = defaultPlayerObj.nombre || "";
+                        } else {
+                            defaultName = defaultPlayerObj;
+                        }
+                    }
+
                     if (coords && coords[i]) {
                         x = coords[i].x; y = coords[i].y; scale = coords[i].scale || 1;
-                        name = coords[i].name || "";
+                        name = (coords[i].name && coords[i].name.trim() !== "") ? coords[i].name : defaultName;
                     } else {
                         x = "-150px"; y = (5 + (i * 3.8)) + '%';
+                        name = defaultName;
                     }
-                    container.appendChild(createPlayerWrapper(i, x, y, scale, name));
+
+                    const playerObjByName = JUGADORES_EQUIPO.find(p => p && p.nombre === name);
+                    if (playerObjByName && playerObjByName.es_baja) {
+                        isBaja = true;
+                    } else if (!playerObjByName && defaultPlayerObj && typeof defaultPlayerObj === 'object' && name === defaultName) {
+                        isBaja = defaultPlayerObj.es_baja || false;
+                    }
+
+                    container.appendChild(createPlayerWrapper(i, x, y, scale, name, isBaja));
                 }
             };
             img.src = '/static/img/formaciones/' + imgName;
