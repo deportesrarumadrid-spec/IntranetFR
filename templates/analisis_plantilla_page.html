@@ -79,16 +79,18 @@
     .pierna-btn.selected { background: #0ea5e9; border-color: #0284c7; color: white; box-shadow: 0 4px 12px rgba(14,165,233,0.3); }
     .pierna-btn { font-weight: 900; font-size: 14px; color: #64748b; }
     
-    .filter-btn { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px; transition: 0.3s; padding: 5px; }
-    .filter-btn:hover { color: #E31E24; transform: scale(1.2); }
+    .filter-btn { background: none; border: none; color: #b0b8c4; cursor: pointer; font-size: 11px; transition: 0.3s; padding: 3px; vertical-align: middle; }
+    .filter-btn:hover { color: #E31E24; }
     
-    .filter-popover { position: absolute; display: none; z-index: 10010; background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); border: 1px solid #e2e8f0; padding: 15px; min-width: 200px; max-height: 300px; overflow-y: auto; }
+    .filter-popover { position: absolute; display: none; z-index: 10010; background: white; border-radius: 16px; box-shadow: 0 12px 48px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; padding: 10px 14px; min-width: 160px; max-height: 300px; overflow-y: auto; backdrop-filter: blur(10px); }
     .filter-popover.show { display: block; }
-    .filter-popover label { display: block; padding: 8px 0; font-size: 12px; font-weight: 700; color: #1e293b; cursor: pointer; }
-    .filter-popover label input { margin-right: 8px; }
+    .filter-popover label { display: flex; align-items: center; padding: 7px 8px; font-size: 12px; font-weight: 700; color: #1e293b; cursor: pointer; border-radius: 8px; transition: background 0.15s; }
+    .filter-popover label:hover { background: #f8fafc; }
+    .filter-popover label input[type="radio"] { appearance: none; -webkit-appearance: none; width: 16px; height: 16px; border: 2px solid #d1d5db; border-radius: 50%; margin-right: 10px; cursor: pointer; transition: 0.2s; flex-shrink: 0; position: relative; }
+    .filter-popover label input[type="radio"]:checked { border-color: #E31E24; background: #E31E24; box-shadow: inset 0 0 0 3px white; }
     
     .stat-col-container { position: relative; }
-    .avg-inline { font-size: 9px; color: #94a3b8; font-weight: 700; display: block; border-top: 1px solid #cbd5e1; padding-top: 2px; margin-top: 2px; text-align: center; }
+    .avg-inline { font-size: 12px; color: #64748b; font-weight: 800; display: block; padding-top: 3px; margin-top: 3px; text-align: center; }
 
     /* Estilos para bordes de categorías */
     .stat-category-fisicas-start { border-left: 1px solid #e2e8f0; }
@@ -205,7 +207,7 @@
                     <tr>
                         <th rowspan="2">JUGADOR</th>
                         <th rowspan="2" style="width: 50px;">PIERNA</th>
-                        <th rowspan="2" style="width: 80px; position: relative;">POSICIÓN <button class="filter-btn" onclick="toggleFilterPopover(event)" title="Filtrar por posición"><i class="fas fa-filter"></i></button><div id="filterPopover" class="filter-popover"></div></th>
+                        <th rowspan="2" style="width: 80px; position: relative;"><div style="display: flex; flex-direction: column; align-items: center; gap: 2px;"><button class="filter-btn" onclick="toggleFilterPopover(event)" title="Filtrar por posición"><i class="fas fa-sliders-h" style="font-size: 10px;"></i></button><span>POSICIÓN</span></div><div id="filterPopover" class="filter-popover"></div></th>
                         <th rowspan="2" style="width: 120px;">FORTALEZAS/<br>DEBILIDADES</th>                        
                         <th rowspan="2">COMENTARIOS</th>
                         <th colspan="2" class="main-stat-header stat-category-fisicas-start" data-category="fisicas" style="text-align: center; border-bottom: 1px solid #f1f5f9;">STATS FÍSICAS</th>
@@ -256,57 +258,99 @@
 <div class="card-modern" style="padding: 15px; margin-top: 20px;">
     <div class="card-title"><i class="fas fa-shield-alt"></i> DETALLES DEL EQUIPO</div>
     
-    <!-- COMENTARIOS -->
-    <div style="margin-bottom: 20px;">
-        <label class="team-details-label">Comentarios</label>
-        <textarea id="teamComments" class="team-details-textarea" onchange="guardarDetalleEquipo('comentarios', this.value)" placeholder="Escribe comentarios generales del equipo..."></textarea>
+    <div style="overflow-x: auto;">
+        <table class="table-val team-detail-table" style="width: 100%; table-layout: fixed;">
+            <thead>
+                <tr>
+                    <th colspan="1" style="text-align: center; font-size: 11px; font-weight: 900; color: #1e293b; padding: 10px 6px; border-bottom: 2px solid #E31E24;">ENTRENAMIENTOS</th>
+                    <th colspan="1" style="text-align: center; font-size: 11px; font-weight: 900; color: #1e293b; padding: 10px 6px; border-bottom: 2px solid #E31E24;">PARTIDOS</th>
+                    <th colspan="1" style="text-align: center; font-size: 11px; font-weight: 900; color: #1e293b; padding: 10px 6px; border-bottom: 2px solid #E31E24;">TÉCNICO</th>
+                    <th colspan="1" style="text-align: center; font-size: 11px; font-weight: 900; color: #1e293b; padding: 10px 6px; border-bottom: 2px solid #E31E24;">TÁCTICO</th>
+                    <th colspan="1" style="text-align: center; font-size: 11px; font-weight: 900; color: #1e293b; padding: 10px 6px; border-bottom: 2px solid #E31E24;">FÍSICO</th>
+                    <th colspan="1" style="text-align: center; font-size: 11px; font-weight: 900; color: #1e293b; padding: 10px 6px; border-bottom: 2px solid #E31E24;">EXTRADEPORTIVO</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 6px; vertical-align: top;"><textarea class="team-details-textarea" style="min-height: 70px; font-size: 12px;" onchange="guardarDetalleEquipo('comentarios_entrenamientos', this.value)" placeholder="comentarios"></textarea></td>
+                    <td style="padding: 6px; vertical-align: top;"><textarea class="team-details-textarea" style="min-height: 70px; font-size: 12px;" onchange="guardarDetalleEquipo('comentarios_partidos', this.value)" placeholder="comentarios"></textarea></td>
+                    <td style="padding: 6px; vertical-align: top;"><textarea class="team-details-textarea" style="min-height: 70px; font-size: 12px;" onchange="guardarDetalleEquipo('comentarios_tecnico', this.value)" placeholder="comentarios"></textarea></td>
+                    <td style="padding: 6px; vertical-align: top;"><textarea class="team-details-textarea" style="min-height: 70px; font-size: 12px;" onchange="guardarDetalleEquipo('comentarios_tactico', this.value)" placeholder="comentarios"></textarea></td>
+                    <td style="padding: 6px; vertical-align: top;"><textarea class="team-details-textarea" style="min-height: 70px; font-size: 12px;" onchange="guardarDetalleEquipo('comentarios_fisico', this.value)" placeholder="comentarios"></textarea></td>
+                    <td style="padding: 6px; vertical-align: top;"><textarea class="team-details-textarea" style="min-height: 70px; font-size: 12px;" onchange="guardarDetalleEquipo('comentarios_extradeportivo', this.value)" placeholder="comentarios"></textarea></td>
+                </tr>
+            </tbody>
+        </table>
     </div>
-    
-    <!-- NOTAS 1-10 -->
-    <div class="team-details-row">
-        <div class="team-details-item">
-            <label class="team-details-label">Entrenamiento</label>
-            <input type="number" id="teamTraining" class="team-details-input" min="1" max="10" onchange="guardarDetalleEquipo('entrenamiento', this.value)" placeholder="-">
-        </div>
-        <div class="team-details-item">
-            <label class="team-details-label">Partidos</label>
-            <input type="number" id="teamMatches" class="team-details-input" min="1" max="10" onchange="guardarDetalleEquipo('partidos', this.value)" placeholder="-">
-        </div>
-        <div class="team-details-item">
-            <label class="team-details-label">Técnico</label>
-            <input type="number" id="teamTechnical" class="team-details-input" min="1" max="10" onchange="guardarDetalleEquipo('tecnico', this.value)" placeholder="-">
-        </div>
-        <div class="team-details-item">
-            <label class="team-details-label">Táctico</label>
-            <input type="number" id="teamTactical" class="team-details-input" min="1" max="10" onchange="guardarDetalleEquipo('tactico', this.value)" placeholder="-">
-        </div>
-        <div class="team-details-item">
-            <label class="team-details-label">Físico</label>
-            <input type="number" id="teamPhysical" class="team-details-input" min="1" max="10" onchange="guardarDetalleEquipo('fisico', this.value)" placeholder="-">
-        </div>
-        <div class="team-details-item">
-            <label class="team-details-label">Extradeportivo</label>
-            <input type="number" id="teamExtraDeport" class="team-details-input" min="1" max="10" onchange="guardarDetalleEquipo('extradeportivo', this.value)" placeholder="-">
-        </div>
-    </div>
-    
-    <!-- EVOLUCIÓN -->
-    <div style="margin-top: 25px; margin-bottom: 20px;">
-        <div style="font-weight: 900; color: #1e293b; font-size: 0.95rem; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">EVOLUCIÓN</div>
-        <div class="team-details-row">
-            <div class="team-details-item">
-                <label class="team-details-label">Inicio</label>
-                <textarea id="evolutionStart" class="team-details-textarea" style="min-height: 60px;" onchange="guardarDetalleEquipo('evolucion_inicio', this.value)" placeholder="Estado inicial..."></textarea>
-            </div>
-            <div class="team-details-item">
-                <label class="team-details-label">Medio</label>
-                <textarea id="evolutionMid" class="team-details-textarea" style="min-height: 60px;" onchange="guardarDetalleEquipo('evolucion_medio', this.value)" placeholder="Cambios a mitad de temporada..."></textarea>
-            </div>
-            <div class="team-details-item">
-                <label class="team-details-label">Final</label>
-                <textarea id="evolutionEnd" class="team-details-textarea" style="min-height: 60px;" onchange="guardarDetalleEquipo('evolucion_final', this.value)" placeholder="Estado final..."></textarea>
-            </div>
-        </div>
+
+    <!-- EVOLUCIÓN TEMPORADA -->
+    <div style="margin-top: 20px; overflow-x: auto;">
+        <table class="table-val team-detail-table" style="width: 100%; table-layout: fixed;">
+            <thead>
+                <tr>
+                    <th colspan="3" style="text-align: center; font-size: 9px; color: #64748b; padding: 6px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0;">evolución temporada</th>
+                    <th colspan="3" style="text-align: center; font-size: 9px; color: #64748b; padding: 6px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0;">evolución temporada</th>
+                    <th colspan="3" style="text-align: center; font-size: 9px; color: #64748b; padding: 6px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0;">evolución temporada</th>
+                    <th colspan="3" style="text-align: center; font-size: 9px; color: #64748b; padding: 6px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0;">evolución temporada</th>
+                    <th colspan="3" style="text-align: center; font-size: 9px; color: #64748b; padding: 6px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0;">evolución temporada</th>
+                    <th colspan="3" style="text-align: center; font-size: 9px; color: #64748b; padding: 6px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0;">evolución temporada</th>
+                </tr>
+                <tr>
+                    <!-- Entrenamientos -->
+                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">INICIO</th>
+                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">MEDIO</th>
+                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase; border-right: 1px solid #e2e8f0;">FINAL</th>
+                    <!-- Partidos -->
+                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">INICIO</th>
+                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">MEDIO</th>
+                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase; border-right: 1px solid #e2e8f0;">FINAL</th>
+                    <!-- Técnico -->
+                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">INICIO</th>
+                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">MEDIO</th>
+                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase; border-right: 1px solid #e2e8f0;">FINAL</th>
+                    <!-- Táctico -->
+                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">INICIO</th>
+                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">MEDIO</th>
+                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase; border-right: 1px solid #e2e8f0;">FINAL</th>
+                    <!-- Físico -->
+                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">INICIO</th>
+                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">MEDIO</th>
+                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase; border-right: 1px solid #e2e8f0;">FINAL</th>
+                    <!-- Extradeportivo -->
+                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">INICIO</th>
+                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">MEDIO</th>
+                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">FINAL</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <!-- Entrenamientos -->
+                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_entrenamientos_inicio', this.value)" placeholder="nota"></td>
+                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_entrenamientos_medio', this.value)" placeholder="nota"></td>
+                    <td style="padding: 4px; border-right: 1px solid #e2e8f0;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_entrenamientos_final', this.value)" placeholder="nota"></td>
+                    <!-- Partidos -->
+                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_partidos_inicio', this.value)" placeholder="nota"></td>
+                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_partidos_medio', this.value)" placeholder="nota"></td>
+                    <td style="padding: 4px; border-right: 1px solid #e2e8f0;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_partidos_final', this.value)" placeholder="nota"></td>
+                    <!-- Técnico -->
+                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_tecnico_inicio', this.value)" placeholder="nota"></td>
+                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_tecnico_medio', this.value)" placeholder="nota"></td>
+                    <td style="padding: 4px; border-right: 1px solid #e2e8f0;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_tecnico_final', this.value)" placeholder="nota"></td>
+                    <!-- Táctico -->
+                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_tactico_inicio', this.value)" placeholder="nota"></td>
+                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_tactico_medio', this.value)" placeholder="nota"></td>
+                    <td style="padding: 4px; border-right: 1px solid #e2e8f0;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_tactico_final', this.value)" placeholder="nota"></td>
+                    <!-- Físico -->
+                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_fisico_inicio', this.value)" placeholder="nota"></td>
+                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_fisico_medio', this.value)" placeholder="nota"></td>
+                    <td style="padding: 4px; border-right: 1px solid #e2e8f0;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_fisico_final', this.value)" placeholder="nota"></td>
+                    <!-- Extradeportivo -->
+                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_extradeportivo_inicio', this.value)" placeholder="nota"></td>
+                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_extradeportivo_medio', this.value)" placeholder="nota"></td>
+                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_extradeportivo_final', this.value)" placeholder="nota"></td>
+                </tr>
+            </tbody>
+        </table>
     </div>
     
     <!-- ANÁLISIS DEL EQUIPO -->
@@ -752,11 +796,13 @@
             popover.innerHTML = html;
             popover.classList.add('show');
             
-            // Posicionar el popover
+            // Posicionar el popover al lado del botón de filtro
             const btn = event.currentTarget;
             const btnRect = btn.getBoundingClientRect();
-            popover.style.top = `${btnRect.bottom + 5}px`;
-            popover.style.left = `${btnRect.left}px`;
+            const thRect = btn.closest('th').getBoundingClientRect();
+            popover.style.position = 'fixed';
+            popover.style.top = `${thRect.bottom + 6}px`;
+            popover.style.left = `${thRect.left}px`;
         }
     }
 
@@ -770,7 +816,8 @@
     }
 
     function actualizarPromedios() {
-        const visibleRows = Array.from(document.querySelectorAll('#tbodyJugadoresDetalles tr')).filter(row => row.style.display !== 'none');
+        const visibleRows = Array.from(document.querySelectorAll('#tbodyJugadoresDetalles tr[data-posicion]')).filter(row => row.style.display !== 'none');
+        const numPlayers = visibleRows.length;
         const keys = [
             'Velocidad','Resistencia',
             'Precision pase corto','Precision pase largo','Capacidad de robo','Juego de cabeza','Regate/desborde','Tiro','Control','Conduccion','Definicion','Creatividad con balon',
@@ -778,8 +825,7 @@
             'Concentracion','Liderazgo','Actitud entrenamientos','Actitud partidos'
         ];
         const totals = {};
-        const counts = {};
-        keys.forEach(k => { totals[k] = 0; counts[k] = 0; });
+        keys.forEach(k => { totals[k] = 0; });
 
         visibleRows.forEach(row => {
             row.querySelectorAll('.stat-input').forEach(input => {
@@ -788,23 +834,21 @@
                 const value = parseFloat(input.value);
                 if (!isNaN(value)) {
                     totals[stat] += value;
-                    counts[stat] += 1;
                 }
             });
         });
 
-        // Actualizar promedios en las cabeceras
+        // Actualizar promedios en las cabeceras (suma / número de jugadores)
         document.querySelectorAll('.avg-header[data-stat]').forEach(avgEl => {
             const stat = avgEl.dataset.stat;
-            const avg = counts[stat] > 0 ? (totals[stat] / counts[stat]).toFixed(1) : '-';
-            avgEl.innerText = `Ø${avg}`;
-            avgEl.style.fontSize = '9px';
-            avgEl.style.color = '#94a3b8';
-            avgEl.style.fontWeight = '700';
+            const avg = numPlayers > 0 ? (totals[stat] / numPlayers).toFixed(1) : '-';
+            avgEl.innerText = `${avg}`;
+            avgEl.style.fontSize = '12px';
+            avgEl.style.color = '#64748b';
+            avgEl.style.fontWeight = '800';
             avgEl.style.display = 'block';
-            avgEl.style.borderTop = '1px solid #cbd5e1';
-            avgEl.style.paddingTop = '2px';
-            avgEl.style.marginTop = '2px';
+            avgEl.style.paddingTop = '3px';
+            avgEl.style.marginTop = '3px';
         });
     }
 
