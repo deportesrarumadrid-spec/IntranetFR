@@ -762,7 +762,13 @@
             <!-- KPIs Financieros -->
             <div id="kpi-financieros" class="kpi-content" style="display: none;">
                 <div style="background: white; border-radius: 12px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 20px;">
-                    <h4 style="margin-top: 0; color: #333; font-weight: 800; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;"><i class="fas fa-file-invoice-dollar" style="color: #dc3545;"></i> Jugadores con Pagos Pendientes</h4>
+                    <!-- Cabecera con título y filtro -->
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; border-bottom:1px solid #eee; padding-bottom:14px;">
+                        <h4 style="margin:0; color:#333; font-weight:800; font-size:18px;"><i class="fas fa-file-invoice-dollar" style="color:#dc3545; margin-right:8px;"></i> Jugadores con Pagos Pendientes</h4>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span id="pagos-total-badge" style="display:none; background:#dc3545; color:white; font-size:14px; font-weight:900; padding:8px 16px; border-radius:24px; box-shadow: 0 4px 10px rgba(220,53,69,0.2);"></span>
+                        </div>
+                    </div>
                     <div id="kpiPagosContainer">
                         <div style="text-align:center; padding:20px; color:#999;"><i class="fas fa-spinner fa-spin"></i> Cargando datos...</div>
                     </div>
@@ -2803,40 +2809,346 @@
         }, 10);
     }
 
+    // ── Datos globales para la tabla de pagos ─────────────────────────────────
+    let _pagosData = null;
+
     async function loadKpiPagos() {
+        filterEquipoQuery = "";
+        filterJugadorQuery = "";
+        
         const container = document.getElementById('kpiPagosContainer');
-        container.innerHTML = '<div style="text-align:center; padding:20px; color:#999;"><i class="fas fa-spinner fa-spin"></i> Buscando deudas...</div>';
+        container.innerHTML = '<div style="text-align:center; padding:24px; color:#999; font-size:14px;"><i class="fas fa-spinner fa-spin"></i> Buscando deudas...</div>';
         try {
             const res = await fetch('/api/kpis_pagos');
             const data = await res.json();
-            if (Object.keys(data).length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:20px; color: #10b981; font-weight: 800;"><i class="fas fa-check-circle"></i> ¡Todos los pagos están al día!</div>';
-                return;
-            }
-            let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">';
-            for (const equipo in data) {
-                html += `
-                <div style="border: 1px solid #fecdd3; border-radius: 8px; overflow: hidden;">
-                    <div style="background: #fff1f2; padding: 10px; font-weight: 900; color: #e11d48; text-transform: uppercase; font-size: 11px;">
-                        ${equipo} <span style="float: right; background: #e11d48; color: white; padding: 2px 6px; border-radius: 10px; font-size: 9px;">${data[equipo].length}</span>
-                    </div>
-                    <div style="padding: 10px; background: white;">
-                        <ul style="margin: 0; padding-left: 20px; font-size: 11px; color: #333;">
-                            ${data[equipo].map(j => `
-                                <li style="margin-bottom: 5px;">
-                                    <b>${j.nombre}</b><br>
-                                    <span style="color: #64748b; font-size: 9px;">Debe: <span style="color: #e11d48; font-weight: 800;">${j.pendiente}€</span> (${j.concepto})</span>
-                                </li>
-                            `).join('')}
-                        </ul>
-                    </div>
-                </div>`;
-            }
-            html += '</div>';
-            container.innerHTML = html;
+            _pagosData = data;
+
+            renderTablaPagos(data);
         } catch(e) {
-            container.innerHTML = '<div style="text-align:center; color:red;">Error al cargar KPIs de pagos.</div>';
+            document.getElementById('kpiPagosContainer').innerHTML = '<div style="text-align:center; padding:20px; color:#dc3545; font-weight:800; font-size:14px;"><i class="fas fa-exclamation-triangle"></i> Error al cargar KPIs de pagos.</div>';
         }
+    }
+
+    let filterEquipoQuery = "";
+    let filterJugadorQuery = "";
+
+    function filtrarTablaPagos() {
+        if (!_pagosData) return;
+        const filteredJugadores = (_pagosData.jugadores || []).filter(j => {
+            const matchEqHeader = !filterEquipoQuery || j.equipo.toLowerCase() === filterEquipoQuery.toLowerCase();
+            const matchJugHeader = !filterJugadorQuery || j.primer_nombre.toLowerCase().includes(filterJugadorQuery.toLowerCase()) || j.nombre.toLowerCase().includes(filterJugadorQuery.toLowerCase());
+            return matchEqHeader && matchJugHeader;
+        });
+        
+        updateTbodyRows(filteredJugadores);
+    }
+
+    window.toggleHeaderFilter = function(event, type, el) {
+        event.stopPropagation();
+        
+        const existing = document.getElementById('kpi-header-filter-popover');
+        if (existing) {
+            existing.remove();
+            if (existing.dataset.type === type) return;
+        }
+        
+        const popover = document.createElement('div');
+        popover.id = 'kpi-header-filter-popover';
+        popover.dataset.type = type;
+        popover.style.position = 'absolute';
+        popover.style.background = 'white';
+        popover.style.border = '1px solid #cbd5e1';
+        popover.style.borderRadius = '8px';
+        popover.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+        popover.style.padding = '12px';
+        popover.style.zIndex = '1000';
+        popover.style.width = '220px';
+        popover.style.fontSize = '12px';
+        popover.style.color = '#1e293b';
+        
+        let html = '';
+        if (type === 'equipo') {
+            html += `<div style="font-weight: 800; margin-bottom: 8px; color:#475569; font-size:12px; text-transform:uppercase; letter-spacing:.5px;">SELECCIONAR EQUIPO:</div>`;
+            html += `<div style="max-height: 180px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px; background: #f8fafc;">`;
+            
+            const isTodosSel = filterEquipoQuery === "";
+            html += `
+            <div class="header-filter-option" onclick="onHeaderFilterSelect('equipo', '')" style="padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: ${isTodosSel ? '900' : '700'}; background: ${isTodosSel ? '#eff6ff' : 'transparent'}; color: ${isTodosSel ? '#1d4ed8' : '#334155'}; transition: 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='${isTodosSel ? '#eff6ff' : 'transparent'}'">
+                Todos los equipos
+            </div>`;
+            
+            if (_pagosData && _pagosData.equipos) {
+                _pagosData.equipos.forEach(eq => {
+                    const isSel = filterEquipoQuery === eq;
+                    html += `
+                    <div class="header-filter-option" onclick="onHeaderFilterSelect('equipo', '${escapeHtml(eq)}')" style="padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: ${isSel ? '900' : '700'}; background: ${isSel ? '#eff6ff' : 'transparent'}; color: ${isSel ? '#1d4ed8' : '#334155'}; transition: 0.15s; margin-top: 2px;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='${isSel ? '#eff6ff' : 'transparent'}'">
+                        ${escapeHtml(eq)}
+                    </div>`;
+                });
+            }
+            html += `</div>`;
+        } else {
+            html += `<div style="font-weight: 800; margin-bottom: 8px; color:#475569; font-size:12px; text-transform:uppercase; letter-spacing:.5px;">BUSCAR JUGADOR:</div>`;
+            html += `<input type="text" id="headerFilterInput" value="${escapeHtml(filterJugadorQuery)}" placeholder="Escribe nombre..." style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #cbd5e1; outline:none; font-size:13px; font-weight:700;" oninput="onHeaderFilterInput('jugador', this.value)">`;
+            html += `<div style="margin-top:8px; display:flex; justify-content:flex-end;"><span style="cursor:pointer; color:#ef4444; font-weight:700; font-size:12px;" onclick="clearHeaderFilter('jugador')">Limpiar</span></div>`;
+        }
+        
+        popover.innerHTML = html;
+        document.body.appendChild(popover);
+        
+        // Position
+        const rect = el.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+        
+        popover.style.top = (rect.bottom + scrollTop + 5) + 'px';
+        popover.style.left = (rect.left + scrollLeft - 100) + 'px';
+        
+        // Focus input
+        if (type === 'jugador') {
+            setTimeout(() => {
+                const input = document.getElementById('headerFilterInput');
+                if (input) input.focus();
+            }, 50);
+        }
+        
+        // Click outside listener
+        setTimeout(() => {
+            const outsideClickListener = (evt) => {
+                if (!popover.contains(evt.target) && evt.target !== el) {
+                    popover.remove();
+                    document.removeEventListener('click', outsideClickListener);
+                }
+            };
+            document.addEventListener('click', outsideClickListener);
+        }, 10);
+    }
+
+    window.onHeaderFilterSelect = function(type, value) {
+        if (type === 'equipo') {
+            filterEquipoQuery = value;
+            const icon = document.querySelector('th i.fa-filter');
+            if (icon) icon.style.color = value ? '#E31E24' : '#94a3b8';
+        }
+        filtrarTablaPagos();
+        
+        // Close popover
+        const popover = document.getElementById('kpi-header-filter-popover');
+        if (popover) popover.remove();
+    }
+
+    window.onHeaderFilterInput = function(type, value) {
+        if (type === 'equipo') {
+            filterEquipoQuery = value;
+            const icon = document.querySelector('th i.fa-filter');
+            if (icon) icon.style.color = value ? '#E31E24' : '#94a3b8';
+        } else {
+            filterJugadorQuery = value;
+            const icon = document.querySelector('th i.fa-search');
+            if (icon) icon.style.color = value ? '#E31E24' : '#94a3b8';
+        }
+        filtrarTablaPagos();
+    }
+
+    window.clearHeaderFilter = function(type) {
+        if (type === 'equipo') {
+            filterEquipoQuery = "";
+            const icon = document.querySelector('th i.fa-filter');
+            if (icon) icon.style.color = '#94a3b8';
+        } else {
+            filterJugadorQuery = "";
+            const icon = document.querySelector('th i.fa-search');
+            if (icon) icon.style.color = '#94a3b8';
+        }
+        const input = document.getElementById('headerFilterInput');
+        if (input) input.value = "";
+        filtrarTablaPagos();
+        
+        // Close popover
+        const popover = document.getElementById('kpi-header-filter-popover');
+        if (popover) popover.remove();
+    }
+
+    function formatDateForInput(dStr) {
+        if (!dStr) return '';
+        if (dStr.includes('/')) {
+            const [d, m, y] = dStr.split('/');
+            return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        }
+        return dStr;
+    }
+
+    function formatDateForSheet(dStr) {
+        if (!dStr) return '';
+        if (dStr.includes('-')) {
+            const [y, m, d] = dStr.split('-');
+            return `${parseInt(d)}/${parseInt(m)}/${y}`;
+        }
+        return dStr;
+    }
+
+    function getWhatsAppLink(tel, nombre, detalle) {
+        const cleanTel = tel.replace(/\D/g, '');
+        const msg = `Hola, recordatorio de Intranet Club. ⚠️\n\nQueremos recordarte que tienes el siguiente saldo pendiente para el jugador/a ${nombre}:\n\n${detalle}\n\nPor favor, realiza el pago lo antes posible. ¡Muchas gracias!`;
+        return `https://api.whatsapp.com/send?phone=${cleanTel}&text=${encodeURIComponent(msg)}`;
+    }
+
+    window.logRecordatorioSent = function(equipo, nombre, anchorEl) {
+        const td = anchorEl.closest('td');
+        const inputFecha = td.querySelector('.input-rec-fecha');
+        const inputComentario = td.querySelector('.input-rec-comentario');
+        const today = new Date().toISOString().split('T')[0];
+        if (inputFecha) inputFecha.value = today;
+        const comentarioVal = inputComentario ? inputComentario.value : '';
+        guardarRecordatorioNuevo(equipo, nombre, today, comentarioVal);
+    }
+
+    window.guardarFilaRecordatorio = function(equipo, nombre, buttonEl) {
+        const td = buttonEl.closest('td');
+        const inputFecha = td.querySelector('.input-rec-fecha');
+        const inputComentario = td.querySelector('.input-rec-comentario');
+        const fechaVal = inputFecha ? inputFecha.value : '';
+        const comentarioVal = inputComentario ? inputComentario.value : '';
+        guardarRecordatorioNuevo(equipo, nombre, fechaVal, comentarioVal);
+    }
+
+    window.guardarRecordatorioNuevo = async function(equipo, nombre, fecha, comentario) {
+        const fechaSheet = formatDateForSheet(fecha);
+        try {
+            const res = await fetch('/api/guardar_recordatorio_jugador', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    equipo: equipo,
+                    nombre: nombre,
+                    fecha: fechaSheet,
+                    comentario: comentario
+                })
+            });
+            if (res.ok) {
+                mostrarToastAutoguardado("RECORDATORIO GUARDADO");
+            } else {
+                console.error("Error al guardar recordatorio");
+            }
+        } catch(e) {
+            console.error("Error de conexión:", e);
+        }
+    }
+
+    function renderTablaPagos(data) {
+        const container = document.getElementById('kpiPagosContainer');
+        const jugadores = data.jugadores || [];
+
+        if (jugadores.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:28px; color:#10b981; font-weight:800; font-size:14px;"><i class="fas fa-check-circle" style="margin-right:6px;"></i>¡Todos los pagos están al día!</div>';
+            return;
+        }
+
+        // ── Construir tabla (tamaños aumentados) ──
+        let html = `
+        <div style="overflow-x:auto; max-width:100%; position:relative;">
+          <table style="width:100%; border-collapse:collapse; font-size:14px; min-width:800px;">
+            <thead>
+              <tr style="background:#1e293b; color:white; text-transform:uppercase; font-size:12px; letter-spacing:.5px;">
+                <th style="padding:12px 10px; text-align:left; white-space:nowrap; font-weight:900; position:sticky; left:0; background:#1e293b; z-index:3; width:90px;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span>Equipo</span>
+                        <i class="fas fa-filter" style="cursor:pointer; color:#94a3b8; transition: 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='#94a3b8'" onclick="toggleHeaderFilter(event, 'equipo', this)"></i>
+                    </div>
+                </th>
+                <th style="padding:12px 10px; text-align:left; white-space:nowrap; font-weight:900; position:sticky; left:90px; background:#1e293b; z-index:3; border-right:2px solid #334155; width:180px;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span>Jugador</span>
+                        <i class="fas fa-search" style="cursor:pointer; color:#94a3b8; transition: 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='#94a3b8'" onclick="toggleHeaderFilter(event, 'jugador', this)"></i>
+                    </div>
+                </th>
+                <th style="padding:12px 10px; text-align:left; font-weight:900;">Detalle Deuda</th>
+                <th style="padding:12px 10px; text-align:center; font-weight:900; width:110px;">Deuda</th>
+                <th style="padding:12px 10px; text-align:center; font-weight:900; width:160px;">Tipo / Forma Pago</th>
+                <th style="padding:12px 10px; text-align:center; font-weight:900; min-width:380px;">Recordatorio</th>
+              </tr>
+            </thead>
+            <tbody id="kpiPagosTbody"></tbody>
+          </table>
+        </div>`;
+        container.innerHTML = html;
+        
+        filtrarTablaPagos();
+    }
+
+    function updateTbodyRows(jugadoresFiltrados) {
+        const tbody = document.getElementById('kpiPagosTbody');
+        if (!tbody) return;
+        
+        let html = '';
+        let prevEquipo = null;
+        let totalDeuda = 0;
+        
+        jugadoresFiltrados.forEach((jug, idx) => {
+            const esNuevoEquipo = jug.equipo !== prevEquipo;
+            if (esNuevoEquipo) {
+                prevEquipo = jug.equipo;
+                html += `
+              <tr class="fila-separador-equipo" data-equipo="${escapeHtml(jug.equipo)}" style="background:#f1f5f9;">
+                <td colspan="6" style="padding:12px 14px; font-weight:900; font-size:16px; color:#000000; text-transform:uppercase; letter-spacing:.5px; border-top:2px solid #cbd5e1;">
+                  ${escapeHtml(jug.equipo)}
+                </td>
+              </tr>`;
+            }
+            
+            const rowBg = idx % 2 === 0 ? '#ffffff' : '#fafafa';
+            html += `<tr class="fila-deuda-jugador" data-equipo="${escapeHtml(jug.equipo)}" data-nombre="${escapeHtml(jug.nombre)}" style="background:${rowBg}; border-bottom:1px solid #f1f5f9;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='${rowBg}'">`;
+            html += `<td style="padding:12px 10px; color:#000000; font-size:13px; position:sticky; left:0; background:${rowBg}; z-index:1;"></td>`;
+            html += `<td style="padding:12px 10px; font-weight:900; color:#000000; font-size:17px; white-space:nowrap; position:sticky; left:90px; background:${rowBg}; z-index:1; border-right:2px solid #cbd5e1;">${escapeHtml(jug.primer_nombre)}</td>`;
+            
+            // Detalle Deuda (badges solo texto en negro y más grande, estilo fino)
+            const badges = (jug.conceptos_deuda || []).map(c => {
+                return `<span style="display:inline-block; color:#000000; font-weight:600; font-size:16px; margin:2px 14px 2px 0; white-space:nowrap;">${escapeHtml(c.label)}: ${c.deuda}€</span>`;
+            }).join('');
+            
+            html += `<td style="padding:12px 10px; text-align:left; line-height:1.6;">${badges}</td>`;
+            html += `<td style="padding:12px 10px; text-align:center; font-weight:900; font-size:18px; color:white; background:#dc3545; white-space:nowrap; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);">${jug.total_deuda}€</td>`;
+            html += `<td style="padding:12px 10px; text-align:center;"><span style="background:#f1f5f9; padding:6px 10px; border-radius:6px; font-size:14px; font-weight:900; color:#000000; white-space:nowrap;">${escapeHtml((jug.tipo_pago || 'Efectivo') + ' ; ' + (jug.forma_pago || 'BIANIAL'))}</span></td>`;
+            
+            // Recordatorio (inputs y botones más grandes)
+            html += `<td style="padding:12px 10px; text-align:center;">
+               <div style="display:flex; align-items:center; gap:8px; justify-content:center; flex-wrap:nowrap;">
+                 <input type="date" class="input-coord input-rec-fecha" value="${formatDateForInput(jug.recordatorio_fecha)}" style="max-width:125px; padding:6px; font-size:13px; height:34px; font-weight:700;">
+                 <input type="text" placeholder="Comentario..." class="input-coord input-rec-comentario" value="${escapeHtml(jug.recordatorio_comentario)}" style="width:160px; padding:6px; font-size:13px; height:34px; border:1px solid #cbd5e1; border-radius:4px; font-weight:700;">
+                 <button class="btn-fin" onclick="guardarFilaRecordatorio('${escapeHtml(jug.equipo)}', '${escapeHtml(jug.primer_nombre)}', this)" style="padding:6px 12px; font-size:12px; height:34px; background:#1e293b; color:white; border-radius:4px; font-weight:800; border:none; cursor:pointer; white-space:nowrap;">AÑADIR</button>
+                 ${jug.telefono ? `<a href="${getWhatsAppLink(jug.telefono, jug.nombre, jug.detalle_text)}" target="_blank" onclick="logRecordatorioSent('${escapeHtml(jug.equipo)}', '${escapeHtml(jug.primer_nombre)}', this)" style="background:#25D366; color:white; width:34px; height:34px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:16px; text-decoration:none; box-shadow:0 2px 5px rgba(37,211,102,0.3); transition:0.2s; cursor:pointer;" title="Enviar recordatorio WhatsApp"><i class="fab fa-whatsapp"></i></a>` : ''}
+               </div>
+             </td>`;
+            
+            html += '</tr>';
+            totalDeuda += jug.total_deuda;
+        });
+        
+        // Sumatorio total
+        html += `
+        <tr style="background:#f8fafc; font-weight:900; border-top:2px solid #cbd5e1; border-bottom:2px solid #cbd5e1; font-size:16px;">
+          <td colspan="2" style="padding:14px 12px; text-align:right; color:#000000; text-transform:uppercase; font-size:13px; letter-spacing:.5px; font-weight:900;">SUMATORIO DEUDA:</td>
+          <td style="padding:14px 12px;"></td>
+          <td style="padding:14px 10px; text-align:center; font-size:18px; background:#dc3545; color:white; font-weight:900; white-space:nowrap;">${totalDeuda.toFixed(2)}€</td>
+          <td colspan="2"></td>
+        </tr>`;
+        
+        tbody.innerHTML = html;
+        
+        // Update the badge too
+        const badge = document.getElementById('pagos-total-badge');
+        if (badge) {
+            if (totalDeuda > 0) {
+                badge.style.display = 'inline-block';
+                badge.textContent = totalDeuda.toFixed(2) + '€ pendientes';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+    }
+
+    function escapeHtml(t) {
+        return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
     async function loadKpiRrss() {

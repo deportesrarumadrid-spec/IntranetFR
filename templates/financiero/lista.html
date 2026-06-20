@@ -1050,7 +1050,7 @@ function getLabelConcepto(item, forma, isStaff) {
     // Lógica para meses agrupados (Bianual, etc.)
     if (!isStaff && typeof item === 'string' && item.match(/^\d+$/)) {
         const configForma = configuracionesPago.find(c => c.nombre === forma);
-        const nPagos = configForma ? (parseInt(configForma.meses) || 12) : 12;
+        const nPagos = configForma ? (parseInt(configForma.meses) || 10) : 10;
         const intervalo = Math.floor(12 / nPagos);
         
         if (intervalo > 1) {
@@ -1217,7 +1217,70 @@ let callbackVerificacion = null;
 function abrirModalBulkEsperado(concepto) {
     bulkConceptoActivo = concepto;
     document.getElementById('modalBulkEsperado').style.display = 'flex';
-    document.getElementById('bulkTituloConcepto').innerText = (concepto === 'Inscripción' ? 'INSCRIPCIÓN' : 'MES ' + concepto);
+    
+    const mesesCompletos = {
+        '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril', '05': 'Mayo', '06': 'Junio',
+        '07': 'Julio', '08': 'Agosto', '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre'
+    };
+    
+    let text = (concepto === 'Inscripción' ? 'INSCRIPCIÓN' : 'MES ' + (mesesCompletos[concepto] || concepto));
+    
+    // Buscar valor actual
+    let valorActual = null;
+    
+    // 1. Intentar buscar en filas visibles que sean mensuales (sin combinar para este concepto)
+    const primerFilaVisible = Array.from(document.querySelectorAll('.fila-jugador')).find(f => {
+        if (f.style.display === 'none') return false;
+        const forma = f.cells[3].innerText.trim();
+        const configForma = configuracionesPago.find(c => c.nombre === forma);
+        const nPagos = configForma ? (parseInt(configForma.meses) || 10) : 10;
+        const esDivisor = [1, 2, 3, 4, 6, 12].includes(nPagos);
+        const intervalo = esDivisor ? (12 / nPagos) : 1;
+        return (intervalo === 1);
+    });
+    
+    if (primerFilaVisible) {
+        const cell = Array.from(primerFilaVisible.querySelectorAll('.pago-cell')).find(c => c.dataset.concepto === concepto);
+        if (cell) {
+            valorActual = parseFloat(cell.dataset.esperado);
+        }
+    } else {
+        // Fallback: Buscar en cualquier fila visible y dividir por su intervalo si está agrupado
+        const f = Array.from(document.querySelectorAll('.fila-jugador')).find(f => f.style.display !== 'none');
+        if (f) {
+            const cell = Array.from(f.querySelectorAll('.pago-cell')).find(c => c.dataset.concepto === concepto);
+            if (cell) {
+                const forma = f.cells[3].innerText.trim();
+                const configForma = configuracionesPago.find(c => c.nombre === forma);
+                const nPagos = configForma ? (parseInt(configForma.meses) || 10) : 10;
+                const esDivisor = [1, 2, 3, 4, 6, 12].includes(nPagos);
+                const intervalo = esDivisor ? (12 / nPagos) : 1;
+                
+                let rawEsp = parseFloat(cell.dataset.esperado) || 0;
+                if (intervalo > 1) {
+                    valorActual = rawEsp / intervalo;
+                } else {
+                    valorActual = rawEsp;
+                }
+            }
+        }
+    }
+    
+    // Fallback de último recurso si sigue siendo null
+    if (valorActual === null && concepto !== 'Inscripción' && concepto !== 'PACK_ROPA' && concepto !== 'EXTRA' && concepto !== 'EXTRA2') {
+        const mensualConfig = configuracionesPago.find(c => c.modalidad === 'mensual' || c.meses === 10 || c.cuota === 49);
+        if (mensualConfig) {
+            valorActual = mensualConfig.cuota;
+        } else {
+            valorActual = 49;
+        }
+    }
+    
+    if (valorActual !== null && !isNaN(valorActual)) {
+        text += ` (Actual: ${Math.round(valorActual * 100) / 100}€)`;
+    }
+    
+    document.getElementById('bulkTituloConcepto').innerText = text;
 }
 
 async function aplicarBulkEsperado(btn) {
@@ -1234,7 +1297,7 @@ async function aplicarBulkEsperado(btn) {
         if (f.style.display !== 'none') {
             const forma = f.cells[3].innerText.trim();
             const configForma = configuracionesPago.find(c => c.nombre === forma);
-            const nPagos = configForma ? (parseInt(configForma.meses) || 12) : 12;
+            const nPagos = configForma ? (parseInt(configForma.meses) || 10) : 10;
             const intervalo = 12 / nPagos;
 
             // Definimos qué columnas son independientes de la modalidad de pago (mensual/bianual/etc)
@@ -1631,8 +1694,9 @@ function actualizarBarraPagos() {
         const equipo = isStaff ? "STAFF" : fila.dataset.equipo;
         const forma = isStaff ? "Varios" : fila.cells[3].innerText.trim();
 
+        const labelItem = getLabelConcepto(item, forma, isStaff);
         if (!agrupado[nombre]) agrupado[nombre] = [];
-        agrupado[nombre].push(item);
+        agrupado[nombre].push(labelItem);
 
         // Calcular el esperado para esta celda según la configuración actual
         let esperadoIndividual = parseFloat(cell.dataset.esperado) || 0;
@@ -1645,7 +1709,11 @@ function actualizarBarraPagos() {
                 esperadoIndividual = parseFloat(configCuotasMes[keyOverride]);
             } else {
                 const config = !isStaff ? configuracionesPago.find(c => c.nombre === forma) : null;
-                if (config) esperadoIndividual = config.cuota;
+                if (config) {
+                    esperadoIndividual = config.cuota;
+                } else if (!isStaff) {
+                    esperadoIndividual = 49;
+                }
             }
         }
         totalEsperado += esperadoIndividual;
@@ -1951,8 +2019,8 @@ function cargarPagosEnTabla() {
         const forma = fila.cells[3].innerText.trim();
         const configForma = configuracionesPago.find(c => c.nombre === forma);
 
-        const nPagos = configForma ? (parseInt(configForma.meses) || 12) : 12;
-        const totalAnual = configForma ? (parseFloat(configForma.total) || 440) : 440;
+        const nPagos = configForma ? (parseInt(configForma.meses) || 10) : 10;
+        const totalAnual = configForma ? (parseFloat(configForma.total) || 490) : 490;
         const cuotaRepartida = nPagos > 0 ? totalAnual / nPagos : 0;
 
         // Solo agrupamos columnas si nPagos es divisor exacto de 12
@@ -2051,7 +2119,7 @@ function cargarPagosEnTabla() {
                             if (isNaN(m)) return;
                             const forma = fila.cells[3].innerText.trim();
                             const configForma = configuracionesPago.find(c => c.nombre === forma);
-                            const nPagos = configForma ? (parseInt(configForma.meses) || 12) : 12;
+                            const nPagos = configForma ? (parseInt(configForma.meses) || 10) : 10;
                             const esDivisor = [1, 2, 3, 4, 6, 12].includes(nPagos);
                             const localIntervalo = esDivisor ? (12 / nPagos) : 1;
                             
@@ -2537,7 +2605,7 @@ function generarReporteImpagos() {
         const formaPagoJugador = cells[3].innerText.trim(); // Columna 3 es FORMA PAGO
 
         // Obtener la cuota mensual base para este jugador según su forma de pago
-        let cuotaMensualBase = 50; // Valor por defecto si no se encuentra configuración
+        let cuotaMensualBase = 49; // Valor por defecto si no se encuentra configuración
         const configFormaPago = configuracionesPago.find(c => c.nombre === formaPagoJugador);
         if (configFormaPago) cuotaMensualBase = configFormaPago.cuota;
 

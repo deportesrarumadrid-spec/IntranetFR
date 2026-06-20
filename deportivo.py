@@ -1092,46 +1092,411 @@ def api_kpis_pagos():
     try:
         from app import client, NOMBRE_EXCEL
         from collections import defaultdict
-        
+        from datetime import datetime
+        import json
+
+        # ── Calcular temporada deportiva ──────────────────────────────────────
+        hoy = datetime.now()
+        cur_year, cur_month = hoy.year, hoy.month
+
+        # Temporada Sep→Jun: si estamos en Sep-Dic, la temporada empieza este año
+        # Si estamos en Ene-Ago, la temporada empieza el año anterior
+        if cur_month >= 9:
+            season_start_year = cur_year
+        else:
+            season_start_year = cur_year - 1
+
+        # Generar lista de meses de la temporada hasta el mes actual (inclusive)
+        season_months = []  # lista de (año, mes) en orden cronológico
+        if cur_month >= 9:
+            for m in range(9, cur_month + 1):
+                season_months.append((season_start_year, m))
+        else:
+            for m in range(9, 13):
+                season_months.append((season_start_year, m))
+            end_m = min(cur_month, 6)
+            for m in range(1, end_m + 1):
+                season_months.append((season_start_year + 1, m))
+
+        # Conceptos de columnas y mapeo de nombres de mes
+        month_labels = {
+            1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun',
+            7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'
+        }
+
+        # 1. Cargar configuración financiera
+        sheet_config = client.open(NOMBRE_EXCEL).worksheet("CONFIGURACION")
+        config_rows = sheet_config.get_all_values()
+        inscripciones_config = {}
+        formas_pago_config = []
+        cuotas_mes_config = {}
+        for r in config_rows:
+            if len(r) >= 2:
+                key = r[0].strip()
+                val = r[1].strip()
+                if key == "INSCRIPCIONES_EQUIPO":
+                    try: inscripciones_config = json.loads(val)
+                    except: pass
+                elif key == "FORMAS_PAGO":
+                    try: formas_pago_config = json.loads(val)
+                    except: pass
+                elif key == "CUOTAS_MES":
+                    try: cuotas_mes_config = json.loads(val)
+                    except: pass
+
+        if not formas_pago_config:
+            formas_pago_config = [
+                {"nombre": "Efectivo", "total": 490, "modalidad": "mensual", "cuota": 49, "meses": 10, "tipo": "Efectivo"},
+                {"nombre": "Domiciliación", "total": 490, "modalidad": "mensual", "cuota": 49, "meses": 10, "tipo": "Domiciliación"},
+                {"nombre": "Transferencia", "total": 490, "modalidad": "mensual", "cuota": 49, "meses": 10, "tipo": "Transferencia"}
+            ]
+
+        # 2. Cargar jugadores activos
+        sheet_jug = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
+        jug_rows = sheet_jug.get_all_values()
+        if not jug_rows:
+            return jsonify({"jugadores": [], "columnas": [], "equipos": []})
+            
+        headers_jug = [h.strip().upper() for h in jug_rows[0]]
+        idx_rec_fecha = headers_jug.index("RECORDATORIO_FECHA") if "RECORDATORIO_FECHA" in headers_jug else -1
+        idx_rec_comentario = headers_jug.index("RECORDATORIO_COMENTARIO") if "RECORDATORIO_COMENTARIO" in headers_jug else -1
+        idx_rec1 = headers_jug.index("RECORDATORIO_1") if "RECORDATORIO_1" in headers_jug else -1
+        idx_nom = headers_jug.index("NOMBRE") if "NOMBRE" in headers_jug else 0
+        idx_ape = headers_jug.index("APELLIDO") if "APELLIDO" in headers_jug else -1
+        idx_eq = headers_jug.index("EQUIPO") if "EQUIPO" in headers_jug else -1
+        idx_baja = headers_jug.index("BAJA_DESDE") if "BAJA_DESDE" in headers_jug else -1
+        idx_alta = headers_jug.index("ALTA_DESDE") if "ALTA_DESDE" in headers_jug else -1
+        idx_forma = headers_jug.index("FORMA_PAGO") if "FORMA_PAGO" in headers_jug else -1
+        idx_tipo = headers_jug.index("TIPO PAGO") if "TIPO PAGO" in headers_jug else -1
+
+        def parse_date_simple(d_str):
+            if not d_str: return None
+            s = str(d_str).strip().replace('-', '/')
+            for fmt in ("%d/%m/%Y", "%Y/%m/%d", "%d/%m/%y"):
+                try: return datetime.strptime(s, fmt)
+                except: continue
+            return None
+
+        players = []
+        for row in jug_rows[1:]:
+            if len(row) <= max(idx_nom, idx_eq): continue
+            nom = row[idx_nom].strip()
+            eq = row[idx_eq].strip()
+            if not nom or not eq: continue
+            
+            ape = row[idx_ape].strip() if idx_ape != -1 and len(row) > idx_ape else ""
+            baja_str = row[idx_baja].strip() if idx_baja != -1 and len(row) > idx_baja else ""
+            alta_str = row[idx_alta].strip() if idx_alta != -1 and len(row) > idx_alta else ""
+            forma = row[idx_forma].strip() if idx_forma != -1 and len(row) > idx_forma else ""
+            tipo = row[idx_tipo].strip() if idx_tipo != -1 and len(row) > idx_tipo else ""
+            
+            rec_fecha_val = ""
+            if idx_rec_fecha != -1 and len(row) > idx_rec_fecha and row[idx_rec_fecha].strip():
+                rec_fecha_val = row[idx_rec_fecha].strip()
+            elif idx_rec1 != -1 and len(row) > idx_rec1:
+                rec_fecha_val = row[idx_rec1].strip()
+                
+            rec_comentario_val = ""
+            if idx_rec_comentario != -1 and len(row) > idx_rec_comentario:
+                rec_comentario_val = row[idx_rec_comentario].strip()
+            
+            players.append({
+                "nombre": nom,
+                "apellido": ape,
+                "equipo": eq,
+                "alta_dt": parse_date_simple(alta_str),
+                "baja_dt": parse_date_simple(baja_str),
+                "forma_pago": forma or "BIANIAL",
+                "tipo_pago": tipo,
+                "recordatorio_fecha": rec_fecha_val,
+                "recordatorio_comentario": rec_comentario_val
+            })
+
+        # 3. Cargar teléfonos de la hoja DATOS JUGADORES
+        phones = {}
+        try:
+            sheet_datos = client.open(NOMBRE_EXCEL).worksheet("DATOS JUGADORES")
+            datos_rows = sheet_datos.get_all_records()
+            for d in datos_rows:
+                d_clean = {k.strip().upper(): str(v).strip() for k, v in d.items()}
+                nombre = d_clean.get("JUGADOR_NOMBRE", "")
+                equipo = d_clean.get("JUGADOR_EQUIPO_LETRA", d_clean.get("JUGADOR_EQUIPO", ""))
+                movil = d_clean.get("JUGADOR_TELEFONO_MOVIL", "")
+                if nombre and movil:
+                    phones[(nombre.lower(), equipo.lower())] = movil
+        except Exception as e_phone:
+            print(f"Aviso al cargar teléfonos: {e_phone}")
+
+        # 4. Cargar pagos
         sheet_pagos = client.open(NOMBRE_EXCEL).worksheet("PAGOS JUGADORES")
         pagos_data = sheet_pagos.get_all_values()
         
-        if not pagos_data: return jsonify({})
-        headers = [str(h).upper().strip().replace(' ', '_') for h in pagos_data[0]]
-        
-        idx_eq = headers.index('EQUIPO') if 'EQUIPO' in headers else 1
-        idx_nom = headers.index('NOMBRE') if 'NOMBRE' in headers else 2
-        idx_con = headers.index('CONCEPTO') if 'CONCEPTO' in headers else 5
-        idx_pag = headers.index('PAGADO') if 'PAGADO' in headers else 6
-        idx_esp = headers.index('ESPERADO') if 'ESPERADO' in headers else 7
-        
-        morosos = defaultdict(list)
-        
-        for row in pagos_data[1:]:
-            if len(row) > max(idx_pag, idx_esp):
-                try:
-                    pagado_str = str(row[idx_pag]).replace('€','').replace(',','.').strip() or "0"
-                    esperado_str = str(row[idx_esp]).replace('€','').replace(',','.').strip() or "0"
-                    pagado = float(pagado_str)
-                    esperado = float(esperado_str)
+        headers_pag = [str(h).upper().strip().replace(' ', '_') for h in pagos_data[0]] if pagos_data else []
+        idx_p_eq = headers_pag.index('EQUIPO') if 'EQUIPO' in headers_pag else 1
+        idx_p_jug = headers_pag.index('JUGADOR') if 'JUGADOR' in headers_pag else 2
+        idx_p_con = headers_pag.index('CONCEPTO') if 'CONCEPTO' in headers_pag else 5
+        idx_p_pag = headers_pag.index('PAGADO') if 'PAGADO' in headers_pag else 6
+        idx_p_esp = headers_pag.index('ESPERADO') if 'ESPERADO' in headers_pag else 7
+
+        def parse_float(s):
+            try: return float(str(s).replace('€', '').replace(',', '.').strip() or '0')
+            except: return 0.0
+
+        def normalizar_concepto(c):
+            c = str(c).strip().upper().replace(' ', '_')
+            if c.isdigit(): return c.zfill(2)
+            if 'ROPA' in c or c in ('PACK_ROPA', 'ROPA', 'EQUIPACION', 'EQUIPACIÓN'): return 'PACK_ROPA'
+            if 'INSCRI' in c: return 'INSCRIPCION'
+            return c
+
+        raw_payments = []
+        if len(pagos_data) > 1:
+            for row in pagos_data[1:]:
+                if len(row) <= max(idx_p_eq, idx_p_jug, idx_p_con, idx_p_pag, idx_p_esp): continue
+                raw_payments.append({
+                    "equipo": row[idx_p_eq].strip(),
+                    "jugador": row[idx_p_jug].strip(),
+                    "concepto": normalizar_concepto(row[idx_p_con]),
+                    "pagado": parse_float(row[idx_p_pag]),
+                    "esperado": parse_float(row[idx_p_esp])
+                })
+
+        # 5. Calcular deudas para cada jugador
+        result_jugadores = []
+        all_equipos = set()
+
+        for p in players:
+            eq = p['equipo']
+            all_equipos.add(eq)
+            
+            # Buscar configuración de forma de pago
+            forma = p['forma_pago']
+            config_forma = next((c for c in formas_pago_config if c['nombre'] == forma), None)
+            if not config_forma:
+                config_forma = {"nombre": forma, "total": 490.0, "modalidad": "mensual", "cuota": 49.0, "meses": 10}
+                
+            nPagos = int(config_forma.get('meses', 12))
+            totalAnual = float(config_forma.get('total', 440.0))
+            cuotaRepartida = totalAnual / nPagos if nPagos > 0 else 0.0
+            esDivisor = nPagos in [1, 2, 3, 4, 6, 12]
+            intervalo = 12 // nPagos if esDivisor else 1
+            
+            expected_concepts = {}
+            
+            # A. Matrícula / Inscripción
+            valIns = float(inscripciones_config.get(eq, 10.0))
+            expected_concepts['INSCRIPCION'] = valIns
+            
+            # B. Mensualidades de la temporada
+            for (y, m) in season_months:
+                is_active = True
+                if p['alta_dt']:
+                    if (y < p['alta_dt'].year) or (y == p['alta_dt'].year and m < p['alta_dt'].month):
+                        is_active = False
+                if p['baja_dt']:
+                    if (y > p['baja_dt'].year) or (y == p['baja_dt'].year and m >= p['baja_dt'].month):
+                        is_active = False
+                        
+                if is_active:
+                    mIdx = m - 1
+                    if esDivisor:
+                        anchor_m_idx = (mIdx // intervalo) * intervalo
+                        anchor_month = anchor_m_idx + 1
+                        if (anchor_m_idx // intervalo) < nPagos:
+                            concept = str(anchor_month).zfill(2)
+                            expected_concepts[concept] = cuotaRepartida
+                    else:
+                        if mIdx < nPagos:
+                            concept = str(m).zfill(2)
+                            val_esp = cuotaRepartida
+                            key_override = f"{eq}-{concept}"
+                            if cuotas_mes_config.get(key_override) is not None:
+                                val_esp = float(cuotas_mes_config[key_override])
+                            expected_concepts[concept] = val_esp
+
+            # C. Pack Ropa
+            ropa_key = f"{eq}-PACK_ROPA"
+            valRopa = float(cuotas_mes_config.get(ropa_key, 0.0))
+            if valRopa > 0:
+                expected_concepts['PACK_ROPA'] = valRopa
+                
+            # D. Filtrar y agrupar pagos del jugador
+            paid_concepts = {}
+            p_payments = [pay for pay in raw_payments if pay['equipo'].upper() == eq.upper() and pay['jugador'].lower() == p['nombre'].lower()]
+            
+            for pay in p_payments:
+                concept = pay['concepto']
+                pagado = pay['pagado']
+                
+                if concept.isdigit():
+                    m_val = int(concept)
+                    mIdx = m_val - 1
+                    if esDivisor:
+                        anchor_m_idx = (mIdx // intervalo) * intervalo
+                        anchor_month = anchor_m_idx + 1
+                        concept = str(anchor_month).zfill(2)
+                    else:
+                        concept = str(m_val).zfill(2)
+                        
+                paid_concepts[concept] = paid_concepts.get(concept, 0.0) + pagado
+
+            # E. Comparar y calcular deudas
+            conceptos_deuda = []
+            total_deuda = 0.0
+            
+            # Orden de conceptos: Inscripción -> Mensualidades cronológicas -> Ropa
+            concept_order = ['INSCRIPCION']
+            for (y, m) in season_months:
+                mIdx = m - 1
+                if esDivisor:
+                    anchor_m_idx = (mIdx // intervalo) * intervalo
+                    anchor_month = anchor_m_idx + 1
+                    concept = str(anchor_month).zfill(2)
+                else:
+                    concept = str(m).zfill(2)
+                if concept not in concept_order:
+                    concept_order.append(concept)
+            concept_order.append('PACK_ROPA')
+            
+            processed = set()
+            for con in concept_order:
+                if con in expected_concepts and con not in processed:
+                    processed.add(con)
+                    esp = expected_concepts[con]
+                    pag = paid_concepts.get(con, 0.0)
+                    deu = max(esp - pag, 0.0)
                     
-                    deuda = esperado - pagado
-                    if deuda > 0:
-                        eq = row[idx_eq].strip()
-                        nom = row[idx_nom].strip()
-                        con = row[idx_con].strip()
-                        morosos[eq].append({
-                            "nombre": nom,
-                            "concepto": con,
-                            "pendiente": round(deuda, 2)
+                    if deu > 0.1: # Tolerancia para flotantes
+                        # Construir etiqueta
+                        if con == 'INSCRIPCION':
+                            lbl = 'Inscr.'
+                            tipo_pago_deuda = 'inscripcion'
+                        elif con == 'PACK_ROPA':
+                            lbl = 'Ropa'
+                            tipo_pago_deuda = 'ropa'
+                        elif con.isdigit():
+                            tipo_pago_deuda = 'mensual'
+                            if esDivisor and intervalo > 1:
+                                start_month = int(con)
+                                meses_arr = []
+                                for m_offset in range(intervalo):
+                                    m_num = (start_month + m_offset)
+                                    if m_num > 12: m_num -= 12
+                                    if m_num in month_labels:
+                                        meses_arr.append(month_labels[m_num])
+                                if len(meses_arr) > 1:
+                                    lbl = f"{meses_arr[0]} a {meses_arr[-1]}"
+                                else:
+                                    lbl = meses_arr[0] if meses_arr else con
+                            else:
+                                lbl = month_labels.get(int(con), con)
+                        else:
+                            lbl = con
+                            tipo_pago_deuda = 'mensual'
+                            
+                        lbl_deu = int(deu) if deu.is_integer() else round(deu, 2)
+                        conceptos_deuda.append({
+                            'label': lbl,
+                            'deuda': lbl_deu,
+                            'tipo': tipo_pago_deuda
                         })
-                except Exception as e:
-                    pass
-                    
-        return jsonify(morosos)
+                        total_deuda += deu
+
+            if total_deuda > 0:
+                # Buscar teléfono
+                p_key = (p['nombre'].lower(), eq.lower())
+                movil = phones.get(p_key, "")
+                if not movil:
+                    for (name_k, eq_k), tel in phones.items():
+                        if eq_k == eq.lower() and p['nombre'].lower().startswith(name_k):
+                            movil = tel
+                            break
+                            
+                # Detalle texto simple para previsualizaciones o logs
+                debts_text = [f"{c['label']} ({c['deuda']}€)" for c in conceptos_deuda]
+                
+                result_jugadores.append({
+                    'equipo': eq,
+                    'nombre': f"{p['nombre']} {p['apellido']}".strip(),
+                    'primer_nombre': p['nombre'],
+                    'conceptos_deuda': conceptos_deuda,
+                    'detalle_text': " · ".join(debts_text),
+                    'total_deuda': round(total_deuda, 2),
+                    'forma_pago': p['forma_pago'],
+                    'tipo_pago': p['tipo_pago'],
+                    'recordatorio_fecha': p['recordatorio_fecha'],
+                    'recordatorio_comentario': p['recordatorio_comentario'],
+                    'telefono': movil
+                })
+
+        # Ordenar por equipo -> nombre
+        result_jugadores.sort(key=lambda x: (x['equipo'].upper(), x['nombre'].upper()))
+
+        return jsonify({
+            'jugadores': result_jugadores,
+            'equipos': sorted(list(all_equipos))
+        })
+
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"Error api_kpis_pagos: {e}")
-        return jsonify({}), 500
+        return jsonify({'jugadores': [], 'equipos': [], 'error': str(e)}), 500
+
+
+@deportivo_bp.route('/api/guardar_recordatorio_jugador', methods=['POST'])
+def api_guardar_recordatorio_jugador():
+    try:
+        from app import client, NOMBRE_EXCEL
+        data = request.json
+        eq = data.get('equipo', '').strip()
+        nom = data.get('nombre', '').strip()
+        fecha = data.get('fecha', '').strip()
+        comentario = data.get('comentario', '').strip()
+        
+        sheet = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
+        all_data = sheet.get_all_values()
+        if not all_data:
+            return jsonify({"status": "error", "message": "Hoja vacía"}), 404
+            
+        headers = [h.strip().upper() for h in all_data[0]]
+        
+        if "RECORDATORIO_FECHA" not in headers:
+            col_idx_fecha = len(headers) + 1
+            sheet.update_cell(1, col_idx_fecha, "RECORDATORIO_FECHA")
+            headers.append("RECORDATORIO_FECHA")
+        else:
+            col_idx_fecha = headers.index("RECORDATORIO_FECHA") + 1
+            
+        if "RECORDATORIO_COMENTARIO" not in headers:
+            col_idx_com = len(headers) + 1
+            sheet.update_cell(1, col_idx_com, "RECORDATORIO_COMENTARIO")
+            headers.append("RECORDATORIO_COMENTARIO")
+        else:
+            col_idx_com = headers.index("RECORDATORIO_COMENTARIO") + 1
+            
+        idx_nom = headers.index("NOMBRE") if "NOMBRE" in headers else 0
+        idx_eq = headers.index("EQUIPO") if "EQUIPO" in headers else 2
+        
+        fila_idx = -1
+        for i, fila in enumerate(all_data):
+            if len(fila) > max(idx_nom, idx_eq):
+                nombre_celda = fila[idx_nom].strip().lower()
+                if nombre_celda == nom.lower() and fila[idx_eq].strip().lower() == eq.lower():
+                    fila_idx = i + 1
+                    break
+                    
+        if fila_idx != -1:
+            sheet.update_cell(fila_idx, col_idx_fecha, fecha)
+            sheet.update_cell(fila_idx, col_idx_com, comentario)
+            return jsonify({"status": "success"})
+        else:
+            return jsonify({"status": "error", "message": "Jugador no encontrado"}), 404
+    except Exception as e:
+        print(f"Error api_guardar_recordatorio_jugador: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 
 @deportivo_bp.route('/api/kpis_rrss')
 def api_kpis_rrss():
