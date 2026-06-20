@@ -581,3 +581,634 @@ def api_upload_ejercicio():
     except Exception as e:
         print(f"DEBUG UPLOAD ERROR: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@deportivo_bp.route('/api/kpis_deportivos')
+def api_kpis_deportivos():
+    try:
+        from app import client, NOMBRE_EXCEL, normalizar_cabecera_universal
+        from collections import defaultdict
+        from datetime import datetime
+        from flask import request, session
+        import os
+        import calendar
+        import json
+
+        # Spanish month names mapping
+        MONTH_NAMES = {
+            1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio",
+            7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"
+        }
+        MONTH_NAMES_SHORT = {
+            1: "Ene", 2: "Feb", 3: "Mar", 4: "Abr", 5: "May", 6: "Jun",
+            7: "Jul", 8: "Ago", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dic"
+        }
+
+        # 1. Parse parameters
+        equipo_filtro = request.args.get('equipo', 'TODOS').strip().upper()
+        mes_filtro = request.args.get('mes', 'TODOS').strip()
+
+        all_teams = set()
+
+        # Load teams from EQUIPO worksheet
+        try:
+            sheet_eq = client.open(NOMBRE_EXCEL).worksheet("EQUIPO")
+            eq_vals = sheet_eq.get_all_values()
+            if eq_vals:
+                headers_eq = [normalizar_cabecera_universal(h) for h in eq_vals[0]]
+                idx_eq = -1
+                for col_name in ["EQUIPO", "NOMBRE", "EQUIPOS", "CATEGORIA", "GRUPO"]:
+                    if col_name in headers_eq:
+                        idx_eq = headers_eq.index(col_name)
+                        break
+                actual_idx = idx_eq if idx_eq != -1 else 0
+                start_row = 1 if idx_eq != -1 else 0
+                for row in eq_vals[start_row:]:
+                    if len(row) > actual_idx and row[actual_idx].strip():
+                        all_teams.add(row[actual_idx].strip().upper())
+        except Exception as e:
+            print("Error loading teams from EQUIPO worksheet:", e)
+
+        # Fallback to JUGADORES sheet for teams
+        try:
+            sheet_jug_tmp = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
+            jug_vals_tmp = sheet_jug_tmp.get_all_values()
+            if jug_vals_tmp:
+                headers_jug_tmp = [normalizar_cabecera_universal(h) for h in jug_vals_tmp[0]]
+                idx_eq_jug_tmp = -1
+                for col_name in ["EQUIPO", "CATEGORIA", "GRUPO", "EQUIPOS"]:
+                    if col_name in headers_jug_tmp:
+                        idx_eq_jug_tmp = headers_jug_tmp.index(col_name)
+                        break
+                if idx_eq_jug_tmp != -1:
+                    for row in jug_vals_tmp[1:]:
+                        if len(row) > idx_eq_jug_tmp and row[idx_eq_jug_tmp].strip():
+                            all_teams.add(row[idx_eq_jug_tmp].strip().upper())
+        except Exception as e:
+            print("Error loading teams from JUGADORES worksheet fallback:", e)
+
+        # Get data from ASISTENCIAS
+        sheet_asis = client.open(NOMBRE_EXCEL).worksheet("ASISTENCIAS")
+        asis_data = sheet_asis.get_all_values()
+
+        all_months = set()
+        
+        # Populate all_teams and all_months from the entire sheet
+        if asis_data:
+            for row in asis_data[1:]:
+                if len(row) > 1 and row[1].strip():
+                    all_teams.add(row[1].strip().upper())
+                if len(row) > 0 and row[0].strip():
+                    partes = row[0].split('/')
+                    if len(partes) == 3:
+                        try:
+                            m = int(partes[1])
+                            a = int(partes[2])
+                            all_months.add(f"{a}-{m:02d}")
+                        except ValueError:
+                            pass
+
+        # Guarantee Enero 2026 to Diciembre 2026 are in the dropdown
+        for m in range(1, 13):
+            all_months.add(f"2026-{m:02d}")
+
+        # Ensure current month is in all_months
+        current_m_str = f"{datetime.now().strftime('%Y')}-{datetime.now().strftime('%m')}"
+        all_months.add(current_m_str)
+
+        # Filter the team list for KPIs based on equipo_filtro
+        if equipo_filtro and equipo_filtro != 'TODOS':
+            kpi_teams = [t for t in all_teams if t == equipo_filtro]
+        else:
+            kpi_teams = sorted(list(all_teams))
+
+        # Target months list
+        target_months = []
+        if mes_filtro == 'TODOS':
+            cur_year = int(datetime.now().strftime('%Y'))
+            cur_month = int(datetime.now().strftime('%m'))
+            for m in range(1, cur_month + 1):
+                target_months.append((cur_year, m))
+        elif mes_filtro == 'ACTUAL':
+            cur_year = int(datetime.now().strftime('%Y'))
+            cur_month = int(datetime.now().strftime('%m'))
+            target_months.append((cur_year, cur_month))
+        else:
+            try:
+                parts = mes_filtro.split('-')
+                target_months.append((int(parts[0]), int(parts[1])))
+            except Exception:
+                cur_year = int(datetime.now().strftime('%Y'))
+                cur_month = int(datetime.now().strftime('%m'))
+                target_months.append((cur_year, cur_month))
+
+        # Parse training days from STAFF worksheet
+        def parse_dias_entreno_robust(texto):
+            if not texto: return []
+            texto_upper = texto.upper()
+            res = []
+            import re
+            match = re.search(r'\(([^)]+)\)', texto_upper)
+            if match:
+                content = match.group(1)
+                chars = content.replace(' ', '').split(',')
+                if len(chars) == 1 and len(chars[0]) > 1:
+                    chars = list(chars[0])
+                for c in chars:
+                    c = c.strip()
+                    if 'L' in c: res.append(0)
+                    if 'M' in c and 'MI' not in c: res.append(1)
+                    if 'X' in c: res.append(2)
+                    if 'J' in c: res.append(3)
+                    if 'V' in c: res.append(4)
+                    if 'S' in c: res.append(5)
+                    if 'D' in c: res.append(6)
+                if res:
+                    return sorted(list(set(res)))
+            
+            words = texto_upper.replace('-', ' ').replace(',', ' ').split()
+            mapping = {
+                'L':0, 'LU':0, 'LUN':0, 'LUNES':0,
+                'M':1, 'MA':1, 'MAR':1, 'MARTES':1,
+                'X':2, 'MI':2, 'MIE':2, 'MIER':2, 'MIERCOLES':2, 'MIÉRCOLES':2,
+                'J':3, 'JU':3, 'JUE':3, 'JUEVES':3,
+                'V':4, 'VI':4, 'VIE':4, 'VIERNES':4,
+                'S':5, 'SA':5, 'SAB':5, 'SABADO':5, 'SÁBADO':5,
+                'D':6, 'DO':6, 'DOM':6, 'DOMINGO':6
+            }
+            for w in words:
+                w_clean = w.strip()
+                if w_clean in mapping:
+                    res.append(mapping[w_clean])
+            return sorted(list(set(res)))
+
+        staff_days = {}
+        try:
+            sheet_staff = client.open(NOMBRE_EXCEL).worksheet("STAFF")
+            staff_data = sheet_staff.get_all_values()
+            if staff_data:
+                headers_staff = [normalizar_cabecera_universal(h) for h in staff_data[0]]
+                idx_staff_eq = -1
+                idx_staff_dias = -1
+                for col_name in ["EQUIPO", "CATEGORIA", "GRUPO"]:
+                    if col_name in headers_staff:
+                        idx_staff_eq = headers_staff.index(col_name)
+                        break
+                for col_name in ["DIASENTRENAMIENTO", "DIAS_ENTRENAMIENTO", "DIAS"]:
+                    if col_name in headers_staff:
+                        idx_staff_dias = headers_staff.index(col_name)
+                        break
+                if idx_staff_eq == -1: idx_staff_eq = 1
+                if idx_staff_dias == -1: idx_staff_dias = 3
+                
+                for row in staff_data[1:]:
+                    if len(row) > max(idx_staff_eq, idx_staff_dias):
+                        eq_name = row[idx_staff_eq].strip().upper()
+                        dias_str = row[idx_staff_dias].strip()
+                        if eq_name and dias_str:
+                            staff_days[eq_name] = parse_dias_entreno_robust(dias_str)
+        except Exception as e:
+            print("Error loading STAFF training days:", e)
+
+        # Load manual KPIs (Balones)
+        kpi_vals = defaultdict(lambda: defaultdict(lambda: defaultdict(str)))
+        try:
+            sheet_kpis = client.open(NOMBRE_EXCEL).worksheet("KPIS")
+            kpi_data = sheet_kpis.get_all_values()
+            for row in kpi_data[1:]:
+                if len(row) >= 4:
+                    tipo = row[0].strip()
+                    ident = row[1].strip().upper()
+                    m_str = row[2].strip()
+                    val = row[3].strip()
+                    kpi_vals[tipo][ident][m_str] = val
+        except Exception as e:
+            print("Error loading KPIS worksheet:", e)
+
+        # Settle the history of Bajas & Altas from JUGADORES sheet
+        sheet_jug = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
+        jug_data = sheet_jug.get_all_values()
+        
+        bajas_por_equipo = defaultdict(lambda: defaultdict(list))
+        altas_por_equipo = defaultdict(lambda: defaultdict(list))
+        
+        if jug_data:
+            headers_jug = [normalizar_cabecera_universal(h) for h in jug_data[0]]
+            idx_jug_nom = headers_jug.index("NOMBRE") if "NOMBRE" in headers_jug else 0
+            idx_jug_ape = headers_jug.index("APELLIDO") if "APELLIDO" in headers_jug else -1
+            idx_jug_eq = -1
+            for col_name in ["EQUIPO", "CATEGORIA", "GRUPO"]:
+                if col_name in headers_jug:
+                    idx_jug_eq = headers_jug.index(col_name)
+                    break
+            if idx_jug_eq == -1: idx_jug_eq = 2
+            idx_jug_obs = headers_jug.index("OBSERVACIONES") if "OBSERVACIONES" in headers_jug else -1
+            
+            import re
+            for row in jug_data[1:]:
+                if len(row) > idx_jug_nom:
+                    nombre = row[idx_jug_nom].strip()
+                    apellido = row[idx_jug_ape].strip() if (idx_jug_ape != -1 and idx_jug_ape < len(row)) else ""
+                    full_name = f"{nombre} {apellido}".strip()
+                    
+                    eq = row[idx_jug_eq].strip().upper() if (idx_jug_eq != -1 and idx_jug_eq < len(row)) else ""
+                    if not eq:
+                        continue
+                        
+                    obs_val = row[idx_jug_obs].strip() if (idx_jug_obs != -1 and idx_jug_obs < len(row)) else ""
+                    if obs_val:
+                        try:
+                            obs_list = json.loads(obs_val)
+                            if not isinstance(obs_list, list):
+                                obs_list = [obs_val]
+                        except Exception:
+                            obs_list = [obs_val]
+                            
+                        for item in obs_list:
+                            item_str = str(item).strip()
+                            if not item_str:
+                                continue
+                            
+                            dt_event = None
+                            match_ef = re.search(r'Efectiva:\s*(\d{4}-\d{2}-\d{2})', item_str)
+                            if match_ef:
+                                try:
+                                    dt_event = datetime.strptime(match_ef.group(1), "%Y-%m-%d")
+                                except ValueError:
+                                    pass
+                            
+                            if not dt_event:
+                                match_pref = re.match(r'^(\d{1,2})/(\d{1,2})/(\d{4})', item_str)
+                                if match_pref:
+                                    try:
+                                        d, m, y = int(match_pref.group(1)), int(match_pref.group(2)), int(match_pref.group(3))
+                                        dt_event = datetime(y, m, d)
+                                    except ValueError:
+                                        pass
+                                        
+                            if not dt_event:
+                                continue
+                                
+                            item_upper = item_str.upper()
+                            for (ano_target, mes_target) in target_months:
+                                last_d = calendar.monthrange(ano_target, mes_target)[1]
+                                limit_date = datetime(ano_target, mes_target, last_d)
+                                
+                                if dt_event <= limit_date:
+                                    motive = item_str
+                                    if "):" in item_str:
+                                        motive = item_str.split("):", 1)[1].strip()
+                                    elif "BAJA:" in item_upper:
+                                        motive = item_str.split("BAJA:", 1)[1].strip()
+                                    elif "ALTA:" in item_upper:
+                                        motive = item_str.split("ALTA:", 1)[1].strip()
+                                    elif ":" in item_str:
+                                        motive = item_str.split(":", 1)[1].strip()
+                                        
+                                    if "BAJA" in item_upper:
+                                        bajas_por_equipo[(eq, ano_target, mes_target)][full_name].append(f"- {full_name}: {motive}")
+                                    elif "ALTA" in item_upper:
+                                        altas_por_equipo[(eq, ano_target, mes_target)][full_name].append(f"- {full_name}: {motive}")
+
+        # Initialize KPIs dict
+        kpis = {}
+        for (ano, mes) in target_months:
+            m_str = f"{MONTH_NAMES_SHORT[mes]} {ano}"
+            for eq in kpi_teams:
+                kpis[(eq, ano, mes)] = {
+                    "equipo": eq, 
+                    "mes": m_str, 
+                    "bajas": "", 
+                    "altas": "", 
+                    "faltas": 0,
+                    "sin_completar_count": 0,
+                    "faltas_detalles": {"no": [], "sin_completar": []},
+                    "entrenos_hechos": 0, 
+                    "entrenos_mes": 0, 
+                    "forms_hechos": 0, 
+                    "forms_mes": 0, 
+                    "balones_inicio": "",
+                    "balones_final": "",
+                    "balones_dif": ""
+                }
+
+        # Calculate training days in this month based on STAFF
+        cal_obj = calendar.Calendar()
+        for (eq, ano, mes) in kpis:
+            days_prog = staff_days.get(eq)
+            if not days_prog:
+                # Fallback: Mon-Fri
+                days_prog = [0, 1, 2, 3, 4]
+            
+            count = 0
+            for d in cal_obj.itermonthdays2(ano, mes):
+                if d[0] != 0 and d[1] in days_prog:
+                    count += 1
+            kpis[(eq, ano, mes)]["entrenos_mes"] = count
+
+        # Count training sessions done (JSON evidence files)
+        entrenos_hechos_dict = defaultdict(int)
+        data_folder = current_app.config.get('DATA_FOLDER', os.path.join(os.getcwd(), 'static', 'data'))
+        sesiones_dir = os.path.join(data_folder, 'sesiones')
+        if os.path.exists(sesiones_dir):
+            for eq_dir_name in os.listdir(sesiones_dir):
+                eq_path = os.path.join(sesiones_dir, eq_dir_name)
+                if os.path.isdir(eq_path):
+                    eq_norm = eq_dir_name.replace('_', ' ').upper()
+                    for fname in os.listdir(eq_path):
+                        if fname.startswith("Sesion_") and fname.endswith(".json"):
+                            date_part = fname[7:-5]
+                            partes = date_part.split('-')
+                            if len(partes) == 3:
+                                try:
+                                    d = int(partes[0])
+                                    m = int(partes[1])
+                                    y = int(partes[2])
+                                    entrenos_hechos_dict[(eq_norm, y, m)] += 1
+                                except ValueError:
+                                    pass
+
+        for (eq, ano, mes) in kpis:
+            kpis[(eq, ano, mes)]["entrenos_hechos"] = entrenos_hechos_dict[(eq, ano, mes)]
+
+        # Fallback for current month from UPLOAD_FOLDER
+        cur_year = int(datetime.now().strftime('%Y'))
+        cur_month = int(datetime.now().strftime('%m'))
+        usuario_sesion = session.get('usuario', 'admin')
+        dias_con_archivo = set()
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', os.path.join(os.getcwd(), 'static', 'uploads'))
+        if os.path.exists(upload_folder):
+            for filename in os.listdir(upload_folder):
+                if filename.startswith(f"entreno_{usuario_sesion}_"):
+                    parts = filename.split('_')
+                    if len(parts) >= 3:
+                        try:
+                            dia_num = int(parts[-1].split('.')[0])
+                            dias_con_archivo.add(dia_num)
+                        except ValueError:
+                            pass
+        uploads_count = len(dias_con_archivo)
+        
+        for (eq, ano, mes) in kpis:
+            if kpis[(eq, ano, mes)]["entrenos_hechos"] == 0 and ano == cur_year and mes == cur_month:
+                kpis[(eq, ano, mes)]["entrenos_hechos"] = uploads_count
+
+        # Faltas & Sin Completar
+        faltas_no_list = defaultdict(list)
+        sin_completar_list = defaultdict(list)
+        if asis_data:
+            for row in asis_data[1:]:
+                if len(row) >= 3:
+                    fecha_str = row[0].strip()
+                    eq = row[1].strip().upper()
+                    nombre = row[2].strip()
+                    estado = row[4].strip().upper() if len(row) > 4 else ""
+                    
+                    partes_fecha = fecha_str.split('/')
+                    if len(partes_fecha) == 3:
+                        try:
+                            m = int(partes_fecha[1])
+                            a = int(partes_fecha[2])
+                            key = (eq, a, m)
+                            if key in kpis:
+                                if estado == "NO":
+                                    faltas_no_list[key].append({"nombre": nombre, "fecha": fecha_str})
+                                elif estado in ["-", ""] or not estado:
+                                    sin_completar_list[key].append({"nombre": nombre, "fecha": fecha_str})
+                        except ValueError:
+                            pass
+                            
+        for (eq, ano, mes) in kpis:
+            key = (eq, ano, mes)
+            kpis[key]["faltas"] = len(faltas_no_list[key])
+            kpis[key]["sin_completar_count"] = len(sin_completar_list[key])
+            kpis[key]["faltas_detalles"] = {
+                "no": faltas_no_list[key],
+                "sin_completar": sin_completar_list[key]
+            }
+
+        # Forms
+        for (eq, ano, mes) in kpis:
+            saturdays_count = sum(1 for d in cal_obj.itermonthdays2(ano, mes) if d[0] != 0 and d[1] == 5)
+            kpis[(eq, ano, mes)]["forms_mes"] = saturdays_count
+
+        try:
+            sheet_form = client.open(NOMBRE_EXCEL).worksheet("FORMULARIO_PARTIDOS")
+            form_data = sheet_form.get_all_values()
+            if form_data:
+                headers = [normalizar_cabecera_universal(h) for h in form_data[0]]
+                idx_mt = headers.index("MARCATEMPORAL") if "MARCATEMPORAL" in headers else 0
+                idx_eq = headers.index("EQUIPO") if "EQUIPO" in headers else 1
+
+                for row in form_data[1:]:
+                    if len(row) > max(idx_mt, idx_eq):
+                        eq = row[idx_eq].strip().upper()
+                        fecha_str = row[idx_mt].strip()
+                        date_part = fecha_str.split()[0] if fecha_str else ""
+                        partes_fecha = date_part.split('/')
+                        if len(partes_fecha) == 3:
+                            try:
+                                m = int(partes_fecha[1])
+                                a = int(partes_fecha[2])
+                                key = (eq, a, m)
+                                if key in kpis:
+                                    kpis[key]["forms_hechos"] += 1
+                            except ValueError:
+                                pass
+        except Exception as e:
+            print("Error FORMULARIOS KPI:", e)
+
+        # Balones
+        for (eq, ano, mes) in kpis:
+            key = (eq, ano, mes)
+            cur_mes_str = f"{MONTH_NAMES_SHORT[mes]} {ano}"
+            
+            if mes == 1:
+                prev_m = 12
+                prev_a = ano - 1
+            else:
+                prev_m = mes - 1
+                prev_a = ano
+            prev_mes_str = f"{MONTH_NAMES_SHORT[prev_m]} {prev_a}"
+            
+            inicio = kpi_vals["BALONES_INICIO"][eq][cur_mes_str]
+            final = kpi_vals["BALONES_FINAL"][eq][cur_mes_str]
+            if not inicio:
+                inicio = kpi_vals["BALONES_FINAL"][eq][prev_mes_str]
+            
+            kpis[key]["balones_inicio"] = inicio
+            kpis[key]["balones_final"] = final
+            
+            try:
+                ini_val = int(inicio)
+                fin_val = int(final)
+                diff = fin_val - ini_val
+                kpis[key]["balones_dif"] = f"+{diff}" if diff > 0 else str(diff)
+            except (ValueError, TypeError):
+                kpis[key]["balones_dif"] = ""
+
+        # Set Bajas & Altas text
+        for (eq, ano, mes) in kpis:
+            key = (eq, ano, mes)
+            
+            player_bajas = []
+            if key in bajas_por_equipo:
+                for player, msgs in bajas_por_equipo[key].items():
+                    player_bajas.extend(sorted(list(set(msgs))))
+            kpis[key]["bajas"] = "\n".join(player_bajas)
+            
+            player_altas = []
+            if key in altas_por_equipo:
+                for player, msgs in altas_por_equipo[key].items():
+                    player_altas.extend(sorted(list(set(msgs))))
+            kpis[key]["altas"] = "\n".join(player_altas)
+
+        # Convert to list and sort by (team, newer month first)
+        sorted_keys = sorted(kpis.keys(), key=lambda x: (x[0], -x[1], -x[2]))
+        res_list = [kpis[k] for k in sorted_keys]
+
+        # Format months for dropdown
+        sorted_months = sorted(list(all_months), reverse=True)
+        dropdown_months = []
+        for m in sorted_months:
+            parts = m.split('-')
+            dropdown_months.append({
+                "value": m,
+                "label": f"{MONTH_NAMES[int(parts[1])]} {parts[0]}"
+            })
+
+        return jsonify({
+            "kpis": res_list,
+            "equipos": sorted(list(all_teams)),
+            "meses": dropdown_months
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"kpis": [], "equipos": [], "meses": [], "error": str(e)}), 500
+
+@deportivo_bp.route('/api/kpis_pagos')
+def api_kpis_pagos():
+    try:
+        from app import client, NOMBRE_EXCEL
+        from collections import defaultdict
+        
+        sheet_pagos = client.open(NOMBRE_EXCEL).worksheet("PAGOS JUGADORES")
+        pagos_data = sheet_pagos.get_all_values()
+        
+        if not pagos_data: return jsonify({})
+        headers = [str(h).upper().strip().replace(' ', '_') for h in pagos_data[0]]
+        
+        idx_eq = headers.index('EQUIPO') if 'EQUIPO' in headers else 1
+        idx_nom = headers.index('NOMBRE') if 'NOMBRE' in headers else 2
+        idx_con = headers.index('CONCEPTO') if 'CONCEPTO' in headers else 5
+        idx_pag = headers.index('PAGADO') if 'PAGADO' in headers else 6
+        idx_esp = headers.index('ESPERADO') if 'ESPERADO' in headers else 7
+        
+        morosos = defaultdict(list)
+        
+        for row in pagos_data[1:]:
+            if len(row) > max(idx_pag, idx_esp):
+                try:
+                    pagado_str = str(row[idx_pag]).replace('€','').replace(',','.').strip() or "0"
+                    esperado_str = str(row[idx_esp]).replace('€','').replace(',','.').strip() or "0"
+                    pagado = float(pagado_str)
+                    esperado = float(esperado_str)
+                    
+                    deuda = esperado - pagado
+                    if deuda > 0:
+                        eq = row[idx_eq].strip()
+                        nom = row[idx_nom].strip()
+                        con = row[idx_con].strip()
+                        morosos[eq].append({
+                            "nombre": nom,
+                            "concepto": con,
+                            "pendiente": round(deuda, 2)
+                        })
+                except Exception as e:
+                    pass
+                    
+        return jsonify(morosos)
+    except Exception as e:
+        print(f"Error api_kpis_pagos: {e}")
+        return jsonify({}), 500
+
+@deportivo_bp.route('/api/kpis_rrss')
+def api_kpis_rrss():
+    try:
+        from app import client, NOMBRE_EXCEL
+        from datetime import datetime, timedelta
+        
+        # Generar últimos 3 meses como columnas fijas para simplificar
+        meses = []
+        for i in range(3):
+            # Restar i meses (aproximado usando 30 dias)
+            d = datetime.now() - timedelta(days=30*i)
+            mes_str = f"{d.strftime('%b').capitalize()} {d.strftime('%Y')}"
+            meses.insert(0, mes_str)
+            
+        valores = {}
+        try:
+            sheet_kpis = client.open(NOMBRE_EXCEL).worksheet("KPIS")
+            for row in sheet_kpis.get_all_values()[1:]:
+                if len(row) >= 4 and row[0] == "RRSS" and row[1] == "INSTAGRAM":
+                    valores[row[2]] = row[3]
+        except:
+            pass
+            
+        variaciones = {}
+        prev_val = 0
+        for m in meses:
+            curr_val_str = valores.get(m, "0")
+            try:
+                curr_val = int(curr_val_str)
+            except:
+                curr_val = 0
+            
+            diff = curr_val - prev_val if prev_val != 0 else 0
+            variaciones[m] = f"+{diff}" if diff > 0 else str(diff)
+            prev_val = curr_val
+
+        return jsonify({
+            "meses": meses,
+            "valores": valores,
+            "variaciones": variaciones
+        })
+    except Exception as e:
+        print(f"Error api_kpis_rrss: {e}")
+        return jsonify({"meses": [], "valores": {}, "variaciones": {}}), 500
+
+@deportivo_bp.route('/api/kpis_manual', methods=['POST'])
+def api_kpis_manual():
+    try:
+        from app import client, NOMBRE_EXCEL
+        data = request.json
+        tipo = data.get('tipo') # BALONES o RRSS
+        identificador = data.get('identificador') # Equipo o INSTAGRAM
+        mes = data.get('mes')
+        valor = str(data.get('valor'))
+        
+        try:
+            sheet_kpis = client.open(NOMBRE_EXCEL).worksheet("KPIS")
+        except:
+            sheet_kpis = client.open(NOMBRE_EXCEL).add_worksheet(title="KPIS", rows="100", cols="10")
+            sheet_kpis.update('A1', [["TIPO", "IDENTIFICADOR", "MES", "VALOR"]])
+            
+        all_v = sheet_kpis.get_all_values()
+        fila_idx = -1
+        
+        for i, row in enumerate(all_v):
+            if i == 0: continue
+            if len(row) >= 3 and row[0] == tipo and row[1] == identificador and row[2] == mes:
+                fila_idx = i + 1
+                break
+                
+        if fila_idx != -1:
+            sheet_kpis.update_cell(fila_idx, 4, valor)
+        else:
+            sheet_kpis.append_row([tipo, identificador, mes, valor])
+            
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error api_kpis_manual: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500

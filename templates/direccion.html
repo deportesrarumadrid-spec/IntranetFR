@@ -110,6 +110,100 @@
     .custom-mes-option:hover { background: #f8f9fa; color: #E31E24; padding-left: 28px; } /* Mantener hover suave */
     .custom-mes-option.selected { background: linear-gradient(90deg, #911719 0%, #b31d2c 100%); color: white; } /* Degradado granate */
 
+    /* Custom Dropdowns Premium Styling */
+    .custom-select-container {
+        position: relative;
+        min-width: 200px;
+        font-family: inherit;
+    }
+    .custom-select-trigger {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: 38px;
+        font-size: 13px;
+        padding: 0 16px;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        font-weight: 700;
+        background: #ffffff;
+        color: #1e293b;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .custom-select-trigger:hover {
+        border-color: #cbd5e1;
+        background: #f8fafc;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.04);
+    }
+    .custom-select-trigger i {
+        font-size: 10px;
+        color: #64748b;
+        transition: transform 0.2s ease;
+    }
+    .custom-select-container.active .custom-select-trigger {
+        border-color: #E31E24;
+        box-shadow: 0 0 0 3px rgba(227, 30, 36, 0.1);
+    }
+    .custom-select-container.active .custom-select-trigger i {
+        transform: rotate(180deg);
+        color: #E31E24;
+    }
+    .custom-select-options {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        right: 0;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+        z-index: 1000;
+        max-height: 250px;
+        overflow-y: auto;
+        opacity: 0;
+        transform: translateY(-10px);
+        pointer-events: none;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .custom-select-container.active .custom-select-options {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+    .custom-option {
+        padding: 10px 16px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #475569;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        text-align: left;
+    }
+    .custom-option:hover {
+        background: #f1f5f9;
+        color: #1e293b;
+    }
+    .custom-option.selected {
+        background: rgba(227, 30, 36, 0.06);
+        color: #E31E24;
+        font-weight: 700;
+    }
+    .custom-select-options::-webkit-scrollbar {
+        width: 6px;
+    }
+    .custom-select-options::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .custom-select-options::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+    }
+    .custom-select-options::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
     .table-coord { width: 100%; border-collapse: collapse; font-size: 13px; }
     .table-coord th { text-align: left; padding: 12px; background: #f8f9fa; color: #666; font-weight: 900; border-bottom: 2px solid #eee; }
     .table-coord td { padding: 10px; border-bottom: 1px solid #eee; }
@@ -578,7 +672,12 @@
 
     <!-- SUBPESTAÑA: D. DEPORTIVA -->
     <div id="tab-d-deportiva" class="tab-content">
-        <div style="display: grid; grid-template-columns: 1fr 350px; gap: 20px;">
+        <div class="tabs-container" style="margin-bottom: 20px; background: #f8fafc; border: 1px solid #e2e8f0;">
+            <div class="tab-item active" onclick="switchSubTab(event, 'subtab-gestion-estrategica')" style="font-size: 11px;">GESTIÓN ESTRATÉGICA</div>
+            <div class="tab-item" onclick="switchSubTab(event, 'subtab-kpis')" style="font-size: 11px;">KPIs</div>
+        </div>
+        
+        <div id="subtab-gestion-estrategica" class="subtab-content active" style="display: grid; grid-template-columns: 1fr 350px; gap: 20px;">
             <div class="card-coord" style="padding: 40px; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 300px;">
                 <div style="font-size: 50px; color: #eee; margin-bottom: 20px;"><i class="fas fa-calendar-alt"></i></div>
                 <h3 style="font-weight: 900; color: #333; margin-bottom: 10px;">GESTIÓN ESTRATÉGICA</h3>
@@ -595,6 +694,110 @@
             </div>
             <div class="card-coord" style="background: #f8f9fa; border: 2px dashed #ddd; display: flex; align-items: center; justify-content: center; color: #bbb; font-weight: 800; text-transform: uppercase; font-size: 11px;">
                 Módulos adicionales en desarrollo
+            </div>
+        </div>
+
+        <div id="subtab-kpis" class="subtab-content" style="display: none;">
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+                <button class="btn-premium" onclick="switchKpiTab(event, 'kpi-deportivos')" style="font-size: 10px; padding: 10px 20px; background: #E31E24; border-color: #E31E24; border-radius: 8px;">DEPORTIVOS</button>
+                <button class="btn-fin" onclick="switchKpiTab(event, 'kpi-financieros')" style="font-size: 10px; padding: 10px 20px; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; border-radius: 8px; justify-content: center;">PAGOS PENDIENTES</button>
+                <button class="btn-fin" onclick="switchKpiTab(event, 'kpi-rrss')" style="font-size: 10px; padding: 10px 20px; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; border-radius: 8px; justify-content: center;">RRSS</button>
+            </div>
+
+            <!-- KPIs Deportivos -->
+            <div id="kpi-deportivos" class="kpi-content active">
+                <!-- Filtros Premium -->
+                <div style="display: flex; gap: 15px; margin-bottom: 15px; background: #fff; padding: 15px 20px; border-radius: 12px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.02); align-items: center; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;"><i class="fas fa-filter" style="color: #E31E24;"></i> Filtrar Equipo:</span>
+                        <input type="hidden" id="filterKpiEquipo" value="TODOS">
+                        <div class="custom-select-container" id="selectKpiEquipoContainer">
+                            <div class="custom-select-trigger" onclick="toggleCustomDropdown(event, 'selectKpiEquipoContainer')">
+                                <span id="selectedKpiEquipoLabel">Todos los equipos</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div class="custom-select-options" id="dropdownKpiEquipo"></div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;"><i class="fas fa-calendar-alt" style="color: #E31E24;"></i> Mes:</span>
+                        <input type="hidden" id="filterKpiMes" value="TODOS">
+                        <div class="custom-select-container" id="selectKpiMesContainer">
+                            <div class="custom-select-trigger" onclick="toggleCustomDropdown(event, 'selectKpiMesContainer')">
+                                <span id="selectedKpiMesLabel">Todos los meses</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div class="custom-select-options" id="dropdownKpiMes"></div>
+                        </div>
+                    </div>
+                </div>
+                <div style="background: white; border-radius: 12px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow-x: auto;">
+                    <table class="table-coord" style="min-width: 1200px; font-size: 13px; white-space: nowrap; margin: 0;">
+                        <thead style="background: #f8f9fa;">
+                            <tr>
+                                <th rowspan="2" style="border-right: 1px solid #eee; border-bottom: 2px solid #ddd; background: #fff;">EQUIPO</th>
+                                <th rowspan="2" style="border-right: 2px solid #eee; border-bottom: 2px solid #ddd; background: #fff;">MES</th>
+                                <th colspan="2" style="border-right: 2px solid #eee; text-align: center; border-bottom: 1px solid #eee;">JUGADORES</th>
+                                <th colspan="1" style="border-right: 2px solid #eee; text-align: center; border-bottom: 1px solid #eee;">ASISTENCIAS</th>
+                                <th colspan="1" style="border-right: 2px solid #eee; text-align: center; border-bottom: 1px solid #eee;">ENTRENAMIENTOS</th>
+                                <th colspan="1" style="border-right: 2px solid #eee; text-align: center; border-bottom: 1px solid #eee;">FORMULARIOS</th>
+                                <th colspan="1" style="text-align: center; border-bottom: 1px solid #eee;">BALONES</th>
+                            </tr>
+                            <tr>
+                                <th style="border-right: 1px solid #eee; font-size: 14px; font-weight: 900; color: #1e293b;">BAJAS DE JUGADORES Y MOTIVO</th>
+                                <th style="border-right: 2px solid #eee; font-size: 14px; font-weight: 900; color: #1e293b;">ALTAS JUGADORES Y MOTIVO</th>
+                                <th style="border-right: 2px solid #eee;">FALTAS JUGADORES</th>
+                                <th style="border-right: 2px solid #eee;">DÍAS HECHOS / DÍAS MES</th>
+                                <th style="border-right: 2px solid #eee;">DÍAS SUBIDOS / DÍAS MES</th>
+                                <th>INICIO / FINAL (DIF)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="kpiDeportivosBody">
+                            <tr><td colspan="8" style="text-align:center; padding:20px; color:#999;"><i class="fas fa-spinner fa-spin"></i> Cargando datos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- KPIs Financieros -->
+            <div id="kpi-financieros" class="kpi-content" style="display: none;">
+                <div style="background: white; border-radius: 12px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 20px;">
+                    <h4 style="margin-top: 0; color: #333; font-weight: 800; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;"><i class="fas fa-file-invoice-dollar" style="color: #dc3545;"></i> Jugadores con Pagos Pendientes</h4>
+                    <div id="kpiPagosContainer">
+                        <div style="text-align:center; padding:20px; color:#999;"><i class="fas fa-spinner fa-spin"></i> Cargando datos...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPIs RRSS -->
+            <div id="kpi-rrss" class="kpi-content" style="display: none;">
+                <div style="background: white; border-radius: 12px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow-x: auto; max-width: 600px;">
+                    <table class="table-coord" style="font-size: 11px; margin: 0; width: 100%;">
+                        <thead style="background: #f8f9fa;">
+                            <tr>
+                                <th style="border-right: 1px solid #eee;"></th>
+                                <th style="border-right: 1px solid #eee; text-align: center;">MES X</th>
+                                <th style="border-right: 1px solid #eee; text-align: center;">MES X+1</th>
+                            </tr>
+                        </thead>
+                        <tbody id="kpiRrssBody">
+                            <tr>
+                                <td style="font-weight: 900; border-right: 1px solid #eee;">INSTAGRAM</td>
+                                <td style="text-align: center; border-right: 1px solid #eee;">
+                                    <div style="font-size: 10px; color: #999; margin-bottom: 5px;">nº seguidores</div>
+                                    <input type="number" class="input-coord" style="text-align:center; max-width: 100px;" placeholder="Ej: 1200">
+                                </td>
+                                <td style="text-align: center;">
+                                    <div style="font-size: 10px; color: #999; margin-bottom: 5px;">variación</div>
+                                    <span style="font-weight: 800; color: #10b981;">+150</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 15px; font-size: 11px; color: #999; font-weight: 800;">
+                    * Los datos se guardan automáticamente al modificar los valores.
+                </div>
             </div>
         </div>
     </div>
@@ -2356,6 +2559,335 @@
         }
 
         document.getElementById('modalFormularioDetalle').style.display = 'flex';
+    }
+
+    // ==========================================
+    // LÓGICA KPIS
+    // ==========================================
+    window.switchSubTab = function(evt, tabId) {
+        // Ocultar contenidos de subtabs
+        document.querySelectorAll('.subtab-content').forEach(el => el.style.display = 'none');
+        document.getElementById(tabId).style.display = tabId === 'subtab-gestion-estrategica' ? 'grid' : 'block';
+        
+        // Cambiar clases activas
+        const tabs = evt.currentTarget.parentElement.querySelectorAll('.tab-item');
+        tabs.forEach(t => t.classList.remove('active'));
+        evt.currentTarget.classList.add('active');
+
+        if (tabId === 'subtab-kpis') {
+            loadKpiDeportivos();
+        }
+    }
+
+    window.switchKpiTab = function(evt, kpiId) {
+        document.querySelectorAll('.kpi-content').forEach(el => el.style.display = 'none');
+        document.getElementById(kpiId).style.display = 'block';
+
+        const buttons = evt.currentTarget.parentElement.querySelectorAll('button');
+        buttons.forEach(btn => {
+            btn.className = 'btn-fin';
+            btn.style.background = '#f8fafc';
+            btn.style.color = '#64748b';
+        });
+        evt.currentTarget.className = 'btn-premium';
+        evt.currentTarget.style.background = '#E31E24';
+        evt.currentTarget.style.color = 'white';
+
+        if (kpiId === 'kpi-deportivos') loadKpiDeportivos();
+        if (kpiId === 'kpi-financieros') loadKpiPagos();
+        if (kpiId === 'kpi-rrss') loadKpiRrss();
+    }
+
+    // Custom select dropdown helpers
+    window.toggleCustomDropdown = function(event, containerId) {
+        event.stopPropagation();
+        const container = document.getElementById(containerId);
+        const isActive = container.classList.contains('active');
+        
+        // Close all custom select dropdowns first
+        document.querySelectorAll('.custom-select-container').forEach(el => el.classList.remove('active'));
+        
+        if (!isActive) {
+            container.classList.add('active');
+        }
+    }
+
+    window.selectCustomOption = function(containerId, value, label) {
+        const container = document.getElementById(containerId);
+        const labelEl = container.querySelector('.custom-select-trigger span');
+        const hiddenInputId = containerId === 'selectKpiEquipoContainer' ? 'filterKpiEquipo' : 'filterKpiMes';
+        const hiddenInput = document.getElementById(hiddenInputId);
+        
+        hiddenInput.value = value;
+        labelEl.textContent = label;
+        
+        container.querySelectorAll('.custom-option').forEach(opt => {
+            if (opt.getAttribute('data-value') === value) {
+                opt.classList.add('selected');
+            } else {
+                opt.classList.remove('selected');
+            }
+        });
+        
+        container.classList.remove('active');
+        loadKpiDeportivos();
+    }
+
+    document.addEventListener('click', function() {
+        document.querySelectorAll('.custom-select-container').forEach(el => el.classList.remove('active'));
+    });
+
+    async function loadKpiDeportivos() {
+        const tbody = document.getElementById('kpiDeportivosBody');
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#999;"><i class="fas fa-spinner fa-spin"></i> Cargando datos deportivos...</td></tr>';
+        
+        const eqFilter = document.getElementById('filterKpiEquipo') ? document.getElementById('filterKpiEquipo').value : 'TODOS';
+        const mesFilter = document.getElementById('filterKpiMes') ? document.getElementById('filterKpiMes').value : 'TODOS';
+        
+        try {
+            const res = await fetch(`/api/kpis_deportivos?equipo=${encodeURIComponent(eqFilter)}&mes=${encodeURIComponent(mesFilter)}`);
+            const data = await res.json();
+            
+            // Populate filters only once on load
+            if (!window.kpiFiltersPopulated) {
+                // 1. Populate Equipo dropdown
+                const eqDropdown = document.getElementById('dropdownKpiEquipo');
+                if (eqDropdown && data.equipos) {
+                    let html = '<div class="custom-option selected" data-value="TODOS" onclick="selectCustomOption(\'selectKpiEquipoContainer\', \'TODOS\', \'Todos los equipos\')">Todos los equipos</div>';
+                    data.equipos.forEach(eq => {
+                        const isSel = eq === eqFilter ? ' selected' : '';
+                        html += `<div class="custom-option${isSel}" data-value="${eq}" onclick="selectCustomOption('selectKpiEquipoContainer', '${eq}', '${eq}')">${eq}</div>`;
+                    });
+                    eqDropdown.innerHTML = html;
+                }
+                
+                // 2. Populate Mes dropdown
+                const mesDropdown = document.getElementById('dropdownKpiMes');
+                if (mesDropdown && data.meses) {
+                    let html = '<div class="custom-option selected" data-value="TODOS" onclick="selectCustomOption(\'selectKpiMesContainer\', \'TODOS\', \'Todos los meses\')">Todos los meses</div>';
+                    html += '<div class="custom-option" data-value="ACTUAL" onclick="selectCustomOption(\'selectKpiMesContainer\', \'ACTUAL\', \'Mes Actual\')">Mes Actual</div>';
+                    data.meses.forEach(m => {
+                        const isSel = m.value === mesFilter ? ' selected' : '';
+                        html += `<div class="custom-option${isSel}" data-value="${m.value}" onclick="selectCustomOption('selectKpiMesContainer', '${m.value}', '${m.label}')">${m.label}</div>`;
+                    });
+                    mesDropdown.innerHTML = html;
+                }
+                window.kpiFiltersPopulated = true;
+            }
+            
+            const kpis = data.kpis || [];
+            window.kpisCache = kpis; // Cache for detailed lookups in popover
+            
+            if (kpis.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px;">No hay datos para mostrar.</td></tr>';
+                return;
+            }
+            let html = '';
+            kpis.forEach(d => {
+                html += `
+                <tr>
+                    <td style="font-weight: 800;">${d.equipo}</td>
+                    <td style="color: #666; font-weight: 700;">${d.mes}</td>
+                    <td><div style="max-height: 100px; overflow-y: auto; font-size: 14px; font-weight: 700; line-height: 1.5; white-space: pre-wrap; color: #1e293b;">${d.bajas}</div></td>
+                    <td><div style="max-height: 100px; overflow-y: auto; font-size: 14px; font-weight: 700; line-height: 1.5; white-space: pre-wrap; color: #1e293b;">${d.altas}</div></td>
+                    <td style="text-align:center; font-weight: 700; color: #dc3545;">
+                        <span style="cursor: pointer; color: #E31E24; text-decoration: underline;" onclick="showFaltasPopover(this, '${d.equipo}')">
+                            ${d.faltas} NO / ${d.sin_completar_count} sin completar
+                        </span>
+                    </td>
+                    <td style="text-align:center; font-weight: 700;">${d.entrenos_hechos} / ${d.entrenos_mes}</td>
+                    <td style="text-align:center; font-weight: 700;">${d.forms_hechos} / ${d.forms_mes}</td>
+                    <td style="text-align: center; padding: 5px;">
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                            <input type="number" class="input-coord" value="${d.balones_inicio}" style="max-width: 60px; text-align: center; font-weight: 700; height: 30px; border-radius: 6px; padding: 2px;" 
+                                   placeholder="Ini" onchange="guardarKpiManual('BALONES_INICIO', '${d.equipo}', '${d.mes}', this.value)">
+                            <span style="font-weight: 800; color: #cbd5e1;">/</span>
+                            <input type="number" class="input-coord" value="${d.balones_final}" style="max-width: 60px; text-align: center; font-weight: 700; height: 30px; border-radius: 6px; padding: 2px;" 
+                                   placeholder="Fin" onchange="guardarKpiManual('BALONES_FINAL', '${d.equipo}', '${d.mes}', this.value)">
+                            <span class="balones-dif-badge" style="font-weight: 800; font-size: 10px; padding: 3px 6px; border-radius: 6px; min-width: 30px; display: inline-block; text-align: center; background: ${d.balones_dif.startsWith('-') ? '#fef2f2' : (d.balones_dif ? '#ecfdf5' : '#f8fafc')}; color: ${d.balones_dif.startsWith('-') ? '#ef4444' : (d.balones_dif ? '#10b981' : '#64748b')};">
+                                ${d.balones_dif || '0'}
+                            </span>
+                        </div>
+                    </td>
+                </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        } catch(e) {
+            console.error("Error loading KPI Deportivos:", e);
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Error al cargar KPIs deportivos.</td></tr>';
+        }
+    }
+
+    function showFaltasPopover(el, equipo) {
+        const kpi = window.kpisCache ? window.kpisCache.find(k => k.equipo === equipo) : null;
+        if (!kpi || !kpi.faltas_detalles) return;
+        
+        const noList = kpi.faltas_detalles.no || [];
+        const sinCompletarList = kpi.faltas_detalles.sin_completar || [];
+        
+        // Remove existing popover if any
+        const existing = document.getElementById('kpi-faltas-popover');
+        if (existing) {
+            existing.remove();
+            if (existing.dataset.triggerEl === el.id) return; // Toggle
+        }
+        
+        const popover = document.createElement('div');
+        popover.id = 'kpi-faltas-popover';
+        popover.dataset.triggerEl = el.id;
+        popover.style.position = 'absolute';
+        popover.style.background = 'white';
+        popover.style.border = '1px solid #e2e8f0';
+        popover.style.borderRadius = '12px';
+        popover.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+        popover.style.padding = '15px';
+        popover.style.zIndex = '1000';
+        popover.style.maxWidth = '300px';
+        popover.style.minWidth = '220px';
+        popover.style.fontSize = '11px';
+        popover.style.color = '#1e293b';
+        popover.style.fontFamily = 'inherit';
+        
+        let html = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid #f1f5f9; padding-bottom:6px;">';
+        html += '<span style="font-weight:800; text-transform:uppercase; color:#E31E24; font-size:10px;">Detalle de Asistencias</span>';
+        html += '<span style="cursor:pointer; font-weight:900; color:#94a3b8;" onclick="document.getElementById(\'kpi-faltas-popover\').remove()">×</span>';
+        html += '</div>';
+        
+        html += '<div style="max-height: 200px; overflow-y: auto;">';
+        
+        html += '<div style="font-weight: 700; margin-bottom: 4px; color: #dc3545;">Faltas (NO):</div>';
+        if (noList.length === 0) {
+            html += '<div style="color: #94a3b8; margin-left: 10px; margin-bottom: 8px;">Ninguna</div>';
+        } else {
+            html += '<ul style="margin: 0 0 8px 15px; padding: 0; list-style-type: disc;">';
+            noList.forEach(item => {
+                html += `<li><strong>${item.nombre}</strong> (${item.fecha})</li>`;
+            });
+            html += '</ul>';
+        }
+        
+        html += '<div style="font-weight: 700; margin-bottom: 4px; color: #e28743;">Sin Completar:</div>';
+        if (sinCompletarList.length === 0) {
+            html += '<div style="color: #94a3b8; margin-left: 10px;">Ninguno</div>';
+        } else {
+            html += '<ul style="margin: 0 0 0 15px; padding: 0; list-style-type: disc;">';
+            sinCompletarList.forEach(item => {
+                html += `<li><strong>${item.nombre}</strong> (${item.fecha})</li>`;
+            });
+            html += '</ul>';
+        }
+        
+        html += '</div>';
+        popover.innerHTML = html;
+        
+        document.body.appendChild(popover);
+        
+        // Position popover
+        const rect = el.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+        
+        popover.style.top = (rect.bottom + scrollTop + 5) + 'px';
+        popover.style.left = (rect.left + scrollLeft - 50) + 'px';
+        
+        // Close when clicking outside
+        setTimeout(() => {
+            const outsideClickListener = (event) => {
+                if (!popover.contains(event.target) && event.target !== el) {
+                    popover.remove();
+                    document.removeEventListener('click', outsideClickListener);
+                }
+            };
+            document.addEventListener('click', outsideClickListener);
+        }, 10);
+    }
+
+    async function loadKpiPagos() {
+        const container = document.getElementById('kpiPagosContainer');
+        container.innerHTML = '<div style="text-align:center; padding:20px; color:#999;"><i class="fas fa-spinner fa-spin"></i> Buscando deudas...</div>';
+        try {
+            const res = await fetch('/api/kpis_pagos');
+            const data = await res.json();
+            if (Object.keys(data).length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:20px; color: #10b981; font-weight: 800;"><i class="fas fa-check-circle"></i> ¡Todos los pagos están al día!</div>';
+                return;
+            }
+            let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">';
+            for (const equipo in data) {
+                html += `
+                <div style="border: 1px solid #fecdd3; border-radius: 8px; overflow: hidden;">
+                    <div style="background: #fff1f2; padding: 10px; font-weight: 900; color: #e11d48; text-transform: uppercase; font-size: 11px;">
+                        ${equipo} <span style="float: right; background: #e11d48; color: white; padding: 2px 6px; border-radius: 10px; font-size: 9px;">${data[equipo].length}</span>
+                    </div>
+                    <div style="padding: 10px; background: white;">
+                        <ul style="margin: 0; padding-left: 20px; font-size: 11px; color: #333;">
+                            ${data[equipo].map(j => `
+                                <li style="margin-bottom: 5px;">
+                                    <b>${j.nombre}</b><br>
+                                    <span style="color: #64748b; font-size: 9px;">Debe: <span style="color: #e11d48; font-weight: 800;">${j.pendiente}€</span> (${j.concepto})</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                </div>`;
+            }
+            html += '</div>';
+            container.innerHTML = html;
+        } catch(e) {
+            container.innerHTML = '<div style="text-align:center; color:red;">Error al cargar KPIs de pagos.</div>';
+        }
+    }
+
+    async function loadKpiRrss() {
+        const tbody = document.getElementById('kpiRrssBody');
+        try {
+            const res = await fetch('/api/kpis_rrss');
+            const data = await res.json();
+            
+            let html = '';
+            // Data viene ordenada mes actual y anteriores (ej: ["Sep 2026", "Oct 2026", "Nov 2026"])
+            for (let i = 0; i < data.meses.length; i++) {
+                const mes = data.meses[i];
+                const valor = data.valores[mes] || '';
+                const variacion = data.variaciones[mes] || '';
+                let varColor = variacion.startsWith('+') ? '#10b981' : (variacion.startsWith('-') ? '#e11d48' : '#94a3b8');
+
+                html += `
+                <tr>
+                    <td style="font-weight: 900; border-right: 1px solid #eee; text-transform: uppercase;">${mes}</td>
+                    <td style="text-align: center; border-right: 1px solid #eee; padding: 10px;">
+                        <input type="number" class="input-coord" value="${valor}" style="text-align:center; max-width: 100px; margin: 0 auto; display: block;" 
+                               placeholder="Seguidores" onchange="guardarKpiManual('RRSS', 'INSTAGRAM', '${mes}', this.value)">
+                    </td>
+                    <td style="text-align: center;">
+                        <span style="font-weight: 900; color: ${varColor}; font-size: 13px;">${variacion}</span>
+                    </td>
+                </tr>`;
+            }
+            tbody.innerHTML = html;
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
+    async function guardarKpiManual(tipo, identificador, mes, valor) {
+        try {
+            const res = await fetch('/api/kpis_manual', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ tipo, identificador, mes, valor })
+            });
+            if (res.ok) {
+                mostrarToastAutoguardado("DATO GUARDADO");
+                if (tipo === 'RRSS') loadKpiRrss(); // Recargar para actualizar variación
+                if (tipo.startsWith('BALONES')) loadKpiDeportivos(); // Recargar para actualizar diferencias y variaciones
+            } else {
+                mostrarToastAutoguardado("Error al guardar", true);
+            }
+        } catch(e) {
+            mostrarToastAutoguardado("Error de conexión", true);
+        }
     }
 </script>
 {% endblock %}
