@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Formulario Partido - ADN FUENTE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --red: #E31E24; --bg: #f4f7f6; --dark: #1e293b; --border: #e2e8f0; }
+        body { font-family: 'Montserrat', sans-serif; background-color: var(--bg); margin: 0; padding: 0; color: var(--dark); padding-bottom: 50px; }
+        
+        .header { background: var(--red); color: white; text-align: center; padding: 25px 15px; font-family: 'Archivo Black', sans-serif; box-shadow: 0 4px 15px rgba(227,30,36,0.3); }
+        .header h1 { margin: 0; font-size: 28px; line-height: 1.1; letter-spacing: -1px; text-transform: uppercase; }
+        .header h2 { margin: 5px 0 0 0; font-size: 32px; letter-spacing: -1px; text-transform: uppercase; }
+        .header .subtitle { font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 11px; margin-top: 10px; opacity: 0.9; }
+
+        .form-container { max-width: 600px; margin: -10px auto 20px auto; padding: 0 15px; position: relative; z-index: 10; }
+        
+        .card { background: white; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.05); }
+        .card-header { font-family: 'Archivo Black', sans-serif; font-size: 18px; color: var(--dark); margin-bottom: 20px; text-transform: uppercase; border-bottom: 2px solid var(--bg); padding-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group:last-child { margin-bottom: 0; }
+        
+        label { display: block; font-weight: 800; font-size: 13px; margin-bottom: 8px; color: #475569; }
+        .req { color: var(--red); margin-left: 3px; }
+        
+        input[type="text"], select, textarea { width: 100%; padding: 14px 16px; border: 2px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 15px; font-weight: 600; color: var(--dark); background: #f8fafc; transition: all 0.3s; box-sizing: border-box; }
+        input[type="text"]:focus, select:focus, textarea:focus { border-color: var(--red); outline: none; background: white; box-shadow: 0 0 0 4px rgba(227,30,36,0.1); }
+        textarea { resize: vertical; min-height: 80px; }
+        
+        /* Opciones Radio como botones grandes */
+        .radio-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .radio-label { display: flex; align-items: center; justify-content: center; padding: 14px 5px; border: 2px solid var(--border); border-radius: 10px; cursor: pointer; font-weight: 800; font-size: 13px; transition: all 0.2s; background: white; color: #64748b; }
+        .radio-label:hover { background: #f8fafc; }
+        .radio-label input[type="radio"] { display: none; }
+        
+        /* Estado Checked */
+        .radio-label input[type="radio"]:checked + .radio-custom { border-color: var(--red); background: var(--red); }
+        .radio-label input[type="radio"]:checked + .radio-custom::after { transform: scale(1); }
+        .radio-label.checked { border-color: var(--red); background: #fff5f5; color: var(--red); }
+
+        .radio-custom { width: 18px; height: 18px; border: 2px solid #cbd5e1; border-radius: 50%; margin-right: 6px; position: relative; transition: all 0.2s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .radio-custom::after { content: ''; width: 8px; height: 8px; background: white; border-radius: 50%; transform: scale(0); transition: all 0.2s; }
+
+        /* Checkbox grande */
+        .check-container { display: flex; align-items: center; padding: 18px; border: 2px solid var(--border); border-radius: 12px; cursor: pointer; font-weight: 800; font-size: 14px; transition: all 0.2s; background: white; color: var(--dark); }
+        .check-container input[type="checkbox"] { display: none; }
+        .check-container.checked { border-color: #10b981; background: #ecfdf5; color: #047857; }
+        .check-custom { width: 24px; height: 24px; border: 2px solid #cbd5e1; border-radius: 6px; margin-right: 15px; position: relative; transition: all 0.2s; display: flex; align-items: center; justify-content: center; color: transparent; }
+        .check-container input[type="checkbox"]:checked + .check-custom { background: #10b981; border-color: #10b981; color: white; }
+        .check-custom i { font-size: 14px; }
+
+        .btn-submit { width: 100%; background: linear-gradient(135deg, var(--red) 0%, #b31d2c 100%); color: white; border: none; padding: 18px; border-radius: 12px; font-family: 'Archivo Black', sans-serif; font-size: 18px; cursor: pointer; transition: all 0.3s; box-shadow: 0 6px 20px rgba(227,30,36,0.3); display: flex; justify-content: center; align-items: center; gap: 10px; text-transform: uppercase; margin-top: 10px; }
+        .btn-submit:active { transform: scale(0.98); }
+        .btn-submit:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; }
+
+        .success-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; box-sizing: border-box; }
+        .success-overlay i { font-size: 80px; color: #10b981; margin-bottom: 20px; animation: scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .success-overlay h2 { font-family: 'Archivo Black'; font-size: 28px; color: var(--dark); margin: 0 0 10px 0; }
+        .success-overlay p { font-size: 16px; font-weight: 600; color: #64748b; margin-bottom: 30px; }
+        
+        @keyframes scaleIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>TEMPORADA</h1>
+        <h2>2026 <img src="/static/ESCUDO%20SIN%20FONDO.png" style="height:25px; margin:-5px 5px; filter: brightness(0) invert(1);" alt="ADN FUENTE"> 2027</h2>
+        <div class="subtitle">FORMULARIO DE PARTIDO</div>
+    </div>
+
+    <div class="form-container">
+        <form id="partidoForm" onsubmit="enviarFormulario(event)">
+            
+            <div class="card" style="margin-top: -20px;">
+                <div class="card-header"><i class="fas fa-info-circle" style="color:var(--red)"></i> Datos Generales</div>
+                
+                <div class="form-group">
+                    <label>EQUIPO <span class="req">*</span></label>
+                    <select name="equipo" required>
+                        <option value="">Elige tu equipo...</option>
+                        {% for eq in equipos %}
+                        <option value="{{ eq }}">{{ eq }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>RIVAL <span class="req">*</span></label>
+                    <input type="text" name="rival" placeholder="Nombre del equipo rival" required>
+                </div>
+
+                <div class="form-group">
+                    <label>FECHA <span style="font-size: 10px; color:#94a3b8; font-weight:600;">(Opcional - Por defecto: Hoy)</span></label>
+                    <input type="date" name="fecha_partido" style="color: #64748b;">
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><i class="fas fa-users" style="color:var(--red)"></i> EVALUACIÓN EQUIPO</div>
+                
+                <div class="form-group">
+                    <label>Valoración Global <span class="req">*</span></label>
+                    <div class="radio-group">
+                        <label class="radio-label"><input type="radio" name="eval_global" value="Bien" required><div class="radio-custom"></div> Bien</label>
+                        <label class="radio-label"><input type="radio" name="eval_global" value="Regular"><div class="radio-custom"></div> Regular</label>
+                        <label class="radio-label"><input type="radio" name="eval_global" value="Mal"><div class="radio-custom"></div> Mal</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Intensidad <span class="req">*</span></label>
+                    <div class="radio-group">
+                        <label class="radio-label"><input type="radio" name="eval_intensidad" value="Bien" required><div class="radio-custom"></div> Bien</label>
+                        <label class="radio-label"><input type="radio" name="eval_intensidad" value="Regular"><div class="radio-custom"></div> Regular</label>
+                        <label class="radio-label"><input type="radio" name="eval_intensidad" value="Mal"><div class="radio-custom"></div> Mal</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Físico <span class="req">*</span></label>
+                    <div class="radio-group">
+                        <label class="radio-label"><input type="radio" name="eval_fisico" value="Bien" required><div class="radio-custom"></div> Bien</label>
+                        <label class="radio-label"><input type="radio" name="eval_fisico" value="Regular"><div class="radio-custom"></div> Regular</label>
+                        <label class="radio-label"><input type="radio" name="eval_fisico" value="Mal"><div class="radio-custom"></div> Mal</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Fallos a trabajar del equipo <span class="req">*</span></label>
+                    <textarea name="fallos_equipo" placeholder="Ej: Salida de balón, repliegue defensivo..." required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Qué mejorar Físicamente <span class="req">*</span></label>
+                    <textarea name="mejorar_fisico" placeholder="Ej: Resistencia en la 2ª parte..." required></textarea>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><i class="fas fa-hands" style="color:var(--red)"></i> PORTEROS</div>
+                
+                <div class="form-group">
+                    <label>Nota <span class="req">*</span></label>
+                    <div class="radio-group">
+                        <label class="radio-label"><input type="radio" name="port_nota" value="Bien" required><div class="radio-custom"></div> Bien</label>
+                        <label class="radio-label"><input type="radio" name="port_nota" value="Regular"><div class="radio-custom"></div> Regular</label>
+                        <label class="radio-label"><input type="radio" name="port_nota" value="Mal"><div class="radio-custom"></div> Mal</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Fallos porteros <span class="req">*</span></label>
+                    <textarea name="port_fallos" placeholder="Ej: Salidas en saques de esquina..." required></textarea>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><i class="fas fa-star" style="color:var(--red)"></i> DESTACADOS</div>
+                
+                <div class="form-group">
+                    <label>(Nº) Jugador/es Rival destacado <span class="req">*</span></label>
+                    <input type="text" name="rival_destacado" placeholder="Ej: El 9 y el extremo izquierdo" required>
+                </div>
+
+                <div class="form-group">
+                    <label>2 Mejores jugadores nuestros <span class="req">*</span></label>
+                    <input type="text" name="nuestros_mejores" placeholder="Ej: Lucas y Marcos" required>
+                </div>
+
+                <div class="form-group">
+                    <label>2 Jugador más flojos nuestros <span class="req">*</span></label>
+                    <input type="text" name="nuestros_flojos" placeholder="Ej: Pedro y Juan" required>
+                </div>
+            </div>
+
+            <div class="card" style="background: transparent; box-shadow: none; padding: 0; border: none;">
+                <label class="check-container">
+                    <input type="checkbox" name="audio_enviado" value="SI" required>
+                    <div class="check-custom"><i class="fas fa-check"></i></div>
+                    <div>
+                        <div style="font-family:'Archivo Black'; font-size:14px; text-transform:uppercase; margin-bottom: 2px;">Envía audio resumen</div>
+                        <div style="font-size:10px; font-weight:700; color:#64748b;">A coordinadores + Rubén</div>
+                    </div>
+                </label>
+            </div>
+
+            <button type="submit" id="btnSubmit" class="btn-submit">
+                <i class="fas fa-paper-plane"></i> ENVIAR FORMULARIO
+            </button>
+            <div id="loadingText" style="text-align: center; color: #64748b; font-weight: 800; font-size: 12px; margin-top: 15px; display: none;">Guardando y sincronizando con la intranet...</div>
+
+        </form>
+    </div>
+
+    <!-- PANTALLA ÉXITO -->
+    <div class="success-overlay" id="successOverlay">
+        <i class="fas fa-check-circle"></i>
+        <h2>¡ENVIADO!</h2>
+        <p>El informe de partido se ha guardado correctamente y ya está sincronizado en la Intranet.</p>
+        <button onclick="window.location.reload()" class="btn-submit" style="max-width: 200px;">NUEVO REGISTRO</button>
+    </div>
+
+    <script>
+        // Logica para estilos de radios
+        document.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                // Remove checked class from all labels in this group
+                const name = this.name;
+                document.querySelectorAll(`input[name="${name}"]`).forEach(r => {
+                    r.closest('.radio-label').classList.remove('checked');
+                });
+                // Add to selected
+                this.closest('.radio-label').classList.add('checked');
+            });
+        });
+
+        // Logica para checkbox
+        const audioCheck = document.querySelector('input[name="audio_enviado"]');
+        audioCheck.addEventListener('change', function() {
+            if(this.checked) {
+                this.closest('.check-container').classList.add('checked');
+            } else {
+                this.closest('.check-container').classList.remove('checked');
+            }
+        });
+
+        function enviarFormulario(e) {
+            e.preventDefault();
+            
+            const btn = document.getElementById('btnSubmit');
+            const loading = document.getElementById('loadingText');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ENVIANDO...';
+            loading.style.display = 'block';
+
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+
+            fetch('/formulario-partido', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(res => {
+                if(res.status === 'success') {
+                    document.getElementById('successOverlay').style.display = 'flex';
+                } else {
+                    alert("Error: " + res.message);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> ENVIAR FORMULARIO';
+                    loading.style.display = 'none';
+                }
+            })
+            .catch(err => {
+                alert("Error de red al guardar el formulario.");
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> ENVIAR FORMULARIO';
+                loading.style.display = 'none';
+            });
+        }
+    </script>
+
+</body>
+</html>

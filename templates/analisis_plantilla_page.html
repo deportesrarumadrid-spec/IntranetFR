@@ -358,11 +358,11 @@
         <div class="team-details-row">
             <div class="team-details-item">
                 <label class="team-details-label">Fallos a Trabajar del Equipo</label>
-                <textarea id="teamFailures" class="team-details-textarea" onchange="guardarDetalleEquipo('fallos_equipo', this.value)" placeholder="Puntos débiles del equipo..."></textarea>
+                <div id="teamFailures" class="team-details-textarea" style="overflow-y: auto; background-color: #f8fafc; min-height: 80px; padding: 12px; font-size: 12px;"></div>
             </div>
             <div class="team-details-item">
                 <label class="team-details-label">Qué Mejorar Físicamente</label>
-                <textarea id="teamPhysicalImp" class="team-details-textarea" onchange="guardarDetalleEquipo('mejorar_fisico', this.value)" placeholder="Aspectos físicos a mejorar..."></textarea>
+                <div id="teamPhysicalImp" class="team-details-textarea" style="overflow-y: auto; background-color: #f8fafc; min-height: 80px; padding: 12px; font-size: 12px;"></div>
             </div>
         </div>
     </div>
@@ -372,11 +372,11 @@
         <div class="team-details-row">
             <div class="team-details-item">
                 <label class="team-details-label">2 Mejores Jugadores Nuestros</label>
-                <textarea id="teamBest" class="team-details-textarea" style="min-height: 80px;" onchange="guardarDetalleEquipo('mejores_jugadores', this.value)" placeholder="1. Nombre del jugador\n2. Nombre del jugador"></textarea>
+                <div id="teamBest" class="team-details-textarea" style="overflow-y: auto; background-color: #f8fafc; min-height: 80px; padding: 12px; font-size: 12px;"></div>
             </div>
             <div class="team-details-item">
                 <label class="team-details-label">2 Jugadores Más Flojos Nuestros</label>
-                <textarea id="teamWorst" class="team-details-textarea" style="min-height: 80px;" onchange="guardarDetalleEquipo('peores_jugadores', this.value)" placeholder="1. Nombre del jugador\n2. Nombre del jugador"></textarea>
+                <div id="teamWorst" class="team-details-textarea" style="overflow-y: auto; background-color: #f8fafc; min-height: 80px; padding: 12px; font-size: 12px;"></div>
             </div>
         </div>
     </div>

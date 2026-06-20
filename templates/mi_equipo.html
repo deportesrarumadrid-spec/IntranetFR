@@ -233,6 +233,14 @@
                 <tbody id="tbodyValoracion"></tbody>
             </table>
         </div>
+        
+        <!-- Bloque 5: Historial de Partidos (Full width) -->
+        <div class="card-modern" style="grid-column: 1 / -1;">
+            <div class="card-title" style="margin-bottom: 15px;"><i class="fas fa-clipboard-list"></i> HISTORIAL DE PARTIDOS (DETALLES DEL EQUIPO)</div>
+            <div id="containerHistorialPartidos" style="display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px;">
+                <!-- Rellenado por JS -->
+            </div>
+        </div>
     </div>
 </div>
 
@@ -254,6 +262,106 @@
         renderValoracion(data.tabla_valoracion); // This function is still needed for the bottom-left card
         renderFullRanking(data.total_ranking); // New call
         renderMonthlyRankings(allAsistenciaData); // New call
+        
+        cargarHistorialPartidos(); // Cargar formularios de partido
+    }
+    
+    function parseDateString(dateStr) {
+        if(!dateStr) return new Date();
+        const parts = dateStr.split(' ');
+        const [d, m, y] = parts[0].split('/');
+        return new Date(y, m-1, d);
+    }
+
+    async function cargarHistorialPartidos() {
+        try {
+            const res = await fetch('/api/formularios_partido');
+            const data = await res.json();
+            const currentEquipo = "{{ equipo }}";
+            
+            let forms = data.filter(f => f.EQUIPO === currentEquipo);
+            // Ordenar del más reciente al más antiguo
+            forms.sort((a,b) => parseDateString(b['MARCA TEMPORAL']) - parseDateString(a['MARCA TEMPORAL'])); 
+            
+            // Llenar historiales de Detalles de Equipo (Analisis Plantilla)
+            let fallosHistorial = '';
+            let fisicoHistorial = '';
+            let mejoresHistorial = '';
+            let flojosHistorial = '';
+
+            forms.forEach(f => {
+                const dateShort = f['MARCA TEMPORAL'] ? f['MARCA TEMPORAL'].split(' ')[0] : 'XX/XX/XXXX';
+                
+                const formatEntry = (text) => `
+                    <div style="margin-bottom: 8px; border-bottom: 1px dashed #e2e8f0; padding-bottom: 5px;">
+                        <span style="color: #94a3b8; font-weight: 800; font-size: 11px;">${dateShort}:</span>
+                        <span style="color: #1e293b; font-weight: 600; font-size: 12px; margin-left: 5px;">${text.replace(/\\n|\n/g, '<br>')}</span>
+                    </div>
+                `;
+
+                if(f.FALLOS_EQUIPO && f.FALLOS_EQUIPO.trim() !== '') fallosHistorial += formatEntry(f.FALLOS_EQUIPO);
+                if(f.MEJORAR_FISICO && f.MEJORAR_FISICO.trim() !== '') fisicoHistorial += formatEntry(f.MEJORAR_FISICO);
+                if(f.NUESTROS_MEJORES && f.NUESTROS_MEJORES.trim() !== '') mejoresHistorial += formatEntry(f.NUESTROS_MEJORES);
+                if(f.NUESTROS_FLOJOS && f.NUESTROS_FLOJOS.trim() !== '') flojosHistorial += formatEntry(f.NUESTROS_FLOJOS);
+            });
+
+            const tf = document.getElementById('teamFailures');
+            if(tf) tf.innerHTML = fallosHistorial || '<div style="color: #cbd5e1; font-style: italic;">Sin registros todavía...</div>';
+            const tp = document.getElementById('teamPhysicalImp');
+            if(tp) tp.innerHTML = fisicoHistorial || '<div style="color: #cbd5e1; font-style: italic;">Sin registros todavía...</div>';
+            const tb = document.getElementById('teamBest');
+            if(tb) tb.innerHTML = mejoresHistorial || '<div style="color: #cbd5e1; font-style: italic;">Sin registros todavía...</div>';
+            const tw = document.getElementById('teamWorst');
+            if(tw) tw.innerHTML = flojosHistorial || '<div style="color: #cbd5e1; font-style: italic;">Sin registros todavía...</div>';
+
+            const container = document.getElementById('containerHistorialPartidos');
+            if(forms.length === 0) {
+                container.innerHTML = '<div style="padding: 20px; color: #999; font-size: 13px; text-align: center; width: 100%;">No hay informes de partido registrados todavía.</div>';
+                return;
+            }
+            
+            let html = '';
+            forms.forEach(f => {
+                const dateShort = f['MARCA TEMPORAL'] ? f['MARCA TEMPORAL'].split(' ')[0] : 'XX/XX/XXXX';
+                html += `
+                <div style="min-width: 300px; max-width: 350px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.02); display: flex; flex-direction: column;">
+                    <div style="font-size: 11px; font-weight: 900; color: #E31E24; margin-bottom: 10px; border-bottom: 2px solid #fee2e2; padding-bottom: 5px; display: flex; justify-content: space-between;">
+                        <span><i class="far fa-calendar-alt"></i> ${dateShort}</span>
+                        <span style="color: #64748b;">vs ${f.RIVAL}</span>
+                    </div>
+                    
+                    <div style="font-size: 12px; margin-bottom: 10px; flex: 1;">
+                        <strong style="color: #333; font-size: 10px; text-transform: uppercase;"><i class="fas fa-users" style="color:#64748b"></i> Eval. Equipo:</strong>
+                        <div style="color: #666; margin-top: 2px;">Global: <strong style="color:#10b981;">${f.EVAL_GLOBAL}</strong> | Int: <strong>${f.EVAL_INTENSIDAD}</strong> | Fís: <strong>${f.EVAL_FISICO}</strong></div>
+                        <div style="color: #777; font-size: 11px; margin-top: 4px; font-style: italic; background: white; padding: 6px; border-radius: 6px; border: 1px solid #eee;">
+                            <div style="margin-bottom: 3px;"><span style="color:#E31E24; font-weight:bold;">Fallos:</span> ${f.FALLOS_EQUIPO}</div>
+                            <div><span style="color:#10b981; font-weight:bold;">Mejorar Físico:</span> ${f.MEJORAR_FISICO}</div>
+                        </div>
+                    </div>
+                    
+                    <div style="font-size: 12px; margin-bottom: 10px; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
+                        <strong style="color: #f59e0b; font-size: 10px; text-transform: uppercase;"><i class="fas fa-hands"></i> Porteros:</strong>
+                        <div style="color: #666; margin-top: 2px; display: flex; justify-content: space-between;">
+                            <span>Nota: <strong>${f.PORT_NOTA}</strong></span>
+                            <span style="color: #777; font-size: 11px; max-width: 60%; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${f.PORT_FALLOS}">Fallos: ${f.PORT_FALLOS}</span>
+                        </div>
+                    </div>
+                    
+                    <div style="font-size: 12px; border-top: 1px dashed #e2e8f0; padding-top: 8px; background: white; border-radius: 8px; padding: 10px; border: 1px solid #eee;">
+                        <strong style="color: #3b82f6; font-size: 10px; text-transform: uppercase;"><i class="fas fa-star"></i> Destacados:</strong>
+                        <div style="color: #666; font-size: 11px; margin-top: 4px; display: grid; gap: 4px;">
+                            <div><strong style="color:#ef4444;">Rival:</strong> ${f.RIVAL_DESTACADO}</div>
+                            <div><strong style="color:#10b981;">Mejores:</strong> ${f.NUESTROS_MEJORES}</div>
+                            <div><strong style="color:#64748b;">Flojos:</strong> ${f.NUESTROS_FLOJOS}</div>
+                        </div>
+                    </div>
+                </div>
+                `;
+            });
+            container.innerHTML = html;
+        } catch(e) {
+            console.error("Error historial partidos:", e);
+        }
     }
 
     function renderChart(asis) {

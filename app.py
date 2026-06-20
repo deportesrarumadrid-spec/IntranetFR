@@ -1725,6 +1725,7 @@ from perfiles import perfiles_bp
 from jugadores_detalles import jugadores_detalles_bp # Importar el nuevo blueprint
 from ropa import ropa_bp
 from mi_equipo import mi_equipo_bp
+from formulario_partido import formulario_partido_bp # Importar el nuevo blueprint
 app.register_blueprint(financiero_bp)
 app.register_blueprint(deportivo_bp)
 app.register_blueprint(jugadores_datos_bp)
@@ -1732,6 +1733,7 @@ app.register_blueprint(perfiles_bp)
 app.register_blueprint(ropa_bp)
 app.register_blueprint(jugadores_detalles_bp) # Registrar el nuevo blueprint
 app.register_blueprint(mi_equipo_bp)
+app.register_blueprint(formulario_partido_bp)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001, use_reloader=True)

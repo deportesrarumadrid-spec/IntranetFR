@@ -379,8 +379,8 @@
                     <button class="btn-fin" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color:white; border:none; height:34px; padding:0 18px; border-radius: 8px; font-weight: 900; box-shadow: 0 2px 8px rgba(40,167,69,0.2); transition: all 0.3s ease; cursor: pointer; font-size: 10px;" onclick="window.print()" onmouseover="this.style.transform='translateY(-1px)';" onmouseout="this.style.transform='translateY(0)';">
                         <i class="fas fa-download"></i> DESCARGAR/IMPRIMIR
                     </button>
-                    <button class="btn-fin" style="background: #f1f5f9; color:#64748b; border: 1px solid #e2e8f0; height:34px; padding:0 18px; border-radius: 8px; font-weight: 900; transition: all 0.3s ease; cursor: pointer; font-size: 10px;" onclick="document.getElementById('modalSesionOnline').style.display='none'">
-                        CERRAR
+                    <button class="btn-fin" style="background: #E31E24; color:white; border: none; height:34px; width: 34px; border-radius: 50%; font-weight: 900; transition: all 0.3s ease; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(227,30,36,0.3);" onclick="cerrarModalSesionOnline()" onmouseover="this.style.transform='scale(1.1)';" onmouseout="this.style.transform='scale(1)';">
+                        &times;
                     </button>
                 </div>
             </div>
@@ -1021,6 +1021,14 @@
             document.getElementById('photoMenu').style.display = 'flex';
         }
 
+        function cerrarModalSesionOnline() {
+            document.getElementById('modalSesionOnline').style.display = 'none';
+            const btnCrono = document.querySelector('.btn-cronograma-fixed');
+            if (btnCrono) btnCrono.style.display = 'flex';
+            const btnTeam = document.querySelector('.btn-change-team-fixed');
+            if (btnTeam) btnTeam.style.display = 'flex';
+        }
+
         async function abrirModalSesionOnline() {
             const eq = document.getElementById('selectEquipoEntrenos').value.trim();
             if(!eq) return alert("Por favor, selecciona un equipo en el desplegable superior antes de crear la sesión.");
@@ -1034,6 +1042,11 @@
             document.getElementById('alineacionPlaceholder').style.display = 'flex';
 
             document.getElementById('modalSesionOnline').style.display = 'flex';
+
+            const btnCrono = document.querySelector('.btn-cronograma-fixed');
+            if (btnCrono) btnCrono.style.display = 'none';
+            const btnTeam = document.querySelector('.btn-change-team-fixed');
+            if (btnTeam) btnTeam.style.display = 'none';
 
             // AUTO-CARGA DE ALINEACIÓN: Si el equipo tiene una formación guardada, la cargamos automáticamente
             const key = `custom_formation_${eq}_PLANTILLA JUGADORES.png`;
