@@ -1,0 +1,290 @@
+Total tables: 40
+Table 0: header='NO HEADER'
+  TR count: 3
+Table 1: header='NO HEADER'
+  TR count: 2
+Table 2: header='NO HEADER'
+  TR count: 1
+Table 3: header='Jornada 1 (14-09-2025)  Jornada 1    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 15
+  Contains FUENTELARREYNA
+    Row 0: ['Clasificación\xa0\xa0\xa0\r \t\t\t\r \t\t\t\r \t\t\t\r \t\t\t\t\r \t\t\t\t\t\r \t\t\t\t']
+    Row 1: ['Descargar Word \xa0\xa0\r \t\tDescargar Excel']
+    Row 2: ['Primera Vuelta          \r \t        \tJornada 1 (14-', 'Primera Vuelta', 'Jornada 1 (14-09-2025)  Jornada 1  \xa0\r \t        \t\t\t', 'Jornada 1 (14-09-2025)  Jornada 1  \xa0\r \t        \t\t\t', 'S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '1', '-', '4', 'C.D.E. F.P.A. LAS ROZAS\r \t\t\t\t\t\t           "C"', '', 'A.D. CALA POZUELO\r \t\t\t           "B"', '0', '-', '3', 'ARAVACA C.F. - CEIBA\r \t\t\t\t\t\t           "B"', '']
+    Row 3: ['Primera Vuelta']
+    Row 4: ['Jornada 1 (14-09-2025)  Jornada 1  \xa0\r \t        \t\t\t', 'Jornada 1 (14-09-2025)  Jornada 1  \xa0\r \t        \t\t\t', 'S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '1', '-', '4', 'C.D.E. F.P.A. LAS ROZAS\r \t\t\t\t\t\t           "C"', '']
+    Row 5: ['Jornada 1 (14-09-2025)  Jornada 1  \xa0\r \t        \t\t\t']
+    Row 6: ['S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '1', '-', '4']
+    Row 7: ['A.D. CALA POZUELO\r \t\t\t           "B"', '0', '-', '3']
+    Row 8: ['S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t           "A"', '1', '-', '1', 'ESCUELA FUTBOL BARRIO PILAR\r \t\t\t\t\t\t           "B"', '']
+    Row 9: ['E.F.M.O. BOADILLA\r \t\t\t           "C"', '3', '-', '0', 'C.D.E. MALASAÑA F.C.\r \t\t\t\t\t\t           "A"', '']
+Table 4: header='Jornada 1 (14-09-2025)  Jornada 1    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 5
+Table 5: header='Jornada 1 (14-09-2025)  Jornada 1    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 2
+Table 6: header='Jornada 2 (21-09-2025)  Jornada 2    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 2
+Table 7: header='Jornada 3 (28-09-2025)  Jornada 3    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 2
+Table 8: header='Jornada 4 (05-10-2025)  Jornada 4    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 2
+Table 9: header='Jornada 5 (12-10-2025)  Jornada 5    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 2
+Table 10: header='Jornada 6 (19-10-2025)  Jornada 6    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 2
+Table 11: header='Jornada 7 (26-10-2025)  Jornada 7    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 2
+Table 12: header='Jornada 8 (02-11-2025)  Jornada 8    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 2
+Table 13: header='Jornada 9 (09-11-2025)  Jornada 9    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 2
+Table 14: header='Jornada 10 (16-11-2025)  Jornada 10    	        			 Cambiar fechas de partidos 						  Respetar dí'
+  TR count: 2
+Table 15: header='Jornada 11 (23-11-2025)  Jornada 11    	        			 Cambiar fechas de partidos 						  Respetar dí'
+  TR count: 2
+Table 16: header='Jornada 12 (30-11-2025)  Jornada 12    	        			 Cambiar fechas de partidos 						  Respetar dí'
+  TR count: 2
+Table 17: header='Jornada 13 (14-12-2025)  Jornada 13    	        			 Cambiar fechas de partidos 						  Respetar dí'
+  TR count: 2
+Table 18: header='Jornada 14 (21-12-2025)  Jornada 14    	        			 Cambiar fechas de partidos 						  Respetar dí'
+  TR count: 2
+Table 19: header='Jornada 15 (11-01-2026)  Jornada 15    	        			 Cambiar fechas de partidos 						  Respetar dí'
+  TR count: 2
+Table 20: header='Jornada 16 (18-01-2026)  Jornada 16    	        			 Cambiar fechas de partidos 						  Respetar dí'
+  TR count: 2
+Table 21: header='Jornada 17 (25-01-2026)  Jornada 17    	        			 Cambiar fechas de partidos 						  Respetar dí'
+  TR count: 2
+Table 22: header='Jornada 18 (01-02-2026)  Jornada 18            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 188
+  Contains FUENTELARREYNA
+    Row 0: ['Segunda Vuelta']
+    Row 1: ['Jornada 18 (01-02-2026)  Jornada 18  \xa0\r         \t\t', 'Jornada 18 (01-02-2026)  Jornada 18  \xa0\r         \t\t', 'C.D.E. F.P.A. LAS ROZAS\r \t\t\t           "C"', '2', '-', '0', 'S.A.D. COLEGIO VALDELUZ\r \t\t\t\t\t\t           "A"', '', 'ESCUELA FUTBOL BARRIO PILAR\r \t\t\t           "B"', '2', '-', '4', 'S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t\t\t\t           "A"', '', 'CELTIC CASTILLA C.F.\r \t\t\t           "A"', '1', '-', '0', 'C.F. POZUELO DE ALARCON\r \t\t\t\t\t\t           "B"', '', 'C.D. MASRIVER\r \t\t\t           "A"', '1', '-', '4', 'C.D. NUEVO BOADILLA\r \t\t\t\t\t\t           "B"', '', 'C.D.E. MALASAÑA F.C.\r \t\t\t           "A"', '3', '-', '5', 'E.F.M.O. BOADILLA\r \t\t\t\t\t\t           "C"', '', 'COLEGIO EL PRADO\r \t\t\t           "A"', '4', '-', '1', 'C.D. PUERTA DE MADRID\r \t\t\t\t\t\t           "B"', '', 'A.D. UNION ADARVE\r \t\t\t           "D"', '2', '-', '3', 'FUNDACION ADF\r \t\t\t\t\t\t           "A"', '', 'ARAVACA C.F. - CEIBA\r \t\t\t           "B"', '0', '-', '1', 'A.D. CALA POZUELO\r \t\t\t\t\t\t           "B"', '', 'C.D. RUPE SAHAGUN\r \t\t\t           "A"', '1', '-', '3', 'CLUB FUENTELARREYNA\r \t\t\t\t\t\t           "A"', '']
+    Row 2: ['Jornada 18 (01-02-2026)  Jornada 18  \xa0\r         \t\t']
+    Row 3: ['C.D.E. F.P.A. LAS ROZAS\r \t\t\t           "C"', '2', '-', '0', 'S.A.D. COLEGIO VALDELUZ\r \t\t\t\t\t\t           "A"', '']
+    Row 4: ['ESCUELA FUTBOL BARRIO PILAR\r \t\t\t           "B"', '2', '-', '4', 'S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t\t\t\t           "A"', '']
+    Row 5: ['CELTIC CASTILLA C.F.\r \t\t\t           "A"', '1', '-', '0', 'C.F. POZUELO DE ALARCON\r \t\t\t\t\t\t           "B"', '']
+    Row 6: ['C.D. MASRIVER\r \t\t\t           "A"', '1', '-', '4', 'C.D. NUEVO BOADILLA\r \t\t\t\t\t\t           "B"', '']
+    Row 7: ['C.D.E. MALASAÑA F.C.\r \t\t\t           "A"', '3', '-', '5', 'E.F.M.O. BOADILLA\r \t\t\t\t\t\t           "C"', '']
+    Row 8: ['COLEGIO EL PRADO\r \t\t\t           "A"', '4', '-', '1', 'C.D. PUERTA DE MADRID\r \t\t\t\t\t\t           "B"', '']
+    Row 9: ['A.D. UNION ADARVE\r \t\t\t           "D"', '2', '-', '3', 'FUNDACION ADF\r \t\t\t\t\t\t           "A"', '']
+Table 23: header='Jornada 18 (01-02-2026)  Jornada 18            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: ['Jornada 18 (01-02-2026)  Jornada 18  \xa0\r         \t\t']
+    Row 1: ['C.D.E. F.P.A. LAS ROZAS\r \t\t\t           "C"', '2', '-', '0', 'S.A.D. COLEGIO VALDELUZ\r \t\t\t\t\t\t           "A"', '']
+    Row 2: ['ESCUELA FUTBOL BARRIO PILAR\r \t\t\t           "B"', '2', '-', '4', 'S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t\t\t\t           "A"', '']
+    Row 3: ['CELTIC CASTILLA C.F.\r \t\t\t           "A"', '1', '-', '0', 'C.F. POZUELO DE ALARCON\r \t\t\t\t\t\t           "B"', '']
+    Row 4: ['C.D. MASRIVER\r \t\t\t           "A"', '1', '-', '4', 'C.D. NUEVO BOADILLA\r \t\t\t\t\t\t           "B"', '']
+    Row 5: ['C.D.E. MALASAÑA F.C.\r \t\t\t           "A"', '3', '-', '5', 'E.F.M.O. BOADILLA\r \t\t\t\t\t\t           "C"', '']
+    Row 6: ['COLEGIO EL PRADO\r \t\t\t           "A"', '4', '-', '1', 'C.D. PUERTA DE MADRID\r \t\t\t\t\t\t           "B"', '']
+    Row 7: ['A.D. UNION ADARVE\r \t\t\t           "D"', '2', '-', '3', 'FUNDACION ADF\r \t\t\t\t\t\t           "A"', '']
+    Row 8: ['ARAVACA C.F. - CEIBA\r \t\t\t           "B"', '0', '-', '1', 'A.D. CALA POZUELO\r \t\t\t\t\t\t           "B"', '']
+    Row 9: ['C.D. RUPE SAHAGUN\r \t\t\t           "A"', '1', '-', '3', 'CLUB FUENTELARREYNA\r \t\t\t\t\t\t           "A"', '']
+Table 24: header='Jornada 19 (08-02-2026)  Jornada 19            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: ['Jornada 19 (08-02-2026)  Jornada 19  \xa0\r         \t\t']
+    Row 1: ['C.D. PUERTA DE MADRID\r \t\t\t           "B"', '1', '-', '2', 'C.D. RUPE SAHAGUN\r \t\t\t\t\t\t           "A"', '']
+    Row 2: ['A.D. CALA POZUELO\r \t\t\t           "B"', '2', '-', '3', 'C.D.E. MALASAÑA F.C.\r \t\t\t\t\t\t           "A"', '']
+    Row 3: ['S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t           "A"', '1', '-', '3', 'C.D.E. F.P.A. LAS ROZAS\r \t\t\t\t\t\t           "C"', '']
+    Row 4: ['FUNDACION ADF\r \t\t\t           "A"', '5', '-', '2', 'ESCUELA FUTBOL BARRIO PILAR\r \t\t\t\t\t\t           "B"', '']
+    Row 5: ['CLUB FUENTELARREYNA\r \t\t\t           "A"', '2', '-', '1', 'CELTIC CASTILLA C.F.\r \t\t\t\t\t\t           "A"', '']
+    Row 6: ['C.D. NUEVO BOADILLA\r \t\t\t           "B"', '3', '-', '0', 'ARAVACA C.F. - CEIBA\r \t\t\t\t\t\t           "B"', '']
+    Row 7: ['E.F.M.O. BOADILLA\r \t\t\t           "C"', '3', '-', '2', 'A.D. UNION ADARVE\r \t\t\t\t\t\t           "D"', '']
+    Row 8: ['S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '4', '-', '4', 'COLEGIO EL PRADO\r \t\t\t\t\t\t           "A"', '']
+    Row 9: ['C.F. POZUELO DE ALARCON\r \t\t\t           "B"', '3', '-', '1', 'C.D. MASRIVER\r \t\t\t\t\t\t           "A"', '']
+Table 25: header='Jornada 20 (15-02-2026)  Jornada 20            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: ['Jornada 20 (15-02-2026)  Jornada 20  \xa0\r         \t\t']
+    Row 1: ['ESCUELA FUTBOL BARRIO PILAR\r \t\t\t           "B"', '0', '-', '2', 'A.D. UNION ADARVE\r \t\t\t\t\t\t           "D"', '']
+    Row 2: ['ARAVACA C.F. - CEIBA\r \t\t\t           "B"', '5', '-', '1', 'C.F. POZUELO DE ALARCON\r \t\t\t\t\t\t           "B"', '']
+    Row 3: ['C.D. MASRIVER\r \t\t\t           "A"', '3', '-', '2', 'CLUB FUENTELARREYNA\r \t\t\t\t\t\t           "A"', '']
+    Row 4: ['CELTIC CASTILLA C.F.\r \t\t\t           "A"', '4', '-', '3', 'C.D. PUERTA DE MADRID\r \t\t\t\t\t\t           "B"', '']
+    Row 5: ['A.D. CALA POZUELO\r \t\t\t           "B"', '4', '-', '2', 'E.F.M.O. BOADILLA\r \t\t\t\t\t\t           "C"', '']
+    Row 6: ['COLEGIO EL PRADO\r \t\t\t           "A"', '1', '-', '1', 'S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t\t\t\t           "A"', '']
+    Row 7: ['C.D.E. MALASAÑA F.C.\r \t\t\t           "A"', '2', '-', '2', 'C.D. NUEVO BOADILLA\r \t\t\t\t\t\t           "B"', '']
+    Row 8: ['C.D. RUPE SAHAGUN\r \t\t\t           "A"', '2', '-', '0', 'S.A.D. COLEGIO VALDELUZ\r \t\t\t\t\t\t           "A"', '']
+    Row 9: ['C.D.E. F.P.A. LAS ROZAS\r \t\t\t           "C"', '2', '-', '3', 'FUNDACION ADF\r \t\t\t\t\t\t           "A"', '']
+Table 26: header='Jornada 21 (22-02-2026)  Jornada 21            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: ['Jornada 21 (22-02-2026)  Jornada 21  \xa0\r         \t\t']
+    Row 1: ['S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '2', '-', '2', 'CELTIC CASTILLA C.F.\r \t\t\t\t\t\t           "A"', '']
+    Row 2: ['C.F. POZUELO DE ALARCON\r \t\t\t           "B"', '3', '-', '2', 'C.D.E. MALASAÑA F.C.\r \t\t\t\t\t\t           "A"', '']
+    Row 3: ['C.D. PUERTA DE MADRID\r \t\t\t           "B"', '3', '-', '2', 'C.D. MASRIVER\r \t\t\t\t\t\t           "A"', '']
+    Row 4: ['E.F.M.O. BOADILLA\r \t\t\t           "C"', '3', '-', '1', 'ESCUELA FUTBOL BARRIO PILAR\r \t\t\t\t\t\t           "B"', '']
+    Row 5: ['C.D. NUEVO BOADILLA\r \t\t\t           "B"', '3', '-', '3', 'A.D. CALA POZUELO\r \t\t\t\t\t\t           "B"', '']
+    Row 6: ['CLUB FUENTELARREYNA\r \t\t\t           "A"', '1', '-', '0', 'ARAVACA C.F. - CEIBA\r \t\t\t\t\t\t           "B"', '']
+    Row 7: ['FUNDACION ADF\r \t\t\t           "A"', '1', '-', '1', 'COLEGIO EL PRADO\r \t\t\t\t\t\t           "A"', '']
+    Row 8: ['S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t           "A"', '4', '-', '1', 'C.D. RUPE SAHAGUN\r \t\t\t\t\t\t           "A"', '']
+    Row 9: ['A.D. UNION ADARVE\r \t\t\t           "D"', '4', '-', '2', 'C.D.E. F.P.A. LAS ROZAS\r \t\t\t\t\t\t           "C"', '']
+Table 27: header='Jornada 22 (01-03-2026)  Jornada 22            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: ['Jornada 22 (01-03-2026)  Jornada 22  \xa0\r         \t\t']
+    Row 1: ['C.D.E. F.P.A. LAS ROZAS\r \t\t\t           "C"', '4', '-', '0', 'ESCUELA FUTBOL BARRIO PILAR\r \t\t\t\t\t\t           "B"', '']
+    Row 2: ['C.D. RUPE SAHAGUN\r \t\t\t           "A"', '4', '-', '2', 'FUNDACION ADF\r \t\t\t\t\t\t           "A"', '']
+    Row 3: ['CELTIC CASTILLA C.F.\r \t\t\t           "A"', '2', '-', '3', 'S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t\t\t\t           "A"', '']
+    Row 4: ['C.D. MASRIVER\r \t\t\t           "A"', '4', '-', '3', 'S.A.D. COLEGIO VALDELUZ\r \t\t\t\t\t\t           "A"', '']
+    Row 5: ['ARAVACA C.F. - CEIBA\r \t\t\t           "B"', '3', '-', '2', 'C.D. PUERTA DE MADRID\r \t\t\t\t\t\t           "B"', '']
+    Row 6: ['A.D. CALA POZUELO\r \t\t\t           "B"', '1', '-', '1', 'C.F. POZUELO DE ALARCON\r \t\t\t\t\t\t           "B"', '']
+    Row 7: ['COLEGIO EL PRADO\r \t\t\t           "A"', '4', '-', '2', 'A.D. UNION ADARVE\r \t\t\t\t\t\t           "D"', '']
+    Row 8: ['C.D. NUEVO BOADILLA\r \t\t\t           "B"', '0', '-', '2', 'E.F.M.O. BOADILLA\r \t\t\t\t\t\t           "C"', '']
+    Row 9: ['C.D.E. MALASAÑA F.C.\r \t\t\t           "A"', '2', '-', '4', 'CLUB FUENTELARREYNA\r \t\t\t\t\t\t           "A"', '']
+Table 28: header='Jornada 23 (08-03-2026)  Jornada 23            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: ['Jornada 23 (08-03-2026)  Jornada 23  \xa0\r         \t\t']
+    Row 1: ['ESCUELA FUTBOL BARRIO PILAR\r \t\t\t           "B"', '3', '-', '2', 'COLEGIO EL PRADO\r \t\t\t\t\t\t           "A"', '']
+    Row 2: ['CLUB FUENTELARREYNA\r \t\t\t           "A"', '5', '-', '1', 'A.D. CALA POZUELO\r \t\t\t\t\t\t           "B"', '']
+    Row 3: ['A.D. UNION ADARVE\r \t\t\t           "D"', '3', '-', '3', 'C.D. RUPE SAHAGUN\r \t\t\t\t\t\t           "A"', '']
+    Row 4: ['C.D. PUERTA DE MADRID\r \t\t\t           "B"', '3', '-', '5', 'C.D.E. MALASAÑA F.C.\r \t\t\t\t\t\t           "A"', '']
+    Row 5: ['S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t           "A"', '4', '-', '0', 'C.D. MASRIVER\r \t\t\t\t\t\t           "A"', '']
+    Row 6: ['FUNDACION ADF\r \t\t\t           "A"', '4', '-', '1', 'CELTIC CASTILLA C.F.\r \t\t\t\t\t\t           "A"', '']
+    Row 7: ['C.F. POZUELO DE ALARCON\r \t\t\t           "B"', '3', '-', '5', 'C.D. NUEVO BOADILLA\r \t\t\t\t\t\t           "B"', '']
+    Row 8: ['E.F.M.O. BOADILLA\r \t\t\t           "C"', '2', '-', '2', 'C.D.E. F.P.A. LAS ROZAS\r \t\t\t\t\t\t           "C"', '']
+    Row 9: ['S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '1', '-', '4', 'ARAVACA C.F. - CEIBA\r \t\t\t\t\t\t           "B"', '']
+Table 29: header='Jornada 24 (15-03-2026)  Jornada 24            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: ['Jornada 24 (15-03-2026)  Jornada 24  \xa0\r         \t\t']
+    Row 1: ['CELTIC CASTILLA C.F.\r \t\t\t           "A"', '2', '-', '5', 'A.D. UNION ADARVE\r \t\t\t\t\t\t           "D"', '']
+    Row 2: ['A.D. CALA POZUELO\r \t\t\t           "B"', '2', '-', '3', 'C.D. PUERTA DE MADRID\r \t\t\t\t\t\t           "B"', '']
+    Row 3: ['C.D. MASRIVER\r \t\t\t           "A"', '1', '-', '3', 'FUNDACION ADF\r \t\t\t\t\t\t           "A"', '']
+    Row 4: ['COLEGIO EL PRADO\r \t\t\t           "A"', '3', '-', '2', 'C.D.E. F.P.A. LAS ROZAS\r \t\t\t\t\t\t           "C"', '']
+    Row 5: ['C.D. NUEVO BOADILLA\r \t\t\t           "B"', '2', '-', '3', 'CLUB FUENTELARREYNA\r \t\t\t\t\t\t           "A"', '']
+    Row 6: ['C.F. POZUELO DE ALARCON\r \t\t\t           "B"', '0', '-', '3', 'E.F.M.O. BOADILLA\r \t\t\t\t\t\t           "C"', '']
+    Row 7: ['C.D. RUPE SAHAGUN\r \t\t\t           "A"', '2', '-', '1', 'ESCUELA FUTBOL BARRIO PILAR\r \t\t\t\t\t\t           "B"', '']
+    Row 8: ['C.D.E. MALASAÑA F.C.\r \t\t\t           "A"', '1', '-', '1', 'S.A.D. COLEGIO VALDELUZ\r \t\t\t\t\t\t           "A"', '']
+    Row 9: ['ARAVACA C.F. - CEIBA\r \t\t\t           "B"', '1', '-', '0', 'S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t\t\t\t           "A"', '']
+Table 30: header='Jornada 25 (22-03-2026)  Jornada 25            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: ['Jornada 25 (22-03-2026)  Jornada 25  \xa0\r         \t\t']
+    Row 1: ['S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '1', '-', '3', 'A.D. CALA POZUELO\r \t\t\t\t\t\t           "B"', '']
+    Row 2: ['C.D.E. F.P.A. LAS ROZAS\r \t\t\t           "C"', '1', '-', '0', 'C.D. RUPE SAHAGUN\r \t\t\t\t\t\t           "A"', '']
+    Row 3: ['ESCUELA FUTBOL BARRIO PILAR\r \t\t\t           "B"', '4', '-', '3', 'CELTIC CASTILLA C.F.\r \t\t\t\t\t\t           "A"', '']
+    Row 4: ['CLUB FUENTELARREYNA\r \t\t\t           "A"', '3', '-', '3', 'C.F. POZUELO DE ALARCON\r \t\t\t\t\t\t           "B"', '']
+    Row 5: ['A.D. UNION ADARVE\r \t\t\t           "D"', '3', '-', '2', 'C.D. MASRIVER\r \t\t\t\t\t\t           "A"', '']
+    Row 6: ['S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t           "A"', '4', '-', '1', 'C.D.E. MALASAÑA F.C.\r \t\t\t\t\t\t           "A"', '']
+    Row 7: ['FUNDACION ADF\r \t\t\t           "A"', '5', '-', '3', 'ARAVACA C.F. - CEIBA\r \t\t\t\t\t\t           "B"', '']
+    Row 8: ['C.D. PUERTA DE MADRID\r \t\t\t           "B"', '2', '-', '4', 'C.D. NUEVO BOADILLA\r \t\t\t\t\t\t           "B"', '']
+    Row 9: ['E.F.M.O. BOADILLA\r \t\t\t           "C"', '2', '-', '3', 'COLEGIO EL PRADO\r \t\t\t\t\t\t           "A"', '']
+Table 31: header='Jornada 26 (29-03-2026)  Jornada 26            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: ['Jornada 26 (29-03-2026)  Jornada 26  \xa0\r         \t\t']
+    Row 1: ['ARAVACA C.F. - CEIBA\r \t\t\t           "B"', '2', '-', '2', 'A.D. UNION ADARVE\r \t\t\t\t\t\t           "D"', '']
+    Row 2: ['C.D. RUPE SAHAGUN\r \t\t\t           "A"', '4', '-', '0', 'COLEGIO EL PRADO\r \t\t\t\t\t\t           "A"', '']
+    Row 3: ['CLUB FUENTELARREYNA\r \t\t\t           "A"', '2', '-', '0', 'E.F.M.O. BOADILLA\r \t\t\t\t\t\t           "C"', '']
+    Row 4: ['C.D. MASRIVER\r \t\t\t           "A"', '1', '-', '0', 'ESCUELA FUTBOL BARRIO PILAR\r \t\t\t\t\t\t           "B"', '']
+    Row 5: ['CELTIC CASTILLA C.F.\r \t\t\t           "A"', '4', '-', '3', 'C.D.E. F.P.A. LAS ROZAS\r \t\t\t\t\t\t           "C"', '']
+    Row 6: ['A.D. CALA POZUELO\r \t\t\t           "B"', '4', '-', '1', 'S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t\t\t\t           "A"', '']
+    Row 7: ['C.D.E. MALASAÑA F.C.\r \t\t\t           "A"', '4', '-', '5', 'FUNDACION ADF\r \t\t\t\t\t\t           "A"', '']
+    Row 8: ['C.F. POZUELO DE ALARCON\r \t\t\t           "B"', '3', '-', '0', 'C.D. PUERTA DE MADRID\r \t\t\t\t\t\t           "B"', '']
+    Row 9: ['C.D. NUEVO BOADILLA\r \t\t\t           "B"', '8', '-', '0', 'S.A.D. COLEGIO VALDELUZ\r \t\t\t\t\t\t           "A"', '']
+Table 32: header='Jornada 27 (12-04-2026)  Jornada 27            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: ['Jornada 27 (12-04-2026)  Jornada 27  \xa0\r         \t\t']
+    Row 1: ['C.D.E. F.P.A. LAS ROZAS\r \t\t\t           "C"', '7', '-', '4', 'C.D. MASRIVER\r \t\t\t\t\t\t           "A"', '']
+    Row 2: ['A.D. UNION ADARVE\r \t\t\t           "D"', '4', '-', '0', 'C.D.E. MALASAÑA F.C.\r \t\t\t\t\t\t           "A"', '']
+    Row 3: ['ESCUELA FUTBOL BARRIO PILAR\r \t\t\t           "B"', '2', '-', '4', 'ARAVACA C.F. - CEIBA\r \t\t\t\t\t\t           "B"', '']
+    Row 4: ['S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '2', '-', '1', 'C.F. POZUELO DE ALARCON\r \t\t\t\t\t\t           "B"', '']
+    Row 5: ['S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t           "A"', '7', '-', '4', 'C.D. NUEVO BOADILLA\r \t\t\t\t\t\t           "B"', '']
+    Row 6: ['C.D. PUERTA DE MADRID\r \t\t\t           "B"', '2', '-', '3', 'CLUB FUENTELARREYNA\r \t\t\t\t\t\t           "A"', '']
+    Row 7: ['COLEGIO EL PRADO\r \t\t\t           "A"', '3', '-', '3', 'CELTIC CASTILLA C.F.\r \t\t\t\t\t\t           "A"', '']
+    Row 8: ['FUNDACION ADF\r \t\t\t           "A"', '7', '-', '1', 'A.D. CALA POZUELO\r \t\t\t\t\t\t           "B"', '']
+    Row 9: ['E.F.M.O. BOADILLA\r \t\t\t           "C"', '3', '-', '2', 'C.D. RUPE SAHAGUN\r \t\t\t\t\t\t           "A"', '']
+Table 33: header='Jornada 28 (19-04-2026)  Jornada 28            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: ['Jornada 28 (19-04-2026)  Jornada 28  \xa0\r         \t\t']
+    Row 1: ['ARAVACA C.F. - CEIBA\r \t\t\t           "B"', '2', '-', '3', 'C.D.E. F.P.A. LAS ROZAS\r \t\t\t\t\t\t           "C"', '']
+    Row 2: ['A.D. CALA POZUELO\r \t\t\t           "B"', '7', '-', '6', 'A.D. UNION ADARVE\r \t\t\t\t\t\t           "D"', '']
+    Row 3: ['C.D. MASRIVER\r \t\t\t           "A"', '1', '-', '3', 'COLEGIO EL PRADO\r \t\t\t\t\t\t           "A"', '']
+    Row 4: ['CELTIC CASTILLA C.F.\r \t\t\t           "A"', '6', '-', '3', 'C.D. RUPE SAHAGUN\r \t\t\t\t\t\t           "A"', '']
+    Row 5: ['C.F. POZUELO DE ALARCON\r \t\t\t           "B"', '2', '-', '2', 'S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t\t\t\t           "A"', '']
+    Row 6: ['C.D.E. MALASAÑA F.C.\r \t\t\t           "A"', '2', '-', '6', 'ESCUELA FUTBOL BARRIO PILAR\r \t\t\t\t\t\t           "B"', '']
+    Row 7: ['C.D. PUERTA DE MADRID\r \t\t\t           "B"', '1', '-', '4', 'E.F.M.O. BOADILLA\r \t\t\t\t\t\t           "C"', '']
+    Row 8: ['C.D. NUEVO BOADILLA\r \t\t\t           "B"', '0', '-', '3', 'FUNDACION ADF\r \t\t\t\t\t\t           "A"', '']
+    Row 9: ['CLUB FUENTELARREYNA\r \t\t\t           "A"', '8', '-', '4', 'S.A.D. COLEGIO VALDELUZ\r \t\t\t\t\t\t           "A"', '']
+Table 34: header='Jornada 29 (26-04-2026)  Jornada 29            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: ['Jornada 29 (26-04-2026)  Jornada 29  \xa0\r         \t\t']
+    Row 1: ['ESCUELA FUTBOL BARRIO PILAR\r \t\t\t           "B"', '3', '-', '0', 'A.D. CALA POZUELO\r \t\t\t\t\t\t           "B"', '']
+    Row 2: ['S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '2', '-', '3', 'C.D. PUERTA DE MADRID\r \t\t\t\t\t\t           "B"', '']
+    Row 3: ['C.D.E. F.P.A. LAS ROZAS\r \t\t\t           "C"', '2', '-', '1', 'C.D.E. MALASAÑA F.C.\r \t\t\t\t\t\t           "A"', '']
+    Row 4: ['E.F.M.O. BOADILLA\r \t\t\t           "C"', '2', '-', '0', 'CELTIC CASTILLA C.F.\r \t\t\t\t\t\t           "A"', '']
+    Row 5: ['S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t           "A"', '3', '-', '2', 'CLUB FUENTELARREYNA\r \t\t\t\t\t\t           "A"', '']
+    Row 6: ['A.D. UNION ADARVE\r \t\t\t           "D"', '2', '-', '2', 'C.D. NUEVO BOADILLA\r \t\t\t\t\t\t           "B"', '']
+    Row 7: ['COLEGIO EL PRADO\r \t\t\t           "A"', '3', '-', '2', 'ARAVACA C.F. - CEIBA\r \t\t\t\t\t\t           "B"', '']
+    Row 8: ['FUNDACION ADF\r \t\t\t           "A"', '2', '-', '1', 'C.F. POZUELO DE ALARCON\r \t\t\t\t\t\t           "B"', '']
+    Row 9: ['C.D. RUPE SAHAGUN\r \t\t\t           "A"', '3', '-', '0', 'C.D. MASRIVER\r \t\t\t\t\t\t           "A"', '']
+Table 35: header='Jornada 30 (10-05-2026)  Jornada 30            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: ['Jornada 30 (10-05-2026)  Jornada 30  \xa0\r         \t\t']
+    Row 1: ['S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '0', '-', '10', 'E.F.M.O. BOADILLA\r \t\t\t\t\t\t           "C"', '']
+    Row 2: ['C.D. NUEVO BOADILLA\r \t\t\t           "B"', '4', '-', '2', 'ESCUELA FUTBOL BARRIO PILAR\r \t\t\t\t\t\t           "B"', '']
+    Row 3: ['C.D. MASRIVER\r \t\t\t           "A"', '1', '-', '6', 'CELTIC CASTILLA C.F.\r \t\t\t\t\t\t           "A"', '']
+    Row 4: ['C.D.E. MALASAÑA F.C.\r \t\t\t           "A"', '3', '-', '4', 'COLEGIO EL PRADO\r \t\t\t\t\t\t           "A"', '']
+    Row 5: ['A.D. CALA POZUELO\r \t\t\t           "B"', '2', '-', '0', 'C.D.E. F.P.A. LAS ROZAS\r \t\t\t\t\t\t           "C"', '']
+    Row 6: ['ARAVACA C.F. - CEIBA\r \t\t\t           "B"', '1', '-', '0', 'C.D. RUPE SAHAGUN\r \t\t\t\t\t\t           "A"', '']
+    Row 7: ['C.D. PUERTA DE MADRID\r \t\t\t           "B"', '0', '-', '3', 'S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t\t\t\t           "A"', '']
+    Row 8: ['CLUB FUENTELARREYNA\r \t\t\t           "A"', '2', '-', '1', 'FUNDACION ADF\r \t\t\t\t\t\t           "A"', '']
+    Row 9: ['C.F. POZUELO DE ALARCON\r \t\t\t           "B"', '0', '-', '0', 'A.D. UNION ADARVE\r \t\t\t\t\t\t           "D"', '']
+Table 36: header='Jornada 31 (17-05-2026)  Jornada 31            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: ['Jornada 31 (17-05-2026)  Jornada 31  \xa0\r         \t\t']
+    Row 1: ['C.D.E. F.P.A. LAS ROZAS\r \t\t\t           "C"', '1', '-', '2', 'C.D. NUEVO BOADILLA\r \t\t\t\t\t\t           "B"', '']
+    Row 2: ['ESCUELA FUTBOL BARRIO PILAR\r \t\t\t           "B"', '3', '-', '2', 'C.F. POZUELO DE ALARCON\r \t\t\t\t\t\t           "B"', '']
+    Row 3: ['C.D. RUPE SAHAGUN\r \t\t\t           "A"', '4', '-', '2', 'C.D.E. MALASAÑA F.C.\r \t\t\t\t\t\t           "A"', '']
+    Row 4: ['A.D. UNION ADARVE\r \t\t\t           "D"', '2', '-', '1', 'CLUB FUENTELARREYNA\r \t\t\t\t\t\t           "A"', '']
+    Row 5: ['CELTIC CASTILLA C.F.\r \t\t\t           "A"', '2', '-', '4', 'ARAVACA C.F. - CEIBA\r \t\t\t\t\t\t           "B"', '']
+    Row 6: ['FUNDACION ADF\r \t\t\t           "A"', '3', '-', '1', 'C.D. PUERTA DE MADRID\r \t\t\t\t\t\t           "B"', '']
+    Row 7: ['COLEGIO EL PRADO\r \t\t\t           "A"', '4', '-', '2', 'A.D. CALA POZUELO\r \t\t\t\t\t\t           "B"', '']
+    Row 8: ['S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t           "A"', '5', '-', '0', 'S.A.D. COLEGIO VALDELUZ\r \t\t\t\t\t\t           "A"', '']
+    Row 9: ['E.F.M.O. BOADILLA\r \t\t\t           "C"', '4', '-', '2', 'C.D. MASRIVER\r \t\t\t\t\t\t           "A"', '']
+Table 37: header='Jornada 32 (24-05-2026)  Jornada 32            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: ['Jornada 32 (24-05-2026)  Jornada 32  \xa0\r         \t\t']
+    Row 1: ['ARAVACA C.F. - CEIBA\r \t\t\t           "B"', '6', '-', '0', 'C.D. MASRIVER\r \t\t\t\t\t\t           "A"', '']
+    Row 2: ['S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '1', '-', '12', 'FUNDACION ADF\r \t\t\t\t\t\t           "A"', '']
+    Row 3: ['CLUB FUENTELARREYNA\r \t\t\t           "A"', '3', '-', '0', 'ESCUELA FUTBOL BARRIO PILAR\r \t\t\t\t\t\t           "B"', '']
+    Row 4: ['S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t           "A"', '4', '-', '2', 'E.F.M.O. BOADILLA\r \t\t\t\t\t\t           "C"', '']
+    Row 5: ['A.D. CALA POZUELO\r \t\t\t           "B"', '3', '-', '3', 'C.D. RUPE SAHAGUN\r \t\t\t\t\t\t           "A"', '']
+    Row 6: ['C.D.E. MALASAÑA F.C.\r \t\t\t           "A"', '1', '-', '6', 'CELTIC CASTILLA C.F.\r \t\t\t\t\t\t           "A"', '']
+    Row 7: ['C.F. POZUELO DE ALARCON\r \t\t\t           "B"', '1', '-', '1', 'C.D.E. F.P.A. LAS ROZAS\r \t\t\t\t\t\t           "C"', '']
+    Row 8: ['C.D. NUEVO BOADILLA\r \t\t\t           "B"', '0', '-', '4', 'COLEGIO EL PRADO\r \t\t\t\t\t\t           "A"', '']
+    Row 9: ['C.D. PUERTA DE MADRID\r \t\t\t           "B"', '0', '-', '3', 'A.D. UNION ADARVE\r \t\t\t\t\t\t           "D"', '']
+Table 38: header='Jornada 33 (31-05-2026)  Jornada 33            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: ['Jornada 33 (31-05-2026)  Jornada 33  \xa0\r         \t\t']
+    Row 1: ['C.D.E. F.P.A. LAS ROZAS\r \t\t\t           "C"', '4', '-', '2', 'CLUB FUENTELARREYNA\r \t\t\t\t\t\t           "A"', '']
+    Row 2: ['ESCUELA FUTBOL BARRIO PILAR\r \t\t\t           "B"', '4', '-', '0', 'C.D. PUERTA DE MADRID\r \t\t\t\t\t\t           "B"', '']
+    Row 3: ['A.D. UNION ADARVE\r \t\t\t           "D"', '3', '-', '0', 'S.A.D. COLEGIO VALDELUZ\r \t\t\t\t\t\t           "A"', '']
+    Row 4: ['ARAVACA C.F. - CEIBA\r \t\t\t           "B"', '2', '-', '2', 'E.F.M.O. BOADILLA\r \t\t\t\t\t\t           "C"', '']
+    Row 5: ['CELTIC CASTILLA C.F.\r \t\t\t           "A"', '3', '-', '2', 'A.D. CALA POZUELO\r \t\t\t\t\t\t           "B"', '']
+    Row 6: ['FUNDACION ADF\r \t\t\t           "A"', '4', '-', '1', 'S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t\t\t\t           "A"', '']
+    Row 7: ['C.D. MASRIVER\r \t\t\t           "A"', '13', '-', '3', 'C.D.E. MALASAÑA F.C.\r \t\t\t\t\t\t           "A"', '']
+    Row 8: ['COLEGIO EL PRADO\r \t\t\t           "A"', '0', '-', '1', 'C.F. POZUELO DE ALARCON\r \t\t\t\t\t\t           "B"', '']
+    Row 9: ['C.D. RUPE SAHAGUN\r \t\t\t           "A"', '1', '-', '1', 'C.D. NUEVO BOADILLA\r \t\t\t\t\t\t           "B"', '']
+Table 39: header='Jornada 34 (07-06-2026)  Jornada 34            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: ['Jornada 34 (07-06-2026)  Jornada 34  \xa0\r         \t\t']
+    Row 1: ['CLUB FUENTELARREYNA\r \t\t\t           "A"', '4', '-', '2', 'COLEGIO EL PRADO\r \t\t\t\t\t\t           "A"', '']
+    Row 2: ['C.D. NUEVO BOADILLA\r \t\t\t           "B"', '1', '-', '4', 'CELTIC CASTILLA C.F.\r \t\t\t\t\t\t           "A"', '']
+    Row 3: ['S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t           "A"', '5', '-', '4', 'A.D. UNION ADARVE\r \t\t\t\t\t\t           "D"', '']
+    Row 4: ['C.F. POZUELO DE ALARCON\r \t\t\t           "B"', '4', '-', '2', 'C.D. RUPE SAHAGUN\r \t\t\t\t\t\t           "A"', '']
+    Row 5: ['A.D. CALA POZUELO\r \t\t\t           "B"', '2', '-', '3', 'C.D. MASRIVER\r \t\t\t\t\t\t           "A"', '']
+    Row 6: ['C.D.E. MALASAÑA F.C.\r \t\t\t           "A"', '3', '-', '7', 'ARAVACA C.F. - CEIBA\r \t\t\t\t\t\t           "B"', '']
+    Row 7: ['E.F.M.O. BOADILLA\r \t\t\t           "C"', '3', '-', '1', 'FUNDACION ADF\r \t\t\t\t\t\t           "A"', '']
+    Row 8: ['C.D. PUERTA DE MADRID\r \t\t\t           "B"', '1', '-', '5', 'C.D.E. F.P.A. LAS ROZAS\r \t\t\t\t\t\t           "C"', '']
+    Row 9: ['S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '2', '-', '2', 'ESCUELA FUTBOL BARRIO PILAR\r \t\t\t\t\t\t           "B"', '']

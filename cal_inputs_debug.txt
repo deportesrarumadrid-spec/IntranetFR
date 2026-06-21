@@ -1,0 +1,186 @@
+Found 0 select elements:
+
+Found 1 forms:
+Form action=None, method=get
+  Input name=cod_primaria, type=hidden, value=1000128
+  Input name=codgrupo, type=hidden, value=24037510
+  Input name=codcompeticion, type=hidden, value=24037502
+  Input name=codtemporada, type=hidden, value=21
+  Input name=codjornada, type=hidden, value=
+  Input name=cod_agrupacion, type=hidden, value=
+  Input name=CDetalle, type=hidden, value=
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=text, value=None
+  Input name=None, type=checkbox, value=1
+  Input name=None, type=checkbox, value=1
+
+Found 169 links on the page:
+  Link text='Consulta de Calendarios, Resultados y Clasificaciones' href='/nfg/NPcd/NFG_CmpJornada?cod_primaria=1000128'
+  Link text='Goleadores' href='NFG_CMP_Goleadores?cod_primaria=1000128&CodJornada=&codcompeticion=24037502&codtemporada=21&codgrupo=24037510'
+  Link text='Porteros' href='NFG_CMP_Porteros?cod_primaria=1000128&CodJornada=&codcompeticion=24037502&codtemporada=21&codgrupo=24037510'
+  Link text='' href='javascript:GrabarJornada(1);'
+  Link text='' href='javascript:CancelarJornada(1);'
+  Link text='' href='javascript:GrabarJornada(2);'
+  Link text='' href='javascript:CancelarJornada(2);'
+  Link text='' href='javascript:GrabarJornada(3);'
+  Link text='' href='javascript:CancelarJornada(3);'
+  Link text='' href='javascript:GrabarJornada(4);'
+  Link text='' href='javascript:CancelarJornada(4);'
+  Link text='' href='javascript:GrabarJornada(5);'
+  Link text='' href='javascript:CancelarJornada(5);'
+  Link text='' href='javascript:GrabarJornada(6);'
+  Link text='' href='javascript:CancelarJornada(6);'
+  Link text='' href='javascript:GrabarJornada(7);'
+  Link text='' href='javascript:CancelarJornada(7);'
+  Link text='' href='javascript:GrabarJornada(8);'
+  Link text='' href='javascript:CancelarJornada(8);'
+  Link text='' href='javascript:GrabarJornada(9);'
+  Link text='' href='javascript:CancelarJornada(9);'
+  Link text='' href='javascript:GrabarJornada(10);'
+  Link text='' href='javascript:CancelarJornada(10);'
+  Link text='' href='javascript:GrabarJornada(11);'
+  Link text='' href='javascript:CancelarJornada(11);'
+  Link text='' href='javascript:GrabarJornada(12);'
+  Link text='' href='javascript:CancelarJornada(12);'
+  Link text='' href='javascript:GrabarJornada(13);'
+  Link text='' href='javascript:CancelarJornada(13);'
+  Link text='' href='javascript:GrabarJornada(14);'
+  Link text='' href='javascript:CancelarJornada(14);'
+  Link text='' href='javascript:GrabarJornada(15);'
+  Link text='' href='javascript:CancelarJornada(15);'
+  Link text='' href='javascript:GrabarJornada(16);'
+  Link text='' href='javascript:CancelarJornada(16);'
+  Link text='' href='javascript:GrabarJornada(17);'
+  Link text='' href='javascript:CancelarJornada(17);'
+  Link text='' href='javascript:GrabarJornada(18);'
+  Link text='' href='javascript:CancelarJornada(18);'
+  Link text='' href='javascript:GrabarJornada(19);'
+  Link text='' href='javascript:CancelarJornada(19);'
+  Link text='' href='javascript:GrabarJornada(20);'
+  Link text='' href='javascript:CancelarJornada(20);'
+  Link text='' href='javascript:GrabarJornada(21);'
+  Link text='' href='javascript:CancelarJornada(21);'
+  Link text='' href='javascript:GrabarJornada(22);'
+  Link text='' href='javascript:CancelarJornada(22);'
+  Link text='' href='javascript:GrabarJornada(23);'
+  Link text='' href='javascript:CancelarJornada(23);'
+  Link text='' href='javascript:GrabarJornada(24);'
+  Link text='' href='javascript:CancelarJornada(24);'
+  Link text='' href='javascript:GrabarJornada(25);'
+  Link text='' href='javascript:CancelarJornada(25);'
+  Link text='' href='javascript:GrabarJornada(26);'
+  Link text='' href='javascript:CancelarJornada(26);'
+  Link text='' href='javascript:GrabarJornada(27);'
+  Link text='' href='javascript:CancelarJornada(27);'
+  Link text='' href='javascript:GrabarJornada(28);'
+  Link text='' href='javascript:CancelarJornada(28);'
+  Link text='' href='javascript:GrabarJornada(29);'
+  Link text='' href='javascript:CancelarJornada(29);'
+  Link text='' href='javascript:GrabarJornada(30);'
+  Link text='' href='javascript:CancelarJornada(30);'
+  Link text='' href='javascript:GrabarJornada(31);'
+  Link text='' href='javascript:CancelarJornada(31);'
+  Link text='' href='javascript:GrabarJornada(32);'
+  Link text='' href='javascript:CancelarJornada(32);'
+  Link text='' href='javascript:GrabarJornada(33);'
+  Link text='' href='javascript:CancelarJornada(33);'
+  Link text='' href='javascript:GrabarJornada(34);'
+  Link text='' href='javascript:CancelarJornada(34);'

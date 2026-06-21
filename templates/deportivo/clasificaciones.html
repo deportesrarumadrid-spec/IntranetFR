@@ -22,9 +22,18 @@
         padding-bottom: 40px;
     }
 
-    /* Banner de Sincronización / Demo - OCULTO */
+    /* Banner de Sincronización / Demo - VISIBLE */
     .sync-status-bar {
-        display: none;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--glass-bg);
+        border: 1px solid var(--red-border);
+        border-radius: var(--border-radius);
+        padding: 15px 25px;
+        box-shadow: var(--glass-shadow);
+        backdrop-filter: blur(10px);
+        margin-bottom: 20px;
     }
 
     .status-info {
@@ -538,6 +547,7 @@
         font-weight: 900;
         color: white;
         text-transform: uppercase;
+        margin: 0 2px;
     }
 
     .outcome-badge.G { background-color: var(--green-state); box-shadow: 0 2px 5px rgba(40,167,69,0.3); }
@@ -1006,7 +1016,11 @@
 
     function getShieldHtml(teamName, shieldUrl, isFuentelarreyna) {
         const isFuente = isFuentelarreyna || teamName.toUpperCase().includes("FUENTELARREYNA");
-        const src = isFuente ? '/static/ESCUDO SIN FONDO.png' : (shieldUrl || '');
+        let src = isFuente ? '/static/ESCUDO SIN FONDO.png' : (shieldUrl || '');
+        
+        if (src && src.startsWith('http')) {
+            src = `/api/shield_proxy?url=${encodeURIComponent(src)}`;
+        }
         
         if (src) {
             return `
@@ -1103,7 +1117,10 @@
             const esFuentelarreyna = r.equipo.toUpperCase().includes("FUENTELARREYNA");
             
             const isFuente = esFuentelarreyna;
-            const shieldSrc = isFuente ? '/static/ESCUDO SIN FONDO.png' : (r.shield || '');
+            let shieldSrc = isFuente ? '/static/ESCUDO SIN FONDO.png' : (r.shield || '');
+            if (shieldSrc && shieldSrc.startsWith('http')) {
+                shieldSrc = `/api/shield_proxy?url=${encodeURIComponent(shieldSrc)}`;
+            }
             const shieldTag = shieldSrc ? `<img src="${shieldSrc}" class="table-shield" onerror="this.style.display='none';">` : '';
             const cleanTeamName = r.equipo.replace(/['"“”]/g, '').trim().toUpperCase();
             
@@ -1121,6 +1138,9 @@
                     <td class="col-num">${r.perdidos}</td>
                     <td class="col-num">${r.goles_favor}</td>
                     <td class="col-num">${r.goles_contra}</td>
+                    <td class="col-num" style="text-align: center; white-space: nowrap;">
+                        ${(r.ultimos || []).map(u => `<span class="outcome-badge ${u}">${u}</span>`).join('')}
+                    </td>
                 </tr>
             `;
         });
@@ -1143,6 +1163,7 @@
                                 <th class="col-num">PP</th>
                                 <th class="col-num">GF</th>
                                 <th class="col-num">GC</th>
+                                <th class="col-num" style="width: 150px; text-align: center;">Últimos</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1203,10 +1224,14 @@
         // Siempre mostrar el SVG de iniciales inmediatamente (fiable)
         const svgSrc = generateInitialShield(teamName || 'CF');
         
-        // Si hay URL de escudo real, intentar cargarla (con fallback al SVG)
-        if (shieldUrl && !shieldUrl.startsWith('http')) {
-            // URL local - usarla directamente
-            return `<img src="${shieldUrl}" alt="Escudo" class="timeline-shield-img"
+        let finalSrc = shieldUrl || '';
+        if (finalSrc && finalSrc.startsWith('http')) {
+            finalSrc = `/api/shield_proxy?url=${encodeURIComponent(finalSrc)}`;
+        }
+        
+        if (finalSrc) {
+            // URL local o proxy - usarla directamente
+            return `<img src="${finalSrc}" alt="Escudo" class="timeline-shield-img"
                         onerror="this.onerror=null; this.src='${svgSrc}'">`;
         }
         
@@ -1307,9 +1332,6 @@
             headerRow += `
                 <td class="timeline-rival-cell">
                     <div class="rival-header-content">
-                        <div class="rival-shield-container">
-                            ${shieldHtml}
-                        </div>
                         <div class="rival-text">${rivalInfo.clean}</div>
                     </div>
                 </td>

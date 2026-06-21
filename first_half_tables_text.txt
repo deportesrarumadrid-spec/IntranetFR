@@ -1,0 +1,73 @@
+=== Table 3: Jornada 1 (14-09-2025)  Jornada 1    	        			 Cambiar fechas de partidos 						  Respetar día juego equipo local ===
+  Row 0: ['Clasificación\xa0\xa0\xa0\r \t\t\t\r \t\t\t\r \t\t\t\r \t\t\t\t\r \t\t\t\t\t\r \t\t\t\t\t\t\xa0 Goleadores\xa0\xa0\xa0\xa0\r \t\t\t\t\t\r \t\t\t\t\r \t\t\t\r \t\t\t\r \t\t\t\t\xa0 Porteros\xa0\xa0\xa0\xa0\r \t\t\t\r \t\t\t\r \t\t\t\t\r \t\t\t\t\t\xa0 Tabla Cruzada\xa0\xa0\xa0\xa0\r \t\t\t\t\r \t\t\t\r \t\t  \xa0 Versión Extendida']
+  Row 1: ['Descargar Word \xa0\xa0\r \t\tDescargar Excel']
+  Row 2: ['Primera Vuelta          \r \t        \tJornada 1 (14-09-2025)  Jornada 1  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local\r \t        \t\t\t\xa0\xa0\r \t        \t\t\t\xa0      \r \t\t\t\t   \r \t       \t\t    \r \t                S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"\xa0\r \t\t\t        \r                     \r \t\t\t       \r \t\t\t\t  \r \t\t\t\t\t\r \t\t\t\t\t\t\r \t\t\t\t\t\t\t1\r \t\t\t\t\t\t\t\r \t\t\t\t\t\t\t\r \t\t\t\t\t\r \t\t\t\t\t\r \t\t\t      \t   - \r \t\t\t\t  \r \t\t\t      \t\r \t\t\t\t\t\t\r \t\t\t\t\t\t\t4\r \t\t\t\t\t\t\t\r \t\t\t\t\t\t\t\r \t\t\t\t\t\r \t\t\t\t\t\r \t\t\t\t\t\r \t\t\t      \t    \r                     \r \t\t\t\t\t\t        C.D.E. F.P.A. LAS ROZAS\r \t\t\t\t\t\t           "C"\r \t\t\t\t\t\t        \r                     \r \t\t\t       \r \t\t\t\t\t\t\t\r \t\t\t       \t\t\xa0\r \t\t\t\t\t\t\t\r \t\t\t\t\t\t\t    \r \t\t\t\t   \r \t       \t\t    \r \t                A.D. CALA POZUELO\r \t\t\t           "B"\xa0\r \t\t\t        \r                     \r \t\t\t       \r \t\t\t\t  \r \t\t\t\t\t\r \t\t\t\t\t\t\r \t\t\t\t\t\t\t0\r \t\t\t\t\t\t\t\r \t\t\t\t\t\t\t\r \t\t\t\t\t\r \t\t\t\t\t\r \t\t\t      \t   - \r \t\t\t\t  \r \t\t\t      \t\r \t\t\t\t\t\t\r \t\t\t\t\t\t\t3', 'Primera Vuelta', 'Jornada 1 (14-09-2025)  Jornada 1  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local\r \t        \t\t\t\xa0\xa0\r \t        \t\t\t\xa0      \r \t\t\t\t   \r \t       \t\t    \r \t                S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"\xa0\r \t\t\t        \r                     \r \t\t\t       \r \t\t\t\t  \r \t\t\t\t\t\r \t\t\t\t\t\t\r \t\t\t\t\t\t\t1\r \t\t\t\t\t\t\t\r \t\t\t\t\t\t\t\r \t\t\t\t\t\r \t\t\t\t\t\r \t\t\t      \t   - \r \t\t\t\t  \r \t\t\t      \t\r \t\t\t\t\t\t\r \t\t\t\t\t\t\t4', 'Jornada 1 (14-09-2025)  Jornada 1  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local', 'S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '1', '-', '4', 'C.D.E. F.P.A. LAS ROZAS\r \t\t\t\t\t\t           "C"', '', 'A.D. CALA POZUELO\r \t\t\t           "B"', '0', '-', '3', 'ARAVACA C.F. - CEIBA\r \t\t\t\t\t\t           "B"', '']
+  Row 3: ['Primera Vuelta']
+  Row 4: ['Jornada 1 (14-09-2025)  Jornada 1  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local\r \t        \t\t\t\xa0\xa0\r \t        \t\t\t\xa0      \r \t\t\t\t   \r \t       \t\t    \r \t                S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"\xa0\r \t\t\t        \r                     \r \t\t\t       \r \t\t\t\t  \r \t\t\t\t\t\r \t\t\t\t\t\t\r \t\t\t\t\t\t\t1\r \t\t\t\t\t\t\t\r \t\t\t\t\t\t\t\r \t\t\t\t\t\r \t\t\t\t\t\r \t\t\t      \t   - \r \t\t\t\t  \r \t\t\t      \t\r \t\t\t\t\t\t\r \t\t\t\t\t\t\t4', 'Jornada 1 (14-09-2025)  Jornada 1  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local', 'S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '1', '-', '4', 'C.D.E. F.P.A. LAS ROZAS\r \t\t\t\t\t\t           "C"', '']
+  Row 5: ['Jornada 1 (14-09-2025)  Jornada 1  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local']
+  Row 6: ['S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '1', '-', '4']
+  Row 7: ['A.D. CALA POZUELO\r \t\t\t           "B"', '0', '-', '3']
+  Row 8: ['S.A.D. OCIO Y DEPORTE CANAL\r \t\t\t           "A"', '1', '-', '1', 'ESCUELA FUTBOL BARRIO PILAR\r \t\t\t\t\t\t           "B"', '']
+  Row 9: ['E.F.M.O. BOADILLA\r \t\t\t           "C"', '3', '-', '0', 'C.D.E. MALASAÑA F.C.\r \t\t\t\t\t\t           "A"', '']
+  Row 10: ['C.D. NUEVO BOADILLA\r \t\t\t           "B"', '4', '-', '1', 'C.D. MASRIVER\r \t\t\t\t\t\t           "A"', '']
+  Row 11: ['FUNDACION ADF\r \t\t\t           "A"', '2', '-', '2', 'A.D. UNION ADARVE\r \t\t\t\t\t\t           "D"', '']
+  Row 12: ['C.F. POZUELO DE ALARCON\r \t\t\t           "B"', '0', '-', '1', 'CELTIC CASTILLA C.F.\r \t\t\t\t\t\t           "A"', '']
+  Row 13: ['CLUB FUENTELARREYNA\r \t\t\t           "A"', '8', '-', '0', 'C.D. RUPE SAHAGUN\r \t\t\t\t\t\t           "A"', '']
+  Row 14: ['C.D. PUERTA DE MADRID\r \t\t\t           "B"', '2', '-', '3', 'COLEGIO EL PRADO\r \t\t\t\t\t\t           "A"', '']
+=== Table 4: Jornada 1 (14-09-2025)  Jornada 1    	        			 Cambiar fechas de partidos 						  Respetar día juego equipo local ===
+  Row 0: ['Primera Vuelta']
+  Row 1: ['Jornada 1 (14-09-2025)  Jornada 1  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local\r \t        \t\t\t\xa0\xa0\r \t        \t\t\t\xa0      \r \t\t\t\t   \r \t       \t\t    \r \t                S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"\xa0\r \t\t\t        \r                     \r \t\t\t       \r \t\t\t\t  \r \t\t\t\t\t\r \t\t\t\t\t\t\r \t\t\t\t\t\t\t1\r \t\t\t\t\t\t\t\r \t\t\t\t\t\t\t\r \t\t\t\t\t\r \t\t\t\t\t\r \t\t\t      \t   - \r \t\t\t\t  \r \t\t\t      \t\r \t\t\t\t\t\t\r \t\t\t\t\t\t\t4', 'Jornada 1 (14-09-2025)  Jornada 1  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local', 'S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '1', '-', '4', 'C.D.E. F.P.A. LAS ROZAS\r \t\t\t\t\t\t           "C"', '']
+  Row 2: ['Jornada 1 (14-09-2025)  Jornada 1  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local']
+  Row 3: ['S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '1', '-', '4']
+  Row 4: ['A.D. CALA POZUELO\r \t\t\t           "B"', '0', '-', '3']
+=== Table 5: Jornada 1 (14-09-2025)  Jornada 1    	        			 Cambiar fechas de partidos 						  Respetar día juego equipo local ===
+  Row 0: ['Jornada 1 (14-09-2025)  Jornada 1  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local']
+  Row 1: ['S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '1', '-', '4']
+=== Table 6: Jornada 2 (21-09-2025)  Jornada 2    	        			 Cambiar fechas de partidos 						  Respetar día juego equipo local ===
+  Row 0: ['Jornada 2 (21-09-2025)  Jornada 2  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local']
+  Row 1: ['ESCUELA FUTBOL BARRIO PILAR\r \t\t\t           "B"', '2', '-', '5']
+=== Table 7: Jornada 3 (28-09-2025)  Jornada 3    	        			 Cambiar fechas de partidos 						  Respetar día juego equipo local ===
+  Row 0: ['Jornada 3 (28-09-2025)  Jornada 3  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local']
+  Row 1: ['S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '3', '-', '2']
+=== Table 8: Jornada 4 (05-10-2025)  Jornada 4    	        			 Cambiar fechas de partidos 						  Respetar día juego equipo local ===
+  Row 0: ['Jornada 4 (05-10-2025)  Jornada 4  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local']
+  Row 1: ['ESCUELA FUTBOL BARRIO PILAR\r \t\t\t           "B"', '2', '-', '1']
+=== Table 9: Jornada 5 (12-10-2025)  Jornada 5    	        			 Cambiar fechas de partidos 						  Respetar día juego equipo local ===
+  Row 0: ['Jornada 5 (12-10-2025)  Jornada 5  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local']
+  Row 1: ['ESCUELA FUTBOL BARRIO PILAR\r \t\t\t           "B"', '0', '-', '2']
+=== Table 10: Jornada 6 (19-10-2025)  Jornada 6    	        			 Cambiar fechas de partidos 						  Respetar día juego equipo local ===
+  Row 0: ['Jornada 6 (19-10-2025)  Jornada 6  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local']
+  Row 1: ['ARAVACA C.F. - CEIBA\r \t\t\t           "B"', '3', '-', '0']
+=== Table 11: Jornada 7 (26-10-2025)  Jornada 7    	        			 Cambiar fechas de partidos 						  Respetar día juego equipo local ===
+  Row 0: ['Jornada 7 (26-10-2025)  Jornada 7  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local']
+  Row 1: ['ESCUELA FUTBOL BARRIO PILAR\r \t\t\t           "B"', '4', '-', '1']
+=== Table 12: Jornada 8 (02-11-2025)  Jornada 8    	        			 Cambiar fechas de partidos 						  Respetar día juego equipo local ===
+  Row 0: ['Jornada 8 (02-11-2025)  Jornada 8  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local']
+  Row 1: ['C.D.E. MALASAÑA F.C.\r \t\t\t           "A"', '3', '-', '3']
+=== Table 13: Jornada 9 (09-11-2025)  Jornada 9    	        			 Cambiar fechas de partidos 						  Respetar día juego equipo local ===
+  Row 0: ['Jornada 9 (09-11-2025)  Jornada 9  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local']
+  Row 1: ['C.D.E. F.P.A. LAS ROZAS\r \t\t\t           "C"', '2', '-', '2']
+=== Table 14: Jornada 10 (16-11-2025)  Jornada 10    	        			 Cambiar fechas de partidos 						  Respetar día juego equipo local ===
+  Row 0: ['Jornada 10 (16-11-2025)  Jornada 10  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local']
+  Row 1: ['C.D. MASRIVER\r \t\t\t           "A"', '4', '-', '5']
+=== Table 15: Jornada 11 (23-11-2025)  Jornada 11    	        			 Cambiar fechas de partidos 						  Respetar día juego equipo local ===
+  Row 0: ['Jornada 11 (23-11-2025)  Jornada 11  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local']
+  Row 1: ['C.D.E. F.P.A. LAS ROZAS\r \t\t\t           "C"', '3', '-', '1']
+=== Table 16: Jornada 12 (30-11-2025)  Jornada 12    	        			 Cambiar fechas de partidos 						  Respetar día juego equipo local ===
+  Row 0: ['Jornada 12 (30-11-2025)  Jornada 12  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local']
+  Row 1: ['A.D. CALA POZUELO\r \t\t\t           "B"', '0', '-', '2']
+=== Table 17: Jornada 13 (14-12-2025)  Jornada 13    	        			 Cambiar fechas de partidos 						  Respetar día juego equipo local ===
+  Row 0: ['Jornada 13 (14-12-2025)  Jornada 13  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local']
+  Row 1: ['C.D.E. F.P.A. LAS ROZAS\r \t\t\t           "C"', '7', '-', '0']
+=== Table 18: Jornada 14 (21-12-2025)  Jornada 14    	        			 Cambiar fechas de partidos 						  Respetar día juego equipo local ===
+  Row 0: ['Jornada 14 (21-12-2025)  Jornada 14  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local']
+  Row 1: ['S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '1', '-', '6']
+=== Table 19: Jornada 15 (11-01-2026)  Jornada 15    	        			 Cambiar fechas de partidos 						  Respetar día juego equipo local ===
+  Row 0: ['Jornada 15 (11-01-2026)  Jornada 15  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local']
+  Row 1: ['C.D.E. F.P.A. LAS ROZAS\r \t\t\t           "C"', '4', '-', '0']
+=== Table 20: Jornada 16 (18-01-2026)  Jornada 16    	        			 Cambiar fechas de partidos 						  Respetar día juego equipo local ===
+  Row 0: ['Jornada 16 (18-01-2026)  Jornada 16  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local']
+  Row 1: ['S.A.D. COLEGIO VALDELUZ\r \t\t\t           "A"', '1', '-', '1']
+=== Table 21: Jornada 17 (25-01-2026)  Jornada 17    	        			 Cambiar fechas de partidos 						  Respetar día juego equipo local ===
+  Row 0: ['Jornada 17 (25-01-2026)  Jornada 17  \xa0\r \t        \t\t\t\xa0Cambiar fechas de partidos\r \t\t\t\t\t\t \xa0Respetar día juego equipo local']
+  Row 1: ['ESCUELA FUTBOL BARRIO PILAR\r \t\t\t           "B"', '1', '-', '1']

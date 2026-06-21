@@ -4,6 +4,7 @@ import requests
 import re
 from bs4 import BeautifulSoup
 from datetime import datetime
+from urllib.parse import urljoin
 
 # Archivo de cache
 CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'rffm_cache.json')
@@ -24,6 +25,9 @@ def download_shield(url, club_id, auth_session=None):
     Usa auth_session si se proporciona (para intranet autenticada)."""
     if not url or not club_id:
         return ''
+        
+    if url.startswith('/static/') or url.startswith('static/'):
+        return url
     
     local_filename = f"club_{club_id}.png"
     local_path = os.path.join(SHIELDS_DIR, local_filename)
@@ -57,6 +61,17 @@ def get_local_shield_url(club_id):
         return f"/static/shields/club_{club_id}.png"
     return ''
 
+def extract_shield_id(url):
+    if not url:
+        return ""
+    m = re.search(r'club_(\d+)', url, re.I)
+    if m:
+        return m.group(1)
+    # Extraer el nombre del archivo sin extensión y limpiarlo
+    m_fn = re.search(r'/([^/]+)\.[a-zA-Z0-9]{3,4}$', url)
+    if m_fn:
+        return re.sub(r'[^a-zA-Z0-9_-]', '', m_fn.group(1))
+    return ""
 
 def test_login(username, password):
     """Prueba si las credenciales son válidas"""
@@ -94,10 +109,10 @@ def detect_categoria_y_letra(comp_name):
         cat = "ALEVIN F7"
     elif "ALEVIN" in name or "ALEVÍN" in name:
         cat = "ALEVIN"
-    elif "BENJAMIN" in name or "BENJAMÍN" in name:
-        cat = "BENJAMIN"
     elif "PREBENJAMIN" in name or "PREBENJAMÍN" in name:
         cat = "PREBENJAMIN"
+    elif "BENJAMIN" in name or "BENJAMÍN" in name:
+        cat = "BENJAMIN"
     else:
         cat = "OTROS"
         
@@ -331,7 +346,7 @@ def sync_rffm(username, password):
             puntos = cols[1].text.strip()
             posicion = cols[2].text.strip()
             
-            # Buscar el enlace de "Ult.Jornada" y extraer parámetros
+            # Buscar el enlace de "Ult.Jornada" y extraer parámetros de todos los enlaces de la fila
             link_jornada = None
             codgrupo = None
             codequipo = None
@@ -339,15 +354,20 @@ def sync_rffm(username, password):
             links = r.find_all('a')
             for a in links:
                 href = a.get('href', '')
-                if 'LstJornada' in href or 'Jornada' in href or 'cod_grupo' in href or 'codgrupo' in href:
+                m_cg = re.search(r'cod_?grupo=(\d+)', href, re.I)
+                m_ce = re.search(r'(?:codequipo|codigo_equipo)=(\d+)', href, re.I)
+                m_cp = re.search(r'cod_primaria=(\d+)', href, re.I)
+                if m_cg and not codgrupo:
+                    codgrupo = m_cg.group(1)
+                if m_ce and not codequipo:
+                    codequipo = m_ce.group(1)
+                if m_cp and cod_primaria == '1000131':
+                    cod_primaria = m_cp.group(1)
+            
+            for a in links:
+                href = a.get('href', '')
+                if 'LstJornada' in href or 'Jornada' in href or 'cod_grupo' in href or 'codgrupo' in href or 'CmpJornada' in href:
                     link_jornada = href
-                    # Extraer parámetros de la URL
-                    m_cg = re.search(r'codgrupo=(\d+)', href)
-                    m_ce = re.search(r'codequipo=(\d+)', href)
-                    m_cp = re.search(r'cod_primaria=(\d+)', href)
-                    if m_cg: codgrupo = m_cg.group(1)
-                    if m_ce: codequipo = m_ce.group(1)
-                    if m_cp: cod_primaria = m_cp.group(1)
                     break
                     
             if not link_jornada:
@@ -364,8 +384,7 @@ def sync_rffm(username, password):
                 continue
                 
             # Resolver URL absoluta del enlace
-            if not link_jornada.startswith('http'):
-                link_jornada = "https://intranet.ffmadrid.es" + link_jornada
+            link_jornada = urljoin(url_portada, link_jornada)
                 
             # 4. Navegar al detalle de la jornada
             res_jornada = session.get(link_jornada)
@@ -394,15 +413,36 @@ def sync_rffm(username, password):
                     break
                     
             jornada_title = "Última Jornada"
-            title_el = soup_jornada.find(class_=re.compile("titulo|header|jornada", re.I))
-            if title_el:
-                jornada_title = title_el.text.strip()
+            if tabla_partidos:
+                th_el = tabla_partidos.find('th')
+                if th_el:
+                    jornada_title = th_el.text.strip()
+            else:
+                title_el = soup_jornada.find(class_=re.compile("titulo|header|jornada", re.I))
+                if title_el:
+                    jornada_title = title_el.text.strip()
+                    if len(jornada_title) > 50:
+                        jornada_title = "Última Jornada"
                 
             rows_partidos = []
             if tabla_partidos:
                 rows_partidos = tabla_partidos.find_all('tr')
             else:
                 rows_partidos = soup_jornada.find_all('tr')
+
+            # Recopilar todos los escudos de los equipos del grupo desde la jornada
+            group_shields = {}
+            for pr in rows_partidos:
+                cells = pr.find_all('td')
+                if len(cells) >= 3:
+                    local_name = cells[0].text.strip().replace('"', '').replace("'", '').strip().upper()
+                    visit_name = cells[2].text.strip().replace('"', '').replace("'", '').strip().upper()
+                    img_loc = cells[0].find('img')
+                    img_vis = cells[2].find('img')
+                    if img_loc and img_loc.get('src'):
+                        group_shields[local_name] = urljoin(link_jornada, img_loc.get('src'))
+                    if img_vis and img_vis.get('src'):
+                        group_shields[visit_name] = urljoin(link_jornada, img_vis.get('src'))
                 
             for pr in rows_partidos:
                 cells = pr.find_all('td')
@@ -410,42 +450,64 @@ def sync_rffm(username, password):
                     text_row = pr.text.upper()
                     if "FUENTELARREYNA" in text_row:
                         eq_local = cells[0].text.strip()
-                        resultado = cells[1].text.strip()
+                        resultado_raw = cells[1].text.strip()
                         eq_visitante = cells[2].text.strip()
                         
-                        # Extraer escudos del partido
+                        # Extraer escudos del partido y descargarlos localmente
                         img_loc = cells[0].find('img')
                         img_vis = cells[2].find('img')
                         shield_loc = ""
                         shield_vis = ""
                         if img_loc:
                             shield_loc = img_loc.get('src', '')
-                            if shield_loc and not shield_loc.startswith('http'):
-                                shield_loc = "https://intranet.ffmadrid.es" + shield_loc
+                            if shield_loc:
+                                shield_loc = urljoin(link_jornada, shield_loc)
+                                cid = extract_shield_id(shield_loc)
+                                if cid:
+                                    local_sh = download_shield(shield_loc, cid, auth_session=session)
+                                    if local_sh:
+                                        shield_loc = local_sh
                         if img_vis:
                             shield_vis = img_vis.get('src', '')
-                            if shield_vis and not shield_vis.startswith('http'):
-                                shield_vis = "https://intranet.ffmadrid.es" + shield_vis
+                            if shield_vis:
+                                shield_vis = urljoin(link_jornada, shield_vis)
+                                cid = extract_shield_id(shield_vis)
+                                if cid:
+                                    local_sh = download_shield(shield_vis, cid, auth_session=session)
+                                    if local_sh:
+                                        shield_vis = local_sh
                         
                         goles_fav, goles_contra = 0, 0
                         es_local = "FUENTELARREYNA" in eq_local.upper()
                         contrario = eq_visitante if es_local else eq_local
                         
                         # Parsear resultado
-                        match_res = re.search(r'(\d+)\s*[-–]\s*(\d+)', resultado)
+                        clean_resultado = "-"
+                        match_res = re.search(r'(\d+)\s*[-–]\s*(\d+)', resultado_raw)
                         if match_res:
                             g_loc = int(match_res.group(1))
                             g_vis = int(match_res.group(2))
                             goles_fav = g_loc if es_local else g_vis
                             goles_contra = g_vis if es_local else g_loc
+                            clean_resultado = f"{g_loc} - {g_vis}"
                             
                         # Buscar fecha si está en la celda
                         fecha_match = "Finalizado"
-                        for cell in cells:
-                            date_match = re.search(r'\d{2}/\d{2}/\d{4}', cell.text)
-                            if date_match:
-                                fecha_match = cell.text.strip()
-                                break
+                        m_date = re.search(r'\d{2}[-/]\d{2}[-/]\d{4}', resultado_raw)
+                        if m_date:
+                            fecha_match = m_date.group(0)
+                            m_time = re.search(r'\d{2}:\d{2}', resultado_raw)
+                            if m_time:
+                                fecha_match += " " + m_time.group(0)
+                        else:
+                            for cell in cells:
+                                date_match = re.search(r'\d{2}[-/]\d{2}[-/]\d{4}', cell.text)
+                                if date_match:
+                                    fecha_match = date_match.group(0)
+                                    time_match = re.search(r'\d{2}:\d{2}', cell.text)
+                                    if time_match:
+                                        fecha_match += " " + time_match.group(0)
+                                    break
                                 
                         ultimo_partido = {
                             "jornada": jornada_title,
@@ -454,7 +516,7 @@ def sync_rffm(username, password):
                             "visitante": eq_visitante,
                             "local_shield": shield_loc,
                             "visitante_shield": shield_vis,
-                            "resultado": resultado,
+                            "resultado": clean_resultado,
                             "contrario": contrario,
                             "goles_favor": goles_fav,
                             "goles_contra": goles_contra,
@@ -472,8 +534,7 @@ def sync_rffm(username, password):
                     
             clasif_data = []
             if link_clasif:
-                if not link_clasif.startswith('http'):
-                    link_clasif = "https://intranet.ffmadrid.es" + link_clasif
+                link_clasif = urljoin(link_jornada, link_clasif)
                     
                 res_clasif = session.get(link_clasif)
                 soup_clasif = BeautifulSoup(res_clasif.text, 'html.parser')
@@ -482,33 +543,79 @@ def sync_rffm(username, password):
                 tabla_cl = None
                 for t in soup_clasif.find_all('table'):
                     headers = [th.text.upper() for th in t.find_all('th')]
-                    if any("PTS" in h or "PUNTOS" in h or "JUG" in h or "PARTIDOS" in h for h in headers):
+                    # Evitar la tabla resumida (casa/fuera) buscando palabras como CASA o FUERA
+                    if any("CASA" in h or "FUERA" in h for h in headers):
+                        continue
+                    if any("PTS" in h or "PUNTOS" in h or "JUG" in h or "PARTIDOS" in h or "PTS/PJ" in h for h in headers):
                         tabla_cl = t
                         break
                         
                 if tabla_cl:
-                    rows_cl = tabla_cl.find_all('tr')[1:]
+                    # Detectar si hay columna de Pts/PJ analizando los encabezados
+                    headers_cl_texts = [th.text.upper() for th in tabla_cl.find_all('th')]
+                    has_pts_pj = any("PTS/PJ" in h or "PTS./PJ" in h or "PTS / PJ" in h for h in headers_cl_texts)
+                    
+                    # Ajustar índices según presencia de Pts/PJ
+                    if has_pts_pj:
+                        pts_idx = 4
+                        j_idx = 5
+                        g_idx = 6
+                        e_idx = 7
+                        p_idx = 8
+                        gf_idx = 9
+                        gc_idx = 10
+                        ultimos_idx = 11
+                    else:
+                        pts_idx = 3
+                        j_idx = 4
+                        g_idx = 5
+                        e_idx = 6
+                        p_idx = 7
+                        gf_idx = 8
+                        gc_idx = 9
+                        ultimos_idx = 10
+                        
+                    rows_cl = tabla_cl.find_all('tr')
                     for r_cl in rows_cl:
                         cells_cl = r_cl.find_all('td')
-                        if len(cells_cl) >= 4:
-                            pos = cells_cl[0].text.strip()
-                            team = cells_cl[1].text.strip()
-                            pts = cells_cl[2].text.strip()
-                            jugados = cells_cl[3].text.strip()
+                        required_len = 12 if has_pts_pj else 11
+                        if len(cells_cl) >= required_len:
+                            pos = cells_cl[1].text.strip()
+                            team = cells_cl[2].text.strip()
+                            pts = cells_cl[pts_idx].text.strip()
+                            jugados = cells_cl[j_idx].text.strip()
                             
-                            ganados = cells_cl[4].text.strip() if len(cells_cl) > 4 else "0"
-                            empatados = cells_cl[5].text.strip() if len(cells_cl) > 5 else "0"
-                            perdidos = cells_cl[6].text.strip() if len(cells_cl) > 6 else "0"
-                            gf = cells_cl[7].text.strip() if len(cells_cl) > 7 else "0"
-                            gc = cells_cl[8].text.strip() if len(cells_cl) > 8 else "0"
+                            ganados = cells_cl[g_idx].text.strip()
+                            empatados = cells_cl[e_idx].text.strip()
+                            perdidos = cells_cl[p_idx].text.strip()
+                            gf = cells_cl[gf_idx].text.strip()
+                            gc = cells_cl[gc_idx].text.strip()
                             
-                            # Extraer escudo de la clasificación
-                            img_cl = cells_cl[1].find('img')
+                            # Extraer columna Últimos
+                            ultimos = [s.text.strip().upper() for s in cells_cl[ultimos_idx].find_all('span') if s.text.strip()]
+                            if not ultimos:
+                                ultimos_raw = cells_cl[ultimos_idx].text.strip()
+                                ultimos = [part.upper() for part in ultimos_raw.split() if part.upper() in ['G', 'E', 'P']]
+                            
+                            # Extraer escudo de la clasificación y descargarlo localmente
+                            img_cl = cells_cl[2].find('img')
+                            raw_shield = ""
+                            if img_cl and img_cl.get('src'):
+                                raw_shield = urljoin(link_clasif, img_cl.get('src'))
+                            
+                            # Fallback al mapa de escudos del grupo de la jornada
+                            if not raw_shield:
+                                clean_team_key = team.replace('"', '').replace("'", '').strip().upper()
+                                raw_shield = group_shields.get(clean_team_key, '')
+                                
                             shield_url = ""
-                            if img_cl:
-                                shield_url = img_cl.get('src', '')
-                                if shield_url and not shield_url.startswith('http'):
-                                    shield_url = "https://intranet.ffmadrid.es" + shield_url
+                            if raw_shield:
+                                cid = extract_shield_id(raw_shield)
+                                if cid:
+                                    local_sh = download_shield(raw_shield, cid, auth_session=session)
+                                    shield_url = local_sh if local_sh else raw_shield
+                                else:
+                                    shield_url = raw_shield
                             
                             clasif_data.append({
                                 "pos": pos,
@@ -520,14 +627,36 @@ def sync_rffm(username, password):
                                 "perdidos": perdidos,
                                 "goles_favor": gf,
                                 "goles_contra": gc,
-                                "shield": shield_url
+                                "shield": shield_url,
+                                "ultimos": ultimos
                             })
 
-            # 6. Scraper del CALENDARIO COMPLETO desde NFG_VisCompeticiones_Grupo
+            # 6. Scraper del CALENDARIO COMPLETO
             calendario_completo = []
-            if codgrupo and codequipo:
+            link_cal = None
+            for a in soup_jornada.find_all('a'):
+                href = a.get('href', '')
+                if 'VisCalendario_Vis' in href or a.text.strip().upper() == 'CALENDARIO':
+                    link_cal = href
+                    break
+            
+            url_cal = None
+            if link_cal:
+                url_cal = urljoin(link_jornada, link_cal)
+            elif codgrupo and codcompeticion:
+                url_cal = f"https://intranet.ffmadrid.es/nfg/NPcd/NFG_VisCalendario_Vis?cod_primaria={cod_primaria}&codtemporada=21&codcompeticion={codcompeticion}&codgrupo={codgrupo}"
+                
+            if url_cal:
+                # Asegurar CDetalle=1 en la URL del calendario para expandir todas las jornadas
+                if "CDetalle=" not in url_cal:
+                    if "?" in url_cal:
+                        url_cal += "&CDetalle=1"
+                    else:
+                        url_cal += "?CDetalle=1"
+                else:
+                    url_cal = re.sub(r'CDetalle=[^&]*', 'CDetalle=1', url_cal)
+
                 try:
-                    url_cal = f"https://intranet.ffmadrid.es/nfg/NPcd/NFG_VisCompeticiones_Grupo?cod_primaria={cod_primaria}&codequipo={codequipo}&codgrupo={codgrupo}"
                     res_cal = session.get(url_cal)
                     soup_cal = BeautifulSoup(res_cal.text, 'html.parser')
 
@@ -538,76 +667,94 @@ def sync_rffm(username, password):
                         if item.get('shield'):
                             escudo_map[clean_name] = item['shield']
 
-                    jornada_actual = "Jornada 1"
-                    jornada_num = 1
-
                     # Buscar todos los bloques de jornada y sus partidos
-                    all_rows = soup_cal.find_all(['tr', 'div'])
-                    for elem in all_rows:
-                        text = elem.get_text(separator=' ', strip=True)
-
-                        # Detectar cabecera de jornada
-                        if re.match(r'^Jornada\s+\d+', text, re.I):
-                            jornada_actual = text.strip()
-                            m_jn = re.search(r'\d+', jornada_actual)
-                            if m_jn:
-                                jornada_num = int(m_jn.group())
-                            continue
-
-                        # Buscar filas con el partido de Fuentelarreyna
-                        if elem.name == 'tr' and "FUENTELARREYNA" in text.upper():
-                            cells = elem.find_all('td')
-                            if len(cells) >= 3:
-                                local_text = cells[0].get_text(separator=' ', strip=True)
-                                score_text = cells[1].get_text(separator=' ', strip=True) if len(cells) > 1 else ''
-                                visit_text = cells[2].get_text(separator=' ', strip=True) if len(cells) > 2 else ''
-
-                                es_local = "FUENTELARREYNA" in local_text.upper()
-                                rival = visit_text if es_local else local_text
-                                rival = rival.strip()
-
-                                # Parsear resultado y estado
-                                match_res = re.search(r'(\d+)\s*[-–]\s*(\d+)', score_text)
-                                resultado = ''
-                                estado = ''
-                                if match_res:
-                                    g1 = int(match_res.group(1))
-                                    g2 = int(match_res.group(2))
-                                    resultado = f"{g1} - {g2}"
-                                    if es_local:
-                                        estado = 'G' if g1 > g2 else ('E' if g1 == g2 else 'P')
-                                    else:
-                                        estado = 'G' if g2 > g1 else ('E' if g1 == g2 else 'P')
-
-                                # Buscar fecha
-                                fecha = ''
-                                for cell in cells:
-                                    dm = re.search(r'\d{2}/\d{2}/\d{4}', cell.get_text())
-                                    if dm:
-                                        fecha = dm.group()
-                                        break
-
-                                # Escudo del rival
-                                rival_clean = rival.replace('"', '').replace("'", '').strip().upper()
-                                rival_shield = escudo_map.get(rival_clean, '')
-
-                                # Escudo del rival desde img de la celda
-                                rival_cell = cells[2] if es_local else cells[0]
-                                img_rival = rival_cell.find('img')
-                                if img_rival and not rival_shield:
-                                    rival_shield = img_rival.get('src', '')
-                                    if rival_shield and not rival_shield.startswith('http'):
-                                        rival_shield = "https://intranet.ffmadrid.es" + rival_shield
-
-                                calendario_completo.append({
-                                    "jornada": jornada_actual,
-                                    "fecha": fecha,
-                                    "rival": rival,
-                                    "es_local": es_local,
-                                    "resultado": resultado,
-                                    "estado": estado,
-                                    "rival_shield": rival_shield
-                                })
+                    seen_matches = set()
+                    for t in soup_cal.find_all('table'):
+                        th_el = t.find('th')
+                        if th_el:
+                            jornada_header = th_el.text.strip()
+                            if "JORNADA" in jornada_header.upper():
+                                # Limpiar espacios en blanco
+                                jornada_actual = " ".join(jornada_header.split())
+                                # Extraer la fecha del título de la jornada
+                                fecha = ""
+                                m_date = re.search(r'\d{2}[-/]\d{2}[-/]\d{4}', jornada_actual)
+                                if m_date:
+                                    fecha = m_date.group(0)
+                                    
+                                # Limpiar cabecera para quedarnos solo con "Jornada X"
+                                m_jn = re.search(r'Jornada\s+\d+', jornada_actual, re.I)
+                                if m_jn:
+                                    jornada_actual = m_jn.group(0)
+                                    
+                                # Procesar los partidos de esta jornada
+                                for r_cal in t.find_all('tr'):
+                                    cells = r_cal.find_all('td')
+                                    if len(cells) >= 5:
+                                        local_raw = cells[0].text.strip()
+                                        visit_raw = cells[4].text.strip()
+                                        
+                                        if "FUENTELARREYNA" in local_raw.upper() or "FUENTELARREYNA" in visit_raw.upper():
+                                            es_local = "FUENTELARREYNA" in local_raw.upper()
+                                            rival = visit_raw if es_local else local_raw
+                                            rival = " ".join(rival.split())
+                                            
+                                            match_key = (jornada_actual, rival)
+                                            if match_key in seen_matches:
+                                                continue
+                                            seen_matches.add(match_key)
+                                            
+                                            score_l = cells[1].text.strip()
+                                            score_v = cells[3].text.strip()
+                                            
+                                            resultado = ""
+                                            estado = ""
+                                            if score_l.isdigit() and score_v.isdigit():
+                                                g1 = int(score_l)
+                                                g2 = int(score_v)
+                                                resultado = f"{g1} - {g2}"
+                                                if es_local:
+                                                    estado = 'G' if g1 > g2 else ('E' if g1 == g2 else 'P')
+                                                else:
+                                                    estado = 'G' if g2 > g1 else ('E' if g1 == g2 else 'P')
+                                                    
+                                            # Escudo del rival
+                                            rival_clean = rival.replace('"', '').replace("'", '').strip().upper()
+                                            rival_shield = escudo_map.get(rival_clean, '')
+                                            
+                                            # Búsqueda difusa de escudo
+                                            if not rival_shield:
+                                                rival_keywords = re.sub(r'^(C\.D\.|A\.D\.|C\.F\.|A\.D\.C\.|S\.A\.D\.|R\.C\.|R\.C\.D\.|U\.D\.|ESC\.FUT\.)\s*', '', rival_clean, flags=re.I).strip()
+                                                rival_keywords_base = rival_keywords.split()[0] if rival_keywords.split() else rival_keywords
+                                                for k_name, sh_url in escudo_map.items():
+                                                    if rival_keywords in k_name or k_name in rival_keywords or k_name.startswith(rival_keywords_base):
+                                                        rival_shield = sh_url
+                                                        break
+                                            
+                                            # Intentar obtener el img de la celda del rival y descargar escudo
+                                            rival_cell = cells[4] if es_local else cells[0]
+                                            img_rival = rival_cell.find('img')
+                                            if img_rival and not rival_shield:
+                                                rival_shield = img_rival.get('src', '')
+                                                if rival_shield:
+                                                    rival_shield = urljoin(url_cal, rival_shield)
+                                                    
+                                            if rival_shield:
+                                                cid = extract_shield_id(rival_shield)
+                                                if cid:
+                                                    local_sh = download_shield(rival_shield, cid, auth_session=session)
+                                                    if local_sh:
+                                                        rival_shield = local_sh
+                                                    
+                                            calendario_completo.append({
+                                                "jornada": jornada_actual,
+                                                "fecha": fecha,
+                                                "rival": rival,
+                                                "es_local": es_local,
+                                                "resultado": resultado,
+                                                "estado": estado,
+                                                "rival_shield": rival_shield
+                                            })
                 except Exception as e_cal:
                     print(f"Aviso: no se pudo scraper el calendario completo: {e_cal}")
 
@@ -748,7 +895,8 @@ def generate_full_clasificacion(nombre_comp, pos_fuentelarreyna, pts_fuentelarre
             "perdidos": str(pp),
             "goles_favor": str(gf),
             "goles_contra": str(gc),
-            "shield": shield_url
+            "shield": shield_url,
+            "ultimos": ["G", "G", "E", "P", "G"]
         })
         
     try:

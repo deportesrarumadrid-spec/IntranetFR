@@ -1655,9 +1655,8 @@ def api_shield_proxy():
     
     # Extraer club_id de la URL si no se dio
     if not club_id and url:
-        m = re.search(r'club_(\d+)', url)
-        if m:
-            club_id = m.group(1)
+        from competicion_scraper import extract_shield_id
+        club_id = extract_shield_id(url)
     
     if not club_id:
         abort(404)

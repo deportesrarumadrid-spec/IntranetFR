@@ -1,0 +1,195 @@
+Total tables: 40
+Table 0: header='NO HEADER'
+  TR count: 3
+Table 1: header='NO HEADER'
+  TR count: 2
+Table 2: header='NO HEADER'
+  TR count: 1
+Table 3: header='Jornada 1 (14-09-2025)  Jornada 1    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 15
+  Contains FUENTELARREYNA
+    Row 0: Clasificación    			 			 				  Resultados    			 			 				 					 						  Goleadores     				
+    Row 1: Descargar Word    		Descargar Excel
+    Row 2: Primera Vuelta           	        	Jornada 1 (14-09-2025)  Jornada 1    	        			 Cambiar fecha
+    Row 3: Primera Vuelta
+    Row 4: Jornada 1 (14-09-2025)  Jornada 1    	        			 Cambiar fechas de partidos 						  Respetar día 
+Table 4: header='Jornada 1 (14-09-2025)  Jornada 1    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 5
+Table 5: header='Jornada 1 (14-09-2025)  Jornada 1    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 2
+Table 6: header='Jornada 2 (21-09-2025)  Jornada 2    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 2
+Table 7: header='Jornada 3 (28-09-2025)  Jornada 3    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 2
+Table 8: header='Jornada 4 (05-10-2025)  Jornada 4    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 2
+Table 9: header='Jornada 5 (12-10-2025)  Jornada 5    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 2
+Table 10: header='Jornada 6 (19-10-2025)  Jornada 6    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 2
+Table 11: header='Jornada 7 (26-10-2025)  Jornada 7    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 2
+Table 12: header='Jornada 8 (02-11-2025)  Jornada 8    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 2
+Table 13: header='Jornada 9 (09-11-2025)  Jornada 9    	        			 Cambiar fechas de partidos 						  Respetar día '
+  TR count: 2
+Table 14: header='Jornada 10 (16-11-2025)  Jornada 10    	        			 Cambiar fechas de partidos 						  Respetar dí'
+  TR count: 2
+Table 15: header='Jornada 11 (23-11-2025)  Jornada 11    	        			 Cambiar fechas de partidos 						  Respetar dí'
+  TR count: 2
+Table 16: header='Jornada 12 (30-11-2025)  Jornada 12    	        			 Cambiar fechas de partidos 						  Respetar dí'
+  TR count: 2
+Table 17: header='Jornada 13 (14-12-2025)  Jornada 13    	        			 Cambiar fechas de partidos 						  Respetar dí'
+  TR count: 2
+Table 18: header='Jornada 14 (21-12-2025)  Jornada 14    	        			 Cambiar fechas de partidos 						  Respetar dí'
+  TR count: 2
+Table 19: header='Jornada 15 (11-01-2026)  Jornada 15    	        			 Cambiar fechas de partidos 						  Respetar dí'
+  TR count: 2
+Table 20: header='Jornada 16 (18-01-2026)  Jornada 16    	        			 Cambiar fechas de partidos 						  Respetar dí'
+  TR count: 2
+Table 21: header='Jornada 17 (25-01-2026)  Jornada 17    	        			 Cambiar fechas de partidos 						  Respetar dí'
+  TR count: 2
+Table 22: header='Jornada 18 (01-02-2026)  Jornada 18            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 188
+  Contains FUENTELARREYNA
+    Row 0: Segunda Vuelta
+    Row 1: Jornada 18 (01-02-2026)  Jornada 18            			 Cambiar fechas de partidos         			  Respeta
+    Row 2: Jornada 18 (01-02-2026)  Jornada 18            			 Cambiar fechas de partidos         			  Respeta
+    Row 3: C.D.E. F.P.A. LAS ROZAS 			           "C"  			                              			        					  
+    Row 4: ESCUELA FUTBOL BARRIO PILAR 			           "B"  			                              			        				
+Table 23: header='Jornada 18 (01-02-2026)  Jornada 18            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: Jornada 18 (01-02-2026)  Jornada 18            			 Cambiar fechas de partidos         			  Respeta
+    Row 1: C.D.E. F.P.A. LAS ROZAS 			           "C"  			                              			        					  
+    Row 2: ESCUELA FUTBOL BARRIO PILAR 			           "B"  			                              			        				
+    Row 3: CELTIC CASTILLA C.F. 			           "A"  			                              			        					   		
+    Row 4: C.D. MASRIVER 			           "A"  			                              			        					   						 	
+Table 24: header='Jornada 19 (08-02-2026)  Jornada 19            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: Jornada 19 (08-02-2026)  Jornada 19            			 Cambiar fechas de partidos         			  Respeta
+    Row 1: C.D. PUERTA DE MADRID 			           "B"  			                              			        					   	
+    Row 2: A.D. CALA POZUELO 			           "B"  			                              			        					   					
+    Row 3: S.A.D. OCIO Y DEPORTE CANAL 			           "A"  			                              			        				
+    Row 4: FUNDACION ADF 			           "A"  			                              			        					   						 	
+Table 25: header='Jornada 20 (15-02-2026)  Jornada 20            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: Jornada 20 (15-02-2026)  Jornada 20            			 Cambiar fechas de partidos         			  Respeta
+    Row 1: ESCUELA FUTBOL BARRIO PILAR 			           "B"  			                              			        				
+    Row 2: ARAVACA C.F. - CEIBA 			           "B"  			                              			        					   		
+    Row 3: C.D. MASRIVER 			           "A"  			                              			        					   						 	
+    Row 4: CELTIC CASTILLA C.F. 			           "A"  			                              			        					   		
+Table 26: header='Jornada 21 (22-02-2026)  Jornada 21            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: Jornada 21 (22-02-2026)  Jornada 21            			 Cambiar fechas de partidos         			  Respeta
+    Row 1: S.A.D. COLEGIO VALDELUZ 			           "A"  			                              			        					  
+    Row 2: C.F. POZUELO DE ALARCON 			           "B"  			                              			        					  
+    Row 3: C.D. PUERTA DE MADRID 			           "B"  			                              			        					   	
+    Row 4: E.F.M.O. BOADILLA 			           "C"  			                              			        					   					
+Table 27: header='Jornada 22 (01-03-2026)  Jornada 22            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: Jornada 22 (01-03-2026)  Jornada 22            			 Cambiar fechas de partidos         			  Respeta
+    Row 1: C.D.E. F.P.A. LAS ROZAS 			           "C"  			                              			        					  
+    Row 2: C.D. RUPE SAHAGUN 			           "A"  			                              			        					   					
+    Row 3: CELTIC CASTILLA C.F. 			           "A"  			                              			        					   		
+    Row 4: C.D. MASRIVER 			           "A"  			                              			        					   						 	
+Table 28: header='Jornada 23 (08-03-2026)  Jornada 23            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: Jornada 23 (08-03-2026)  Jornada 23            			 Cambiar fechas de partidos         			  Respeta
+    Row 1: ESCUELA FUTBOL BARRIO PILAR 			           "B"  			                              			        				
+    Row 2: CLUB FUENTELARREYNA 			           "A"  			                              			        					   			
+    Row 3: A.D. UNION ADARVE 			           "D"  			                              			        					   					
+    Row 4: C.D. PUERTA DE MADRID 			           "B"  			                              			        					   	
+Table 29: header='Jornada 24 (15-03-2026)  Jornada 24            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: Jornada 24 (15-03-2026)  Jornada 24            			 Cambiar fechas de partidos         			  Respeta
+    Row 1: CELTIC CASTILLA C.F. 			           "A"  			                              			        					   		
+    Row 2: A.D. CALA POZUELO 			           "B"  			                              			        					   					
+    Row 3: C.D. MASRIVER 			           "A"  			                              			        					   						 	
+    Row 4: COLEGIO EL PRADO 			           "A"  			                              			        					   						
+Table 30: header='Jornada 25 (22-03-2026)  Jornada 25            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: Jornada 25 (22-03-2026)  Jornada 25            			 Cambiar fechas de partidos         			  Respeta
+    Row 1: S.A.D. COLEGIO VALDELUZ 			           "A"  			                              			        					  
+    Row 2: C.D.E. F.P.A. LAS ROZAS 			           "C"  			                              			        					  
+    Row 3: ESCUELA FUTBOL BARRIO PILAR 			           "B"  			                              			        				
+    Row 4: CLUB FUENTELARREYNA 			           "A"  			                              			        					   			
+Table 31: header='Jornada 26 (29-03-2026)  Jornada 26            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: Jornada 26 (29-03-2026)  Jornada 26            			 Cambiar fechas de partidos         			  Respeta
+    Row 1: ARAVACA C.F. - CEIBA 			           "B"  			                              			        					   		
+    Row 2: C.D. RUPE SAHAGUN 			           "A"  			                              			        					   					
+    Row 3: CLUB FUENTELARREYNA 			           "A"  			                              			        					   			
+    Row 4: C.D. MASRIVER 			           "A"  			                              			        					   						 	
+Table 32: header='Jornada 27 (12-04-2026)  Jornada 27            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: Jornada 27 (12-04-2026)  Jornada 27            			 Cambiar fechas de partidos         			  Respeta
+    Row 1: C.D.E. F.P.A. LAS ROZAS 			           "C"  			                              			        					  
+    Row 2: A.D. UNION ADARVE 			           "D"  			                              			        					   					
+    Row 3: ESCUELA FUTBOL BARRIO PILAR 			           "B"  			                              			        				
+    Row 4: S.A.D. COLEGIO VALDELUZ 			           "A"  			                              			        					  
+Table 33: header='Jornada 28 (19-04-2026)  Jornada 28            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: Jornada 28 (19-04-2026)  Jornada 28            			 Cambiar fechas de partidos         			  Respeta
+    Row 1: ARAVACA C.F. - CEIBA 			           "B"  			                              			        					   		
+    Row 2: A.D. CALA POZUELO 			           "B"  			                              			        					   					
+    Row 3: C.D. MASRIVER 			           "A"  			                              			        					   						 	
+    Row 4: CELTIC CASTILLA C.F. 			           "A"  			                              			        					   		
+Table 34: header='Jornada 29 (26-04-2026)  Jornada 29            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: Jornada 29 (26-04-2026)  Jornada 29            			 Cambiar fechas de partidos         			  Respeta
+    Row 1: ESCUELA FUTBOL BARRIO PILAR 			           "B"  			                              			        				
+    Row 2: S.A.D. COLEGIO VALDELUZ 			           "A"  			                              			        					  
+    Row 3: C.D.E. F.P.A. LAS ROZAS 			           "C"  			                              			        					  
+    Row 4: E.F.M.O. BOADILLA 			           "C"  			                              			        					   					
+Table 35: header='Jornada 30 (10-05-2026)  Jornada 30            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: Jornada 30 (10-05-2026)  Jornada 30            			 Cambiar fechas de partidos         			  Respeta
+    Row 1: S.A.D. COLEGIO VALDELUZ 			           "A"  			                              			        					  
+    Row 2: C.D. NUEVO BOADILLA 			           "B"  			                              			        					   			
+    Row 3: C.D. MASRIVER 			           "A"  			                              			        					   						 	
+    Row 4: C.D.E. MALASAÑA F.C. 			           "A"  			                              			        					   		
+Table 36: header='Jornada 31 (17-05-2026)  Jornada 31            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: Jornada 31 (17-05-2026)  Jornada 31            			 Cambiar fechas de partidos         			  Respeta
+    Row 1: C.D.E. F.P.A. LAS ROZAS 			           "C"  			                              			        					  
+    Row 2: ESCUELA FUTBOL BARRIO PILAR 			           "B"  			                              			        				
+    Row 3: C.D. RUPE SAHAGUN 			           "A"  			                              			        					   					
+    Row 4: A.D. UNION ADARVE 			           "D"  			                              			        					   					
+Table 37: header='Jornada 32 (24-05-2026)  Jornada 32            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: Jornada 32 (24-05-2026)  Jornada 32            			 Cambiar fechas de partidos         			  Respeta
+    Row 1: ARAVACA C.F. - CEIBA 			           "B"  			                              			        					   		
+    Row 2: S.A.D. COLEGIO VALDELUZ 			           "A"  			                              			        					  
+    Row 3: CLUB FUENTELARREYNA 			           "A"  			                              			        					   			
+    Row 4: S.A.D. OCIO Y DEPORTE CANAL 			           "A"  			                              			        				
+Table 38: header='Jornada 33 (31-05-2026)  Jornada 33            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: Jornada 33 (31-05-2026)  Jornada 33            			 Cambiar fechas de partidos         			  Respeta
+    Row 1: C.D.E. F.P.A. LAS ROZAS 			           "C"  			                              			        					  
+    Row 2: ESCUELA FUTBOL BARRIO PILAR 			           "B"  			                              			        				
+    Row 3: A.D. UNION ADARVE 			           "D"  			                              			        					   					
+    Row 4: ARAVACA C.F. - CEIBA 			           "B"  			                              			        					   		
+Table 39: header='Jornada 34 (07-06-2026)  Jornada 34            			 Cambiar fechas de partidos         			  Respeta'
+  TR count: 10
+  Contains FUENTELARREYNA
+    Row 0: Jornada 34 (07-06-2026)  Jornada 34            			 Cambiar fechas de partidos         			  Respeta
+    Row 1: CLUB FUENTELARREYNA 			           "A"  			                              			        					   			
+    Row 2: C.D. NUEVO BOADILLA 			           "B"  			                              			        					   			
+    Row 3: S.A.D. OCIO Y DEPORTE CANAL 			           "A"  			                              			        				
+    Row 4: C.F. POZUELO DE ALARCON 			           "B"  			                              			        					  
