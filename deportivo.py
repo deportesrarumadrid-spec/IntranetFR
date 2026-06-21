@@ -3,6 +3,7 @@ import json
 import base64
 import calendar
 import unicodedata
+import re
 from datetime import datetime, timedelta
 from flask import Blueprint, render_template, session, request, jsonify, redirect, current_app
 
@@ -1577,3 +1578,177 @@ def api_kpis_manual():
     except Exception as e:
         print(f"Error api_kpis_manual: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@deportivo_bp.route('/clasificaciones')
+def clasificaciones():
+    usuario = session.get('usuario')
+    if not usuario:
+        return redirect('/')
+    
+    perms = session.get('permisos', {})
+    if perms.get('ENTRENAMIENTOS') != 'SI' and perms.get('D.DEPORTIVA') != 'SI' and usuario.lower() != 'admin':
+        return "Acceso denegado", 403
+
+    from competicion_scraper import load_cached_data
+    
+    data_rffm = load_cached_data()
+    
+    client = current_app.gs_client
+    NOMBRE_EXCEL = current_app.gs_name
+    
+    equipos = []
+    try:
+        sheet = client.open(NOMBRE_EXCEL).worksheet("EQUIPO")
+        all_v = sheet.get_all_values()
+        if all_v:
+            headers = normalizar_cabeceras_dep(all_v[0])
+            idx_eq = headers.index("EQUIPO") if "EQUIPO" in headers else 0
+            equipos = sorted(list(set(str(row[idx_eq]).strip() for row in all_v[1:] if len(row) > idx_eq and str(row[idx_eq]).strip())))
+    except Exception as e:
+        print(f"Error cargando equipos en clasificaciones: {e}")
+
+    equipo_activo = session.get('equipo_defecto', '')
+    if not equipo_activo and equipos:
+        equipo_activo = equipos[0]
+        session['equipo_defecto'] = equipo_activo
+
+    return render_template('deportivo/clasificaciones.html',
+                           usuario=usuario,
+                           equipo_defecto=equipo_activo,
+                           equipos=equipos,
+                           data_rffm=data_rffm)
+
+@deportivo_bp.route('/api/sincronizar_rffm', methods=['POST'])
+def api_sincronizar_rffm():
+    usuario = session.get('usuario')
+    if not usuario:
+        return jsonify({"status": "error", "message": "No session"}), 401
+        
+    data = request.json or {}
+    username_rffm = data.get('usuario_rffm', '').strip()
+    password_rffm = data.get('password_rffm', '').strip()
+    
+    if not username_rffm or not password_rffm:
+        return jsonify({"status": "error", "message": "Faltan credenciales"}), 400
+        
+    from competicion_scraper import sync_rffm
+    
+    success, message = sync_rffm(username_rffm, password_rffm)
+    if success:
+        return jsonify({"status": "success", "message": message})
+    else:
+        return jsonify({"status": "error", "message": message}), 400
+
+
+@deportivo_bp.route('/api/shield_proxy')
+def api_shield_proxy():
+    """Proxy para servir escudos de la RFFM localmente desde static/shields/."""
+    from competicion_scraper import download_shield, get_session as rffm_session, SHIELDS_DIR
+    import os
+    from flask import send_file, abort
+    
+    url = request.args.get('url', '').strip()
+    club_id = request.args.get('id', '').strip()
+    
+    if not url and not club_id:
+        abort(404)
+    
+    # Extraer club_id de la URL si no se dio
+    if not club_id and url:
+        m = re.search(r'club_(\d+)', url)
+        if m:
+            club_id = m.group(1)
+    
+    if not club_id:
+        abort(404)
+    
+    local_path = os.path.join(SHIELDS_DIR, f"club_{club_id}.png")
+    
+    # Si ya existe localmente, servirlo directamente
+    if os.path.exists(local_path) and os.path.getsize(local_path) > 500:
+        return send_file(local_path, mimetype='image/png')
+    
+    # Intentar descargar si tenemos una URL
+    if url:
+        # Intentar con sesión anónima primero (algunos escudos son públicos)
+        try:
+            sess = rffm_session()
+            r = sess.get(url, timeout=8)
+            ct = r.headers.get("Content-Type", "")
+            if r.status_code == 200 and ("image" in ct or r.content[:4] in [b'\x89PNG', b'\xff\xd8\xff\xe0', b'GIF8']):
+                with open(local_path, 'wb') as f:
+                    f.write(r.content)
+                return send_file(local_path, mimetype='image/png')
+        except Exception:
+            pass
+    
+    abort(404)
+
+
+@deportivo_bp.route('/api/descargar_escudos', methods=['POST'])
+def api_descargar_escudos():
+    """Descarga y cachea todos los escudos visibles en los datos actuales usando credenciales RFFM."""
+    usuario = session.get('usuario')
+    if not usuario:
+        return jsonify({"status": "error", "message": "No session"}), 401
+    
+    from competicion_scraper import (load_cached_data, download_shield, 
+                                      get_session as rffm_session, SHIELDS_DIR)
+    import re
+    
+    data = request.json or {}
+    username_rffm = data.get('usuario_rffm', '').strip()
+    password_rffm = data.get('password_rffm', '').strip()
+    
+    # Crear sesión autenticada si tenemos credenciales
+    auth_sess = None
+    if username_rffm and password_rffm:
+        auth_sess = rffm_session()
+        try:
+            auth_sess.post(
+                "https://intranet.ffmadrid.es/nfg/NLogin",
+                data={"NUser": username_rffm, "NPass": password_rffm, "LoginAjax": "1"},
+                timeout=10
+            )
+        except Exception:
+            auth_sess = None
+    
+    # Recopilar todas las URLs de escudos de los datos cacheados
+    rffm_data = load_cached_data()
+    shield_urls = set()
+    
+    for eq in rffm_data.get('equipos', []):
+        # Escudos de clasificación
+        for item in eq.get('clasificacion', []):
+            if item.get('shield'):
+                shield_urls.add(item['shield'])
+        # Escudos del último partido
+        up = eq.get('ultimo_partido', {}) or {}
+        if up.get('local_shield'): shield_urls.add(up['local_shield'])
+        if up.get('visitante_shield'): shield_urls.add(up['visitante_shield'])
+        # Escudos del calendario
+        for p in eq.get('calendario', []):
+            if p.get('rival_shield'): shield_urls.add(p['rival_shield'])
+    
+    descargados = 0
+    fallidos = 0
+    
+    for url in shield_urls:
+        if not url or url.startswith('/static/'):
+            continue
+        m = re.search(r'club_(\d+)', url)
+        if not m:
+            continue
+        club_id = m.group(1)
+        result = download_shield(url, club_id, auth_session=auth_sess)
+        if result:
+            descargados += 1
+        else:
+            fallidos += 1
+    
+    return jsonify({
+        "status": "success",
+        "descargados": descargados,
+        "fallidos": fallidos,
+        "total": len(shield_urls)
+    })

@@ -5,6 +5,35 @@ from datetime import datetime, timedelta
 import calendar
 import unicodedata
 import gspread
+import time
+from gspread.exceptions import APIError
+from gspread.http_client import HTTPClient
+
+original_request = HTTPClient.request
+
+def retry_request(self, method, endpoint, *args, **kwargs):
+    retries = 5
+    backoff = 2.0
+    for attempt in range(retries):
+        try:
+            return original_request(self, method, endpoint, *args, **kwargs)
+        except APIError as e:
+            is_rate_limit = False
+            if hasattr(e, 'response') and e.response is not None:
+                if e.response.status_code == 429:
+                    is_rate_limit = True
+            elif '429' in str(e):
+                is_rate_limit = True
+            
+            if is_rate_limit and attempt < retries - 1:
+                print(f"⚠️ Google Sheets API 429 (Límite Excedido). Reintentando en {backoff}s... (Intento {attempt+1}/{retries})")
+                time.sleep(backoff)
+                backoff *= 1.5
+            else:
+                raise e
+
+HTTPClient.request = retry_request
+
 from oauth2client.service_account import ServiceAccountCredentials
 import requests # ¡IMPORTANTE! Añadir esta línea
 try:

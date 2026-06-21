@@ -1,0 +1,1437 @@
+{% extends 'dashboard.html' %}
+
+{% block content %}
+<style>
+    :root {
+        --red-primary: #E31E24;
+        --red-light: rgba(227, 30, 36, 0.08);
+        --red-border: rgba(227, 30, 36, 0.2);
+        --glass-bg: rgba(255, 255, 255, 0.85);
+        --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.06);
+        --border-radius: 12px;
+        --green-state: #28a745;
+        --yellow-state: #ffc107;
+        --red-state: #dc3545;
+    }
+
+    .clasif-wrapper {
+        font-family: 'Montserrat', sans-serif;
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+        padding-bottom: 40px;
+    }
+
+    /* Banner de Sincronización / Demo - OCULTO */
+    .sync-status-bar {
+        display: none;
+    }
+
+    .status-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .status-indicator.success { background-color: #28a745; box-shadow: 0 0 10px rgba(40, 167, 69, 0.5); }
+    .status-indicator.demo { background-color: #ffc107; box-shadow: 0 0 10px rgba(255, 193, 7, 0.5); }
+
+    .status-text {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #444;
+    }
+
+    .status-text span {
+        font-weight: 500;
+        color: #777;
+    }
+
+    .btn-sync {
+        background: var(--red-primary);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        font-size: 0.8rem;
+        font-weight: 900;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(227, 30, 36, 0.2);
+    }
+
+    .btn-sync:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(227, 30, 36, 0.3);
+    }
+
+    /* Selector de Competición - Botoneras Premium de 2 Niveles */
+    .selector-container {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 25px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        border: 1px solid #eee;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .selector-label {
+        font-size: 0.75rem;
+        font-weight: 900;
+        color: #475569;
+        text-transform: uppercase;
+        display: block;
+        margin-bottom: 5px;
+        letter-spacing: 0.5px;
+    }
+
+    .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .category-btn {
+        background: white;
+        color: #475569;
+        border: 1px solid #cbd5e1;
+        padding: 10px 22px;
+        font-size: 0.8rem;
+        font-weight: 800;
+        border-radius: 50px;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-transform: uppercase;
+        display: inline-block;
+        text-align: center;
+        outline: none;
+    }
+
+    .category-btn:hover {
+        background: var(--red-light);
+        color: var(--red-primary);
+        border-color: var(--red-border);
+        transform: translateY(-2px);
+    }
+
+    .category-btn.active {
+        background: linear-gradient(135deg, var(--red-primary) 0%, #B81419 100%);
+        color: white;
+        border-color: var(--red-primary);
+        box-shadow: 0 4px 12px rgba(227, 30, 36, 0.3);
+        transform: translateY(-1px);
+    }
+
+    .team-btn {
+        background: white;
+        color: #0f172a;
+        border: 2px solid #e2e8f0;
+        padding: 8px 16px;
+        font-size: 0.85rem;
+        font-weight: 900;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        min-width: 55px;
+        text-align: center;
+        outline: none;
+    }
+
+    .team-btn:hover {
+        border-color: var(--red-primary);
+        color: var(--red-primary);
+        background: var(--red-light);
+        transform: scale(1.05);
+    }
+
+    .team-btn.active {
+        background: var(--red-primary);
+        color: white;
+        border-color: var(--red-primary);
+        box-shadow: 0 4px 10px rgba(227, 30, 36, 0.2);
+    }
+
+    .team-selector-container {
+        margin-top: 12px;
+        display: none; /* Se muestra dinámicamente cuando hay equipos */
+    }
+
+    .left-column {
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+    }
+
+    /* Diseño Grid para Tab de Clasificación */
+    .grid-container {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 25px;
+    }
+
+    @media (min-width: 992px) {
+        .grid-container {
+            grid-template-columns: 1fr 1.6fr;
+        }
+    }
+
+    /* Ficha de Competición Horizontal (Estilo Timeline / Spreadsheet) */
+    .timeline-scroll-container {
+        overflow-x: auto;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: white;
+        margin-top: 10px;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .timeline-table {
+        border-collapse: collapse;
+        width: max-content;
+        min-width: 100%;
+        font-family: 'Montserrat', sans-serif;
+    }
+
+    .timeline-table td {
+        border: 1px solid #cbd5e1;
+        padding: 8px 10px;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    .timeline-label-col {
+        background-color: #f1f5f9;
+        color: #0f172a;
+        font-weight: 900;
+        font-size: 0.7rem;
+        min-width: 130px;
+        max-width: 130px;
+        position: sticky;
+        left: 0;
+        z-index: 10;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .timeline-rival-cell {
+        background-color: #f8fafc;
+        color: #1e293b;
+        font-size: 0.68rem;
+        font-weight: 900;
+        min-width: 120px;
+        max-width: 120px;
+        height: 85px;
+        white-space: normal;
+        word-wrap: break-word;
+        padding: 6px !important;
+        vertical-align: middle;
+    }
+
+    .timeline-rival-cell .rival-text {
+        text-transform: uppercase;
+        line-height: 1.2;
+        margin-top: 4px;
+    }
+
+    .timeline-shield-img {
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
+    }
+
+    .rival-shield-container {
+        height: 26px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .rival-header-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .timeline-result-cell.empty-result {
+        background-color: #f8fafc !important;
+        color: #94a3b8 !important;
+    }
+
+    .timeline-shield-fallback {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        color: #cbd5e1;
+        font-size: 14px;
+    }
+
+    .timeline-result-cell {
+        font-size: 0.8rem;
+        font-weight: 900;
+        color: white;
+        min-width: 120px;
+        max-width: 120px;
+        height: 35px;
+    }
+
+    .timeline-result-cell.outcome-G {
+        background-color: var(--green-state) !important;
+        color: white !important;
+    }
+
+    .timeline-result-cell.outcome-E {
+        background-color: var(--yellow-state) !important;
+        color: #1e293b !important;
+    }
+
+    .timeline-result-cell.outcome-P {
+        background-color: var(--red-state) !important;
+        color: white !important;
+    }
+
+    .timeline-objective-cell {
+        background-color: white;
+        height: 25px;
+        min-width: 120px;
+        max-width: 120px;
+    }
+
+    .table-shield {
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
+        margin-right: 8px;
+        vertical-align: middle;
+    }
+
+    .match-shield-img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    /* Tarjeta del Último Partido */
+    .partido-card {
+        background: white;
+        border-radius: var(--border-radius);
+        border: 1px solid #eee;
+        padding: 25px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .partido-header {
+        border-bottom: 1px solid #f1f5f9;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .jornada-badge {
+        background: #f1f5f9;
+        color: #475569;
+        font-size: 0.7rem;
+        font-weight: 900;
+        padding: 4px 10px;
+        border-radius: 20px;
+        text-transform: uppercase;
+    }
+
+    .partido-fecha {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #94a3b8;
+    }
+
+    .partido-equipos {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        gap: 15px;
+        margin: 20px 0;
+    }
+
+    .team-box {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        max-width: 140px;
+    }
+
+    .team-shield {
+        width: 60px;
+        height: 60px;
+        background: #f8fafc;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 12px;
+        font-size: 24px;
+        color: #94a3b8;
+        border: 1px solid #e2e8f0;
+    }
+
+    .team-shield.fuentelarreyna {
+        background: #fff5f5;
+        color: var(--red-primary);
+        border-color: var(--red-border);
+    }
+
+    .team-name {
+        font-size: 0.8rem;
+        font-weight: 900;
+        color: #1e293b;
+        line-height: 1.3;
+        min-height: 2.6rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .score-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-width: 80px;
+    }
+
+    .score-nums {
+        font-size: 2rem;
+        font-weight: 900;
+        color: #0f172a;
+        letter-spacing: 5px;
+        display: flex;
+        align-items: center;
+    }
+
+    .partido-status {
+        background: var(--red-light);
+        color: var(--red-primary);
+        font-size: 0.7rem;
+        font-weight: 800;
+        padding: 3px 8px;
+        border-radius: 4px;
+        margin-top: 8px;
+        text-transform: uppercase;
+        border: 1px solid var(--red-border);
+    }
+
+    /* Tabla de Clasificación */
+    .clasificacion-box {
+        background: white;
+        border-radius: var(--border-radius);
+        border: 1px solid #eee;
+        padding: 25px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    }
+
+    .clasificacion-header {
+        font-size: 0.85rem;
+        font-weight: 900;
+        color: #333;
+        text-transform: uppercase;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .clasificacion-header i {
+        color: var(--red-primary);
+    }
+
+    .table-container {
+        overflow-x: auto;
+    }
+
+    .clasif-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+        font-size: 0.8rem;
+    }
+
+    .clasif-table th {
+        color: #64748b;
+        font-weight: 900;
+        text-transform: uppercase;
+        padding: 12px 10px;
+        border-bottom: 2px solid #e2e8f0;
+        font-size: 0.7rem;
+    }
+
+    .clasif-table td {
+        padding: 12px 10px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #1e293b;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.78rem;
+    }
+
+    .clasif-table tbody tr:hover {
+        background-color: #f8fafc;
+    }
+
+    /* Fila de Fuentelarreyna Resaltada */
+    .clasif-table tr.highlight-row {
+        background-color: var(--red-light) !important;
+        border-left: 4px solid var(--red-primary);
+    }
+
+    .clasif-table tr.highlight-row td {
+        color: #000;
+        font-weight: 900;
+    }
+
+    .col-pos { width: 45px; text-align: center; }
+    .col-team { font-weight: 800 !important; }
+    .col-num { text-align: center; width: 45px; }
+    .col-pts { text-align: center; width: 50px; color: var(--red-primary) !important; font-weight: 900 !important; }
+
+    /* Ficha de Competición (Calendario / Resultados de los Rivales) */
+    .calendario-box {
+        background: white;
+        border-radius: var(--border-radius);
+        border: 1px solid #eee;
+        padding: 25px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    }
+
+    /* Outcome State Badges */
+    .outcome-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 900;
+        color: white;
+        text-transform: uppercase;
+    }
+
+    .outcome-badge.G { background-color: var(--green-state); box-shadow: 0 2px 5px rgba(40,167,69,0.3); }
+    .outcome-badge.E { background-color: var(--yellow-state); color: #333; box-shadow: 0 2px 5px rgba(255,193,7,0.3); }
+    .outcome-badge.P { background-color: var(--red-state); box-shadow: 0 2px 5px rgba(220,53,69,0.3); }
+
+    .condicion-badge {
+        font-size: 0.7rem;
+        font-weight: 900;
+        padding: 4px 8px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        display: inline-block;
+    }
+    .condicion-badge.local {
+        background-color: #f1f5f9;
+        color: #475569;
+    }
+    .condicion-badge.visitante {
+        background-color: #e0f2fe;
+        color: #0369a1;
+    }
+
+    /* Modal de Sincronización */
+    .modal-backdrop {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 99999;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-sync-card {
+        background: white;
+        border-radius: var(--border-radius);
+        width: 100%;
+        max-width: 400px;
+        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        animation: modalScale 0.3s ease;
+    }
+
+    @keyframes modalScale {
+        from { transform: scale(0.95); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-sync-header {
+        background: #f8fafc;
+        padding: 20px;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-sync-title {
+        font-size: 0.9rem;
+        font-weight: 900;
+        color: #0f172a;
+        text-transform: uppercase;
+    }
+
+    .modal-close-btn {
+        background: transparent;
+        border: none;
+        font-size: 20px;
+        color: #94a3b8;
+        cursor: pointer;
+        outline: none;
+    }
+
+    .modal-close-btn:hover { color: #000; }
+
+    .modal-sync-body {
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .form-group label {
+        font-size: 0.7rem;
+        font-weight: 900;
+        color: #475569;
+        text-transform: uppercase;
+    }
+
+    .form-group input {
+        padding: 10px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 0.85rem;
+        outline: none;
+    }
+
+    .form-group input:focus {
+        border-color: var(--red-primary);
+    }
+
+    .modal-error-banner {
+        background-color: #fee2e2;
+        border: 1px solid #fecaca;
+        color: #991b1b;
+        padding: 10px 12px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        display: none;
+    }
+
+    .modal-sync-footer {
+        padding: 15px 20px;
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .btn-cancelar {
+        background: white;
+        border: 1px solid #cbd5e1;
+        color: #475569;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .btn-cancelar:hover { background: #f1f5f9; }
+
+    .btn-sync-submit {
+        background: var(--red-primary);
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 900;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-sync-submit:disabled {
+        background: #f1f5f9;
+        color: #94a3b8;
+        cursor: not-allowed;
+        border: 1px solid #e2e8f0;
+    }
+
+    .spinner-sync {
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top: 2px solid white;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        display: none;
+    }
+
+    .btn-sync-submit:disabled .spinner-sync {
+        display: block;
+        border: 2px solid rgba(148, 163, 184, 0.3);
+        border-top: 2px solid #94a3b8;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Estado Vacío */
+    .empty-state {
+        padding: 40px;
+        text-align: center;
+        color: #94a3b8;
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+    .empty-state i {
+        font-size: 40px;
+        color: #cbd5e1;
+        margin-bottom: 15px;
+        display: block;
+    }
+</style>
+
+<div class="clasif-wrapper">
+    <!-- Barra de Estado de Sincronización -->
+    <div class="sync-status-bar">
+        <div class="status-info">
+            <span class="status-indicator {% if data_rffm.status == 'demo' %}demo{% else %}success{% endif %}"></span>
+            <div class="status-text">
+                {% if data_rffm.status == 'demo' %}
+                MODO DEMOSTRACIÓN ACTIVO
+                {% else %}
+                SINCRONIZACIÓN EXITOSA
+                {% endif %}
+                <span>| Última actualización: {{ data_rffm.last_updated }}</span>
+            </div>
+        </div>
+        <button class="btn-sync" onclick="openSyncModal()">
+            <i class="fas fa-sync-alt"></i> Sincronizar RFFM
+        </button>
+    </div>
+
+    <!-- Selector de Competición / Equipo (Botoneras Premium de 2 Niveles) -->
+    <div class="selector-container">
+        <div>
+            <span class="selector-label">Categoría</span>
+            <div id="categoryBtnContainer" class="button-row">
+                <!-- Botones de Categorías se poblarán dinámicamente -->
+            </div>
+        </div>
+        
+        <div id="teamSelectorSection" class="team-selector-container">
+            <div id="teamBtnContainer" class="button-row">
+                <!-- Botones de Letras se poblarán dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor Unificado (Sin Pestañas) -->
+    <div class="grid-container">
+        <!-- Columna Izquierda: Último Partido y Ficha de Competición (Jornadas) -->
+        <div class="left-column">
+            <div id="partidoContainer">
+                <!-- Cargado vía JS -->
+            </div>
+            
+            <div id="calendarioContainer">
+                <!-- Cargado vía JS -->
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Clasificación Completa -->
+        <div id="clasificacionContainer">
+            <!-- Cargado vía JS -->
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE CREDENCIALES DE SINCRONIZACIÓN -->
+<div id="syncModal" class="modal-backdrop" onclick="if(event.target === this) closeSyncModal()">
+    <div class="modal-sync-card">
+        <div class="modal-sync-header">
+            <h3 class="modal-sync-title">Sincronizar con RFFM</h3>
+            <button class="modal-close-btn" onclick="closeSyncModal()">&times;</button>
+        </div>
+        <div class="modal-sync-body">
+            <div id="modalError" class="modal-error-banner"></div>
+            
+            <div class="form-group">
+                <label for="inputUsuario">Usuario RFFM</label>
+                <input type="text" id="inputUsuario" placeholder="Ej: C30048" value="C30048">
+            </div>
+            
+            <div class="form-group">
+                <label for="inputClave">Contraseña RFFM</label>
+                <input type="password" id="inputClave" placeholder="Ingresa la contraseña" value="INTRANET RFFM1.">
+            </div>
+        </div>
+        <div class="modal-sync-footer">
+            <button class="btn-cancelar" onclick="closeSyncModal()">Cancelar</button>
+            <button id="btnSubmitSync" class="btn-sync-submit" onclick="enviarSincronizacion()">
+                <div class="spinner-sync"></div>
+                <span>Iniciar Sincronización</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Lógica JS para renderizado reactivo y pestañas -->
+<script>
+    const rffmData = {{ data_rffm | tojson | safe }};
+    const equipos = rffmData.equipos || [];
+
+    const CATEGORIES = [
+        'AFICIONADO',
+        'JUVENIL',
+        'CADETE',
+        'INFANTIL',
+        'ALEVIN',
+        'ALEVIN F7',
+        'BENJAMIN',
+        'PREBENJAMIN'
+    ];
+
+    const categoryIcons = {
+        'AFICIONADO': 'fa-users',
+        'JUVENIL': 'fa-running',
+        'CADETE': 'fa-star',
+        'INFANTIL': 'fa-trophy',
+        'ALEVIN': 'fa-tshirt',
+        'ALEVIN F7': 'fa-futbol',
+        'BENJAMIN': 'fa-seedling',
+        'PREBENJAMIN': 'fa-child'
+    };
+
+    let selectedCategory = '';
+    let selectedTeamIndex = -1;
+
+    function renderCategories() {
+        const container = document.getElementById("categoryBtnContainer");
+        container.innerHTML = '';
+        
+        CATEGORIES.forEach(cat => {
+            const btn = document.createElement("button");
+            btn.className = `category-btn ${selectedCategory === cat ? 'active' : ''}`;
+            btn.textContent = cat;
+            
+            btn.addEventListener("click", () => {
+                selectCategory(cat);
+            });
+            container.appendChild(btn);
+        });
+    }
+
+    function renderTeamsForCategory(categoryName) {
+        const container = document.getElementById("teamBtnContainer");
+        const section = document.getElementById("teamSelectorSection");
+        container.innerHTML = '';
+        
+        // Filtrar los equipos de esta categoría
+        const filtered = equipos.map((eq, originalIndex) => ({ eq, originalIndex }))
+                                .filter(item => item.eq.categoria === categoryName);
+                                
+        if (filtered.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+        
+        section.style.display = 'block';
+        
+        filtered.forEach(item => {
+            const btn = document.createElement("button");
+            btn.className = `team-btn ${selectedTeamIndex === item.originalIndex ? 'active' : ''}`;
+            btn.textContent = item.eq.letra;
+            btn.title = item.eq.nombre; // Tooltip con nombre completo
+            
+            btn.addEventListener("click", () => {
+                selectTeam(item.originalIndex);
+            });
+            container.appendChild(btn);
+        });
+    }
+
+    function selectCategory(categoryName, initialTeamIndex = -1) {
+        selectedCategory = categoryName;
+        renderCategories();
+        
+        const filtered = equipos.map((eq, originalIndex) => ({ eq, originalIndex }))
+                                .filter(item => item.eq.categoria === categoryName);
+                                
+        if (filtered.length > 0) {
+            let targetIndex = initialTeamIndex;
+            if (targetIndex === -1 || !filtered.some(item => item.originalIndex === targetIndex)) {
+                targetIndex = filtered[0].originalIndex;
+            }
+            selectTeam(targetIndex);
+        } else {
+            selectedTeamIndex = -1;
+            renderTeamsForCategory(categoryName);
+            renderEmptyState();
+        }
+    }
+
+    function selectTeam(index) {
+        selectedTeamIndex = parseInt(index);
+        
+        const eq = equipos[selectedTeamIndex];
+        if (eq && eq.categoria !== selectedCategory) {
+            selectedCategory = eq.categoria;
+            renderCategories();
+        }
+        
+        renderTeamsForCategory(selectedCategory);
+        cambiarCompeticion(selectedTeamIndex);
+    }
+
+    // Al cargar la página, inicializar y renderizar las botoneras
+    document.addEventListener("DOMContentLoaded", () => {
+        if (equipos.length === 0) {
+            renderCategories();
+            renderEmptyState();
+            return;
+        }
+
+        // Intentar pre-seleccionar según el equipo defecto de la sesión
+        const eqDefecto = "{{ equipo_defecto | safe }}".toUpperCase().replace(/"/g, '').trim();
+        let initialIndex = 0;
+        
+        for (let i = 0; i < equipos.length; i++) {
+            const eqClean = equipos[i].nombre.toUpperCase();
+            if (eqDefecto && (eqClean.includes(eqDefecto) || eqDefecto.includes(eqClean))) {
+                initialIndex = i;
+                break;
+            }
+        }
+        
+        // Seleccionar la categoría y equipo correspondientes
+        const initialEq = equipos[initialIndex];
+        if (initialEq && initialEq.categoria) {
+            selectCategory(initialEq.categoria, initialIndex);
+        } else {
+            selectCategory(CATEGORIES[0], initialIndex);
+        }
+    });
+
+    function cambiarCompeticion(index) {
+        const eq = equipos[index];
+        if (!eq) {
+            renderEmptyState();
+            return;
+        }
+
+        renderUltimoPartido(eq.ultimo_partido);
+        renderClasificacion(eq.clasificacion);
+        renderCalendarioHorizontal(eq.calendario, eq.letra, eq.categoria);
+    }
+
+    function renderEmptyState() {
+        document.getElementById("partidoContainer").innerHTML = `
+            <div class="partido-card">
+                <div class="empty-state">
+                    <i class="fas fa-info-circle"></i>
+                    No hay partidos registrados.
+                </div>
+            </div>
+        `;
+        document.getElementById("clasificacionContainer").innerHTML = `
+            <div class="clasificacion-box">
+                <div class="empty-state">
+                    <i class="fas fa-info-circle"></i>
+                    No hay clasificación disponible.
+                </div>
+            </div>
+        `;
+        document.getElementById("calendarioContainer").innerHTML = `
+            <div class="calendario-box">
+                <div class="empty-state">
+                    <i class="fas fa-info-circle"></i>
+                    No hay ficha de partidos disponible.
+                </div>
+            </div>
+        `;
+    }
+
+    function getShieldHtml(teamName, shieldUrl, isFuentelarreyna) {
+        const isFuente = isFuentelarreyna || teamName.toUpperCase().includes("FUENTELARREYNA");
+        const src = isFuente ? '/static/ESCUDO SIN FONDO.png' : (shieldUrl || '');
+        
+        if (src) {
+            return `
+                <img src="${src}" alt="Escudo" class="match-shield-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+                <i class="fas fa-shield-alt" style="display: none;"></i>
+            `;
+        } else {
+            return `
+                <img style="display: none;">
+                <i class="fas fa-shield-alt" style="display: inline-block;"></i>
+            `;
+        }
+    }
+
+    function renderUltimoPartido(partido) {
+        const container = document.getElementById("partidoContainer");
+        if (!partido) {
+            container.innerHTML = `
+                <div class="partido-card">
+                    <div class="clasificacion-header">
+                        <i class="fas fa-futbol"></i> Último Partido
+                    </div>
+                    <div class="empty-state" style="padding: 20px 0;">
+                        <i class="fas fa-calendar-minus" style="font-size: 30px;"></i>
+                        No hay partidos jugados recientemente.
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const esFuentelarreynaLocal = partido.es_local;
+        const shieldLocalHtml = getShieldHtml(partido.local, partido.local_shield, esFuentelarreynaLocal);
+        const shieldVisHtml = getShieldHtml(partido.visitante, partido.visitante_shield, !esFuentelarreynaLocal);
+        
+        const cleanLocal = partido.local.replace(/['"“”]/g, '').trim().toUpperCase();
+        const cleanVisitante = partido.visitante.replace(/['"“”]/g, '').trim().toUpperCase();
+        
+        container.innerHTML = `
+            <div class="partido-card">
+                <div class="partido-header">
+                    <span class="jornada-badge">${partido.jornada || 'Último Partido'}</span>
+                    <span class="partido-fecha">${partido.fecha || ''}</span>
+                </div>
+                
+                <div class="partido-equipos">
+                    <!-- Local -->
+                    <div class="team-box">
+                        <div class="team-shield ${esFuentelarreynaLocal ? 'fuentelarreyna' : ''}">
+                            ${shieldLocalHtml}
+                        </div>
+                        <div class="team-name">${cleanLocal}</div>
+                    </div>
+ 
+                    <!-- Marcador -->
+                    <div class="score-box">
+                        <div class="score-nums">
+                            ${partido.resultado || '-'}
+                        </div>
+                        <span class="partido-status">Finalizado</span>
+                    </div>
+ 
+                    <!-- Visitante -->
+                    <div class="team-box">
+                        <div class="team-shield ${!esFuentelarreynaLocal ? 'fuentelarreyna' : ''}">
+                            ${shieldVisHtml}
+                        </div>
+                        <div class="team-name">${cleanVisitante}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderClasificacion(tabla) {
+        const container = document.getElementById("clasificacionContainer");
+        if (!tabla || tabla.length === 0) {
+            container.innerHTML = `
+                <div class="clasificacion-box">
+                    <div class="clasificacion-header">
+                        <i class="fas fa-table"></i> Clasificación General
+                    </div>
+                    <div class="empty-state" style="padding: 20px 0;">
+                        <i class="fas fa-table" style="font-size: 30px;"></i>
+                        Clasificación vacía.
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        let rowsHtml = '';
+        tabla.forEach(r => {
+            const esFuentelarreyna = r.equipo.toUpperCase().includes("FUENTELARREYNA");
+            
+            const isFuente = esFuentelarreyna;
+            const shieldSrc = isFuente ? '/static/ESCUDO SIN FONDO.png' : (r.shield || '');
+            const shieldTag = shieldSrc ? `<img src="${shieldSrc}" class="table-shield" onerror="this.style.display='none';">` : '';
+            const cleanTeamName = r.equipo.replace(/['"“”]/g, '').trim().toUpperCase();
+            
+            rowsHtml += `
+                <tr class="${esFuentelarreyna ? 'highlight-row' : ''}">
+                    <td class="col-pos">${r.pos}</td>
+                    <td class="col-team" style="display: flex; align-items: center;">
+                        ${shieldTag}
+                        <span>${cleanTeamName}</span>
+                    </td>
+                    <td class="col-pts">${r.puntos}</td>
+                    <td class="col-num">${r.jugados}</td>
+                    <td class="col-num">${r.ganados}</td>
+                    <td class="col-num">${r.empatados}</td>
+                    <td class="col-num">${r.perdidos}</td>
+                    <td class="col-num">${r.goles_favor}</td>
+                    <td class="col-num">${r.goles_contra}</td>
+                </tr>
+            `;
+        });
+
+        container.innerHTML = `
+            <div class="clasificacion-box">
+                <div class="clasificacion-header">
+                    <i class="fas fa-list-ol"></i> Clasificación Completa (${tabla.length} equipos)
+                </div>
+                <div class="table-container">
+                    <table class="clasif-table">
+                        <thead>
+                            <tr>
+                                <th class="col-pos">Pos</th>
+                                <th>Equipo</th>
+                                <th class="col-pts">Pts</th>
+                                <th class="col-num">PJ</th>
+                                <th class="col-num">PG</th>
+                                <th class="col-num">PE</th>
+                                <th class="col-num">PP</th>
+                                <th class="col-num">GF</th>
+                                <th class="col-num">GC</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    // Generar un color único y consistente para cada equipo basado en su nombre
+    function stringToColor(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const colors = [
+            '#1e40af','#7c3aed','#0369a1','#047857','#b45309',
+            '#9d174d','#dc2626','#0891b2','#4338ca','#065f46',
+            '#92400e','#6d28d9','#1d4ed8','#15803d','#b91c1c',
+            '#1e3a5f','#6b21a8','#155e75','#14532d','#78350f'
+        ];
+        return colors[Math.abs(hash) % colors.length];
+    }
+
+    // Generar iniciales del equipo para el escudo SVG
+    function getInitials(name) {
+        const clean = (name || '').replace(/["'()]/g, '').trim().toUpperCase();
+        // Quitar prefijos comunes
+        const withoutPrefix = clean.replace(/^(C\.D\.|A\.D\.|C\.F\.|S\.A\.D\.|R\.C\.|R\.C\.D\.|U\.D\.|ESC\.FUT\.|A\.D\.C\.\s*)/, '').trim();
+        const words = withoutPrefix.split(/\s+/).filter(w => w.length > 2 && !['DEL','DE','LA','LOS','LAS','EL'].includes(w));
+        if (words.length === 0) return clean.substring(0, 2);
+        if (words.length === 1) return words[0].substring(0, 2);
+        return words[0][0] + words[1][0];
+    }
+
+    // Generar escudo SVG con iniciales - siempre visible, profesional
+    function generateInitialShield(teamName) {
+        const initials = getInitials(teamName);
+        const color = stringToColor(teamName.toUpperCase());
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="32" height="32">
+          <circle cx="20" cy="20" r="19" fill="${color}" stroke="white" stroke-width="1.5"/>
+          <text x="20" y="25" text-anchor="middle" fill="white" font-size="13" font-weight="800" font-family="Montserrat,Arial,sans-serif">${initials}</text>
+        </svg>`;
+        return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    }
+
+    function getShieldHtmlForTimeline(teamName, shieldUrl) {
+        const cleanName = (teamName || '').replace(/['"“”]/g, '').trim().toUpperCase();
+        const isFuente = cleanName.includes("FUENTELARREYNA");
+        
+        if (isFuente) {
+            return `<img src="/static/ESCUDO SIN FONDO.png" alt="Escudo" class="timeline-shield-img"
+                        onerror="this.onerror=null; this.src='${generateInitialShield(teamName || 'CF')}'">`;
+        }
+        
+        // Siempre mostrar el SVG de iniciales inmediatamente (fiable)
+        const svgSrc = generateInitialShield(teamName || 'CF');
+        
+        // Si hay URL de escudo real, intentar cargarla (con fallback al SVG)
+        if (shieldUrl && !shieldUrl.startsWith('http')) {
+            // URL local - usarla directamente
+            return `<img src="${shieldUrl}" alt="Escudo" class="timeline-shield-img"
+                        onerror="this.onerror=null; this.src='${svgSrc}'">`;
+        }
+        
+        // Sin URL real o URL externa no accesible - usar SVG directamente
+        return `<img src="${svgSrc}" alt="${cleanName}" class="timeline-shield-img">`;
+    }
+
+    function renderCalendarioHorizontal(calendario, equipoLetra, categoriaName) {
+        const container = document.getElementById("calendarioContainer");
+        if (!calendario || calendario.length === 0) {
+            container.innerHTML = `
+                <div class="calendario-box">
+                    <div class="clasificacion-header">
+                        <i class="fas fa-file-invoice"></i> Ficha de Competición
+                    </div>
+                    <div class="empty-state" style="padding: 20px 0;">
+                        <i class="fas fa-calendar-alt" style="font-size: 30px;"></i>
+                        No hay partidos programados.
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        // Agrupar por rival (sin comillas, en mayúsculas)
+        const groups = {};
+        const rivalOrder = [];
+        
+        calendario.forEach(p => {
+            const rawRival = p.rival || '';
+            const cleanRival = rawRival.replace(/['"\u201c\u201d]/g, '').trim().toUpperCase();
+            if (!groups[cleanRival]) {
+                groups[cleanRival] = [];
+                rivalOrder.push({
+                    raw: rawRival,
+                    clean: cleanRival,
+                    shield: p.rival_shield || ''  // Escudo pre-calculado desde Python
+                });
+            }
+            groups[cleanRival].push(p);
+        });
+
+        // Crear mapa de escudos de la clasificación del equipo activo
+        // Indexamos por múltiples variantes del nombre para encontrar siempre el escudo
+        const shieldLookup = {};
+        const activeTeam = equipos[selectedTeamIndex];
+        if (activeTeam && activeTeam.clasificacion) {
+            activeTeam.clasificacion.forEach(item => {
+                if (!item.shield) return;
+                // Guardamos por nombre completo limpio
+                const cleanFull = item.equipo.replace(/['"“”]/g, '').trim().toUpperCase();
+                shieldLookup[cleanFull] = item.shield;
+                // También por nombre sin la letra final (ej: "C.D. RUPE SAHAGUN A" -> "C.D. RUPE SAHAGUN")
+                const withoutLetter = cleanFull.replace(/\s+[A-E]$/, '').trim();
+                if (!shieldLookup[withoutLetter]) shieldLookup[withoutLetter] = item.shield;
+                // También por las palabras clave del nombre (sin prefijos C.D., A.D., etc.)
+                const keywords = cleanFull.replace(/^(C\.D\.|A\.D\.|C\.F\.|A\.D\.C\.|S\.A\.D\.|R\.C\.|R\.C\.D\.|U\.D\.|ESC\.FUT\.)\s*/i, '').split(/\s+[A-E]$/)[0].trim();
+                if (keywords && !shieldLookup[keywords]) shieldLookup[keywords] = item.shield;
+            });
+        }
+
+        function findShieldForRival(rivalClean, rivalRaw) {
+            // 1. Buscar directamente (nombre limpio)
+            if (shieldLookup[rivalClean]) return shieldLookup[rivalClean];
+            // 2. Buscar sin la letra final
+            const withoutLetter = rivalClean.replace(/\s+[A-E]$/, '').trim();
+            if (shieldLookup[withoutLetter]) return shieldLookup[withoutLetter];
+            // 3. Buscar por keywords
+            const keywords = rivalClean.replace(/^(C\.D\.|A\.D\.|C\.F\.|A\.D\.C\.|S\.A\.D\.|R\.C\.|R\.C\.D\.|U\.D\.|ESC\.FUT\.)\s*/i, '').split(/\s+[A-E]$/)[0].trim();
+            if (keywords && shieldLookup[keywords]) return shieldLookup[keywords];
+            // 4. Búsqueda parcial
+            for (const key of Object.keys(shieldLookup)) {
+                if (key.length > 5 && (rivalClean.includes(key) || key.includes(rivalClean))) {
+                    return shieldLookup[key];
+                }
+            }
+            return '';
+        }
+
+        // Limpiar letra y categoría del equipo
+        const cleanLetra = equipoLetra.replace(/['"“”]/g, '').trim();
+        const teamLabel = `${categoriaName} ${cleanLetra}`.toUpperCase();
+
+        let headerRow = `<td class="timeline-label-col">RIVAL</td>`;
+        let idaRow = `<td class="timeline-label-col" rowspan="2">${teamLabel}</td>`;
+        let vueltaRow = ``;
+        let objectiveRow = `<td class="timeline-label-col">OBJETIVO</td>`;
+
+        rivalOrder.forEach(rivalInfo => {
+            const matches = groups[rivalInfo.clean];
+            const matchIda = matches[0];
+            const matchVuelta = matches[1];
+
+            // Usar escudo pre-calculado desde Python; JS lookup como fallback
+            const shieldUrl = rivalInfo.shield || findShieldForRival(rivalInfo.clean, rivalInfo.raw);
+            const shieldHtml = getShieldHtmlForTimeline(rivalInfo.raw, shieldUrl);
+
+            headerRow += `
+                <td class="timeline-rival-cell">
+                    <div class="rival-header-content">
+                        <div class="rival-shield-container">
+                            ${shieldHtml}
+                        </div>
+                        <div class="rival-text">${rivalInfo.clean}</div>
+                    </div>
+                </td>
+            `;
+
+            // Ida
+            if (matchIda) {
+                const outcomeClass = matchIda.estado || 'G';
+                idaRow += `
+                    <td class="timeline-result-cell outcome-${outcomeClass}">
+                        <span class="result-text">${matchIda.resultado || '-'}</span>
+                    </td>
+                `;
+            } else {
+                idaRow += `
+                    <td class="timeline-result-cell empty-result">
+                        <span class="result-text">-</span>
+                    </td>
+                `;
+            }
+
+            // Vuelta
+            if (matchVuelta) {
+                const outcomeClass = matchVuelta.estado || 'G';
+                vueltaRow += `
+                    <td class="timeline-result-cell outcome-${outcomeClass}">
+                        <span class="result-text">${matchVuelta.resultado || '-'}</span>
+                    </td>
+                `;
+            } else {
+                vueltaRow += `
+                    <td class="timeline-result-cell empty-result">
+                        <span class="result-text">-</span>
+                    </td>
+                `;
+            }
+
+            objectiveRow += `
+                <td class="timeline-objective-cell"></td>
+            `;
+        });
+
+        container.innerHTML = `
+            <div class="calendario-box">
+                <div class="clasificacion-header">
+                    <i class="fas fa-file-invoice"></i> Ficha de Competición (Jornadas)
+                </div>
+                <div class="timeline-scroll-container">
+                    <table class="timeline-table">
+                        <thead>
+                            <tr>${headerRow}</tr>
+                        </thead>
+                        <tbody>
+                            <tr>${idaRow}</tr>
+                            <tr>${vueltaRow}</tr>
+                            <tr>${objectiveRow}</tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    // Modal sync functions
+    function openSyncModal() {
+        document.getElementById("modalError").style.display = 'none';
+        document.getElementById("syncModal").style.display = 'flex';
+    }
+
+    function closeSyncModal() {
+        document.getElementById("syncModal").style.display = 'none';
+    }
+
+    function enviarSincronizacion() {
+        const user = document.getElementById("inputUsuario").value.trim();
+        const pass = document.getElementById("inputClave").value.trim();
+        
+        if (!user || !pass) {
+            showModalError("El usuario y la contraseña son obligatorios.");
+            return;
+        }
+
+        const btn = document.getElementById("btnSubmitSync");
+        btn.disabled = true;
+        
+        showModalError("");
+
+        fetch('/api/sincronizar_rffm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usuario_rffm: user, password_rffm: pass })
+        })
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(err => { throw new Error(err.message || "Error en el servidor"); });
+            }
+            return res.json();
+        })
+        .then(data => {
+            if (data.status === "success") {
+                closeSyncModal();
+                showLoader();
+                window.location.reload();
+            } else {
+                throw new Error(data.message || "Error al sincronizar");
+            }
+        })
+        .catch(err => {
+            console.error("Sync Error:", err);
+            showModalError(err.message || "Error al conectar con el servidor.");
+            btn.disabled = false;
+        });
+    }
+
+    function showModalError(msg) {
+        const errorBanner = document.getElementById("modalError");
+        if (msg) {
+            errorBanner.textContent = msg;
+            errorBanner.style.display = 'block';
+        } else {
+            errorBanner.style.display = 'none';
+        }
+    }
+</script>
+{% endblock %}
