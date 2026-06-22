@@ -452,10 +452,16 @@
                             <th>EQUIPO</th>
                             <th>NOMBRE JUGADOR</th>
                             <th>COLEGIO</th>
+                            <th>DOMICILIO / CP</th>
                             <th>EMAIL / TELÉFONO</th>
                             <th>PADRE / MADRE</th>
                             <th>FORMA PAGO</th>
                             <th>IBAN / SEPA</th>
+                            <th>TITULAR Y DIRECCIÓN SEPA</th>
+                            <th>SWIFT/BIC</th>
+                            <th>TUTOR FIRMANTE</th>
+                            <th>FECHA - LOCALIDAD</th>
+                            <th style="text-align:center;">FIRMA</th>
                             <th style="text-align:center;">FICHA</th>
                         </tr>
                     </thead>
@@ -1519,6 +1525,8 @@ function mostrarRevisionFicha(datos) {
     zona.style.display = 'block';
     zona.style.background = '#fffbeb';
     zona.style.border = '2px solid #f59e0b';
+    // Guardamos la URL original del archivo temporal en el dataset para recuperarla al confirmar
+    zona.dataset.archivoUrl = datos.ARCHIVO_URL || '';
 
     // Agrupación solicitada por el usuario
     const grupos = {
@@ -1558,6 +1566,9 @@ async function confirmarFichaDefinitiva(btn) {
     const inputs = document.querySelectorAll('.input-rev-ficha');
     const datos = {};
     inputs.forEach(inp => datos[inp.dataset.key] = inp.value);
+    
+    // Recuperamos la URL original del archivo subido
+    datos.ARCHIVO_URL = document.getElementById('zonaRevisionFicha').dataset.archivoUrl || '';
 
     try {
         const res = await fetch('/api/jugadores_datos/confirmar', {
@@ -1590,6 +1601,7 @@ async function cargarTablaDatosJugadores() {
                     <div style="font-size:10px; color:#666;">DNI: ${j.AUTORIZA_JUGADOR_DNI || '-'} | Nac: ${j.JUGADOR_FECHA_NACIMIENTO || '-'}</div>
                 </td>
                 <td style="font-size:10px;">${j.JUGADOR_COLEGIO || '-'}</td>
+                <td style="font-size:10px;">${j.JUGADOR_DOMICILIO_CP || '-'}</td>
                 <td>
                     <div style="font-size:11px; font-weight:700;">${j.JUGADOR_TELEFONO_MOVIL || '-'}</div>
                     <div style="font-size:10px; color:#1e40af;">${j.JUGADOR_EMAIL || '-'}</div>
@@ -1603,8 +1615,18 @@ async function cargarTablaDatosJugadores() {
                     <div style="font-family:monospace; font-size:10px; font-weight:800;">${j.SEPA_IBAN || '-'}</div>
                     <div style="font-size:9px; color:#666;">${j.SEPA_TIPO_PAGO || '-'}</div>
                 </td>
+                <td style="font-size:10px;">
+                    <div style="font-weight:700;">${j.SEPA_NOMBRE_DEUDOR || '-'}</div>
+                    <div style="color:#666;">${j.SEPA_DIRECCION_DEUDOR || '-'}</div>
+                </td>
+                <td style="font-family:monospace; font-size:10px; font-weight:800;">${j.SEPA_SWIFT_BIC || '-'}</td>
+                <td style="font-size:10px;">${j.AUTORIZA_TUTOR_NOMBRE || '-'}</td>
+                <td style="font-size:10px;">${j.CIERRE_FECHA_LOCALIDAD || '-'}</td>
                 <td style="text-align:center;">
-                    <button class="btn-fin" style="padding:5px 10px; background:#333; color:white; font-size:9px;">VER FICHA</button>
+                    <span style="background:${j.CIERRE_FIRMA_TUTOR === 'SI' ? '#dcfce7' : '#fee2e2'}; color:${j.CIERRE_FIRMA_TUTOR === 'SI' ? '#15803d' : '#b91c1c'}; padding:4px 8px; border-radius:6px; font-size:9px; font-weight:800;">${j.CIERRE_FIRMA_TUTOR || 'NO'}</span>
+                </td>
+                <td style="text-align:center;">
+                    ${j.ARCHIVO_URL ? `<a href="${j.ARCHIVO_URL}" target="_blank" class="btn-fin" style="padding:5px 10px; background:#333; color:white; font-size:9px; text-decoration:none; display:inline-block;">VER FICHA</a>` : `-`}
                 </td>
             </tr>
         `).join('');

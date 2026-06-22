@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Crops Index</title>
+    <style>
+        body { font-family: sans-serif; background: #f1f5f9; padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
+        .card { background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .card h3 { margin: 0 0 10px 0; font-size: 14px; color: #475569; }
+        .card img { max-width: 100%; border: 1px solid #e2e8f0; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Page 1 Crops</h1>
+    <div class="grid">
+        <script>
+            for(let i=1; i<=21; i++) {
+                let num = i.toString().padStart(2, '0');
+                document.write(`
+                    <div class="card">
+                        <h3>Page 1 Region ${i}</h3>
+                        <img src="page1_region_${num}.png">
+                    </div>
+                `);
+            }
+        </script>
+    </div>
+    <h1>Page 2 Crops</h1>
+    <div class="grid">
+        <script>
+            for(let i=1; i<=3; i++) {
+                let num = i.toString().padStart(2, '0');
+                document.write(`
+                    <div class="card">
+                        <h3>Page 2 Region ${i}</h3>
+                        <img src="page2_region_${num}.png">
+                    </div>
+                `);
+            }
+        </script>
+    </div>
+</body>
+</html>

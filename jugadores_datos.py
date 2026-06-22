@@ -56,16 +56,14 @@ def extraer_datos_pdf_tradicional(file_content, mime_type):
         print(f"Error en extracción tradicional: {e}")
         return None
 
-# Definición de columnas según el formulario solicitado
+# Definición de columnas según el formulario solicitado (alineado con cabeceras de Google Sheets)
 COLUMNAS_DATOS_JUGADORES = [
     "JUGADOR_NOMBRE", "JUGADOR_APELLIDOS", "JUGADOR_COLEGIO", "JUGADOR_FECHA_NACIMIENTO",
-    "JUGADOR_EQUIPO", "JUGADOR_LETRA", "JUGADOR_DOMICILIO", "JUGADOR_CP",
-    "JUGADOR_TEL_FIJO", "JUGADOR_MOVIL", "JUGADOR_EMAIL",
-    "PADRE_NOMBRE", "MADRE_NOMBRE",
-    "FORMA_PAGO",
-    "SEPA_NOMBRE_DEUDOR", "SEPA_DIRECCION_DEUDOR", "SEPA_CP_POBLACION_CIUDAD",
-    "SEPA_PAIS", "SEPA_SWIFT_BIC", "SEPA_IBAN", "SEPA_TIPO_PAGO",
-    "SEPA_FECHA_LOCALIDAD", "SEPA_FIRMA_DETECTADA", "ARCHIVO_URL"
+    "JUGADOR_EQUIPO_LETRA", "JUGADOR_DOMICILIO_CP", "JUGADOR_TELEFONO_MOVIL", "JUGADOR_EMAIL",
+    "FAMILIA_NOMBRE_PADRE", "FAMILIA_NOMBRE_MADRE", "PAGO_MODALIDAD", "SEPA_NOMBRE_DEUDOR",
+    "SEPA_DIRECCION_DEUDOR", "SEPA_SWIFT_BIC", "SEPA_IBAN", "SEPA_TIPO_PAGO",
+    "AUTORIZA_TUTOR_NOMBRE", "AUTORIZA_JUGADOR_NOMBRE", "AUTORIZA_JUGADOR_DNI",
+    "CIERRE_FECHA_LOCALIDAD", "CIERRE_FIRMA_TUTOR", "ARCHIVO_URL"
 ]
 
 def inicializar_ia():
@@ -143,10 +141,7 @@ def upload_ficha_ia():
                 for page in doc:
                     widgets = page.widgets()
                     for widget in widgets:
-                        # widget.field_name es el ID interno (ej: 'txt_nombre')
-                        # widget.field_value es lo que se escribió
                         val = widget.field_value
-                        # Normalización de checkboxes/botones
                         if widget.field_type == 2: # Checkbox/Radio
                             val = "SI" if val not in ["Off", "", None, "No"] else "NO"
                         metadatos_formulario[widget.field_name] = val
@@ -163,41 +158,44 @@ def upload_ficha_ia():
 
         INSTRUCCIONES DE PRIORIDAD ABSOLUTA:
         1. **Prioridad Metadatos**: Si un campo existe en el "CONTEXTO TÉCNICO", usa ese valor como fuente de verdad primaria.
-        2. **Mapeo de Nombres**: Relaciona los 'Field Names' técnicos (como 'topmostSubform[0].Page1[0].Nombre[0]') con las llaves JSON solicitadas basándote en la semántica.
+        2. **Mapeo de Nombres**: Relaciona los 'Field Names' técnicos con las llaves JSON solicitadas basándote en la semántica.
         3. **Tratamiento de Checkboxes**: Usa los valores del contexto técnico para determinar si una opción está marcada (SI/NO). No te bases solo en la visión si el metadato está disponible.
         4. **Limpieza de Ruido**: Ignora todo el texto estático, avisos legales y encabezados. Devuelve exclusivamente los datos del usuario.
-        5. **Firma**: Si en la imagen se observa un trazo manuscrito en el recuadro de firma, devuelve "SI", de lo contrario "NO".
+        5. **Firma**: Si en la imagen se observa un trazo manuscrito en el recuadro de firma correspondiente, devuelve "SI", de lo contrario "NO".
 
         CAMPOS A EXTRAER Y SUS LLAVES EXACTAS:
         1. **DATOS JUGADOR**: 
-           - **JUGADOR_NOMBRE**: Nombre completo.
-           - **JUGADOR_APELLIDOS**: Apellidos completos.
-           - **JUGADOR_COLEGIO**: Nombre del colegio.
-           - **JUGADOR_FECHA_NACIMIENTO**: Fecha de nacimiento.
-           - **JUGADOR_EQUIPO**: Nombre del equipo.
-           - **JUGADOR_LETRA**: Letra del equipo (A, B, C...).
-           - Domicilio, Código Postal (CP).
-           - **JUGADOR_TEL_FIJO**: Teléfono fijo (suele empezar por 91).
-           - **JUGADOR_MOVIL**: Teléfono móvil (empieza por 6 o 7).
+           - **JUGADOR_NOMBRE**: Nombre de pila del jugador.
+           - **JUGADOR_APELLIDOS**: Apellidos del jugador.
+           - **JUGADOR_COLEGIO**: Nombre del colegio del jugador.
+           - **JUGADOR_FECHA_NACIMIENTO**: Fecha de nacimiento del jugador.
+           - **JUGADOR_EQUIPO_LETRA**: Nombre del equipo y/o categoría con su letra (ej. "BENJAMIN A", "INFANTIL B").
+           - **JUGADOR_DOMICILIO_CP**: Domicilio y código postal completo.
+           - **JUGADOR_TELEFONO_MOVIL**: Teléfonos fijo y/o móvil proporcionados.
            - **JUGADOR_EMAIL**: E-mail de contacto.
-           - **PADRE_NOMBRE**: Nombre del padre.
-           - **MADRE_NOMBRE**: Nombre de la madre.
-        2. **FORMA_PAGO**: Identifica cuál casilla está marcada: "PAGO EN OFICINA" o "PAGO DOMICILIADO".
-        3. **SEPA_NOMBRE_DEUDOR**: Nombre del titular.
-           - **SEPA_DIRECCION_DEUDOR**: Dirección del deudor.
-           - **SEPA_CP_POBLACION_CIUDAD**: Bloque de CP, Población y Ciudad.
-           - **SEPA_PAIS**: País del deudor.
-           - **SEPA_SWIFT_BIC**: SWIFT/BIC.
+        2. **DATOS FAMILIARES**:
+           - **FAMILIA_NOMBRE_PADRE**: Nombre completo del padre.
+           - **FAMILIA_NOMBRE_MADRE**: Nombre completo de la madre.
+        3. **FORMA DE PAGO / SEPA**:
+           - **PAGO_MODALIDAD**: Identifica cuál casilla está marcada: "PAGO EN OFICINA" o "PAGO DOMICILIADO".
+           - **SEPA_NOMBRE_DEUDOR**: Nombre del titular de la cuenta bancaria.
+           - **SEPA_DIRECCION_DEUDOR**: Dirección completa del titular.
+           - **SEPA_SWIFT_BIC**: Código Swift/BIC.
            - **SEPA_IBAN**: IBAN completo (debe empezar por ES).
-           - **SEPA_TIPO_PAGO**: Identifica cuál casilla está marcada: "PAGO RECURRENTE TRES PAGOS" o "PAGO UNICO".
-           - **SEPA_FECHA_LOCALIDAD**: Fecha y Localidad escrita en el mandato.
-        4. **SEPA_FIRMA_DETECTADA**: "SI" o "NO" según el recuadro de firma.
+           - **SEPA_TIPO_PAGO**: Identifica cuál casilla de SEPA está marcada: "PAGO RECURRENTE TRES PAGOS" o "PAGO UNICO".
+        4. **AUTORIZACIONES (PÁGINA 2)**:
+           - **AUTORIZA_TUTOR_NOMBRE**: Nombre de pila y apellidos del padre/madre/tutor legal que firma la autorización.
+           - **AUTORIZA_JUGADOR_NOMBRE**: Nombre del jugador que se está autorizando.
+           - **AUTORIZA_JUGADOR_DNI**: DNI del padre/madre/tutor que firma la autorización.
+        5. **FIRMAS Y CIERRE**:
+           - **CIERRE_FECHA_LOCALIDAD**: Fecha y Localidad del documento.
+           - **CIERRE_FIRMA_TUTOR**: "SI" o "NO" según si se detecta firma en los recuadros de firma del deudor/tutor.
 
         REGLAS DE SALIDA OBLIGATORIAS:
         - Devuelve EXCLUSIVAMENTE el objeto JSON plano sin bloques de código markdown.
         - Usa estas llaves exactas: {', '.join(COLUMNAS_DATOS_JUGADORES[:-1])}
-        - Si un cuadro azul está vacío, pon "".
-        - No inventes datos que no estén dentro de un cuadro azul.
+        - Si un campo está vacío, pon "".
+        - No inventes datos que no estén en el documento.
         """
 
         response = model.generate_content([
@@ -223,30 +221,75 @@ def upload_ficha_ia():
 
         return jsonify({"status": "success", "data": datos_extraidos})
     except Exception as e:
-        # Log detallado para depuración
         print("--- DETALLE DEL ERROR IA ---")
         print(f"Tipo de error: {type(e).__name__}")
         print(f"Mensaje: {str(e)}")
-        try:
-            print("Modelos que tu API ve actualmente:", [m.name for m in genai.list_models()])
-        except:
-            print("No se pudieron listar los modelos. Revisa tu API KEY.")
-        print(f"Error IA: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @jugadores_datos_bp.route('/api/jugadores_datos/confirmar', methods=['POST'])
 def confirmar_ficha():
+    import shutil
+    import unicodedata
     from app import client, NOMBRE_EXCEL
     datos = request.json
     try:
+        # 1. Mover y Renombrar el archivo subido si existe
+        archivo_url = datos.get('ARCHIVO_URL', '').strip()
+        if archivo_url and archivo_url.startswith('/static/uploads/'):
+            filename_orig = os.path.basename(archivo_url)
+            upload_folder = current_app.config.get('UPLOAD_FOLDER', os.path.join(os.getcwd(), 'static', 'uploads'))
+            temp_path = os.path.join(upload_folder, filename_orig)
+            
+            if os.path.exists(temp_path):
+                # Generar nombre destino
+                nombre = datos.get('JUGADOR_NOMBRE', '').strip()
+                apellidos = datos.get('JUGADOR_APELLIDOS', '').strip()
+                equipo = datos.get('JUGADOR_EQUIPO_LETRA', '').strip()
+                
+                parts = [nombre, apellidos, equipo]
+                combined_name = "_".join([p for p in parts if p])
+                
+                # Normalizar texto para nombre de archivo seguro
+                def clean_filename(text):
+                    nfkd_form = unicodedata.normalize('NFKD', text)
+                    only_ascii = "".join([c for c in nfkd_form if not unicodedata.category(c).startswith('M')])
+                    cleaned = re.sub(r'[^a-zA-Z0-9_\-]', '', only_ascii.replace(' ', '_'))
+                    return cleaned.upper()
+                
+                sanitized_name = clean_filename(combined_name)
+                ext = filename_orig.rsplit('.', 1)[1].lower() if '.' in filename_orig else 'pdf'
+                new_filename = f"{sanitized_name}.{ext}"
+                
+                target_folder = os.path.join(os.getcwd(), 'static', 'hojas_inscripcion')
+                os.makedirs(target_folder, exist_ok=True)
+                new_path = os.path.join(target_folder, new_filename)
+                
+                try:
+                    shutil.copy(temp_path, new_path)
+                    # Actualizar URL al nuevo destino
+                    datos['ARCHIVO_URL'] = f"/static/hojas_inscripcion/{new_filename}"
+                    print(f"DEBUG: Archivo copiado exitosamente a: {new_path}")
+                except Exception as ex_copy:
+                    print(f"Error al copiar archivo de revisión: {ex_copy}")
+
+        # 2. Guardar en Google Sheets
         try:
             sheet = client.open(NOMBRE_EXCEL).worksheet("DATOS JUGADORES")
         except gspread.exceptions.WorksheetNotFound:
             sheet = client.open(NOMBRE_EXCEL).add_worksheet(title="DATOS JUGADORES", rows="1000", cols="25")
             sheet.append_row(COLUMNAS_DATOS_JUGADORES)
         
+        # Self-healing de cabeceras en Google Sheets
+        try:
+            headers = [h.strip().upper() for h in sheet.row_values(1)]
+            if "ARCHIVO_URL" not in headers:
+                sheet.update_cell(1, len(headers) + 1, "ARCHIVO_URL")
+                print("DEBUG: Columna ARCHIVO_URL agregada al Google Sheet.")
+        except Exception as e_sh:
+            print(f"Error en self-healing del Google Sheet: {e_sh}")
+
         fila = [datos.get(col, "") for col in COLUMNAS_DATOS_JUGADORES]
-        sheet.append_row(fila)
+        sheet.append_row(fila, value_input_option='USER_ENTERED')
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500

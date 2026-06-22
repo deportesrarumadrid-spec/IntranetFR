@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Inscripción - EF Club Fuentelarreyna</title>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Montserrat:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --red: #E31E24;
+            --dark-red: #b31d2c;
+            --blue-highlight: rgba(199, 210, 254, 0.35); /* Transparent light blue-purple highlighting the paper gaps */
+            --blue-focus: rgba(255, 255, 255, 0.9);
+            --bg: #0f172a; /* Dark sleek background for A4 sheet contrast */
+            --border-glow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+        
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+            color: white;
+            padding-bottom: 80px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--red) 0%, var(--dark-red) 100%);
+            color: white;
+            text-align: center;
+            padding: 25px 15px;
+            font-family: 'Archivo Black', sans-serif;
+            box-shadow: 0 4px 20px rgba(227, 30, 36, 0.25);
+            position: relative;
+        }
+        .header img {
+            height: 55px;
+            margin-bottom: 8px;
+            filter: brightness(0) invert(1);
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 22px;
+            letter-spacing: -0.5px;
+            text-transform: uppercase;
+        }
+        .header h2 {
+            margin: 4px 0 0 0;
+            font-size: 18px;
+            opacity: 0.9;
+        }
+        
+        .form-container {
+            max-width: 800px;
+            margin: 25px auto;
+            padding: 0 10px;
+        }
+        
+        .form-instructions {
+            text-align: center;
+            margin-bottom: 25px;
+            font-weight: 700;
+            font-size: 13px;
+            color: #94a3b8;
+            line-height: 1.5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        /* A4 Page Container */
+        .page-sheet {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 634 / 898; /* Exact aspect ratio of template images */
+            background-size: cover;
+            background-position: center;
+            box-shadow: var(--border-glow);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 40px;
+            background-repeat: no-repeat;
+        }
+        
+        .page-sheet-p2 {
+            aspect-ratio: 634 / 900; /* Page 2 ratio */
+        }
+        
+        /* Absolute positioned input overlays */
+        .overlay-input {
+            position: absolute;
+            border: none;
+            background-color: var(--blue-highlight);
+            color: #0c1c49;
+            font-family: Arial, sans-serif;
+            font-size: 2vw; /* Responsive font-size scaling with width */
+            font-weight: 900;
+            text-transform: uppercase;
+            padding: 0 4px;
+            box-sizing: border-box;
+            outline: none;
+            transition: all 0.2s ease;
+            border-radius: 2px;
+        }
+        @media (min-width: 800px) {
+            .overlay-input {
+                font-size: 14px; /* Caps font size on desktop */
+            }
+        }
+        .overlay-input:focus {
+            background-color: var(--blue-focus);
+            box-shadow: 0 0 0 2px #818cf8;
+        }
+        
+        /* Special styles for inputs */
+        .overlay-input[type="date"] {
+            font-size: 1.8vw;
+        }
+        @media (min-width: 800px) {
+            .overlay-input[type="date"] {
+                font-size: 13px;
+            }
+        }
+        
+        /* Checkbox label overlay */
+        .overlay-check {
+            position: absolute;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+        }
+        .overlay-check input[type="radio"], .overlay-check input[type="checkbox"] {
+            display: none;
+        }
+        .overlay-check .x-mark {
+            font-family: Arial, sans-serif;
+            font-size: 2.2vw;
+            font-weight: 900;
+            color: #0b2265;
+            display: none;
+            line-height: 1;
+            user-select: none;
+        }
+        @media (min-width: 800px) {
+            .overlay-check .x-mark {
+                font-size: 16px;
+            }
+        }
+        .overlay-check.active .x-mark {
+            display: block;
+        }
+        
+        /* Signature Overlay */
+        .overlay-signature {
+            position: absolute;
+            box-sizing: border-box;
+            background-color: rgba(199, 210, 254, 0.25);
+            border: 1px dashed var(--blue-border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .overlay-sig-canvas {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            cursor: crosshair;
+            touch-action: none;
+        }
+        .overlay-sig-clear {
+            position: absolute;
+            right: 4px;
+            bottom: 4px;
+            background: rgba(15, 23, 42, 0.7);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: bold;
+            padding: 2px 6px;
+            cursor: pointer;
+            z-index: 10;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .overlay-sig-clear:hover {
+            background: rgba(15, 23, 42, 0.9);
+        }
+        
+        /* Submit Button */
+        .btn-submit {
+            width: 100%;
+            background: linear-gradient(135deg, var(--red) 0%, var(--dark-red) 100%);
+            color: white;
+            border: none;
+            padding: 18px;
+            border-radius: 12px;
+            font-family: 'Archivo Black', sans-serif;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 6px 20px rgba(227, 30, 36, 0.45);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            text-transform: uppercase;
+            margin-top: 10px;
+        }
+        .btn-submit:active { transform: scale(0.98); }
+        .btn-submit:disabled { background: #475569; cursor: not-allowed; box-shadow: none; }
+        
+        /* Success Overlay */
+        .success-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 30px;
+            box-sizing: border-box;
+        }
+        .success-overlay i {
+            font-size: 80px;
+            color: #10b981;
+            margin-bottom: 20px;
+            animation: scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .success-overlay h2 {
+            font-family: 'Archivo Black';
+            font-size: 26px;
+            color: white;
+            margin: 0 0 10px 0;
+        }
+        .success-overlay p {
+            font-size: 14px;
+            font-weight: 600;
+            color: #94a3b8;
+            margin-bottom: 30px;
+            max-width: 400px;
+            line-height: 1.5;
+        }
+        .btn-download {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-weight: 800;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+        
+        @keyframes scaleIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+    <div class="form-container">
+        
+        <div class="form-instructions">
+            <i class="fas fa-info-circle" style="color:#60a5fa;"></i> Rellena directamente las zonas sombreadas en azul del documento:
+        </div>
+
+        <form id="inscripcionForm" onsubmit="enviarInscripcion(event)">
+            
+            <!-- PAGINA 1: DATOS JUGADOR Y SEPA -->
+            <div class="page-sheet" style="background-image: url('/static/inscripcion_p1.png');">
+                
+                <!-- Inputs Datos Jugador -->
+                <input type="text" name="JUGADOR_NOMBRE" class="overlay-input" style="left: 14.04%; top: 14.59%; width: 13.41%; height: 2.23%;" required oninput="syncTutorAuth()">
+                <input type="text" name="JUGADOR_APELLIDOS" class="overlay-input" style="left: 34.23%; top: 14.59%; width: 28.08%; height: 2.23%;" required oninput="syncTutorAuth()">
+                <input type="text" name="JUGADOR_COLEGIO" class="overlay-input" style="left: 68.14%; top: 14.59%; width: 15.30%; height: 2.23%;" required>
+                
+                <input type="text" name="JUGADOR_FECHA_NACIMIENTO" class="overlay-input" style="left: 20.50%; top: 17.04%; width: 15.14%; height: 2.23%;" required>
+
+                <!-- Autocomplete input using active teams datalist -->
+                <input type="text" name="JUGADOR_EQUIPO" class="overlay-input" style="left: 42.27%; top: 16.93%; width: 17.67%; height: 2.23%;" required list="equipos_list">
+                <datalist id="equipos_list">
+                    {% for eq in equipos %}
+                    <option value="{{ eq }}">{{ eq }}</option>
+                    {% endfor %}
+                </datalist>
+
+                <input type="text" name="JUGADOR_LETRA" class="overlay-input" style="left: 65.62%; top: 16.93%; width: 9.15%; height: 2.23%;" required>
+
+                <input type="text" name="JUGADOR_DOMICILIO" class="overlay-input" style="left: 15.14%; top: 19.38%; width: 58.04%; height: 2.23%;" required>
+                <input type="text" name="JUGADOR_CP" class="overlay-input" style="left: 83.75%; top: 19.38%; width: 7.57%; height: 2.23%;" required maxlength="5">
+
+                <input type="text" name="JUGADOR_TEL_FIJO" class="overlay-input" style="left: 18.77%; top: 21.71%; width: 11.67%; height: 2.23%;">
+                <input type="text" name="JUGADOR_MOVIL" class="overlay-input" style="left: 35.49%; top: 21.71%; width: 11.83%; height: 2.23%;" required>
+                <input type="email" name="JUGADOR_EMAIL" class="overlay-input" style="left: 52.84%; top: 21.71%; width: 38.80%; height: 2.23%; text-transform: none;" required>
+
+                <input type="text" name="PADRE_NOMBRE" class="overlay-input" style="left: 18.77%; top: 24.05%; width: 28.55%; height: 2.23%;" oninput="syncTutorAuth()">
+                <input type="text" name="MADRE_NOMBRE" class="overlay-input" style="left: 59.15%; top: 24.05%; width: 24.45%; height: 1.89%;" oninput="syncTutorAuth()">
+                
+                <!-- Checkboxes Pago -->
+                <label class="overlay-check" style="left: 12.78%; top: 32.07%; width: 1.42%; height: 1.11%;" id="lblPagoOficina" onclick="selectPaymentMode('OFICINA')">
+                    <input type="radio" name="PAGO_MODALIDAD" value="OFICINA" required>
+                    <span class="x-mark">X</span>
+                </label>
+                <label class="overlay-check" style="left: 12.78%; top: 34.41%; width: 1.42%; height: 1.11%;" id="lblPagoDomiciliado" onclick="selectPaymentMode('DOMICILIADO')">
+                    <input type="radio" name="PAGO_MODALIDAD" value="DOMICILIADO">
+                    <span class="x-mark">X</span>
+                </label>
+                
+                <!-- SEPA Mandate Fields (Overlayed inside SEPA area on Page 1) -->
+                <div id="sepaOverlayContainer">
+                    <input type="text" name="SEPA_NOMBRE_DEUDOR" class="overlay-input sepa-req-fld" style="left: 38.01%; top: 62.81%; width: 57.57%; height: 2.12%;">
+                    <input type="text" name="SEPA_DIRECCION_DEUDOR" class="overlay-input sepa-req-fld" style="left: 39.75%; top: 65.03%; width: 55.84%; height: 2.23%;">
+                    <input type="text" name="SEPA_CP_POBLACION_CIUDAD" class="overlay-input sepa-req-fld" style="left: 54.42%; top: 67.26%; width: 15.93%; height: 2.12%;">
+                    <input type="text" name="SEPA_PAIS" class="overlay-input sepa-req-fld" style="left: 80.60%; top: 67.26%; width: 15.00%; height: 2.12%;">
+                    <input type="text" name="SEPA_SWIFT_BIC" class="overlay-input sepa-req-fld" style="left: 23.34%; top: 69.27%; width: 25.55%; height: 2.23%;">
+                    <input type="text" name="SEPA_IBAN" class="overlay-input sepa-req-fld" style="left: 45.90%; top: 72.61%; width: 49.53%; height: 2.23%;">
+                    
+                    <!-- Checkboxes SEPA -->
+                    <label class="overlay-check" style="left: 9.15%; top: 79.51%; width: 1.42%; height: 1.11%;" id="lblSepaRecurrente" onclick="selectSepaType('RECURRENTE')">
+                        <input type="radio" name="SEPA_TIPO_PAGO" value="RECURRENTE" class="sepa-radio-req-fld">
+                        <span class="x-mark">X</span>
+                    </label>
+                    <label class="overlay-check" style="left: 9.15%; top: 81.63%; width: 1.42%; height: 1.11%;" id="lblSepaUnico" onclick="selectSepaType('UNICO')">
+                        <input type="radio" name="SEPA_TIPO_PAGO" value="UNICO">
+                        <span class="x-mark">X</span>
+                    </label>
+                    
+                    <input type="text" name="SEPA_FECHA_LOCALIDAD" id="sepaFechaLocalidad" class="overlay-input sepa-req-fld" style="left: 23.97%; top: 88.98%; width: 25.24%; height: 2.00%;">
+                    
+                    <!-- Canvas Firma SEPA (sigCanvas1) -->
+                    <div class="overlay-signature" style="left: 69.09%; top: 83.63%; width: 26.34%; height: 8.80%;">
+                        <canvas id="sigCanvas1" class="overlay-sig-canvas"></canvas>
+                        <button type="button" class="overlay-sig-clear" onclick="clearCanvas('sigCanvas1')">Borrar</button>
+                    </div>
+                </div>
+                
+            </div>
+
+            <!-- PAGINA 2: AUTORIZACIONES Y FIRMA -->
+            <div class="page-sheet page-sheet-p2" style="background-image: url('/static/inscripcion_p2.png');">
+                
+                <input type="text" name="AUTORIZA_TUTOR_NOMBRE" id="authTutorNombre" class="overlay-input" style="left: 11.99%; top: 13.11%; width: 45.58%; height: 2.78%;" required>
+                <input type="text" name="AUTORIZA_TUTOR_DNI" class="overlay-input" style="left: 64.35%; top: 13.11%; width: 13.88%; height: 2.78%;" required>
+
+                <!-- Autocompleted read-only player name -->
+                <input type="text" name="AUTORIZA_JUGADOR_NOMBRE" id="authJugadorNombre" class="overlay-input" style="left: 44.16%; top: 16.11%; width: 38.96%; height: 2.78%; background-color: rgba(224, 231, 255, 0.5);" readonly>
+                
+                <!-- Date for authorization closing (copied from Page 1 date) -->
+                <input type="hidden" name="CIERRE_FECHA_LOCALIDAD" id="authFechaLocalidad">
+                
+                <!-- Canvas Firma Autorización (sigCanvas2) -->
+                <div class="overlay-signature" style="left: 30.91%; top: 81.56%; width: 38.33%; height: 11.44%;">
+                    <canvas id="sigCanvas2" class="overlay-sig-canvas"></canvas>
+                    <button type="button" class="overlay-sig-clear" onclick="clearCanvas('sigCanvas2')">Borrar</button>
+                </div>
+                
+            </div>
+
+            <button type="submit" id="btnSubmit" class="btn-submit">
+                <i class="fas fa-file-contract"></i> Confirmar y Enviar Inscripción Firmada
+            </button>
+            <div id="loadingText" style="text-align: center; color: #94a3b8; font-weight: 800; font-size: 12px; margin-top: 15px; display: none;">
+                Generando documento PDF y guardando datos en la base de datos...
+            </div>
+            
+        </form>
+    </div>
+
+    <!-- SUCCESS SCREEN -->
+    <div class="success-overlay" id="successOverlay">
+        <i class="fas fa-check-circle"></i>
+        <h2>¡Inscripción Enviada Correctamente!</h2>
+        <p>Los datos ya se encuentran archivados y procesados en la Intranet de Fuentelarreyna. Puedes descargar el documento PDF firmado aquí:</p>
+        <div style="display: flex; flex-direction: column; gap: 15px; align-items: center;">
+            <a href="#" id="linkDownloadPdf" target="_blank" class="btn-download">
+                <i class="fas fa-file-pdf"></i> DESCARGAR HOJA DE INSCRIPCIÓN
+            </a>
+            <button onclick="window.location.reload()" class="btn-submit" style="max-width: 250px; padding: 12px; font-size: 13px;">Registrar Otro Jugador</button>
+        </div>
+    </div>
+
+    <script>
+        // Set dates
+        const hoy = new Date();
+        const fechaStr = `${hoy.getDate().toString().padStart(2, '0')}/${(hoy.getMonth()+1).toString().padStart(2, '0')}/${hoy.getFullYear()}`;
+        document.getElementById('sepaFechaLocalidad').value = `MADRID, ${fechaStr}`;
+        document.getElementById('authFechaLocalidad').value = `MADRID, ${fechaStr}`;
+        
+        // Sync Player Name on Page 2
+        function syncTutorAuth() {
+            const nom = document.querySelector('input[name="JUGADOR_NOMBRE"]').value.trim();
+            const ape = document.querySelector('input[name="JUGADOR_APELLIDOS"]').value.trim();
+            const tutorNombre = document.getElementById('authTutorNombre');
+            
+            document.getElementById('authJugadorNombre').value = `${nom} ${ape}`.trim().toUpperCase();
+            
+            // Auto fill tutor from parents if empty
+            if (!tutorNombre.value.trim()) {
+                const padre = document.querySelector('input[name="PADRE_NOMBRE"]').value.trim();
+                const madre = document.querySelector('input[name="MADRE_NOMBRE"]').value.trim();
+                tutorNombre.value = (padre || madre).toUpperCase();
+            }
+        }
+
+        // Option selections
+        function selectPaymentMode(mode) {
+            const lblOficina = document.getElementById('lblPagoOficina');
+            const lblDomiciliado = document.getElementById('lblPagoDomiciliado');
+
+            document.querySelectorAll('input[name="PAGO_MODALIDAD"]').forEach(r => {
+                r.checked = (r.value === mode);
+            });
+
+            if (mode === 'OFICINA') {
+                lblOficina.classList.add('active');
+                lblDomiciliado.classList.remove('active');
+
+                // Disable validation requirements (SEPA queda visible pero no obligatorio)
+                document.querySelectorAll('.sepa-req-fld').forEach(inp => inp.required = false);
+                document.querySelectorAll('.sepa-radio-req-fld').forEach(r => r.required = false);
+            } else {
+                lblOficina.classList.remove('active');
+                lblDomiciliado.classList.add('active');
+
+                // Enable validation requirements
+                document.querySelectorAll('.sepa-req-fld').forEach(inp => inp.required = true);
+                document.querySelectorAll('.sepa-radio-req-fld').forEach(r => r.required = true);
+            }
+        }
+        
+        function selectSepaType(type) {
+            const recurrente = document.getElementById('lblSepaRecurrente');
+            const unico = document.getElementById('lblSepaUnico');
+            
+            document.querySelectorAll('input[name="SEPA_TIPO_PAGO"]').forEach(r => {
+                r.checked = (r.value === type);
+            });
+            
+            if (type === 'RECURRENTE') {
+                recurrente.classList.add('active');
+                unico.classList.remove('active');
+            } else {
+                recurrente.classList.remove('active');
+                unico.classList.add('active');
+            }
+        }
+        
+        // --- CANVAS SIGNATURE PADS LOGIC ---
+        const canvases = ['sigCanvas1', 'sigCanvas2'];
+        const contexts = {};
+        const drawingState = {};
+        
+        canvases.forEach(id => {
+            const canvas = document.getElementById(id);
+            contexts[id] = canvas.getContext('2d');
+            drawingState[id] = { drawing: false, lastPos: { x: 0, y: 0 } };
+            
+            // Adjust resolution
+            resizeCanvas(canvas);
+            
+            // Mouse Events
+            canvas.addEventListener('mousedown', (e) => startDrawing(e, id));
+            canvas.addEventListener('mousemove', (e) => draw(e, id));
+            canvas.addEventListener('mouseup', () => stopDrawing(id));
+            canvas.addEventListener('mouseout', () => stopDrawing(id));
+            
+            // Touch Events
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                startDrawing(touch, id);
+            }, { passive: false });
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                draw(touch, id);
+            }, { passive: false });
+            canvas.addEventListener('touchend', () => stopDrawing(id), { passive: false });
+        });
+        
+        window.addEventListener('resize', () => {
+            canvases.forEach(id => resizeCanvas(document.getElementById(id)));
+        });
+        
+        function resizeCanvas(canvas) {
+            if (!canvas) return;
+            const rect = canvas.getBoundingClientRect();
+            
+            // Save current drawing content
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(canvas, 0, 0);
+            
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            
+            // Restore drawing content scaled
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, canvas.width, canvas.height);
+            
+            // Re-apply brush styles
+            ctx.strokeStyle = '#0c1c49'; // Dark blue ink matching printed form
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+        }
+        
+        function startDrawing(e, id) {
+            const canvas = document.getElementById(id);
+            const rect = canvas.getBoundingClientRect();
+            drawingState[id].drawing = true;
+            
+            const x = (e.clientX || e.pageX) - rect.left;
+            const y = (e.clientY || e.pageY) - rect.top;
+            drawingState[id].lastPos = { x, y };
+        }
+        
+        function draw(e, id) {
+            if (!drawingState[id].drawing) return;
+            
+            const canvas = document.getElementById(id);
+            const rect = canvas.getBoundingClientRect();
+            const ctx = contexts[id];
+            
+            const x = (e.clientX || e.pageX) - rect.left;
+            const y = (e.clientY || e.pageY) - rect.top;
+            
+            ctx.beginPath();
+            ctx.moveTo(drawingState[id].lastPos.x, drawingState[id].lastPos.y);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            
+            drawingState[id].lastPos = { x, y };
+        }
+        
+        function stopDrawing(id) {
+            drawingState[id].drawing = false;
+        }
+        
+        function clearCanvas(id) {
+            const canvas = document.getElementById(id);
+            const ctx = contexts[id];
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Re-apply styles after clearing
+            ctx.strokeStyle = '#0c1c49';
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+        }
+        
+        // Check if canvas is empty
+        function isCanvasBlank(id) {
+            const canvas = document.getElementById(id);
+            const blank = document.createElement('canvas');
+            blank.width = canvas.width;
+            blank.height = canvas.height;
+            return canvas.toDataURL() === blank.toDataURL();
+        }
+        
+        // Handle Form Submission
+        function enviarInscripcion(e) {
+            e.preventDefault();
+            
+            // Sync page 1 date to page 2 hidden field
+            document.getElementById('authFechaLocalidad').value = document.getElementById('sepaFechaLocalidad').value;
+            
+            // Check canvas signatures
+            const paymentMode = document.querySelector('input[name="PAGO_MODALIDAD"]:checked').value;
+            if (paymentMode === 'DOMICILIADO' && isCanvasBlank('sigCanvas1')) {
+                alert("Por favor, firma la orden de domiciliación SEPA.");
+                return;
+            }
+            if (isCanvasBlank('sigCanvas2')) {
+                alert("Por favor, firma la hoja de autorizaciones en el recuadro de firma.");
+                return;
+            }
+            
+            const btn = document.getElementById('btnSubmit');
+            const loading = document.getElementById('loadingText');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GENERANDO PDF Y GUARDANDO...';
+            loading.style.display = 'block';
+            
+            // Collect Form Fields
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Get base64 signatures
+            data.sig1 = paymentMode === 'DOMICILIADO' ? document.getElementById('sigCanvas1').toDataURL('image/png') : '';
+            data.sig2 = document.getElementById('sigCanvas2').toDataURL('image/png');
+            
+            // Set FAMILIA_NOMBRE_PADRE and FAMILIA_NOMBRE_MADRE from PADRE_NOMBRE / MADRE_NOMBRE
+            data.FAMILIA_NOMBRE_PADRE = data.PADRE_NOMBRE;
+            data.FAMILIA_NOMBRE_MADRE = data.MADRE_NOMBRE;
+            
+            fetch('/api/inscripcion/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    document.getElementById('linkDownloadPdf').href = res.pdf_url;
+                    document.getElementById('successOverlay').style.display = 'flex';
+                } else {
+                    alert("Error: " + res.message);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-file-contract"></i> Confirmar y Enviar Inscripción Firmada';
+                    loading.style.display = 'none';
+                }
+            })
+            .catch(err => {
+                alert("Error de conexión al procesar la inscripción.");
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-file-contract"></i> Confirmar y Enviar Inscripción Firmada';
+                loading.style.display = 'none';
+            });
+        }
+    </script>
+</body>
+</html>
