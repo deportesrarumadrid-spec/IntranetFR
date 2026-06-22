@@ -136,6 +136,10 @@
         height: 40px;
         background: rgba(255,255,255,0.1);
     }
+    .pago-action-bar select option {
+        color: #1e293b !important;
+        background-color: #ffffff !important;
+    }
 </style>
 
 <div style="padding: 10px;">
@@ -262,7 +266,6 @@
                 <div class="legend-item item-llegado">LLEGADO</div>
                 <div class="legend-item item-entregada">ENTREGADA</div>
                 </div>
-
                 <div style="display: flex; gap: 8px;">
                     <button class="btn-fin" style="background: #E31E24; color: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(227,30,36,0.2);" onclick="abrirModalAnadirJugadorFin()">
                         <i class="fas fa-user-plus"></i> AÑADIR JUGADOR
@@ -270,8 +273,11 @@
                     <button id="btnExportarRopa" class="btn-fin" style="background: #198754; color: white; border-radius: 10px; display: none; align-items: center; gap: 8px;" onclick="exportarRopaExcel()">
                         <i class="fas fa-file-excel"></i> EXPORTAR ROPA
                     </button>
-                <button id="btnSacarImpagos" class="btn-fin" style="background: #f8f9fa; color: #333; border: 1px solid #e2e8f0; border-radius: 10px; display: flex; align-items: center; gap: 8px;" onclick="generarReporteImpagos()">
+                    <button id="btnSacarImpagos" class="btn-fin" style="background: #f8f9fa; color: #333; border: 1px solid #e2e8f0; border-radius: 10px; display: flex; align-items: center; gap: 8px;" onclick="generarReporteImpagos()">
                         <i class="fas fa-exclamation-circle"></i> SACAR IMPAGOS
+                    </button>
+                    <button id="btnConfigurarTipoForma" class="btn-fin" style="background: #f8f9fa; color: #333; border: 1px solid #e2e8f0; border-radius: 10px; display: flex; align-items: center; gap: 8px;" onclick="abrirModalConfigurarTipoForma()">
+                        <i class="fas fa-sliders-h"></i> CONFIGURAR TIPO/FORMA
                     </button>
                 </div>
             </div>
@@ -299,39 +305,15 @@
                                 <input type="text" id="busquedaJugador" oninput="filtrarJugadores()" placeholder="Buscar..." style="padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; font-weight: 700; font-family: inherit; font-size: 11px; width: 120px; outline: none; background: white;">
                             </div>
                         </th>
-                        <th class="col-financiera" style="width: 110px; background: #fdfdfd; padding: 15px 5px;">
-                            <div style="display: flex; flex-direction: column; gap: 5px;">
-                                <div style="display: flex; align-items: center; justify-content: space-between;">
-                                    <span style="font-size: 10px; color: #94a3b8; font-weight: 800;">TIPO PAGO</span>
-                                    <button class="btn-fin" style="padding: 2px 6px; font-size: 10px; background: #333; color: white;" onclick="bulkSaveColumn('TIPO_PAGO', 'bulkSelectTipo')" title="Guardar Cambios Masivos">
-                                        <i class="fas fa-save"></i>
-                                    </button>
-                                </div>
-                                <select id="bulkSelectTipo" onchange="bulkApplyUI('tipo', this.value)" style="padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; font-weight: 700; font-size: 11px; background: white;">
-                                    <option value="">Cambiar...</option>
-                                    <option value="Efectivo">Efectivo</option>
-                                    <option value="Domiciliación">Domiciliación</option>
-                                    <option value="Transferencia">Transferencia</option>
-                                    <option value="Tarjeta">Tarjeta</option>
-                                    <option value="Beca">Beca</option>
-                                </select>
-                            </div>
+                        <th class="col-financiera" style="width: 110px; background: #fdfdfd; padding: 15px 5px; vertical-align: middle; text-align: center; cursor: pointer;" onclick="abrirModalBulkColumna('TIPO_PAGO')" title="Cambiar tipo de pago masivamente">
+                            <span style="font-size: 10px; color: #94a3b8; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                TIPO PAGO <i class="fas fa-edit" style="color: #E31E24; font-size: 8px;"></i>
+                            </span>
                         </th>
-                        <th class="col-financiera" style="width: 140px; background: #fdfdfd; padding: 15px 5px;">
-                            <div style="display: flex; flex-direction: column; gap: 5px;">
-                                <div style="display: flex; align-items: center; justify-content: space-between;">
-                                    <span style="font-size: 10px; color: #94a3b8; font-weight: 800;">FORMA PAGO</span>
-                                    <button class="btn-fin" style="padding: 2px 6px; font-size: 10px; background: #333; color: white;" onclick="bulkSaveColumn('FORMA_PAGO', 'bulkSelectForma')" title="Guardar Cambios Masivos">
-                                        <i class="fas fa-save"></i>
-                                    </button>
-                                </div>
-                                <select id="bulkSelectForma" onchange="bulkApplyUI('forma', this.value)" style="padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; font-weight: 700; font-size: 11px; background: white; margin-bottom: 5px;">
-                                    <option value="">Cambiar...</option>
-                                </select>
-                                <button class="btn-fin" style="padding: 4px; font-size: 9px; background: #fff; border: 1px solid #e2e8f0; color: #64748b; border-radius: 6px; font-weight: 800;" onclick="abrirModalFormasPago()">
-                                    <i class="fas fa-edit"></i> EDITAR
-                                </button>
-                            </div>
+                        <th class="col-financiera" style="width: 140px; background: #fdfdfd; padding: 15px 5px; vertical-align: middle; text-align: center; cursor: pointer;" onclick="abrirModalBulkColumna('FORMA_PAGO')" title="Cambiar forma de pago masivamente">
+                            <span style="font-size: 10px; color: #94a3b8; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                FORMA PAGO <i class="fas fa-edit" style="color: #E31E24; font-size: 8px;"></i>
+                            </span>
                         </th>
                         <th class="pago-cell col-financiera" style="min-width: 50px; padding: 10px 5px; background: #fdfdfd; border-bottom: 2px solid #eee;">
                             <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
@@ -373,11 +355,11 @@
                 </thead>
                 <tbody id="cuerpoPagos">
                     {% for j in jugadores %}
-                    <tr class="fila-jugador" data-equipo="{{ j.EQUIPO }}" data-nombre="{{ j.NOMBRE }}">
+                    <tr class="fila-jugador" data-equipo="{{ j.EQUIPO }}" data-nombre="{{ j.NOMBRE }}" onclick="manejarClickFila(event, this)">
                         <td style="font-weight: 800;">{{ j.EQUIPO }}</td>
                         <td>{{ j.NOMBRE }}</td>
-                        <td class="col-financiera"><span class="span-tipo-pago" style="background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-weight: 700; color: #475569; font-size: 10px;">{{ j.TIPO_PAGO or 'Efectivo' }}</span></td>
-                        <td class="col-financiera"><span class="span-forma-pago" style="background: #eee; padding: 2px 5px; border-radius: 4px;">{{ j.FORMA_PAGO or 'Efectivo' }}</span></td>
+                        <td class="col-financiera" onclick="event.stopPropagation(); editarPagoIndividual(this.closest('tr'), 'TIPO_PAGO')"><span class="span-tipo-pago" style="background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-weight: 700; color: #475569; font-size: 10px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#dbeafe'; this.style.color='#1e40af'" onmouseout="this.style.background='#f1f5f9'; this.style.color='#475569'">{{ j.TIPO_PAGO or 'Efectivo' }}</span></td>
+                        <td class="col-financiera" onclick="event.stopPropagation(); editarPagoIndividual(this.closest('tr'), 'FORMA_PAGO')"><span class="span-forma-pago" style="background: #eee; padding: 4px 8px; border-radius: 6px; font-weight: 700; color: #475569; font-size: 10px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#dcfce7'; this.style.color='#15803d'" onmouseout="this.style.background='#eee'; this.style.color='#475569'">{{ j.FORMA_PAGO or 'Efectivo' }}</span></td>
                         <td class="pago-cell col-financiera" onclick="seleccionarPago(event, this, 'Inscripción')">-</td>
                         {% for mes in ['01','02','03','04','05','06','07','08','09','10','11','12'] %}
                         <td class="pago-cell col-financiera" onclick="seleccionarPago(event, this, '{{ mes }}')">-</td>
@@ -1045,25 +1027,7 @@ function getLabelConcepto(item, forma, isStaff) {
     let itemKey = item;
     if (typeof item === 'string' && item.startsWith('Staff-')) itemKey = item.replace('Staff-', '');
     
-    let label = mesesNombres[itemKey] || item;
-
-    // Lógica para meses agrupados (Bianual, etc.)
-    if (!isStaff && typeof item === 'string' && item.match(/^\d+$/)) {
-        const configForma = configuracionesPago.find(c => c.nombre === forma);
-        const nPagos = configForma ? (parseInt(configForma.meses) || 10) : 10;
-        const intervalo = Math.floor(12 / nPagos);
-        
-        if (intervalo > 1) {
-            let mesesArr = [];
-            const startMonth = parseInt(item);
-            for (let m = 0; m < intervalo; m++) {
-                const mesNum = (startMonth + m).toString().padStart(2, '0');
-                if (mesesNombres[mesNum]) mesesArr.push(mesesNombres[mesNum]);
-            }
-            label = mesesArr.join('+');
-        }
-    }
-    return label;
+    return mesesNombres[itemKey] || item;
 }
 
 function abrirAccionAsiento(id_global, real_id, tipo_origen, nombreOrig, conceptoOrig, fechaOrig) {
@@ -1281,6 +1245,104 @@ function abrirModalBulkEsperado(concepto) {
     }
     
     document.getElementById('bulkTituloConcepto').innerText = text;
+}
+
+let bulkColumnaActiva = ""; // 'TIPO_PAGO' o 'FORMA_PAGO'
+
+function abrirModalBulkColumna(campo) {
+    bulkColumnaActiva = campo;
+    const select = document.getElementById('bulkColumnaSelect');
+    if (!select) return;
+    
+    let titulo = "";
+    let optionsHtml = "";
+    
+    if (campo === 'TIPO_PAGO') {
+        titulo = "EDITAR TIPO DE PAGO MASIVAMENTE";
+        // TIPO PAGO = tipos de tarifa (Mensual, Trimestral…) → gridTipos
+        const tipoOptions = gridTipos.length > 0 ? [...gridTipos] : ['Mensual', 'Trimestral'];
+        optionsHtml = tipoOptions.map(t => `<option value="${t}">${t}</option>`).join('');
+    } else if (campo === 'FORMA_PAGO') {
+        titulo = "EDITAR FORMA DE PAGO MASIVAMENTE";
+        // FORMA PAGO = métodos de cobro (Domiciliación, Transferencia, Efectivo…) → gridFormas
+        let formaOptions = [...gridFormas];
+        if (formaOptions.length === 0) formaOptions = ['DOMICILIACION', 'TRANSFERENCIA', 'EFECTIVO'];
+        optionsHtml = formaOptions.map(f => `<option value="${f}">${f}</option>`).join('');
+    }
+    
+    document.getElementById('bulkColumnaTitulo').innerText = titulo;
+    select.innerHTML = optionsHtml;
+    document.getElementById('modalBulkColumna').style.display = 'flex';
+}
+
+async function aplicarBulkColumna(btn) {
+    const select = document.getElementById('bulkColumnaSelect');
+    if (!select) return;
+    const nuevoVal = select.value;
+    if (!nuevoVal) return alert("Selecciona un valor válido");
+
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> APLICANDO...';
+    btn.disabled = true;
+
+    const filas = document.querySelectorAll('.fila-jugador');
+    const updates = [];
+
+    filas.forEach(f => {
+        if (f.style.display !== 'none') {
+            const nombre = f.dataset.nombre;
+            updates.push({
+                nombre: nombre,
+                campo: bulkColumnaActiva,
+                valor: nuevoVal
+            });
+        }
+    });
+
+    if (updates.length === 0) {
+        alert("No hay jugadores visibles para actualizar.");
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        cerrarModalsFin();
+        return;
+    }
+
+    if (!confirm(`¿Deseas cambiar el campo "${bulkColumnaActiva === 'TIPO_PAGO' ? 'TIPO PAGO' : 'FORMA PAGO'}" a "${nuevoVal}" para los ${updates.length} jugadores visibles?`)) {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/bulk_update_jugadores', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ updates })
+        });
+        
+        if (res.ok) {
+            // Actualizar visualmente en la tabla
+            filas.forEach(f => {
+                if (f.style.display !== 'none') {
+                    const span = f.querySelector(bulkColumnaActiva === 'TIPO_PAGO' ? '.span-tipo-pago' : '.span-forma-pago');
+                    if (span) {
+                        span.innerText = nuevoVal;
+                    }
+                }
+            });
+            // Recargar datos y recalcular
+            cargarPagosEnTabla();
+            cerrarModalsFin();
+            alert("Cambios aplicados con éxito.");
+        } else {
+            alert("Error al actualizar los datos en el servidor.");
+        }
+    } catch (e) {
+        alert("Error al realizar la actualización masiva.");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
 }
 
 async function aplicarBulkEsperado(btn) {
@@ -1612,6 +1674,11 @@ function renderStats() {
 
 let prefixExtraActivo = 'EXTRA-';
 function seleccionarPago(e, el, item) {
+    if (e) {
+        e.stopPropagation();
+    }
+    deseleccionarFilasJugadores();
+
     if (item === 'EXTRA') {
         abrirModalExtraDetalle(el, 'EXTRA-');
         return;
@@ -1684,7 +1751,6 @@ function actualizarBarraPagos() {
     document.getElementById('txtSeleccionados').innerText = `${count} SELECCIONADO${count > 1 ? 'S' : ''}`;
     
     let totalEsperado = 0;
-    // Detalle: Agrupamos por jugador para mostrar qué estamos pagando
     const agrupado = {};
     celdasSeleccionadas.forEach(cell => {
         const fila = cell.closest('tr');
@@ -1693,25 +1759,28 @@ function actualizarBarraPagos() {
         const item = cell.dataset.tempItem || cell.dataset.concepto || '';
         const equipo = isStaff ? "STAFF" : fila.dataset.equipo;
         const forma = isStaff ? "Varios" : fila.cells[3].innerText.trim();
+        const tipo = isStaff ? "Varios" : (fila.querySelector('.span-tipo-pago')?.innerText || '').trim().toUpperCase();
 
         const labelItem = getLabelConcepto(item, forma, isStaff);
         if (!agrupado[nombre]) agrupado[nombre] = [];
         agrupado[nombre].push(labelItem);
 
-        // Calcular el esperado para esta celda según la configuración actual
         let esperadoIndividual = parseFloat(cell.dataset.esperado) || 0;
         if (esperadoIndividual === 0) {
-            // Intentar leer de la configuración guardada
             const keyOverride = `${equipo}-${item}`;
             if (!isStaff && item === 'Inscripción') {
                 esperadoIndividual = parseFloat(configInscripciones[equipo]) || 50;
-            } else if (configCuotasMes[keyOverride]) {
+            } else if (configCuotasMes[keyOverride] !== undefined) {
                 esperadoIndividual = parseFloat(configCuotasMes[keyOverride]);
-            } else {
-                const config = !isStaff ? configuracionesPago.find(c => c.nombre === forma) : null;
-                if (config) {
-                    esperadoIndividual = config.cuota;
-                } else if (!isStaff) {
+            } else if (!isStaff) {
+                const configMatch = gridConfigData.find(c => c.tipo === forma);
+                if (configMatch) {
+                    const mIdx = parseInt(item);
+                    const configMeses = (configMatch.meses && configMatch.meses.length > 0) ? configMatch.meses : [9, 10, 11, 12, 1, 2, 3, 4, 5, 6];
+                    if (!isNaN(mIdx) && configMeses.includes(mIdx)) {
+                        esperadoIndividual = configMatch.importe;
+                    }
+                } else if (forma === 'MENSUAL' && item !== '07' && item !== '08') {
                     esperadoIndividual = 49;
                 }
             }
@@ -2014,78 +2083,105 @@ function cargarPagosEnTabla() {
         });
     });
 
+    // Meses de la temporada en orden de visualización (columnas 1..12 = ENE..DIC)
+    const SEASON_ORDER = [9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8]; // SEP→AGO
+
     document.querySelectorAll('.fila-jugador').forEach(fila => {
         const equipo = fila.dataset.equipo;
-        const forma = fila.cells[3].innerText.trim();
-        const configForma = configuracionesPago.find(c => c.nombre === forma);
-
-        const nPagos = configForma ? (parseInt(configForma.meses) || 10) : 10;
-        const totalAnual = configForma ? (parseFloat(configForma.total) || 490) : 490;
-        const cuotaRepartida = nPagos > 0 ? totalAnual / nPagos : 0;
-
-        // Solo agrupamos columnas si nPagos es divisor exacto de 12
-        const esDivisor = [1, 2, 3, 4, 6, 12].includes(nPagos);
-        const intervalo = esDivisor ? (12 / nPagos) : 1;
+        // ── CLAVE: buscar config por TIPO (MENSUAL, TRIMESTRAL…), NO por FORMA (EFECTIVO…) ──
+        const tipo = (fila.querySelector('.span-tipo-pago')?.innerText || '').trim().toUpperCase();
+        const configMatch = gridConfigData.find(c => c.tipo.toUpperCase() === tipo);
 
         const celdas = fila.querySelectorAll('.pago-cell');
+
+        // ── RESET completo de todas las celdas ──
         celdas.forEach((cell, idx) => {
-            // RESET de la celda (por si cambió de modalidad)
             cell.style.display = '';
             cell.colSpan = 1;
-            cell.className = 'pago-cell col-financiera';
+            cell.className = idx >= 13 ? 'pago-cell col-financiera pago-extra-bg' : 'pago-cell col-financiera';
             cell.innerText = '-';
             delete cell.dataset.asientoId;
-            cell.dataset.importe = "0";
+            cell.dataset.importe = '0';
+            cell.dataset.esperado = '0';
             if (idx === 14 || idx === 15) { cell.dataset.sumPagado = 0; cell.dataset.sumEsperado = 0; }
+        });
 
-            const mesReal = idx; // 0: Inscripción, 1: Ene, 2: Feb...
-            
-            if (mesReal === 0) {
-                cell.style.display = '';
-                cell.colSpan = 1;
-                const valIns = parseFloat(configInscripciones[equipo]) || 50;
-                cell.innerText = `${Math.round(valIns)}€`;
-                cell.style.color = '#ccc';
-                cell.dataset.esperado = valIns;
-                cell.dataset.concepto = 'Inscripción';
-            } else if (mesReal >= 1 && mesReal <= 12) {
-                // Meses 1 a 12
-                const mIdx = mesReal - 1; // 0 a 11
-                if (mIdx % intervalo === 0 && (mIdx / intervalo) < nPagos) {
-                    // Es inicio de bloque (Anchor)
-                    cell.colSpan = intervalo;
-                    const concepto = (mIdx + 1) < 10 ? '0' + (mIdx + 1) : '' + (mIdx + 1);
-                    
-                    let valEsperado = cuotaRepartida;
-                    // Aplicar override solo si la celda no es combinada (intervalo === 1)
-                    if (intervalo === 1 && configCuotasMes[`${equipo}-${concepto}`]) {
-                        valEsperado = parseFloat(configCuotasMes[`${equipo}-${concepto}`]);
-                    }
+        // ── Celda 0: Inscripción ──
+        const cellIns = celdas[0];
+        const valIns = parseFloat(configInscripciones[equipo]) || 50;
+        cellIns.innerText = `${Math.round(valIns)}€`;
+        cellIns.style.color = '#ccc';
+        cellIns.dataset.esperado = valIns;
+        cellIns.dataset.concepto = 'Inscripción';
 
-                    cell.innerText = `${Math.round(valEsperado)}€`;
-                    cell.style.color = '#ccc';
-                    cell.dataset.esperado = valEsperado;
-                    cell.dataset.concepto = concepto;
-                } else if (mIdx % intervalo === 0) {
-                    cell.colSpan = intervalo;
-                    cell.innerText = '-';
-                    cell.style.color = '#ccc';
-                    cell.dataset.esperado = 0;
-                } else {
-                    // Es una celda "esclava" que debe desaparecer por el colspan del anchor
-                    cell.style.display = 'none';
+        // ── Celdas 13-15: Ropa / Extra / Extra2 ──
+        [13, 14, 15].forEach(idx => {
+            const cell = celdas[idx];
+            if (!cell) return;
+            const concepto = idx === 13 ? 'PACK_ROPA' : (idx === 14 ? 'EXTRA' : 'EXTRA2');
+            const valEsperado = parseFloat(configCuotasMes[`${equipo}-${concepto}`]) || 0;
+            cell.innerText = (valEsperado > 0 || idx >= 14) ? `${Math.round(valEsperado)}€` : '-';
+            cell.style.color = '#ccc';
+            cell.dataset.esperado = valEsperado;
+            cell.dataset.concepto = concepto;
+        });
+
+        // ── Celdas 1-12: Meses de pago ──
+        const grupos = configMatch?.grupos || []; // [{grupo: [9,10,11]}, ...]
+        const tieneGrupos = grupos.some(g => Array.isArray(g) && g.length > 0);
+
+        if (!tieneGrupos) {
+            // MENSUAL (sin grupos) → mostrar importe en todos los meses de la temporada
+            const importe = configMatch ? configMatch.importe : 49;
+            for (let mIdx = 1; mIdx <= 12; mIdx++) {
+                const cell = celdas[mIdx];
+                if (!cell) continue;
+                const concepto = mIdx < 10 ? '0' + mIdx : '' + mIdx;
+                // Aplicar override por equipo/mes si existe
+                let valEsperado = importe;
+                if (configCuotasMes[`${equipo}-${concepto}`] !== undefined) {
+                    valEsperado = parseFloat(configCuotasMes[`${equipo}-${concepto}`]) || 0;
                 }
-            } else {
-                // PACK ROPA (13), EXTRA (14) y EXTRA 2 (15)
-                const concepto = idx === 13 ? 'PACK_ROPA' : (idx === 14 ? 'EXTRA' : 'EXTRA2');
-                cell.classList.add('pago-extra-bg');
-                let valEsperado = parseFloat(configCuotasMes[`${equipo}-${concepto}`]) || 0;
-                cell.innerText = (valEsperado > 0 || idx === 14 || idx === 15) ? `${Math.round(valEsperado)}€` : '-';
+                cell.innerText = valEsperado > 0 ? `${Math.round(valEsperado)}€` : '-';
                 cell.style.color = '#ccc';
                 cell.dataset.esperado = valEsperado;
                 cell.dataset.concepto = concepto;
             }
-        });
+        } else {
+            // TRIMESTRAL (u otro con grupos) → fusionar celdas del mismo grupo
+            // Primero marcar todas las celdas de meses como ocultas / sin importe
+            for (let mIdx = 1; mIdx <= 12; mIdx++) {
+                const cell = celdas[mIdx];
+                if (cell) { cell.innerText = '-'; cell.style.color = '#ccc'; cell.dataset.esperado = '0'; cell.dataset.concepto = mIdx < 10 ? '0' + mIdx : '' + mIdx; }
+            }
+
+            // Pintar/fusionar por cada grupo
+            grupos.forEach((grupo, gIdx) => {
+                if (!Array.isArray(grupo) || grupo.length === 0) return;
+
+                // Ordenar meses del grupo según orden de columnas (1=ENE…12=DIC)
+                const sortedGrupo = [...grupo].sort((a, b) => a - b);
+                const primerMes = sortedGrupo[0]; // celda "ancla" (la primera en orden columnar)
+
+                const anclaCell = celdas[primerMes];
+                if (!anclaCell) return;
+
+                const importe = configMatch.importe;
+                const concepto = primerMes < 10 ? '0' + primerMes : '' + primerMes;
+
+                anclaCell.colSpan = sortedGrupo.length;
+                anclaCell.innerText = `${Math.round(importe)}€`;
+                anclaCell.style.color = '#ccc';
+                anclaCell.dataset.esperado = importe;
+                anclaCell.dataset.concepto = concepto;
+
+                // Ocultar las celdas secundarias del grupo
+                sortedGrupo.slice(1).forEach(m => {
+                    const cell = celdas[m];
+                    if (cell) cell.style.display = 'none';
+                });
+            });
+        }
     });
 
     // 2. Mapear historial de pagos
@@ -2117,26 +2213,27 @@ function cargarPagosEnTabla() {
                         else {
                             const m = parseInt(item);
                             if (isNaN(m)) return;
-                            const forma = fila.cells[3].innerText.trim();
-                            const configForma = configuracionesPago.find(c => c.nombre === forma);
-                            const nPagos = configForma ? (parseInt(configForma.meses) || 10) : 10;
-                            const esDivisor = [1, 2, 3, 4, 6, 12].includes(nPagos);
-                            const localIntervalo = esDivisor ? (12 / nPagos) : 1;
                             
-                            const anchorIdx = 1 + (Math.floor((m - 1) / localIntervalo) * localIntervalo);
-                            cell = celdas[anchorIdx];
+                            // Mapear el mes al primer mes de su grupo si existe
+                            let targetM = m;
+                            const tipo = (fila.querySelector('.span-tipo-pago')?.innerText || '').trim().toUpperCase();
+                            const configMatch = gridConfigData.find(c => c.tipo === tipo);
+                            if (configMatch && configMatch.grupos) {
+                                const group = configMatch.grupos.find(g => g.includes(m));
+                                if (group && group.length > 0) {
+                                    targetM = group[0];
+                                }
+                            }
+                            cell = celdas[targetM];
                         }
                     }
 
                     if (cell) {
-                        // Limpieza de formato para asegurar que parseFloat funcione con comas y puntos
                         const cleanImporte = (asiento.IMPORTE || "0").toString().replace(',', '.');
                         const cleanEsperado = (asiento.ESPERADO || "0").toString().replace(',', '.');
                         
                         const pagado = parseFloat(cleanImporte) || 0;
-                        // Acumular pago para celdas agrupadas o normales
                         const actualPagado = (parseFloat(cell.dataset.importe) || 0) + pagado;
-                        // El esperado es el de la celda (configuración de la modalidad para ese bloque)
                         const valEsperadoCelda = parseFloat(cell.dataset.esperado) || 0;
                         
                         if (item.includes('EXTRA')) {
@@ -2501,10 +2598,33 @@ async function bulkSaveColumn(campo, selectId) {
 }
 
 function actualizarSelectsFormasPago() {
-    const options = configuracionesPago.map(f => `<option value="${f.nombre}">${f.nombre}</option>`).join('');
-    document.getElementById('newJugForma').innerHTML = options;
-    document.getElementById('bulkSelectForma').innerHTML = '<option value="">Cambiar...</option>' + options;
-    if (configuracionesPago.length > 0) document.getElementById('newJugForma').value = configuracionesPago[0].nombre;
+    // FORMA PAGO select (payment plan / frequency): union of gridFormas and gridTipos
+    const planOptions = [...new Set([...gridFormas, ...gridTipos])];
+    const formaHtml = planOptions.map(f => `<option value="${f}">${f}</option>`).join('');
+    
+    if (document.getElementById('newJugForma')) {
+        document.getElementById('newJugForma').innerHTML = formaHtml;
+        if (planOptions.length > 0) document.getElementById('newJugForma').value = planOptions[0];
+    }
+    if (document.getElementById('selSeleccionForma')) {
+        document.getElementById('selSeleccionForma').innerHTML = '<option value="">Sin cambios...</option>' + formaHtml;
+    }
+
+    // TIPO PAGO select (payment method): gridFormas (and ensure Efectivo is there as it is the default)
+    let methodOptions = [...gridFormas];
+    const lowerMethods = methodOptions.map(x => x.toLowerCase());
+    if (!lowerMethods.includes("efectivo")) {
+        methodOptions.unshift("Efectivo");
+    }
+    const tipoHtml = methodOptions.map(t => `<option value="${t}">${t}</option>`).join('');
+    
+    if (document.getElementById('newJugTipoPago')) {
+        document.getElementById('newJugTipoPago').innerHTML = tipoHtml;
+        if (methodOptions.length > 0) document.getElementById('newJugTipoPago').value = methodOptions[0];
+    }
+    if (document.getElementById('selSeleccionTipo')) {
+        document.getElementById('selSeleccionTipo').innerHTML = '<option value="">Sin cambios...</option>' + tipoHtml;
+    }
 }
 
 async function cargarConfiguraciones() {
@@ -2512,9 +2632,69 @@ async function cargarConfiguraciones() {
         const res = await fetch('/api/config_financiera');
         const data = await res.json();
         configInscripciones = data.inscripciones || {};
-        configuracionesPago = data.formas_pago || [];
+        configuracionesPago = data.formas_pago || {};
         configCuotasMes = data.cuotas_mes || {};
         if (data.extra_names) extraNames = data.extra_names;
+        
+        // Initialize gridFormas (decoupled payment forms list)
+        if (configuracionesPago && configuracionesPago.formas) {
+            gridFormas = configuracionesPago.formas;
+        } else if (configuracionesPago && configuracionesPago.grid) {
+            gridFormas = [...new Set(configuracionesPago.grid.map(c => c.forma))];
+        } else if (Array.isArray(configuracionesPago)) {
+            gridFormas = [...new Set(configuracionesPago.map(item => (item.nombre || "Efectivo").toUpperCase()))];
+        }
+        if (!gridFormas || gridFormas.length === 0) {
+            gridFormas = ["EFECTIVO", "DOMICILIACION", "TRANSFERENCIA"];
+        }
+
+        // Initialize gridConfigData (decoupled payment types list: {tipo, importe, meses})
+        if (configuracionesPago && configuracionesPago.tipos) {
+            gridConfigData = configuracionesPago.tipos;
+        } else if (configuracionesPago && configuracionesPago.grid) {
+            gridConfigData = [];
+            const uniqueTipos = [...new Set(configuracionesPago.grid.map(c => c.tipo))];
+            uniqueTipos.forEach(tipo => {
+                const match = configuracionesPago.grid.find(c => c.tipo === tipo);
+                gridConfigData.push({
+                    tipo: tipo,
+                    importe: match.importe,
+                    meses: match.meses
+                });
+            });
+        } else if (Array.isArray(configuracionesPago)) {
+            gridConfigData = [];
+            const uniqueTipos = [...new Set(configuracionesPago.map(item => (item.modalidad || "mensual").toUpperCase()))];
+            uniqueTipos.forEach(tipo => {
+                const match = configuracionesPago.find(item => (item.modalidad || "mensual").toUpperCase() === tipo);
+                const cuota = parseFloat(match.cuota) || 49.0;
+                const mesesCount = parseInt(match.meses) || 10;
+                const meses = [9, 10, 11, 12, 1, 2, 3, 4, 5, 6].slice(0, mesesCount);
+                gridConfigData.push({ tipo, importe: cuota, meses });
+            });
+        }
+
+        if (!gridConfigData || gridConfigData.length === 0) {
+            gridConfigData = [
+                { tipo: "MENSUAL", importe: 49.0, meses: [9, 10, 11, 12, 1, 2, 3, 4, 5, 6] },
+                { tipo: "TRIMESTRAL", importe: 147.0, meses: [10, 1, 4] },
+                { tipo: "ANUAL", importe: 490.0, meses: [9] }
+            ];
+        }
+        
+        // Sanitizar y asegurar que item.grupos existe para todos los tipos
+        gridConfigData.forEach(item => {
+            if (!item.grupos || !Array.isArray(item.grupos)) {
+                if (Array.isArray(item.meses)) {
+                    item.grupos = item.meses.map(m => [m]);
+                } else {
+                    item.grupos = [];
+                }
+            }
+        });
+        
+        gridTipos = gridConfigData.map(c => c.tipo);
+
         actualizarSelectsFormasPago();
         actualizarLabelsExtra();
     } catch (e) {
@@ -2589,10 +2769,22 @@ async function cerrarYGuardarFormasPago(btn) {
 
 function generarReporteImpagos() {
     const hoy = new Date();
-    const mesActual = hoy.getMonth() + 1; 
-    const filas = document.querySelectorAll('#cuerpoPagos tr.fila-jugador'); // Solo filas de jugadores
+    const curYear = hoy.getFullYear();
+    const curMonth = hoy.getMonth() + 1;
+
+    // Determinar la lista de meses desde Septiembre de la temporada actual hasta el mes actual
+    let seasonMonths = [];
+    if (curMonth >= 9) {
+        for (let m = 9; m <= curMonth; m++) seasonMonths.push(m);
+    } else {
+        for (let m = 9; m <= 12; m++) seasonMonths.push(m);
+        const endMonth = Math.min(curMonth, 6);
+        for (let m = 1; m <= endMonth; m++) seasonMonths.push(m);
+    }
+
+    const filas = document.querySelectorAll('#cuerpoPagos tr.fila-jugador');
     const listaImpagos = [];
-    const nombresMesesCortos = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC']; // Para el detalle
+    const nombresMesesCortos = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
 
     filas.forEach(f => {
         if (f.style.display === 'none') return;
@@ -2602,49 +2794,72 @@ function generarReporteImpagos() {
         const cells = f.cells;
         
         const equipoJugador = f.dataset.equipo;
-        const formaPagoJugador = cells[3].innerText.trim(); // Columna 3 es FORMA PAGO
-
-        // Obtener la cuota mensual base para este jugador según su forma de pago
-        let cuotaMensualBase = 49; // Valor por defecto si no se encuentra configuración
-        const configFormaPago = configuracionesPago.find(c => c.nombre === formaPagoJugador);
-        if (configFormaPago) cuotaMensualBase = configFormaPago.cuota;
+        const tipo = (f.querySelector('.span-tipo-pago')?.innerText || '').trim().toUpperCase();
+        const forma = (f.querySelector('.span-forma-pago')?.innerText || '').trim().toUpperCase();
+        
+        const configMatch = gridConfigData.find(c => c.tipo === tipo);
+        const configMeses = configMatch ? configMatch.meses : [9, 10, 11, 12, 1, 2, 3, 4, 5, 6];
 
         const celdasPago = f.querySelectorAll('.pago-cell');
 
         // 1. Revisar Inscripción (Index 0 en celdasPago)
         const cellInscrip = celdasPago[0];
         let inscripcionEsperada = parseFloat(cellInscrip.dataset.esperado) || parseFloat(configInscripciones[equipoJugador]) || 50;
-        if (cellInscrip.innerText === '-' || cellInscrip.classList.contains('pago-naranja')) {
-            const pagado = parseFloat(cellInscrip.dataset.importe) || 0;
-            const deuda = Math.max(0, inscripcionEsperada - pagado);
-            if (deuda > 0) {
-                deudaTotal += deuda;
-                detalleArr.push(`INSCR (${deuda}€)`);
-            }
+        const inscrPagada = parseFloat(cellInscrip.dataset.importe) || 0;
+        const inscrDeuda = Math.max(0, inscripcionEsperada - inscrPagada);
+        if (inscrDeuda > 0.1) {
+            deudaTotal += inscrDeuda;
+            detalleArr.push(`INSCR (${Math.round(inscrDeuda)}€)`);
         }
 
-        // 2. Revisar Meses (Index 1 al mes actual en celdasPago)
-        for (let m = 1; m <= mesActual; m++) {
+        // 2. Revisar Meses de la Temporada hasta el mes actual
+        seasonMonths.forEach(m => {
             const cell = celdasPago[m];
-            if (!cell || cell.style.display === 'none' || parseFloat(cell.dataset.esperado) === 0) continue; 
-            
-            if (cell.innerText === '-' || cell.classList.contains('pago-naranja')) {
-                const esperado = cell.dataset.esperado !== undefined ? parseFloat(cell.dataset.esperado) : cuotaMensualBase;
-                const pagado = parseFloat(cell.dataset.importe) || 0;
-                const deuda = Math.max(0, esperado - pagado);
-                if (deuda > 0) {
-                    deudaTotal += deuda;
-                    detalleArr.push(`${nombresMesesCortos[m-1]} (${deuda}€)`);
+            if (!cell) return;
+
+            let esperado = 0;
+            if (configMatch) {
+                if (configMeses.includes(m)) {
+                    esperado = configMatch.importe;
+                }
+            } else {
+                if (tipo === 'MENSUAL' && m !== 7 && m !== 8) {
+                    esperado = 49;
                 }
             }
+
+            if (configCuotasMes[`${equipoJugador}-${m < 10 ? '0' + m : '' + m}`] !== undefined) {
+                esperado = parseFloat(configCuotasMes[`${equipoJugador}-${m < 10 ? '0' + m : '' + m}`]) || 0;
+            }
+
+            if (esperado > 0) {
+                const pagado = parseFloat(cell.dataset.importe) || 0;
+                const deuda = Math.max(0, esperado - pagado);
+                if (deuda > 0.1) {
+                    deudaTotal += deuda;
+                    detalleArr.push(`${nombresMesesCortos[m-1]} (${Math.round(deuda)}€)`);
+                }
+            }
+        });
+
+        // 3. Revisar PACK ROPA (Index 13 en celdasPago)
+        const cellRopa = celdasPago[13];
+        if (cellRopa) {
+            let ropaEsperada = parseFloat(cellRopa.dataset.esperado) || 0;
+            const ropaPagada = parseFloat(cellRopa.dataset.importe) || 0;
+            const ropaDeuda = Math.max(0, ropaEsperada - ropaPagada);
+            if (ropaDeuda > 0.1) {
+                deudaTotal += ropaDeuda;
+                detalleArr.push(`ROPA (${Math.round(ropaDeuda)}€)`);
+            }
         }
 
-        if (deudaTotal > 0) {
+        if (deudaTotal > 0.1) {
             listaImpagos.push({
                 equipo: cells[0].innerText,
                 nombre: cells[1].innerText,
-                forma: cells[3].innerText, // Forma Pago es en cells[3]
-                deuda: deudaTotal,
+                forma: cells[3].innerText,
+                deuda: Math.round(deudaTotal),
                 detalle: detalleArr.join(', ')
             });
         }
@@ -3191,6 +3406,41 @@ async function guardarSeleccionadosRevision() {
     </div>
 </div>
 
+<!-- BARRA DE ACCIÓN SELECCIÓN JUGADORES (CAMBIOS MASIVOS) -->
+<div id="barraAccionSeleccionJugadores" class="pago-action-bar" style="background: rgba(15, 23, 42, 0.98);">
+    <div style="min-width: 150px;">
+        <div id="txtJugadoresSeleccionados" style="font-weight: 900; font-size: 24px; color: #fff; letter-spacing: 1px;">0 SELECCIONADOS</div>
+        <div style="font-size: 14px; color: #38bdf8; font-weight: 800; margin-top: 4px;">APLICAR CAMBIO MASIVO DE PAGO</div>
+    </div>
+    <div class="action-bar-divider"></div>
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <div>
+            <label style="color: #fff; opacity: 0.6;">TIPO PAGO</label>
+            <select id="selSeleccionTipo" style="padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: white; font-weight: 700; font-size: 13px;">
+                <option value="">Sin cambios...</option>
+                <option value="Efectivo">Efectivo</option>
+                <option value="Domiciliación">Domiciliación</option>
+                <option value="Transferencia">Transferencia</option>
+                <option value="Tarjeta">Tarjeta</option>
+                <option value="Beca">Beca</option>
+            </select>
+        </div>
+        <div>
+            <label style="color: #fff; opacity: 0.6;">FORMA PAGO</label>
+            <select id="selSeleccionForma" style="padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: white; font-weight: 700; font-size: 13px;">
+                <!-- Se llena dinámicamente -->
+            </select>
+        </div>
+    </div>
+    <div class="action-bar-divider"></div>
+    <div style="display: flex; gap: 12px;">
+        <button class="btn-fin" style="background: #28a745; color: white; padding: 12px 25px; box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);" onclick="guardarCambiosSeleccionJugadores()">
+            <i class="fas fa-check" style="margin-right: 8px;"></i> APLICAR CAMBIOS
+        </button>
+        <button class="btn-fin" style="background: rgba(255,255,255,0.1); color: #fff; border: none;" onclick="deseleccionarFilasJugadores()">CANCELAR</button>
+    </div>
+</div>
+
 <!-- MODAL AÑADIR STAFF -->
 <div id="modalAnadirStaff" class="modal">
     <div class="modal-content" style="width: 350px;">
@@ -3456,6 +3706,79 @@ async function guardarExtraDetalle(btn) {
     }
 }
 
+// ─── EDICIÓN INDIVIDUAL DE TIPO/FORMA DE PAGO ───────────────────────────────
+let epiRowActual = null; // fila <tr> del jugador que se está editando
+
+function editarPagoIndividual(row, campoFoco) {
+    epiRowActual = row;
+    const nombre = row.dataset.nombre || '';
+    const tipoActual = (row.querySelector('.span-tipo-pago')?.innerText || '').trim();
+    const formaActual = (row.querySelector('.span-forma-pago')?.innerText || '').trim();
+
+    // Nombre del jugador en el modal
+    document.getElementById('epiNombreJugador').innerText = nombre;
+
+    // Poblar TIPO DE PAGO (gridTipos: Mensual, Trimestral…)
+    const tipoSelect = document.getElementById('epiSelectTipo');
+    const tipoOptions = gridTipos.length > 0 ? [...gridTipos] : ['MENSUAL', 'TRIMESTRAL'];
+    tipoSelect.innerHTML = tipoOptions.map(t =>
+        `<option value="${t}" ${t.toUpperCase() === tipoActual.toUpperCase() ? 'selected' : ''}>${t}</option>`
+    ).join('');
+
+    // Poblar FORMA DE PAGO (gridFormas: Domiciliación, Transferencia, Efectivo…)
+    const formaSelect = document.getElementById('epiSelectForma');
+    const formaOptions = gridFormas.length > 0 ? [...gridFormas] : ['EFECTIVO', 'DOMICILIACION', 'TRANSFERENCIA'];
+    formaSelect.innerHTML = formaOptions.map(f =>
+        `<option value="${f}" ${f.toUpperCase() === formaActual.toUpperCase() ? 'selected' : ''}>${f}</option>`
+    ).join('');
+
+    // Enfocar directamente el select del campo en que se hizo clic
+    document.getElementById('modalEditarPagoIndividual').style.display = 'flex';
+    setTimeout(() => {
+        if (campoFoco === 'TIPO_PAGO') tipoSelect.focus();
+        else formaSelect.focus();
+    }, 100);
+}
+
+async function guardarPagoIndividual(btn) {
+    if (!epiRowActual) return;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GUARDANDO...';
+    btn.disabled = true;
+
+    const nombre = epiRowActual.dataset.nombre;
+    const nuevoTipo = document.getElementById('epiSelectTipo').value;
+    const nuevaForma = document.getElementById('epiSelectForma').value;
+
+    try {
+        const updates = [
+            { nombre, campo: 'TIPO_PAGO', valor: nuevoTipo },
+            { nombre, campo: 'FORMA_PAGO', valor: nuevaForma }
+        ];
+        const res = await fetch('/api/bulk_update_jugadores', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ updates })
+        });
+        if (res.ok) {
+            // Actualizar visualmente la fila sin recargar
+            const spanTipo = epiRowActual.querySelector('.span-tipo-pago');
+            const spanForma = epiRowActual.querySelector('.span-forma-pago');
+            if (spanTipo) spanTipo.innerText = nuevoTipo;
+            if (spanForma) spanForma.innerText = nuevaForma;
+            document.getElementById('modalEditarPagoIndividual').style.display = 'none';
+        } else {
+            alert('Error al guardar. Inténtalo de nuevo.');
+        }
+    } catch(e) {
+        alert('Error de conexión: ' + e.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 </script>
 
 <!-- MODAL MODIFICAR ESPERADO COLUMNA -->
@@ -3472,6 +3795,59 @@ async function guardarExtraDetalle(btn) {
         <div style="display: flex; gap: 10px;">
             <button class="btn-fin" style="flex:1; background:#eee;" onclick="cerrarModalsFin()">CANCELAR</button>
             <button class="btn-fin" style="flex:1; background:#333; color:white;" onclick="aplicarBulkEsperado(this)">APLICAR</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL MODIFICAR MASIVAMENTE COLUMNA JUGADORES -->
+<div id="modalBulkColumna" class="modal">
+    <div class="modal-content" style="width: 380px;">
+        <h3 id="bulkColumnaTitulo" style="font-size: 14px; margin-bottom: 5px; font-weight: 900; color: #333; text-transform: uppercase;">EDITAR COLUMNA MASIVAMENTE</h3>
+        <p style="font-size: 11px; font-weight: 800; color: #E31E24; margin-bottom: 20px;">SE APLICARÁ A TODAS LAS FILAS VISIBLES</p>
+        
+        <div style="margin-bottom: 20px;">
+            <label id="bulkColumnaLabel" style="font-size: 10px; font-weight: 800; color: #999; display: block; margin-bottom: 5px;">NUEVO VALOR</label>
+            <select id="bulkColumnaSelect" style="width:100%; padding:12px; border-radius:8px; border:1px solid #ddd; font-weight: 800; font-size: 14px; background: white; color: #333;">
+                <!-- Se llena dinámicamente -->
+            </select>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-fin" style="flex:1; background:#eee;" onclick="cerrarModalsFin()">CANCELAR</button>
+            <button class="btn-fin" style="flex:1; background:#333; color:white;" onclick="aplicarBulkColumna(this)">APLICAR</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EDITAR PAGO INDIVIDUAL JUGADOR -->
+<div id="modalEditarPagoIndividual" class="modal">
+    <div class="modal-content" style="width: 420px; border-radius: 20px; padding: 28px; border-top: 5px solid #E31E24;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+            <div>
+                <h3 style="font-size: 16px; font-weight: 900; color: #1e293b; margin: 0 0 4px 0;">EDITAR FORMA DE PAGO</h3>
+                <div id="epiNombreJugador" style="font-size: 13px; font-weight: 800; color: #E31E24; text-transform: uppercase;"></div>
+            </div>
+            <button onclick="document.getElementById('modalEditarPagoIndividual').style.display='none'" style="background: none; border: none; font-size: 20px; color: #94a3b8; cursor: pointer; line-height: 1;">&times;</button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 18px; margin-bottom: 24px;">
+            <div>
+                <label style="font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">TIPO DE PAGO <span style="color: #94a3b8; font-weight: 600;">(Mensual, Trimestral...)</span></label>
+                <select id="epiSelectTipo" style="width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #e2e8f0; font-weight: 800; font-size: 14px; color: #1e293b; background: white; outline: none; transition: 0.2s;" onfocus="this.style.borderColor='#E31E24'" onblur="this.style.borderColor='#e2e8f0'">
+                </select>
+            </div>
+            <div>
+                <label style="font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">FORMA DE PAGO <span style="color: #94a3b8; font-weight: 600;">(Domiciliación, Efectivo...)</span></label>
+                <select id="epiSelectForma" style="width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #e2e8f0; font-weight: 800; font-size: 14px; color: #1e293b; background: white; outline: none; transition: 0.2s;" onfocus="this.style.borderColor='#E31E24'" onblur="this.style.borderColor='#e2e8f0'">
+                </select>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-fin" style="flex:1; background:#f1f5f9; color:#475569; border: 1px solid #e2e8f0;" onclick="document.getElementById('modalEditarPagoIndividual').style.display='none'">CANCELAR</button>
+            <button class="btn-fin" id="epiGuardarBtn" style="flex:2; background:#E31E24; color:white; box-shadow: 0 4px 12px rgba(227,30,36,0.25);" onclick="guardarPagoIndividual(this)">
+                <i class="fas fa-save" style="margin-right: 6px;"></i> GUARDAR CAMBIOS
+            </button>
         </div>
     </div>
 </div>
@@ -3623,5 +3999,460 @@ async function guardarExtraDetalle(btn) {
         </div>
     </div>
 </div>
+<!-- MODAL CONFIGURAR TIPO/FORMA (CONFIGURACIÓN DE TARIFAS Y GRUPOS) -->
+<div id="modalConfigurarTipoForma" class="modal">
+    <div class="modal-content" style="width: 1150px; max-width: 96vw; height: auto; max-height: 92vh; overflow-y: auto; border-radius: 24px; padding: 30px; border-top: 6px solid #E31E24; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 25px;">
+            <h3 style="font-size: 18px; margin: 0; font-weight: 900; color: #1e293b; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-sliders-h" style="color: #E31E24;"></i> CONFIGURACIÓN DE TARIFAS Y FORMAS DE PAGO
+            </h3>
+            <button class="btn-fin" style="background: #f1f5f9; color: #475569; border-radius: 12px; padding: 8px 16px; border: 1px solid #cbd5e1; cursor: pointer; font-weight: 800; font-size: 11px;" onclick="cerrarModalConfigurarTipoForma()">CERRAR</button>
+        </div>
+
+        <!-- SECCIÓN: FORMA DE PAGO -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 16px; margin-bottom: 25px;">
+            <h4 style="font-size: 12px; font-weight: 900; color: #475569; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-wallet" style="color: #E31E24;"></i> Forma de Pago
+            </h4>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;" id="formasPagoPillsContainer">
+                <!-- Se genera dinámicamente -->
+            </div>
+        </div>
+
+        <!-- SECCIÓN: TIPO DE PAGO -->
+        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; margin-bottom: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);">
+            <div style="padding: 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #fdfdfd;">
+                <h4 style="font-size: 12px; font-weight: 900; color: #475569; margin: 0; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-layer-group" style="color: #E31E24;"></i> Tipo de Pago
+                </h4>
+                <button onclick="promptAnadirTipoFila()" class="btn-fin" style="background: #E31E24; color: white; border-radius: 8px; padding: 8px 16px; font-size: 11px; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(227,30,36,0.2);">
+                    <i class="fas fa-plus"></i> Añadir Nueva Tarifa
+                </button>
+            </div>
+            
+            <div style="overflow-x: auto;">
+                <table class="fin-table" id="tablaGridConfig" style="width: 100%; border-collapse: collapse; background: white; font-family: inherit;">
+                    <!-- Se rellena dinámicamente -->
+                </table>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid #f1f5f9; padding-top: 20px; margin-top: 20px;">
+            <button class="btn-fin" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 10px;" onclick="cerrarModalConfigurarTipoForma()">CANCELAR</button>
+            <button class="btn-fin" style="background: #E31E24; color: white; padding: 12px 35px; border-radius: 10px; box-shadow: 0 4px 12px rgba(227,30,36,0.3);" onclick="guardarConfiguracionesGrid(this)">GUARDAR CAMBIOS</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let gridConfigData = [];
+let gridTipos = [];
+let gridFormas = [];
+let activeGroupIdxMap = {}; // tipo -> activeGroupIndex (0 a N, o -1 para borrador)
+
+const groupColors = [
+    { bg: '#e0f2fe', text: '#0369a1', border: '#bae6fd' }, // Grupo 1: Celeste
+    { bg: '#dcfce7', text: '#15803d', border: '#bbf7d0' }, // Grupo 2: Verde
+    { bg: '#f3e8ff', text: '#6b21a8', border: '#e9d5ff' }, // Grupo 3: Púrpura
+    { bg: '#ffedd5', text: '#9a3412', border: '#fed7aa' }, // Grupo 4: Naranja
+    { bg: '#fee2e2', text: '#991b1b', border: '#fecaca' }, // Grupo 5: Rojo
+    { bg: '#ecfeff', text: '#0891b2', border: '#cffafe' }, // Grupo 6: Cian
+    { bg: '#fef9c3', text: '#854d0e', border: '#fef08a' }, // Grupo 7: Amarillo
+    { bg: '#fce7f3', text: '#9d174d', border: '#fbcfe8' }  // Grupo 8: Rosa
+];
+const defaultColor = { bg: '#f1f5f9', text: '#64748b', border: '#e2e8f0' };
+
+function abrirModalConfigurarTipoForma() {
+    document.getElementById('modalConfigurarTipoForma').style.display = 'flex';
+    renderGridConfig();
+}
+
+function cerrarModalConfigurarTipoForma() {
+    document.getElementById('modalConfigurarTipoForma').style.display = 'none';
+}
+
+function renderFormasPagoPills() {
+    const container = document.getElementById('formasPagoPillsContainer');
+    if (!container) return;
+    
+    let html = '';
+    gridFormas.forEach(forma => {
+        html += `
+            <div style="display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 20px; background: white; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.02); font-size: 11px; font-weight: 800; color: #1e293b;">
+                <span style="text-transform: uppercase;">${forma}</span>
+                <button onclick="eliminarFormaCol('${forma}')" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 14px; font-weight: bold; padding: 0 2px; display: flex; align-items: center; justify-content: center; line-height: 1;" title="Eliminar Método">×</button>
+            </div>
+        `;
+    });
+    
+    // Add input inline for adding new payment method
+    html += `
+        <div style="display: flex; align-items: center; gap: 6px; margin-left: 8px;">
+            <input type="text" id="inputNuevaFormaGrid" placeholder="Nuevo método (ej. BIZUM)..." style="padding: 6px 12px; border: 1px solid #cbd5e1; border-radius: 20px; font-size: 11px; font-weight: 700; width: 180px; outline: none; transition: 0.2s;" onfocus="this.style.borderColor='#E31E24';">
+            <button onclick="anadirNuevaFormaGrid()" class="btn-fin" style="padding: 6px 14px; border-radius: 20px; background: #334155; color: white; font-size: 10px; cursor: pointer; font-weight: bold;">+ Añadir</button>
+        </div>
+    `;
+    container.innerHTML = html;
+}
+
+function anadirNuevaFormaGrid() {
+    const input = document.getElementById('inputNuevaFormaGrid');
+    if (!input) return;
+    const valor = input.value.trim().toUpperCase();
+    if (!valor) return;
+    if (gridFormas.includes(valor)) return alert("Este método de pago ya existe.");
+    gridFormas.push(valor);
+    renderGridConfig();
+}
+
+function eliminarFormaCol(forma) {
+    if (!confirm(`¿Eliminar la forma de pago "${forma}"?`)) return;
+    gridFormas = gridFormas.filter(f => f !== forma);
+    renderGridConfig();
+}
+
+function renderResumenPills(grupos) {
+    if (!grupos || grupos.length === 0) return '<span style="color: #94a3b8; font-style: italic; font-size: 11px;">Sin meses asignados</span>';
+    const nombresMesesCortos = {
+        1: 'ENE', 2: 'FEB', 3: 'MAR', 4: 'ABR', 5: 'MAY', 6: 'JUN',
+        7: 'JUL', 8: 'AGO', 9: 'SEP', 10: 'OCT', 11: 'NOV', 12: 'DIC'
+    };
+    const seasonOrder = [9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8];
+    
+    let html = '';
+    let hasGroups = false;
+    
+    grupos.forEach((g, idx) => {
+        if (g && g.length > 0) {
+            hasGroups = true;
+            const sortedG = [...g].sort((a, b) => seasonOrder.indexOf(a) - seasonOrder.indexOf(b));
+            const text = sortedG.map(m => nombresMesesCortos[m]).join('-');
+            const color = groupColors[idx % groupColors.length];
+            html += `<span style="display: inline-block; padding: 4px 10px; border-radius: 20px; background: ${color.bg}; color: ${color.text}; border: 1px solid ${color.border}; font-weight: 800; font-size: 10px; margin-right: 6px; margin-bottom: 4px;">
+                ${text}
+            </span>`;
+        }
+    });
+    return hasGroups ? html : '<span style="color: #94a3b8; font-style: italic; font-size: 11px;">Sin meses asignados</span>';
+}
+
+function renderGridConfig() {
+    renderFormasPagoPills();
+    
+    const table = document.getElementById('tablaGridConfig');
+    if (!table) return;
+
+    let html = `<thead>
+        <tr style="background: #f8fafc; border-bottom: 2px solid #cbd5e1;">
+            <th style="padding: 15px; font-weight: 900; color: #475569; text-transform: uppercase; font-size: 11px; text-align: left;">Tipo de Tarifa</th>
+            <th style="padding: 15px; font-weight: 900; color: #475569; text-transform: uppercase; font-size: 11px; text-align: center; width: 140px;">Importe (€)</th>
+            <th style="padding: 15px; font-weight: 900; color: #475569; text-transform: uppercase; font-size: 11px; text-align: left;">Meses de Cobro y Agrupaciones</th>
+            <th style="padding: 15px; font-weight: 900; color: #475569; text-transform: uppercase; font-size: 11px; text-align: left; width: 280px;">Resumen Agrupado</th>
+        </tr>
+    </thead>
+    <tbody>`;
+
+    gridConfigData.forEach((item) => {
+        const activeIdx = activeGroupIdxMap[item.tipo] !== undefined ? activeGroupIdxMap[item.tipo] : 0;
+        
+        const mesesArray = [
+            { num: 9, label: 'SEP' }, { num: 10, label: 'OCT' }, { num: 11, label: 'NOV' }, { num: 12, label: 'DIC' },
+            { num: 1, label: 'ENE' }, { num: 2, label: 'FEB' }, { num: 3, label: 'MAR' }, { num: 4, label: 'ABR' },
+            { num: 5, label: 'MAY' }, { num: 6, label: 'JUN' }, { num: 7, label: 'JUL' }, { num: 8, label: 'AGO' }
+        ];
+
+        let monthButtonsHtml = `<div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px;">`;
+        mesesArray.forEach(m => {
+            const gIdx = item.grupos.findIndex(g => g.includes(m.num));
+            let color = defaultColor;
+            if (gIdx !== -1) {
+                color = groupColors[gIdx % groupColors.length];
+            }
+            
+            monthButtonsHtml += `
+                <button onclick="toggleMonthInGroup('${item.tipo}', ${m.num})" style="width: 38px; height: 32px; font-size: 10px; font-weight: 900; border-radius: 6px; cursor: pointer; border: 1px solid ${color.border}; background: ${color.bg}; color: ${color.text}; transition: all 0.15s; outline: none;" title="Asignar / Quitar del grupo activo">
+                    ${m.label}
+                </button>
+            `;
+        });
+        monthButtonsHtml += `</div>`;
+
+        // Render Groups manager
+        let groupsHtml = `<div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">`;
+        item.grupos.forEach((g, gIdx) => {
+            const color = groupColors[gIdx % groupColors.length];
+            const isActive = (gIdx === activeIdx);
+            const borderStyle = isActive ? `outline: 2.5px solid #E31E24; outline-offset: 1px; font-weight: 900; transform: scale(1.05);` : `opacity: 0.8;`;
+            groupsHtml += `
+                <div onclick="selectActiveGroup('${item.tipo}', ${gIdx})" style="cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 8px; background: ${color.bg}; color: ${color.text}; border: 1px solid ${color.border}; font-size: 10px; font-weight: 800; transition: 0.2s; ${borderStyle}" title="Hacer grupo activo para pintar">
+                    <span>G${gIdx + 1}</span>
+                    <button onclick="event.stopPropagation(); deleteGrupoRow('${item.tipo}', ${gIdx})" style="background: none; border: none; color: ${color.text}; font-weight: bold; cursor: pointer; padding: 0 2px; font-size: 12px; line-height: 1; display: flex; align-items: center; justify-content: center;" title="Eliminar este grupo">×</button>
+                </div>
+            `;
+        });
+
+        // Eraser
+        const isEraserActive = (activeIdx === -1);
+        const eraserBorderStyle = isEraserActive ? `outline: 2.5px solid #E31E24; outline-offset: 1px; font-weight: 900; transform: scale(1.05);` : `opacity: 0.6;`;
+        groupsHtml += `
+            <div onclick="selectActiveGroup('${item.tipo}', -1)" style="cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 8px; background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; font-size: 10px; font-weight: 800; transition: 0.2s; ${eraserBorderStyle}" title="Pincel para quitar meses del grupo">
+                <i class="fas fa-eraser"></i> <span>Quitar</span>
+            </div>
+        `;
+
+        // Add Group Button
+        groupsHtml += `
+            <button onclick="addGrupoRow('${item.tipo}')" style="cursor: pointer; background: none; border: 1.5px dashed #cbd5e1; padding: 5px 12px; border-radius: 8px; color: #64748b; font-size: 10px; font-weight: 800; transition: all 0.2s; outline: none;" onmouseover="this.style.borderColor='#E31E24'; this.style.color='#E31E24';" onmouseout="this.style.borderColor='#cbd5e1'; this.style.color='#64748b';">
+                + Grupo
+            </button>
+        </div>`;
+
+        // Render Summary
+        const summaryPills = renderResumenPills(item.grupos);
+
+        html += `<tr style="border-bottom: 1px solid #f1f5f9; vertical-align: middle;">
+            <!-- Tipo de Pago -->
+            <td style="padding: 15px; text-align: left;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-weight: 800; font-size: 13px; color: #1e293b; text-transform: uppercase;">${item.tipo}</span>
+                    <button onclick="eliminarTipoFila('${item.tipo}')" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 12px; padding: 6px; transition: 0.2s;" onmouseover="this.style.transform='scale(1.2)';" onmouseout="this.style.transform='scale(1)';" title="Eliminar Tarifa"><i class="fas fa-trash-alt"></i></button>
+                </div>
+            </td>
+            <!-- Importe -->
+            <td style="padding: 15px; text-align: center;">
+                <div style="display: inline-flex; align-items: center; background: white; border: 1px solid #cbd5e1; border-radius: 8px; padding: 5px 10px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
+                    <input type="number" step="any" value="${item.importe}" onchange="actualizarImporteGrid('${item.tipo}', this.value)" style="width: 70px; border: none; outline: none; font-weight: 900; text-align: right; font-size: 13px; color: #1e293b;">
+                    <span style="font-weight: 900; color: #64748b; font-size: 13px; margin-left: 4px;">€</span>
+                </div>
+            </td>
+            <!-- Meses y grupos -->
+            <td style="padding: 15px; text-align: left;">
+                ${monthButtonsHtml}
+                ${groupsHtml}
+            </td>
+            <!-- Resumen -->
+            <td style="padding: 15px; text-align: left;">
+                <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                    ${summaryPills}
+                </div>
+            </td>
+        </tr>`;
+    });
+
+    html += `</tbody>`;
+    table.innerHTML = html;
+}
+
+function promptAnadirTipoFila() {
+    const valor = prompt("Introduce el nombre del nuevo tipo de pago:");
+    if (!valor) return;
+    const nombre = valor.trim().toUpperCase();
+    if (!nombre) return;
+    if (gridConfigData.some(c => c.tipo === nombre)) return alert("Este tipo de pago ya existe.");
+    
+    gridConfigData.push({
+        tipo: nombre,
+        importe: 0.0,
+        meses: [],
+        grupos: [[]]
+    });
+    activeGroupIdxMap[nombre] = 0;
+    renderGridConfig();
+}
+
+function eliminarTipoFila(tipo) {
+    if (!confirm(`¿Eliminar el tipo de pago "${tipo}"?`)) return;
+    gridConfigData = gridConfigData.filter(c => c.tipo !== tipo);
+    renderGridConfig();
+}
+
+function actualizarImporteGrid(tipo, valor) {
+    let match = gridConfigData.find(c => c.tipo === tipo);
+    if (match) {
+        match.importe = parseFloat(valor) || 0;
+    }
+}
+
+function selectActiveGroup(tipo, idx) {
+    activeGroupIdxMap[tipo] = idx;
+    renderGridConfig();
+}
+
+function addGrupoRow(tipo) {
+    const item = gridConfigData.find(c => c.tipo === tipo);
+    if (item) {
+        if (!item.grupos) item.grupos = [];
+        item.grupos.push([]);
+        activeGroupIdxMap[tipo] = item.grupos.length - 1;
+        renderGridConfig();
+    }
+}
+
+function deleteGrupoRow(tipo, idx) {
+    const item = gridConfigData.find(c => c.tipo === tipo);
+    if (item) {
+        item.grupos.splice(idx, 1);
+        activeGroupIdxMap[tipo] = Math.max(0, item.grupos.length - 1);
+        completarMesesDesdeGrupos(item);
+        renderGridConfig();
+    }
+}
+
+function toggleMonthInGroup(tipo, month) {
+    const item = gridConfigData.find(c => c.tipo === tipo);
+    if (!item) return;
+    
+    let activeIdx = activeGroupIdxMap[tipo];
+    if (activeIdx === undefined) {
+        activeGroupIdxMap[tipo] = 0;
+        activeIdx = 0;
+    }
+    
+    if (!item.grupos) item.grupos = [[]];
+    
+    const wasInActive = (activeIdx >= 0 && activeIdx < item.grupos.length) 
+        ? item.grupos[activeIdx].includes(month) 
+        : false;
+
+    // Quitar de todos los grupos primero
+    item.grupos.forEach((grp, index) => {
+        item.grupos[index] = grp.filter(x => x !== month);
+    });
+
+    // Si no estaba en el activo (y no tenemos activo borrador/-1), se añade al activo
+    if (activeIdx >= 0 && activeIdx < item.grupos.length && !wasInActive) {
+        item.grupos[activeIdx].push(month);
+    }
+    
+    completarMesesDesdeGrupos(item);
+    renderGridConfig();
+}
+
+function completarMesesDesdeGrupos(item) {
+    const seasonOrder = [9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8];
+    const starts = [];
+    if (Array.isArray(item.grupos)) {
+        item.grupos.forEach(grp => {
+            if (Array.isArray(grp) && grp.length > 0) {
+                const sortedGrp = [...grp].sort((a, b) => seasonOrder.indexOf(a) - seasonOrder.indexOf(b));
+                starts.push(sortedGrp[0]);
+            }
+        });
+    }
+    starts.sort((a, b) => seasonOrder.indexOf(a) - seasonOrder.indexOf(b));
+    item.meses = starts;
+}
+
+async function guardarConfiguracionesGrid(btn) {
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GUARDANDO...';
+    btn.disabled = true;
+
+    try {
+        configuracionesPago = {
+            formas: gridFormas,
+            tipos: gridConfigData
+        };
+        await guardarConfiguracionesFinancieras();
+        actualizarSelectsFormasPago();
+        cargarPagosEnTabla();
+        cerrarModalConfigurarTipoForma();
+        alert("Configuraciones guardadas con éxito.");
+    } catch(e) {
+        alert("Error al guardar configuraciones.");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+function manejarClickFila(event, row) {
+    const targetCell = event.target.closest('td');
+    if (!targetCell) return;
+    const cellIdx = targetCell.cellIndex;
+    if (cellIdx > 3) return; // Skip if clicked on payment/ropa cells
+    
+    event.stopPropagation();
+    
+    // Clear cell selection to avoid conflicts
+    celdasSeleccionadas.forEach(c => c.classList.remove('selected-cell'));
+    celdasSeleccionadas = [];
+    actualizarBarraPagos();
+    
+    if (!event.ctrlKey) {
+        document.querySelectorAll('.fila-jugador.selected-row').forEach(r => {
+            if (r !== row) r.classList.remove('selected-row');
+        });
+    }
+    
+    row.classList.toggle('selected-row');
+    actualizarBarraSeleccionJugadores();
+}
+
+function actualizarBarraSeleccionJugadores() {
+    const barra = document.getElementById('barraAccionSeleccionJugadores');
+    if (!barra) return;
+    const selectedRows = document.querySelectorAll('.fila-jugador.selected-row');
+    const count = selectedRows.length;
+    
+    if (count === 0) {
+        barra.style.display = 'none';
+        return;
+    }
+    
+    document.getElementById('txtJugadoresSeleccionados').innerText = `${count} JUGADOR${count > 1 ? 'ES SELECCIONADOS' : ' SELECCIONADO'}`;
+    barra.style.display = 'flex';
+}
+
+function deseleccionarFilasJugadores() {
+    document.querySelectorAll('.fila-jugador.selected-row').forEach(row => {
+        row.classList.remove('selected-row');
+    });
+    actualizarBarraSeleccionJugadores();
+}
+
+async function guardarCambiosSeleccionJugadores() {
+    const selectedRows = document.querySelectorAll('.fila-jugador.selected-row');
+    if (selectedRows.length === 0) return;
+    
+    const nuevoTipo = document.getElementById('selSeleccionTipo').value;
+    const nuevaForma = document.getElementById('selSeleccionForma').value;
+    
+    if (!nuevoTipo && !nuevaForma) {
+        alert("Selecciona al menos un Tipo o Forma de pago para cambiar.");
+        return;
+    }
+    
+    const updates = [];
+    selectedRows.forEach(row => {
+        const nombre = row.dataset.nombre;
+        if (nuevoTipo) {
+            updates.push({ nombre: nombre, campo: 'TIPO_PAGO', valor: nuevoTipo });
+        }
+        if (nuevaForma) {
+            updates.push({ nombre: nombre, campo: 'FORMA_PAGO', valor: nuevaForma });
+        }
+    });
+    
+    showLoader();
+    try {
+        const res = await fetch('/api/bulk_update_jugadores', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ updates })
+        });
+        if (res.ok) {
+            alert("Cambios aplicados correctamente.");
+            location.reload();
+        } else {
+            alert("Error al aplicar cambios.");
+        }
+    } catch(e) {
+        alert("Error de conexión.");
+    } finally {
+        hideLoader();
+    }
+}
+</script>
 
 {% endblock %}

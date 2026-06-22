@@ -1152,6 +1152,30 @@ def api_kpis_pagos():
                 {"nombre": "Transferencia", "total": 490, "modalidad": "mensual", "cuota": 49, "meses": 10, "tipo": "Transferencia"}
             ]
 
+        # Convert/extract the grid configuration list from FORMAS_PAGO key
+        grid_config = []
+        if isinstance(formas_pago_config, dict):
+            if "tipos" in formas_pago_config:
+                grid_config = formas_pago_config["tipos"]
+            elif "grid" in formas_pago_config:
+                grid_config = formas_pago_config["grid"]
+        elif isinstance(formas_pago_config, list):
+            if formas_pago_config and "tipo" in formas_pago_config[0]:
+                grid_config = formas_pago_config
+            else:
+                for item in formas_pago_config:
+                    tipo = str(item.get("modalidad", "mensual")).upper()
+                    forma = str(item.get("nombre", "Efectivo")).upper()
+                    importe = float(item.get("cuota", 49.0))
+                    meses_count = int(item.get("meses", 10))
+                    meses = [9, 10, 11, 12, 1, 2, 3, 4, 5, 6][:meses_count]
+                    grid_config.append({
+                        "tipo": tipo,
+                        "forma": forma,
+                        "importe": importe,
+                        "meses": meses
+                    })
+
         # 2. Cargar jugadores activos
         sheet_jug = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
         jug_rows = sheet_jug.get_all_values()
@@ -1270,17 +1294,14 @@ def api_kpis_pagos():
             eq = p['equipo']
             all_equipos.add(eq)
             
-            # Buscar configuración de forma de pago
-            forma = p['forma_pago']
-            config_forma = next((c for c in formas_pago_config if c['nombre'] == forma), None)
-            if not config_forma:
-                config_forma = {"nombre": forma, "total": 490.0, "modalidad": "mensual", "cuota": 49.0, "meses": 10}
-                
-            nPagos = int(config_forma.get('meses', 12))
-            totalAnual = float(config_forma.get('total', 440.0))
-            cuotaRepartida = totalAnual / nPagos if nPagos > 0 else 0.0
-            esDivisor = nPagos in [1, 2, 3, 4, 6, 12]
-            intervalo = 12 // nPagos if esDivisor else 1
+            # Buscar configuración de forma y tipo de pago
+            forma_p = p['forma_pago'].strip().upper()
+            tipo_p = p['tipo_pago'].strip().upper() if p['tipo_pago'] else "MENSUAL"
+            config_match = None
+            for c in grid_config:
+                if str(c.get('tipo', '')).strip().upper() == forma_p:
+                    config_match = c
+                    break
             
             expected_concepts = {}
             
@@ -1299,21 +1320,16 @@ def api_kpis_pagos():
                         is_active = False
                         
                 if is_active:
-                    mIdx = m - 1
-                    if esDivisor:
-                        anchor_m_idx = (mIdx // intervalo) * intervalo
-                        anchor_month = anchor_m_idx + 1
-                        if (anchor_m_idx // intervalo) < nPagos:
-                            concept = str(anchor_month).zfill(2)
-                            expected_concepts[concept] = cuotaRepartida
+                    concept = str(m).zfill(2)
+                    if config_match:
+                        config_meses = [int(x) for x in config_match.get('meses', [])]
+                        if not config_meses:
+                            config_meses = [9, 10, 11, 12, 1, 2, 3, 4, 5, 6]
+                        if m in config_meses:
+                            expected_concepts[concept] = float(config_match.get('importe', 0.0))
                     else:
-                        if mIdx < nPagos:
-                            concept = str(m).zfill(2)
-                            val_esp = cuotaRepartida
-                            key_override = f"{eq}-{concept}"
-                            if cuotas_mes_config.get(key_override) is not None:
-                                val_esp = float(cuotas_mes_config[key_override])
-                            expected_concepts[concept] = val_esp
+                        if forma_p == 'MENSUAL' and m not in (7, 8):
+                            expected_concepts[concept] = 49.0
 
             # C. Pack Ropa
             ropa_key = f"{eq}-PACK_ROPA"
@@ -1325,20 +1341,24 @@ def api_kpis_pagos():
             paid_concepts = {}
             p_payments = [pay for pay in raw_payments if pay['equipo'].upper() == eq.upper() and pay['jugador'].lower() == p['nombre'].lower()]
             
+            # Mapeo de meses de grupo al primer mes del grupo
+            month_to_group_start = {}
+            if config_match and 'grupos' in config_match:
+                for grp in config_match['grupos']:
+                    if isinstance(grp, list) and len(grp) > 0:
+                        start_m = grp[0]
+                        for m in grp:
+                            month_to_group_start[m] = start_m
+
             for pay in p_payments:
                 concept = pay['concepto']
                 pagado = pay['pagado']
-                
                 if concept.isdigit():
-                    m_val = int(concept)
-                    mIdx = m_val - 1
-                    if esDivisor:
-                        anchor_m_idx = (mIdx // intervalo) * intervalo
-                        anchor_month = anchor_m_idx + 1
-                        concept = str(anchor_month).zfill(2)
+                    m_num = int(concept)
+                    if m_num in month_to_group_start:
+                        concept = str(month_to_group_start[m_num]).zfill(2)
                     else:
-                        concept = str(m_val).zfill(2)
-                        
+                        concept = str(m_num).zfill(2)
                 paid_concepts[concept] = paid_concepts.get(concept, 0.0) + pagado
 
             # E. Comparar y calcular deudas
@@ -1348,13 +1368,7 @@ def api_kpis_pagos():
             # Orden de conceptos: Inscripción -> Mensualidades cronológicas -> Ropa
             concept_order = ['INSCRIPCION']
             for (y, m) in season_months:
-                mIdx = m - 1
-                if esDivisor:
-                    anchor_m_idx = (mIdx // intervalo) * intervalo
-                    anchor_month = anchor_m_idx + 1
-                    concept = str(anchor_month).zfill(2)
-                else:
-                    concept = str(m).zfill(2)
+                concept = str(m).zfill(2)
                 if concept not in concept_order:
                     concept_order.append(concept)
             concept_order.append('PACK_ROPA')
@@ -1368,7 +1382,6 @@ def api_kpis_pagos():
                     deu = max(esp - pag, 0.0)
                     
                     if deu > 0.1: # Tolerancia para flotantes
-                        # Construir etiqueta
                         if con == 'INSCRIPCION':
                             lbl = 'Inscr.'
                             tipo_pago_deuda = 'inscripcion'
@@ -1377,20 +1390,7 @@ def api_kpis_pagos():
                             tipo_pago_deuda = 'ropa'
                         elif con.isdigit():
                             tipo_pago_deuda = 'mensual'
-                            if esDivisor and intervalo > 1:
-                                start_month = int(con)
-                                meses_arr = []
-                                for m_offset in range(intervalo):
-                                    m_num = (start_month + m_offset)
-                                    if m_num > 12: m_num -= 12
-                                    if m_num in month_labels:
-                                        meses_arr.append(month_labels[m_num])
-                                if len(meses_arr) > 1:
-                                    lbl = f"{meses_arr[0]} a {meses_arr[-1]}"
-                                else:
-                                    lbl = meses_arr[0] if meses_arr else con
-                            else:
-                                lbl = month_labels.get(int(con), con)
+                            lbl = month_labels.get(int(con), con)
                         else:
                             lbl = con
                             tipo_pago_deuda = 'mensual'

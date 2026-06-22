@@ -875,7 +875,7 @@ def api_config_financiera():
                 ['FORMAS_PAGO', json.dumps(data.get('formas_pago', []))],
                 ['CUOTAS_MES', json.dumps(data.get('cuotas_mes', {}))],
                 ['EXTRA_NAMES', json.dumps(data.get('extra_names', {}))]
-            ], value_input_option='USER_ENTERED')
+            ], value_input_option='RAW')
             return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error api_config_financiera: {e}")
