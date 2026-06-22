@@ -24,6 +24,8 @@
     .table-ropa-active .col-ropa-btn { background-color: #f8fafc !important; border-left: 1px solid #e2e8f0 !important; }
     .celda-ropa { cursor: pointer; font-size: 10px; font-weight: 900; text-align: center; border: 1px solid #e2e8f0; height: 35px; }
     .col-financiera { transition: all 0.3s; }
+    .col-pago-ropa { display: none; transition: all 0.3s; }
+    .table-ropa-active .col-pago-ropa { display: table-cell; }
     .active-mode { background: #334155 !important; color: white !important; border: 1px solid #334155 !important; }
     .inactive-mode { background: #f1f5f9 !important; color: #64748b !important; border: 1px solid #e2e8f0 !important; }
     .table-ropa-active .col-financiera { display: none !important; }
@@ -75,7 +77,7 @@
     .btn-fin { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 800; font-size: 11px; text-transform: uppercase; }
     
     /* Aseguramos que los modales estén ocultos por defecto */
-    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); align-items: center; justify-content: center; }
+    .modal { display: none; position: fixed; z-index: 25000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); align-items: center; justify-content: center; }
     .modal-content { background: white; padding: 25px; border-radius: 15px; width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
     
     /* Estilos para Estadísticas */
@@ -94,51 +96,110 @@
     /* Barra de acciones inferior fija */
     .pago-action-bar {
         position: fixed;
-        bottom: 20px;
+        bottom: 25px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(15, 23, 42, 0.96); /* Slate 900: Ultra moderno y profundo */
+        background: rgba(15, 23, 42, 0.96);
         backdrop-filter: blur(10px);
-        color: white;
-        padding: 25px 60px;
-        border-radius: 24px;
+        color: #ffffff;
+        padding: 14px 28px;
+        border-radius: 16px;
         display: none;
         align-items: center;
-        gap: 50px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        gap: 30px;
         z-index: 2000;
-        border: 1px solid rgba(255,255,255,0.08);
-        width: auto;
-        min-width: 950px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        width: 90%;
+        max-width: 1050px;
+        min-width: 800px;
+        justify-content: space-between;
+        box-shadow: 0 20px 30px rgba(0, 0, 0, 0.4);
     }
     .pago-action-bar input {
-        background: rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.08);
         border: 1px solid rgba(255, 255, 255, 0.2);
-        color: white;
+        color: #ffffff;
         padding: 8px 12px;
         border-radius: 8px;
-        width: 80px;
-        font-weight: 900;
+        width: 85px;
+        font-weight: 800;
         font-family: inherit;
-        font-size: 14px;
+        font-size: 15px;
         text-align: center;
+        transition: all 0.2s;
+    }
+    .pago-action-bar input:focus {
+        outline: none;
+        border-color: #E31E24;
+        background: rgba(255, 255, 255, 0.15);
+        box-shadow: 0 0 0 3px rgba(227, 30, 36, 0.25);
     }
     .pago-action-bar label {
-        font-size: 9px;
+        font-size: 10px;
         font-weight: 800;
-        color: #999;
+        color: #94a3b8;
         text-transform: uppercase;
         display: block;
         margin-bottom: 4px;
+        letter-spacing: 0.5px;
     }
     .action-bar-divider {
         width: 1px;
-        height: 40px;
-        background: rgba(255,255,255,0.1);
+        height: 35px;
+        background: rgba(255, 255, 255, 0.1);
     }
     .pago-action-bar select option {
         color: #1e293b !important;
         background-color: #ffffff !important;
+    }
+    
+    /* ESTILOS GRID COMPENSACIÓN DE PAGO */
+    .compensacion-grid-cell {
+        background: #f8fafc;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 10px 8px;
+        text-align: center;
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: bold;
+        color: #334155;
+        transition: all 0.2s;
+        user-select: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 48px;
+    }
+    .compensacion-grid-cell:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+        transform: translateY(-1px);
+    }
+    .compensacion-grid-cell.selected {
+        background: #fef2f2;
+        border-color: #E31E24;
+        color: #E31E24;
+        box-shadow: 0 4px 12px rgba(227, 30, 36, 0.1);
+    }
+    .compensacion-grid-cell.disabled {
+        background: #f1f5f9;
+        border-color: #e2e8f0;
+        color: #94a3b8;
+        opacity: 0.6;
+        cursor: not-allowed;
+        pointer-events: none;
+        position: relative;
+    }
+    .compensacion-grid-cell.disabled::after {
+        content: '✓';
+        position: absolute;
+        top: 2px;
+        right: 5px;
+        color: #28a745;
+        font-size: 10px;
+        font-weight: 900;
     }
 </style>
 
@@ -267,9 +328,6 @@
                 <div class="legend-item item-entregada">ENTREGADA</div>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                    <button class="btn-fin" style="background: #E31E24; color: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(227,30,36,0.2);" onclick="abrirModalAnadirJugadorFin()">
-                        <i class="fas fa-user-plus"></i> AÑADIR JUGADOR
-                    </button>
                     <button id="btnExportarRopa" class="btn-fin" style="background: #198754; color: white; border-radius: 10px; display: none; align-items: center; gap: 8px;" onclick="exportarRopaExcel()">
                         <i class="fas fa-file-excel"></i> EXPORTAR ROPA
                     </button>
@@ -329,22 +387,10 @@
                             </div>
                         </th>
                         {% endfor %}
-                        <th class="col-financiera" style="min-width: 60px; padding: 10px 5px; background: #eceef2; border-bottom: 2px solid #dee2e6;">
+                        <th class="col-pago-ropa" style="min-width: 60px; padding: 10px 5px; background: #eceef2; border-bottom: 2px solid #dee2e6;">
                             <div class="pago-cell" style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
                                 <span id="labelPackRopa" style="font-size: 9px; color: #475569; font-weight: 800;">PACK ROPA</span>
                                 <i class="fas fa-cog" style="cursor: pointer; color: #E31E24; font-size: 11px;" onclick="abrirModalBulkEsperado('PACK_ROPA')"></i>
-                            </div>
-                        </th>
-                        <th class="col-financiera" style="min-width: 60px; padding: 10px 5px; background: #eceef2; border-bottom: 2px solid #dee2e6;">
-                            <div class="pago-cell" style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-                                <span id="labelExtra" style="font-size: 9px; color: #475569; font-weight: 800;">EXTRA</span>
-                                <i class="fas fa-pencil-alt" style="cursor: pointer; color: #E31E24; font-size: 11px;" onclick="renombrarExtra('EXTRA')"></i>
-                            </div>
-                        </th>
-                        <th class="col-financiera" style="min-width: 60px; padding: 10px 5px; background: #eceef2; border-bottom: 2px solid #dee2e6;">
-                            <div class="pago-cell" style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-                                <span id="labelExtra2" style="font-size: 9px; color: #475569; font-weight: 800;">EXTRA 2</span>
-                                <i class="fas fa-pencil-alt" style="cursor: pointer; color: #E31E24; font-size: 11px;" onclick="renombrarExtra('EXTRA2')"></i>
                             </div>
                         </th>
                         <!-- ANCLAJE CABECERAS ROPA -->
@@ -364,9 +410,7 @@
                         {% for mes in ['01','02','03','04','05','06','07','08','09','10','11','12'] %}
                         <td class="pago-cell col-financiera" onclick="seleccionarPago(event, this, '{{ mes }}')">-</td>
                         {% endfor %}
-                        <td class="pago-cell col-financiera pago-extra-bg" onclick="seleccionarPago(event, this, 'PACK_ROPA')">-</td>
-                        <td class="pago-cell col-financiera pago-extra-bg" onclick="seleccionarPago(event, this, 'EXTRA')">-</td>
-                        <td class="pago-cell col-financiera pago-extra-bg" onclick="seleccionarPago(event, this, 'EXTRA2')">-</td>
+                        <td class="pago-cell col-pago-ropa pago-extra-bg" onclick="seleccionarPago(event, this, 'PACK_ROPA')">-</td>
                         <!-- Celdas de Ropa (se añadirán dinámicamente) -->
                         <td class="col-anchor-ropa col-ropa-btn"></td>
                         <td id="filaRopa_{{ loop.index0 }}" class="contenedor-celdas-ropa" style="display:none; padding:0; border:0;"></td>
@@ -597,7 +641,7 @@ let presupuestoData = [];
 let configuracionesPago = [];
 let configInscripciones = {};
 let configCuotasMes = {};
-let extraNames = { "EXTRA": "EXTRA", "EXTRA2": "EXTRA 2" };
+let extraNames = { "STAFF_OTROS": "OTROS" };
 let bulkConceptoActivo = '';
 let asientoSeleccionado = null;
 let isSaving = false;
@@ -613,6 +657,7 @@ function setVista(modo) {
     const btnsRopa = [document.getElementById('btnRopaJug'), document.getElementById('btnRopaStaff')];
     const btnImpagos = document.getElementById('btnSacarImpagos');
     const btnExportarRopa = document.getElementById('btnExportarRopa');
+    const btnConfigTipoForma = document.getElementById('btnConfigurarTipoForma');
 
     if (modo === 'ropa') {
         tablas.forEach(t => t.classList.add('table-ropa-active'));
@@ -621,6 +666,7 @@ function setVista(modo) {
         document.getElementById('legendRopa').style.display = 'flex';
         if(btnImpagos) btnImpagos.style.display = 'none';
         if(btnExportarRopa) btnExportarRopa.style.display = 'flex';
+        if(btnConfigTipoForma) btnConfigTipoForma.style.display = 'none';
         cargarDatosRopa();
     } else {
         tablas.forEach(t => t.classList.remove('table-ropa-active'));
@@ -629,6 +675,7 @@ function setVista(modo) {
         document.getElementById('legendRopa').style.display = 'none';
         if(btnImpagos) btnImpagos.style.display = 'flex';
         if(btnExportarRopa) btnExportarRopa.style.display = 'none';
+        if(btnConfigTipoForma) btnConfigTipoForma.style.display = 'flex';
     }
 }
 
@@ -1231,7 +1278,7 @@ function abrirModalBulkEsperado(concepto) {
     }
     
     // Fallback de último recurso si sigue siendo null
-    if (valorActual === null && concepto !== 'Inscripción' && concepto !== 'PACK_ROPA' && concepto !== 'EXTRA' && concepto !== 'EXTRA2') {
+    if (valorActual === null && concepto !== 'Inscripción' && concepto !== 'PACK_ROPA') {
         const mensualConfig = configuracionesPago.find(c => c.modalidad === 'mensual' || c.meses === 10 || c.cuota === 49);
         if (mensualConfig) {
             valorActual = mensualConfig.cuota;
@@ -1363,16 +1410,14 @@ async function aplicarBulkEsperado(btn) {
             const intervalo = 12 / nPagos;
 
             // Definimos qué columnas son independientes de la modalidad de pago (mensual/bianual/etc)
-            const esColumnaIndependiente = ['Inscripción', 'PACK_ROPA', 'EXTRA', 'EXTRA2'].includes(bulkConceptoActivo);
+            const esColumnaIndependiente = ['Inscripción', 'PACK_ROPA'].includes(bulkConceptoActivo);
 
             // Solo omitimos el cambio si es una columna de MES (01-12) y la celda está combinada (intervalo > 1)
             if (!esColumnaIndependiente && intervalo > 1) return;
 
             const celdas = f.querySelectorAll('.pago-cell');
-            let colIdx = (bulkConceptoActivo === 'Inscripción') ? 0 : 
+            let colIdx = (bulkConceptoActivo === 'Inscripción') ? 0 :
                          (bulkConceptoActivo === 'PACK_ROPA') ? 13 :
-                         (bulkConceptoActivo === 'EXTRA') ? 14 :
-                         (bulkConceptoActivo === 'EXTRA2') ? 15 :
                          parseInt(bulkConceptoActivo);
 
             if (celdas[colIdx]) {
@@ -1672,23 +1717,15 @@ function renderStats() {
     // Las tarjetas de resumen ya se actualizan en la parte superior
 }
 
-let prefixExtraActivo = 'EXTRA-';
+let prefixExtraActivo = 'S-EXTRA-';
 function seleccionarPago(e, el, item) {
     if (e) {
         e.stopPropagation();
     }
     deseleccionarFilasJugadores();
 
-    if (item === 'EXTRA') {
-        abrirModalExtraDetalle(el, 'EXTRA-');
-        return;
-    }
     if (item === 'PACK_ROPA') { // PACK ROPA también tendrá su propio modal si es necesario
         abrirModalBulkEsperado('PACK_ROPA'); // Por ahora, sigue usando el bulk
-        return;
-    }
-    if (item === 'EXTRA2') {
-        abrirModalExtraDetalle(el, 'EXTRA2-');
         return;
     }
 
@@ -1755,15 +1792,16 @@ function actualizarBarraPagos() {
     celdasSeleccionadas.forEach(cell => {
         const fila = cell.closest('tr');
         const isStaff = fila.classList.contains('fila-staff');
-        const nombre = isStaff ? fila.dataset.nombre.split(' ')[0] : fila.cells[1].innerText.split(' ')[0];
+        const nombreCompleto = isStaff ? fila.dataset.nombre : fila.cells[1].innerText.trim();
         const item = cell.dataset.tempItem || cell.dataset.concepto || '';
         const equipo = isStaff ? "STAFF" : fila.dataset.equipo;
         const forma = isStaff ? "Varios" : fila.cells[3].innerText.trim();
         const tipo = isStaff ? "Varios" : (fila.querySelector('.span-tipo-pago')?.innerText || '').trim().toUpperCase();
 
         const labelItem = getLabelConcepto(item, forma, isStaff);
-        if (!agrupado[nombre]) agrupado[nombre] = [];
-        agrupado[nombre].push(labelItem);
+        const key = isStaff ? `${nombreCompleto} (STAFF)` : `${nombreCompleto} (${equipo})`;
+        if (!agrupado[key]) agrupado[key] = [];
+        agrupado[key].push(labelItem);
 
         let esperadoIndividual = parseFloat(cell.dataset.esperado) || 0;
         if (esperadoIndividual === 0) {
@@ -1787,7 +1825,7 @@ function actualizarBarraPagos() {
         }
         totalEsperado += esperadoIndividual;
     });
-    const resumen = Object.entries(agrupado).map(([nom, items]) => `${nom}(${items.join(',')})`).join(' | ');
+    const resumen = Object.entries(agrupado).map(([key, items]) => `${key} - ${items.join(', ')}`).join(' | ');
     document.getElementById('detalleSeleccion').innerText = "REGISTRO PARA: " + resumen;
 
     document.getElementById('pagoEsperadoBar').value = totalEsperado;
@@ -1817,9 +1855,12 @@ async function confirmarPago(btn) {
 
     // 1. Validación de sobrepago
     if (totalPagado > totalEsperado && totalEsperado > 0) {
-        alert("El importe pagado es mayor que el total esperado. Por favor, ajusta el importe o selecciona más conceptos para que todo cuadre.");
-        btn.disabled = false;
-        isSaving = false;
+        const filasSeleccionadas = new Set(celdasSeleccionadas.map(c => c.closest('tr')));
+        if (filasSeleccionadas.size > 1) {
+            alert("La compensación por sobrepago solo está disponible al registrar pagos de un único jugador.");
+            return;
+        }
+        abrirModalCompensacion(totalPagado, totalEsperado, btn);
         return;
     }
 
@@ -1905,52 +1946,57 @@ function seleccionarPagoStaff(e, el, item) {
 
 async function eliminarPago(btn) {
     if (!celdaActiva || !btn) return;
-    if (!confirm("¿Seguro que quieres eliminar este registro de pago definitivamente?")) return;
     
-    btn.disabled = true;
-
     const asientoId = celdaActiva.dataset.asientoId;
-    
-    try {
-        let res;
-        if (asientoId) {
-            // Si hay un ID de asiento (S-XXXX o P-XXXX), usamos el borrado directo por índice
-            res = await fetch('/api/operacion_asiento', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ accion: 'borrar', id: asientoId })
-            });
-        } else {
-            // Fallback por datos si no hay ID cargado
-            const datos = {
-                nombre: celdaActiva.closest('tr').cells[1].innerText.trim(),
-                equipo: celdaActiva.closest('tr').dataset.equipo,
-                concepto: celdaActiva.dataset.concepto
-            };
-            res = await fetch('/api/borrar_pago', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(datos)
-            });
-        }
-
-        if (res.ok) {
-            // Limpiamos visualmente la celda de inmediato
-            celdaActiva.innerText = '-'; 
-            celdaActiva.className = celdaActiva.classList.contains('pago-extra-bg') ? 'pago-cell pago-extra-bg' : 'pago-cell';
-            
-            delete celdaActiva.dataset.asientoId;
-            delete celdaActiva.dataset.importe;
-            await cargarPresupuesto();
-            cerrarModalsFin();
-        } else {
-            alert("Error al eliminar el pago");
-        }
-    } catch (e) {
-        alert("Error de conexión");
-    } finally {
-        btn.disabled = false;
+    let targetAsiento = null;
+    if (asientoId && typeof presupuestoData !== 'undefined' && presupuestoData) {
+        targetAsiento = presupuestoData.find(a => String(a.REAL_ID) === String(asientoId));
     }
+    
+    // Verificar si es un pago dividido
+    relatedSplitAsientos = [];
+    if (targetAsiento && targetAsiento.DESCRIPCION && (targetAsiento.DESCRIPCION.includes("dividieron") || targetAsiento.DESCRIPCION.includes("se dividieron"))) {
+        let match = targetAsiento.DESCRIPCION.match(/\((.*?se dividieron en.*?)\)/);
+        if (match) {
+            let splitText = match[1];
+            relatedSplitAsientos = presupuestoData.filter(a => 
+                a.NOMBRE.trim().toLowerCase() === targetAsiento.NOMBRE.trim().toLowerCase() &&
+                a.FECHA === targetAsiento.FECHA &&
+                a.DESCRIPCION && a.DESCRIPCION.includes(splitText)
+            );
+        }
+    }
+    
+    if (relatedSplitAsientos && relatedSplitAsientos.length > 1) {
+        // Mostrar modal de eliminación coordinada
+        targetDeleteBtn = btn;
+        
+        // Rellenar detalles en el modal
+        const container = document.getElementById('listaAsientosSplitDetalle');
+        if (container) {
+            container.innerHTML = `
+                <div style="font-weight: 800; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 4px; color: #1e293b;">
+                    PAGO ORIGINAL DEL ${targetAsiento.FECHA}
+                </div>
+                ${relatedSplitAsientos.map(a => {
+                    const esActual = String(a.REAL_ID) === String(asientoId);
+                    const descMarcador = esActual ? ' <b>(Seleccionado para borrar)</b>' : '';
+                    return `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0;">
+                            <span>• Cuota de <b>${getFriendlyName(a.CONCEPTO)}</b>:${descMarcador}</span>
+                            <span style="font-weight: 800; color: #1e293b;">${a.IMPORTE}€</span>
+                        </div>
+                    `;
+                }).join('')}
+            `;
+        }
+        
+        document.getElementById('modalEliminarPagoSplit').style.display = 'flex';
+        return;
+    }
+    
+    if (!confirm("¿Seguro que quieres eliminar este registro de pago definitivamente?")) return;
+    ejecutarBorradoDirecto(btn, asientoId);
 }
 
 async function actualizarPago(btn) {
@@ -2098,12 +2144,13 @@ function cargarPagosEnTabla() {
         celdas.forEach((cell, idx) => {
             cell.style.display = '';
             cell.colSpan = 1;
-            cell.className = idx >= 13 ? 'pago-cell col-financiera pago-extra-bg' : 'pago-cell col-financiera';
+            cell.className = idx === 13 ? 'pago-cell col-pago-ropa pago-extra-bg' : 'pago-cell col-financiera';
             cell.innerText = '-';
             delete cell.dataset.asientoId;
+            delete cell.dataset.splitDescriptions;
+            cell.removeAttribute('title');
             cell.dataset.importe = '0';
             cell.dataset.esperado = '0';
-            if (idx === 14 || idx === 15) { cell.dataset.sumPagado = 0; cell.dataset.sumEsperado = 0; }
         });
 
         // ── Celda 0: Inscripción ──
@@ -2114,17 +2161,15 @@ function cargarPagosEnTabla() {
         cellIns.dataset.esperado = valIns;
         cellIns.dataset.concepto = 'Inscripción';
 
-        // ── Celdas 13-15: Ropa / Extra / Extra2 ──
-        [13, 14, 15].forEach(idx => {
-            const cell = celdas[idx];
-            if (!cell) return;
-            const concepto = idx === 13 ? 'PACK_ROPA' : (idx === 14 ? 'EXTRA' : 'EXTRA2');
-            const valEsperado = parseFloat(configCuotasMes[`${equipo}-${concepto}`]) || 0;
-            cell.innerText = (valEsperado > 0 || idx >= 14) ? `${Math.round(valEsperado)}€` : '-';
-            cell.style.color = '#ccc';
-            cell.dataset.esperado = valEsperado;
-            cell.dataset.concepto = concepto;
-        });
+        // ── Celda 13: Pack Ropa ──
+        const cellRopaPack = celdas[13];
+        if (cellRopaPack) {
+            const valEsperado = parseFloat(configCuotasMes[`${equipo}-PACK_ROPA`]) || 0;
+            cellRopaPack.innerText = valEsperado > 0 ? `${Math.round(valEsperado)}€` : '-';
+            cellRopaPack.style.color = '#ccc';
+            cellRopaPack.dataset.esperado = valEsperado;
+            cellRopaPack.dataset.concepto = 'PACK_ROPA';
+        }
 
         // ── Celdas 1-12: Meses de pago ──
         const grupos = configMatch?.grupos || []; // [{grupo: [9,10,11]}, ...]
@@ -2208,8 +2253,6 @@ function cargarPagosEnTabla() {
                     } else {
                         if (item === 'Inscripción') cell = celdas[0];
                         else if (item === 'PACK_ROPA') cell = celdas[13];
-                        else if (item.startsWith('EXTRA-')) cell = celdas[14];
-                        else if (item.startsWith('EXTRA2-')) cell = celdas[15];
                         else {
                             const m = parseInt(item);
                             if (isNaN(m)) return;
@@ -2221,7 +2264,7 @@ function cargarPagosEnTabla() {
                             if (configMatch && configMatch.grupos) {
                                 const group = configMatch.grupos.find(g => g.includes(m));
                                 if (group && group.length > 0) {
-                                    targetM = group[0];
+                                    targetM = [...group].sort((a, b) => a - b)[0];
                                 }
                             }
                             cell = celdas[targetM];
@@ -2236,19 +2279,45 @@ function cargarPagosEnTabla() {
                         const actualPagado = (parseFloat(cell.dataset.importe) || 0) + pagado;
                         const valEsperadoCelda = parseFloat(cell.dataset.esperado) || 0;
                         
+                        // Si el asiento tiene descripción de compensación/división
+                        if (asiento.DESCRIPCION && (asiento.DESCRIPCION.includes("dividieron") || asiento.DESCRIPCION.includes("se dividieron"))) {
+                            let existing = cell.dataset.splitDescriptions || "";
+                            if (existing) {
+                                existing += "\n";
+                            }
+                            existing += asiento.DESCRIPCION;
+                            cell.dataset.splitDescriptions = existing;
+                        }
+                        
                         if (item.includes('EXTRA')) {
                             let sP = (parseFloat(cell.dataset.sumPagado) || 0) + pagado;
                             let sE = (parseFloat(cell.dataset.sumEsperado) || 0) + (parseFloat(asiento.ESPERADO) || 0);
                             cell.dataset.sumPagado = sP;
                             cell.dataset.sumEsperado = sE;
                             cell.dataset.importe = sP;
-                            cell.innerHTML = `<span class="paid-amount-large">${Math.round(sP)}€</span><span style="font-size: 8px; opacity: 0.7;"> / ${Math.round(sE)}€</span>`;
+                            
+                            let asteriskHTML = "";
+                            if (cell.dataset.splitDescriptions) {
+                                const tooltipText = cell.dataset.splitDescriptions.replace(/"/g, '&quot;');
+                                asteriskHTML = ` <span style="color: #ffeb3b; font-weight: bold; cursor: help; font-size: 14px;" title="${tooltipText}">*</span>`;
+                                cell.setAttribute('title', cell.dataset.splitDescriptions);
+                            }
+                            
+                            cell.innerHTML = `<span class="paid-amount-large">${Math.round(sP)}€</span><span style="font-size: 8px; opacity: 0.7;"> / ${Math.round(sE)}€</span>${asteriskHTML}`;
                             cell.classList.add(sP >= sE && sE > 0 ? 'pago-verde' : 'pago-naranja');
                             cell.style.color = '';
                         } else {
                             const p = Math.round(actualPagado);
                             const e = Math.round(valEsperadoCelda);
-                            cell.innerHTML = `<span class="paid-amount-large">${p}€</span><span style="font-size: 8px; opacity: 0.7;"> / ${e}€</span>`;
+                            
+                            let asteriskHTML = "";
+                            if (cell.dataset.splitDescriptions) {
+                                const tooltipText = cell.dataset.splitDescriptions.replace(/"/g, '&quot;');
+                                asteriskHTML = ` <span style="color: #ffeb3b; font-weight: bold; cursor: help; font-size: 14px;" title="${tooltipText}">*</span>`;
+                                cell.setAttribute('title', cell.dataset.splitDescriptions);
+                            }
+                            
+                            cell.innerHTML = `<span class="paid-amount-large">${p}€</span><span style="font-size: 8px; opacity: 0.7;"> / ${e}€</span>${asteriskHTML}`;
                             cell.classList.remove('pago-verde', 'pago-naranja', 'pago-exceso');
                             cell.classList.add(p >= e ? 'pago-verde' : 'pago-naranja');
                             if (p > e) cell.classList.add('pago-exceso');
@@ -2717,8 +2786,6 @@ async function guardarConfiguracionesFinancieras() {
 }
 
 function actualizarLabelsExtra() {
-    if (document.getElementById('labelExtra')) document.getElementById('labelExtra').innerText = extraNames.EXTRA || 'EXTRA';
-    if (document.getElementById('labelExtra2')) document.getElementById('labelExtra2').innerText = extraNames.EXTRA2 || 'EXTRA 2';
     if (document.getElementById('labelStaffOtros')) document.getElementById('labelStaffOtros').innerText = extraNames.STAFF_OTROS || 'OTROS';
 }
 
@@ -3174,7 +3241,7 @@ function renderPlayerPaymentGrid(playerData) {
     if (!isStaff) {
         items.push({ id: 'Inscripción', label: 'INSCR.' });
         meses.forEach(m => items.push({ id: m, label: getLabelConcepto(m, 'Mensual', false).toUpperCase() }));
-        items.push({ id: 'PACK_ROPA', label: 'ROPA' }, { id: 'EXTRA', label: 'EX1' }, { id: 'EXTRA2', label: 'EX2' });
+        items.push({ id: 'PACK_ROPA', label: 'ROPA' });
     } else {
         meses.forEach(m => items.push({ id: `Staff-${m}`, label: getLabelConcepto(m, 'Varios', true).toUpperCase() }));
         items.push({ id: 'S-EXTRA', label: 'OTROS' });
@@ -3388,26 +3455,26 @@ async function guardarSeleccionadosRevision() {
 
 <!-- BARRA DE ACCIÓN PERMANENTE AL SELECCIONAR -->
 <div id="barraAccionPagos" class="pago-action-bar">
-    <div style="min-width: 150px;">
-        <div id="txtSeleccionados" style="font-weight: 900; font-size: 24px; color: #fff; letter-spacing: 1px;">1 SELECCIONADO</div>
-        <div id="detalleSeleccion" style="font-size: 16px; color: #38bdf8; font-weight: 800; max-width: 500px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px;">Detalle...</div>
+    <div style="min-width: 170px;">
+        <div id="txtSeleccionados" style="font-weight: 900; font-size: 26px; color: #fff; letter-spacing: 1px;">1 SELECCIONADO</div>
+        <div id="detalleSeleccion" style="font-size: 15px; color: #38bdf8; font-weight: 800; max-width: 500px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 6px;">Detalle...</div>
     </div>
     <div class="action-bar-divider"></div>
-    <div style="display: flex; align-items: center; gap: 10px;">
-        <div><label style="color: #fff; opacity: 0.6;">PAGADO (€)</label><input type="number" id="pagoImporteBar" value="" placeholder="-" style="border-color: #28a745;" onkeyup="if(event.key === 'Enter') confirmarPago()"></div>
-        <div><label>ESPERADO (€)</label><input type="number" id="pagoEsperadoBar" value="50"></div>
+    <div style="display: flex; align-items: center; gap: 14px;">
+        <div><label>PAGADO (€)</label><input type="number" id="pagoImporteBar" value="" placeholder="-" style="border-color: #28a745;" onkeyup="if(event.key === 'Enter') confirmarPago()"></div>
+        <div><label>ESPERADO (€)</label><input type="number" id="pagoEsperadoBar" value="50" style="border-color: #38bdf8;"></div>
     </div>
     <div class="action-bar-divider"></div>
-    <div style="display: flex; gap: 12px;">
-        <button class="btn-fin" style="background: #E31E24; color: white; padding: 12px 25px; box-shadow: 0 4px 10px rgba(227, 30, 36, 0.3);" onclick="confirmarPago(this)">
+    <div style="display: flex; gap: 16px;">
+        <button class="btn-fin" style="background: #E31E24; color: white; padding: 12px 28px; font-size: 13px; font-weight: bold; border-radius: 10px; box-shadow: 0 4px 10px rgba(227, 30, 36, 0.2);" onclick="confirmarPago(this)">
             <i class="fas fa-save" style="margin-right: 8px;"></i> REGISTRAR PAGO
         </button>
-        <button class="btn-fin" style="background: rgba(255,255,255,0.1); color: #fff; border: none;" onclick="cerrarModalsFin()">CANCELAR</button>
+        <button class="btn-fin" style="background: rgba(255, 255, 255, 0.08); color: #fff; border: 1px solid rgba(255, 255, 255, 0.15); padding: 12px 24px; font-size: 13px; font-weight: bold; border-radius: 10px;" onclick="cerrarModalsFin()">CANCELAR</button>
     </div>
 </div>
 
 <!-- BARRA DE ACCIÓN SELECCIÓN JUGADORES (CAMBIOS MASIVOS) -->
-<div id="barraAccionSeleccionJugadores" class="pago-action-bar" style="background: rgba(15, 23, 42, 0.98);">
+<div id="barraAccionSeleccionJugadores" class="pago-action-bar">
     <div style="min-width: 150px;">
         <div id="txtJugadoresSeleccionados" style="font-weight: 900; font-size: 24px; color: #fff; letter-spacing: 1px;">0 SELECCIONADOS</div>
         <div style="font-size: 14px; color: #38bdf8; font-weight: 800; margin-top: 4px;">APLICAR CAMBIO MASIVO DE PAGO</div>
@@ -3415,8 +3482,8 @@ async function guardarSeleccionadosRevision() {
     <div class="action-bar-divider"></div>
     <div style="display: flex; align-items: center; gap: 15px;">
         <div>
-            <label style="color: #fff; opacity: 0.6;">TIPO PAGO</label>
-            <select id="selSeleccionTipo" style="padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: white; font-weight: 700; font-size: 13px;">
+            <label>TIPO PAGO</label>
+            <select id="selSeleccionTipo" style="padding: 8px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.08); color: white; font-weight: 700; font-size: 13px;">
                 <option value="">Sin cambios...</option>
                 <option value="Efectivo">Efectivo</option>
                 <option value="Domiciliación">Domiciliación</option>
@@ -3426,8 +3493,8 @@ async function guardarSeleccionadosRevision() {
             </select>
         </div>
         <div>
-            <label style="color: #fff; opacity: 0.6;">FORMA PAGO</label>
-            <select id="selSeleccionForma" style="padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: white; font-weight: 700; font-size: 13px;">
+            <label>FORMA PAGO</label>
+            <select id="selSeleccionForma" style="padding: 8px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.08); color: white; font-weight: 700; font-size: 13px;">
                 <!-- Se llena dinámicamente -->
             </select>
         </div>
@@ -3437,7 +3504,7 @@ async function guardarSeleccionadosRevision() {
         <button class="btn-fin" style="background: #28a745; color: white; padding: 12px 25px; box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);" onclick="guardarCambiosSeleccionJugadores()">
             <i class="fas fa-check" style="margin-right: 8px;"></i> APLICAR CAMBIOS
         </button>
-        <button class="btn-fin" style="background: rgba(255,255,255,0.1); color: #fff; border: none;" onclick="deseleccionarFilasJugadores()">CANCELAR</button>
+        <button class="btn-fin" style="background: rgba(255, 255, 255, 0.08); color: #fff; border: 1px solid rgba(255, 255, 255, 0.15);" onclick="deseleccionarFilasJugadores()">CANCELAR</button>
     </div>
 </div>
 
@@ -3631,13 +3698,11 @@ async function guardarSeleccionadosRevision() {
 </div>
 
 <script>
-function abrirModalExtraDetalle(el, prefix = 'EXTRA-') {
+function abrirModalExtraDetalle(el, prefix = 'S-EXTRA-') {
     prefixExtraActivo = prefix;
     celdaActiva = el;
     const nombre = el.closest('tr').cells[1].innerText;
-    let label = extraNames.EXTRA;
-    if (prefix === 'EXTRA2-') label = extraNames.EXTRA2;
-    else if (prefix === 'S-EXTRA-') label = extraNames.STAFF_OTROS;
+    let label = extraNames.STAFF_OTROS;
 
     document.getElementById('tituloExtra').innerText = `${label}: ${nombre}`;
     const container = document.getElementById('containerRowsExtra');
@@ -4040,6 +4105,106 @@ async function guardarPagoIndividual(btn) {
         <div style="display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid #f1f5f9; padding-top: 20px; margin-top: 20px;">
             <button class="btn-fin" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 10px;" onclick="cerrarModalConfigurarTipoForma()">CANCELAR</button>
             <button class="btn-fin" style="background: #E31E24; color: white; padding: 12px 35px; border-radius: 10px; box-shadow: 0 4px 12px rgba(227,30,36,0.3);" onclick="guardarConfiguracionesGrid(this)">GUARDAR CAMBIOS</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL COMPENSACIÓN DE PAGO -->
+<div id="modalCompensacionPago" class="modal">
+    <div class="modal-content" style="width: 750px; max-width: 95vw; border-radius: 24px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.25); border-top: 6px solid #E31E24; border-bottom: 1px solid #e2e8f0; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">
+        <h3 style="font-size: 18px; font-weight: 900; margin-bottom: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; text-transform: uppercase; color: #1e293b; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-coins" style="color: #E31E24;"></i> <span>DISTRIBUCIÓN Y COMPENSACIÓN DE PAGO</span>
+        </h3>
+        
+        <!-- Tarjeta de Importe Sobrante -->
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 16px 20px; border-radius: 16px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 11px; font-weight: 800; color: #166534; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Importe Total a Distribuir</span>
+                <span style="font-size: 14px; color: #374151; font-weight: 700;" id="txtCompensacionJugadorInfo">Para: Mikel (PREBENJAMÍN A)</span>
+            </div>
+            <div style="background: #28a745; color: white; padding: 10px 22px; border-radius: 12px; font-weight: 900; font-size: 26px; box-shadow: 0 4px 10px rgba(40,167,69,0.2);" id="txtCompensacionMontoSobrante" data-sobrante="0">
+                +0€
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 25px;">
+            <label style="font-size: 11px; font-weight: 800; color: #94a3b8; display: block; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.5px;">Asigna el importe sobrante a los siguientes conceptos pendientes:</label>
+            
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+                <!-- Fila 1: Cuotas Mensuales -->
+                <div>
+                    <h5 style="font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; margin: 0 0 8px 0; letter-spacing: 0.5px;">1. Cuotas Mensuales</h5>
+                    <div id="gridCompensacionMeses" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;">
+                        <!-- Se llena por JS (6 columnas x 2 filas) -->
+                    </div>
+                </div>
+                
+                <!-- Fila 2: Ropa y Otros -->
+                <div>
+                    <h5 style="font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; margin: 0 0 8px 0; letter-spacing: 0.5px;">2. Ropa y Otros</h5>
+                    <div id="gridCompensacionOtros" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                        <!-- Se llena por JS -->
+                    </div>
+                </div>
+
+                <!-- Fila 3: Registro de Inscripción -->
+                <div>
+                    <h5 style="font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; margin: 0 0 8px 0; letter-spacing: 0.5px;">3. Registro de Inscripción</h5>
+                    <div id="gridCompensacionInscripcion" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                        <!-- Se llena por JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resumen del reparto de compensación -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px 20px; border-radius: 16px; margin-bottom: 25px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; text-align: center;">
+            <div>
+                <span style="font-size: 10px; font-weight: 800; color: #64748b; display: block; text-transform: uppercase;">Total a Repartir</span>
+                <span style="font-size: 18px; font-weight: 900; color: #1e293b;" id="txtTotalRepartirCompensacion">0€</span>
+            </div>
+            <div>
+                <span style="font-size: 10px; font-weight: 800; color: #64748b; display: block; text-transform: uppercase;">Asignado</span>
+                <span style="font-size: 18px; font-weight: 900; color: #0284c7;" id="txtAsignadoCompensacion">0€</span>
+            </div>
+            <div>
+                <span style="font-size: 10px; font-weight: 800; color: #64748b; display: block; text-transform: uppercase;">Restante</span>
+                <span style="font-size: 18px; font-weight: 900; color: #ef4444;" id="txtRestanteCompensacion">0€</span>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; border-top: 1px solid #f1f5f9; padding-top: 20px; justify-content: flex-end;">
+            <button class="btn-fin" style="background: #f1f5f9; color: #475569; border-radius: 12px; padding: 12px 30px; font-weight: bold; border: 1px solid #e2e8f0;" onclick="cerrarModalCompensacion()">CANCELAR</button>
+            <button id="btnAceptarCompensacion" class="btn-fin" style="background: #E31E24; color: white; border-radius: 12px; padding: 12px 40px; font-weight: bold; box-shadow: 0 4px 12px rgba(227,30,36,0.3);" onclick="ejecutarCompensacionPago()">CONFIRMAR COMPENSACIÓN</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL ELIMINAR PAGO COMPENSADO/SPLIT -->
+<div id="modalEliminarPagoSplit" class="modal">
+    <div class="modal-content" style="width: 450px; border-radius: 20px; padding: 25px; border-top: 5px solid #dc3545;">
+        <h3 style="font-size: 16px; font-weight: 900; color: #1e293b; margin: 0 0 10px 0; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i> ELIMINAR PAGO DIVIDIDO
+        </h3>
+        <p style="font-size: 12px; color: #64748b; margin-bottom: 15px; line-height: 1.5;">
+            Este registro forma parte de un pago conjunto que se dividió en varios conceptos. A continuación se muestran todos los registros vinculados:
+        </p>
+        
+        <!-- Detalle de los asientos vinculados -->
+        <div id="listaAsientosSplitDetalle" style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 12px; margin-bottom: 20px; font-size: 12px; color: #334155; display: flex; flex-direction: column; gap: 8px;">
+            <!-- Se llena dinámicamente -->
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button class="btn-fin" id="btnEliminarTodoSplit" style="background: #dc3545; color: white; border-radius: 10px; padding: 12px; font-weight: bold; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.2);" onclick="ejecutarBorradoSplit(true)">
+                ELIMINAR TODOS LOS REGISTROS VINCULADOS
+            </button>
+            <button class="btn-fin" id="btnEliminarSoloUnoSplit" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px; font-weight: bold;" onclick="ejecutarBorradoSplit(false)">
+                ELIMINAR SOLO EL CONCEPTO SELECCIONADO
+            </button>
+            <button class="btn-fin" style="background: #f8fafc; color: #64748b; border: none; border-radius: 10px; padding: 10px; font-weight: bold;" onclick="cerrarModalEliminarSplit()">
+                CANCELAR
+            </button>
         </div>
     </div>
 </div>
@@ -4453,6 +4618,541 @@ async function guardarCambiosSeleccionJugadores() {
         hideLoader();
     }
 }
+
+// --- LOGICA DE COMPENSACION DE SOBREPAGO ---
+function getFriendlyName(concepto) {
+    const nombres = {
+        'Inscripción': 'Inscripción',
+        '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril', '05': 'Mayo', '06': 'Junio',
+        '07': 'Julio', '08': 'Agosto', '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre',
+        'PACK_ROPA': 'Pack Ropa'
+    };
+    return nombres[concepto] || concepto;
+}
+
+function obtenerEsperadoConcepto(fila, concepto) {
+    const isStaff = fila.classList.contains('fila-staff');
+    if (isStaff) return 0;
+    
+    let cell = null;
+    if (concepto === 'Inscripción') cell = fila.cells[4];
+    else if (concepto === 'PACK_ROPA') cell = fila.cells[17];
+    else {
+        const m = parseInt(concepto);
+        if (!isNaN(m)) cell = fila.cells[4 + m];
+    }
+    
+    if (cell && parseFloat(cell.dataset.esperado) > 0) {
+        return parseFloat(cell.dataset.esperado);
+    }
+    
+    const equipo = fila.dataset.equipo;
+    const keyOverride = `${equipo}-${concepto}`;
+    if (concepto === 'Inscripción') {
+        return parseFloat(configInscripciones[equipo]) || 50;
+    } else if (configCuotasMes[keyOverride] !== undefined) {
+        return parseFloat(configCuotasMes[keyOverride]);
+    } else {
+        const tipo = (fila.querySelector('.span-tipo-pago')?.innerText || '').trim().toUpperCase();
+        const configMatch = gridConfigData.find(c => c.tipo.toUpperCase() === tipo);
+        if (configMatch) {
+            const mIdx = parseInt(concepto);
+            const configMeses = (configMatch.meses && configMatch.meses.length > 0) ? configMatch.meses : [9, 10, 11, 12, 1, 2, 3, 4, 5, 6];
+            if (!isNaN(mIdx) && configMeses.includes(mIdx)) {
+                return configMatch.importe;
+            }
+        } else if (tipo === 'MENSUAL' && concepto !== '07' && concepto !== '08') {
+            return 49;
+        }
+    }
+    return 0;
+}
+
+let currentBtnOriginal = null;
+let currentTotalPagado = 0;
+let currentTotalEsperado = 0;
+
+function actualizarRepartoCompensacion() {
+    const inputs = Array.from(document.querySelectorAll('.compensacion-input'));
+    let totalAsignado = 0;
+    const sobrante = parseFloat(document.getElementById('txtCompensacionMontoSobrante').dataset.sobrante) || 0;
+    
+    inputs.forEach(input => {
+        let val = parseFloat(input.value) || 0;
+        if (val < 0) val = 0;
+        
+        const falta = parseFloat(input.dataset.falta) || 0;
+        if (val > falta) {
+            val = falta;
+        }
+        
+        input.value = val;
+        totalAsignado += val;
+    });
+    
+    // Si el total asignado supera el sobrante, ajustamos los inputs desde el activo
+    if (totalAsignado > sobrante) {
+        const activeInput = document.activeElement;
+        if (activeInput && activeInput.classList.contains('compensacion-input')) {
+            let sumOthers = 0;
+            inputs.forEach(inp => {
+                if (inp !== activeInput) {
+                    sumOthers += parseFloat(inp.value) || 0;
+                }
+            });
+            let maxPermitido = sobrante - sumOthers;
+            if (maxPermitido < 0) maxPermitido = 0;
+            
+            let val = parseFloat(activeInput.value) || 0;
+            if (val > maxPermitido) {
+                activeInput.value = maxPermitido;
+            }
+        }
+        
+        // Re-calcular
+        totalAsignado = 0;
+        inputs.forEach(input => {
+            totalAsignado += parseFloat(input.value) || 0;
+        });
+    }
+    
+    const restante = sobrante - totalAsignado;
+    
+    document.getElementById('txtAsignadoCompensacion').innerText = `${Math.round(totalAsignado)}€`;
+    
+    const restanteEl = document.getElementById('txtRestanteCompensacion');
+    restanteEl.innerText = `${Math.round(restante)}€`;
+    
+    if (restante === 0) {
+        document.getElementById('btnAceptarCompensacion').disabled = false;
+        restanteEl.style.color = '#28a745';
+    } else {
+        document.getElementById('btnAceptarCompensacion').disabled = true;
+        restanteEl.style.color = '#ef4444';
+    }
+}
+
+function crearCeldaCompensacion(concepto, pagado, esperado, valorAsignado, isSelectedInMain) {
+    const falta = esperado - pagado;
+    const isPaid = (esperado > 0 && pagado >= esperado) || isSelectedInMain;
+    const label = getFriendlyName(concepto).toUpperCase();
+    
+    let subtext = `${Math.round(pagado)}€ / ${Math.round(esperado)}€`;
+    if (esperado === 0) {
+        subtext = pagado > 0 ? `${Math.round(pagado)}€` : '-';
+    }
+    
+    if (isSelectedInMain) {
+        subtext = `PAGADO (Sel)`;
+    }
+    
+    const disabledClass = isPaid ? 'disabled' : '';
+    
+    return `
+        <div class="compensacion-grid-cell ${disabledClass}" 
+             data-concepto="${concepto}"
+             style="padding: 8px 6px;">
+            <div style="font-weight: 800; font-size: 10px; color: ${isPaid ? '#94a3b8' : '#334155'};">${label}</div>
+            <div style="font-size: 9px; opacity: 0.8; margin-top: 3px; font-weight: 700; color: ${isPaid ? '#cbd5e1' : '#64748b'};">${subtext}</div>
+            ${isPaid ? `
+                <div style="color: #28a745; font-size: 14px; font-weight: 900; margin-top: 5px;">✓</div>
+            ` : `
+                <input type="number" class="compensacion-input" 
+                       data-concepto="${concepto}" 
+                       data-falta="${falta}" 
+                       min="0" max="${falta}" 
+                       value="${valorAsignado}" 
+                       oninput="actualizarRepartoCompensacion()" 
+                       style="width: 100%; max-width: 65px; margin-top: 6px; padding: 4px 6px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 800; font-size: 12px; text-align: center; color: #1e293b; background: white; outline: none;">
+            `}
+        </div>
+    `;
+}
+
+function abrirModalCompensacion(totalPagado, totalEsperado, btnOriginal) {
+    currentBtnOriginal = btnOriginal;
+    currentTotalPagado = totalPagado;
+    currentTotalEsperado = totalEsperado;
+    
+    const sobrante = totalPagado - totalEsperado;
+    const fila = celdasSeleccionadas[0].closest('tr');
+    const nombre = fila.cells[1].innerText.trim();
+    const equipo = fila.dataset.equipo;
+    
+    // 1. Mostrar cabecera visual de sobrante
+    document.getElementById('txtCompensacionJugadorInfo').innerHTML = `Para: <b>${nombre}</b> (${equipo})`;
+    document.getElementById('txtCompensacionMontoSobrante').innerHTML = `+${sobrante}€`;
+    document.getElementById('txtCompensacionMontoSobrante').dataset.sobrante = sobrante;
+    
+    document.getElementById('txtTotalRepartirCompensacion').innerText = `${sobrante}€`;
+    
+    const celdas = Array.from(fila.querySelectorAll('.pago-cell'));
+    const conceptosSeleccionados = celdasSeleccionadas.map(c => c.dataset.tempItem || c.dataset.concepto);
+    
+    const SEASON_ORDER_MONTHS = ['09', '10', '11', '12', '01', '02', '03', '04', '05', '06', '07', '08'];
+    
+    // Recopilar todos los conceptos visibles de la fila
+    const todosConceptos = [];
+    
+    // 1. Meses
+    SEASON_ORDER_MONTHS.forEach(m => {
+        const cell = celdas.find(el => el.dataset.concepto === m);
+        if (cell && cell.style.display !== 'none') {
+            todosConceptos.push({ concepto: m, cell: cell });
+        }
+    });
+    
+    // 2. Ropa (Pack Ropa y otras extras/ropa de la fila)
+    const cellRopa = celdas.find(el => el.dataset.concepto === 'PACK_ROPA');
+    if (cellRopa && cellRopa.style.display !== 'none') {
+        todosConceptos.push({ concepto: 'PACK_ROPA', cell: cellRopa });
+    }
+    celdas.forEach((cell) => {
+        const concepto = cell.dataset.concepto;
+        if (concepto && concepto !== 'Inscripción' && concepto !== 'PACK_ROPA' && !SEASON_ORDER_MONTHS.includes(concepto) && cell.style.display !== 'none') {
+            todosConceptos.push({ concepto: concepto, cell: cell });
+        }
+    });
+    
+    // 3. Inscripción
+    const cellInsc = celdas.find(el => el.dataset.concepto === 'Inscripción');
+    if (cellInsc && cellInsc.style.display !== 'none') {
+        todosConceptos.push({ concepto: 'Inscripción', cell: cellInsc });
+    }
+    
+    // Pre-asignación del sobrante en base al orden: Inscripción -> Meses -> Ropa/Otros
+    const preselectOrder = [];
+    if (cellInsc && cellInsc.style.display !== 'none') preselectOrder.push('Inscripción');
+    SEASON_ORDER_MONTHS.forEach(m => {
+        const cell = celdas.find(el => el.dataset.concepto === m);
+        if (cell && cell.style.display !== 'none') preselectOrder.push(m);
+    });
+    if (cellRopa && cellRopa.style.display !== 'none') preselectOrder.push('PACK_ROPA');
+    celdas.forEach((cell) => {
+        const concepto = cell.dataset.concepto;
+        if (concepto && concepto !== 'Inscripción' && concepto !== 'PACK_ROPA' && !SEASON_ORDER_MONTHS.includes(concepto) && cell.style.display !== 'none') {
+            preselectOrder.push(concepto);
+        }
+    });
+    
+    let saldoSobrante = sobrante;
+    const allocations = {};
+    
+    preselectOrder.forEach(concepto => {
+        const cell = celdas.find(el => el.dataset.concepto === concepto);
+        const isSelectedInMain = conceptosSeleccionados.includes(concepto);
+        const pag = parseFloat(cell.dataset.importe) || 0;
+        const esp = parseFloat(cell.dataset.esperado) || 0;
+        const falta = esp - pag;
+        
+        if (isSelectedInMain || falta <= 0) {
+            allocations[concepto] = 0;
+        } else {
+            const asignado = Math.min(saldoSobrante, falta);
+            allocations[concepto] = asignado;
+            saldoSobrante -= asignado;
+        }
+    });
+    
+    // Renderizar Inscripción
+    let inscHtml = '';
+    if (cellInsc && cellInsc.style.display !== 'none') {
+        const pag = parseFloat(cellInsc.dataset.importe) || 0;
+        const esp = parseFloat(cellInsc.dataset.esperado) || 0;
+        inscHtml = crearCeldaCompensacion('Inscripción', pag, esp, allocations['Inscripción'] || 0, conceptosSeleccionados.includes('Inscripción'));
+    }
+    document.getElementById('gridCompensacionInscripcion').innerHTML = inscHtml || '<div style="color: #94a3b8; font-size: 11px; font-style: italic; grid-column: span 4; text-align: left;">Inscripción no disponible para este jugador</div>';
+    
+    // Renderizar Meses
+    const monthsHtml = [];
+    SEASON_ORDER_MONTHS.forEach(m => {
+        const cell = celdas.find(el => el.dataset.concepto === m);
+        if (cell && cell.style.display !== 'none') {
+            const pag = parseFloat(cell.dataset.importe) || 0;
+            const esp = parseFloat(cell.dataset.esperado) || 0;
+            monthsHtml.push(crearCeldaCompensacion(m, pag, esp, allocations[m] || 0, conceptosSeleccionados.includes(m)));
+        }
+    });
+    document.getElementById('gridCompensacionMeses').innerHTML = monthsHtml.join('') || '<div style="color: #94a3b8; font-size: 11px; font-style: italic; grid-column: span 6; text-align: left;">No hay cuotas mensuales disponibles</div>';
+    
+    // Renderizar Ropa y Otros
+    const otrosHtml = [];
+    if (cellRopa && cellRopa.style.display !== 'none') {
+        const pag = parseFloat(cellRopa.dataset.importe) || 0;
+        const esp = parseFloat(cellRopa.dataset.esperado) || 0;
+        otrosHtml.push(crearCeldaCompensacion('PACK_ROPA', pag, esp, allocations['PACK_ROPA'] || 0, conceptosSeleccionados.includes('PACK_ROPA')));
+    }
+    celdas.forEach((cell) => {
+        const concepto = cell.dataset.concepto;
+        if (concepto && concepto !== 'Inscripción' && concepto !== 'PACK_ROPA' && !SEASON_ORDER_MONTHS.includes(concepto) && cell.style.display !== 'none') {
+            const pag = parseFloat(cell.dataset.importe) || 0;
+            const esp = parseFloat(cell.dataset.esperado) || 0;
+            otrosHtml.push(crearCeldaCompensacion(concepto, pag, esp, allocations[concepto] || 0, conceptosSeleccionados.includes(concepto)));
+        }
+    });
+    document.getElementById('gridCompensacionOtros').innerHTML = otrosHtml.join('') || '<div style="color: #94a3b8; font-size: 11px; font-style: italic; grid-column: span 4; text-align: left;">No hay otros conceptos de ropa/pagos disponibles</div>';
+    
+    // Actualizar visualización de totales
+    actualizarRepartoCompensacion();
+    
+    document.getElementById('modalCompensacionPago').style.display = 'flex';
+}
+
+function cerrarModalCompensacion() {
+    document.getElementById('modalCompensacionPago').style.display = 'none';
+}
+
+function ejecutarCompensacionPago() {
+    guardarPagoConCompensacion(currentBtnOriginal, currentTotalPagado, currentTotalEsperado);
+}
+
+async function guardarPagoConCompensacion(btnOriginal, totalPagado, totalEsperado) {
+    if (isSaving) return;
+    
+    const sobrante = totalPagado - totalEsperado;
+    const fila = celdasSeleccionadas[0].closest('tr');
+    const isStaff = fila.classList.contains('fila-staff');
+    
+    if (isStaff) {
+        alert("La compensación no está disponible para personal del Staff.");
+        return;
+    }
+    
+    // Obtener todas las asignaciones de compensación
+    const inputs = Array.from(document.querySelectorAll('.compensacion-input'));
+    const allocations = [];
+    inputs.forEach(input => {
+        const val = parseFloat(input.value) || 0;
+        if (val > 0) {
+            allocations.push({
+                concepto: input.dataset.concepto,
+                importe: val
+            });
+        }
+    });
+    
+    // Validar que se ha repartido todo
+    let sumAllocated = allocations.reduce((acc, a) => acc + a.importe, 0);
+    if (Math.round(sumAllocated) !== Math.round(sobrante)) {
+        alert(`Debes asignar exactamente la totalidad del sobrante (${sobrante}€). Actualmente asignado: ${sumAllocated}€`);
+        return;
+    }
+
+    btnOriginal.disabled = true;
+    isSaving = true;
+    showLoader();
+    
+    try {
+        const fechaHoy = new Date().toLocaleDateString('es-ES');
+        const nombre = fila.cells[1].innerText.trim();
+        const equipo = fila.dataset.equipo;
+        const forma = fila.cells[3].innerText.trim();
+        const tipo = (fila.querySelector('.span-tipo-pago')?.innerText || '').trim().toUpperCase();
+        
+        const parts = [];
+        celdasSeleccionadas.forEach(cell => {
+            const item = cell.dataset.tempItem || cell.dataset.concepto;
+            const esp = parseFloat(cell.dataset.esperado) || 0;
+            parts.push(`${esp}€ en ${getFriendlyName(item)}`);
+        });
+        allocations.forEach(alloc => {
+            parts.push(`${alloc.importe}€ en ${getFriendlyName(alloc.concepto)}`);
+        });
+        
+        const divisionDesc = `El dia ${fechaHoy} se pagaron ${totalPagado}€ que se dividieron en: ${parts.join(' y ')}`;
+        
+        // 1. Guardar los pagos principales seleccionados (cada uno se paga al 100% de su esperado)
+        for (let i = 0; i < celdasSeleccionadas.length; i++) {
+            const cell = celdasSeleccionadas[i];
+            const item = cell.dataset.tempItem || cell.dataset.concepto;
+            const esperadoIndividual = parseFloat(cell.dataset.esperado) || 0;
+            
+            const asiento = {
+                fecha: fechaHoy,
+                departamento: "Administración",
+                pilar: "Cuotas",
+                descripcion: `Cuota ${getFriendlyName(item)}: ${nombre} (${divisionDesc})`,
+                importe: esperadoIndividual,
+                equipo,
+                nombre,
+                tipo_pago: tipo,
+                forma_pago: forma,
+                concepto: item,
+                esperado: esperadoIndividual
+            };
+            
+            await fetch('/api/presupuesto', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(asiento)
+            });
+        }
+        
+        // 2. Guardar cada pago de compensación (sobrantes)
+        for (let alloc of allocations) {
+            const esperadoCompensacion = obtenerEsperadoConcepto(fila, alloc.concepto);
+            
+            const asientoCompensacion = {
+                fecha: fechaHoy,
+                departamento: "Administración",
+                pilar: "Cuotas",
+                descripcion: `Cuota ${getFriendlyName(alloc.concepto)}: ${nombre} (${divisionDesc})`,
+                importe: alloc.importe,
+                equipo,
+                nombre,
+                tipo_pago: tipo,
+                forma_pago: forma,
+                concepto: alloc.concepto,
+                esperado: esperadoCompensacion
+            };
+            
+            await fetch('/api/presupuesto', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(asientoCompensacion)
+            });
+        }
+        
+        await cargarPresupuesto();
+        cerrarModalCompensacion();
+        cerrarModalsFin();
+    } catch (e) {
+        console.error(e);
+        alert("Error al registrar el pago con compensación: " + e.message);
+    } finally {
+        btnOriginal.disabled = false;
+        isSaving = false;
+        hideLoader();
+    }
+}
+
+// ─── LÓGICA DE ELIMINACIÓN DE REGISTROS DE PAGO VINCULADOS/SPLIT ───
+let relatedSplitAsientos = [];
+let targetDeleteBtn = null;
+
+function cerrarModalEliminarSplit() {
+    document.getElementById('modalEliminarPagoSplit').style.display = 'none';
+    relatedSplitAsientos = [];
+    targetDeleteBtn = null;
+}
+
+async function ejecutarBorradoSplit(eliminarTodo) {
+    if (!celdaActiva || !targetDeleteBtn) return;
+    
+    const originalText = targetDeleteBtn.innerHTML;
+    targetDeleteBtn.disabled = true;
+    showLoader();
+    
+    try {
+        const asientosABorrar = eliminarTodo ? relatedSplitAsientos : [relatedSplitAsientos.find(a => String(a.REAL_ID) === String(celdaActiva.dataset.asientoId))];
+        
+        for (let asiento of asientosABorrar) {
+            if (!asiento) continue;
+            
+            await fetch('/api/operacion_asiento', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ 
+                    accion: 'borrar', 
+                    id: asiento.REAL_ID, 
+                    tipo_origen: 'JUGADOR', 
+                    nombre_orig: asiento.NOMBRE, 
+                    concepto_orig: asiento.CONCEPTO, 
+                    fecha_orig: asiento.FECHA 
+                })
+            });
+        }
+        
+        cerrarModalEliminarSplit();
+        await cargarPresupuesto();
+        cerrarModalsFin();
+    } catch(e) {
+        alert("Error de conexión: " + e.message);
+    } finally {
+        targetDeleteBtn.innerHTML = originalText;
+        targetDeleteBtn.disabled = false;
+        hideLoader();
+    }
+}
+
+async function ejecutarBorradoDirecto(btn, asientoId) {
+    btn.disabled = true;
+    try {
+        let res;
+        if (asientoId) {
+            res = await fetch('/api/operacion_asiento', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ 
+                    accion: 'borrar', 
+                    id: asientoId, 
+                    tipo_origen: 'JUGADOR', 
+                    nombre_orig: celdaActiva.closest('tr').cells[1].innerText.trim(), 
+                    concepto_orig: celdaActiva.dataset.concepto, 
+                    fecha_orig: celdaActiva.dataset.fecha || '-' 
+                })
+            });
+        } else {
+            const datos = {
+                nombre: celdaActiva.closest('tr').cells[1].innerText.trim(),
+                equipo: celdaActiva.closest('tr').dataset.equipo,
+                concepto: celdaActiva.dataset.concepto
+            };
+            res = await fetch('/api/borrar_pago', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(datos)
+            });
+        }
+
+        if (res.ok) {
+            celdaActiva.innerText = '-'; 
+            celdaActiva.className = celdaActiva.classList.contains('pago-extra-bg') ? 'pago-cell pago-extra-bg' : 'pago-cell';
+            delete celdaActiva.dataset.asientoId;
+            delete celdaActiva.dataset.importe;
+            await cargarPresupuesto();
+            cerrarModalsFin();
+        } else {
+            alert("Error al eliminar el pago");
+        }
+    } catch (e) {
+        alert("Error de conexión");
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+// Monitor modals to show/hide fixed layout buttons (Switch Team & Cronograma)
+const observerModals = new MutationObserver(() => {
+    const anyModalVisible = Array.from(document.querySelectorAll('.modal')).some(m => m.style.display === 'flex' || m.style.display === 'block');
+    const btnCrono = document.querySelector('.btn-cronograma-fixed');
+    const btnTeam = document.querySelector('.btn-change-team-fixed');
+    
+    if (anyModalVisible) {
+        if (btnCrono) btnCrono.style.display = 'none';
+        if (btnTeam) btnTeam.style.display = 'none';
+    } else {
+        const cronoModalOpen = document.getElementById('modalCronogramaGlobal')?.style.display === 'flex';
+        if (!cronoModalOpen) {
+            if (btnCrono) btnCrono.style.display = 'flex';
+            if (btnTeam) btnTeam.style.display = 'flex';
+        }
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.modal').forEach(m => {
+        observerModals.observe(m, { attributes: true, attributeFilter: ['style'] });
+    });
+    
+    const anyModalVisible = Array.from(document.querySelectorAll('.modal')).some(m => m.style.display === 'flex' || m.style.display === 'block');
+    if (anyModalVisible) {
+        const btnCrono = document.querySelector('.btn-cronograma-fixed');
+        const btnTeam = document.querySelector('.btn-change-team-fixed');
+        if (btnCrono) btnCrono.style.display = 'none';
+        if (btnTeam) btnTeam.style.display = 'none';
+    }
+});
 </script>
 
 {% endblock %}
