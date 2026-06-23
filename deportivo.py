@@ -1499,6 +1499,72 @@ def api_guardar_recordatorio_jugador():
 
 
 
+def _normalizar_nombre_kpi(s):
+    import unicodedata
+    s = str(s or '').strip().lower()
+    s = unicodedata.normalize('NFD', s)
+    return ''.join(c for c in s if unicodedata.category(c) != 'Mn')
+
+@deportivo_bp.route('/api/kpis_estadisticas')
+def api_kpis_estadisticas():
+    from app import client, NOMBRE_EXCEL
+    try:
+        # 1. Roster oficial (JUGADORES: NOMBRE, EQUIPO)
+        sheet_jug = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
+        jug_rows = sheet_jug.get_all_values()
+        headers_jug = [h.strip().upper() for h in jug_rows[0]] if jug_rows else []
+        idx_nom = headers_jug.index("NOMBRE") if "NOMBRE" in headers_jug else 0
+        idx_eq = headers_jug.index("EQUIPO") if "EQUIPO" in headers_jug else 1
+
+        roster = []
+        for row in jug_rows[1:]:
+            if len(row) <= max(idx_nom, idx_eq):
+                continue
+            nom = row[idx_nom].strip()
+            eq = row[idx_eq].strip()
+            if nom and eq:
+                roster.append({"nombre": nom, "equipo": eq})
+
+        # 2. Fichas registradas (DATOS JUGADORES: colegio + domicilio)
+        fichas = []
+        try:
+            sheet_datos = client.open(NOMBRE_EXCEL).worksheet("DATOS JUGADORES")
+            for d in sheet_datos.get_all_records():
+                d_clean = {str(k).strip().upper(): str(v).strip() for k, v in d.items()}
+                fichas.append({
+                    "nombre": d_clean.get("JUGADOR_NOMBRE", ""),
+                    "equipo": d_clean.get("JUGADOR_EQUIPO_LETRA", ""),
+                    "colegio": d_clean.get("JUGADOR_COLEGIO", ""),
+                    "domicilio": d_clean.get("JUGADOR_DOMICILIO_CP", "")
+                })
+        except Exception as e_datos:
+            print(f"Aviso al cargar DATOS JUGADORES para estadísticas: {e_datos}")
+
+        # 3. Cruce roster <-> ficha por nombre normalizado + equipo compatible
+        resultado = []
+        for p in roster:
+            n_of = _normalizar_nombre_kpi(p["nombre"])
+            e_of = _normalizar_nombre_kpi(p["equipo"])
+            ficha_match = None
+            for f in fichas:
+                if _normalizar_nombre_kpi(f["nombre"]) == n_of:
+                    e_reg = _normalizar_nombre_kpi(f["equipo"])
+                    if e_of in e_reg or e_reg in e_of:
+                        ficha_match = f
+                        break
+            resultado.append({
+                "nombre": p["nombre"],
+                "equipo": p["equipo"],
+                "colegio": (ficha_match["colegio"] if ficha_match and ficha_match["colegio"] else None),
+                "domicilio": (ficha_match["domicilio"] if ficha_match and ficha_match["domicilio"] else None)
+            })
+
+        equipos = sorted(set(p["equipo"] for p in resultado))
+        return jsonify({"jugadores": resultado, "equipos": equipos})
+    except Exception as e:
+        print(f"Error en api_kpis_estadisticas: {e}")
+        return jsonify({"jugadores": [], "equipos": [], "error": str(e)}), 500
+
 @deportivo_bp.route('/api/kpis_rrss')
 def api_kpis_rrss():
     try:

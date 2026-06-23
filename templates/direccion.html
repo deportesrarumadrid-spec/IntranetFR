@@ -2,6 +2,9 @@
 
 {% block content %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
     .tabs-container { display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 2px solid #eee; }
     .tab-item { padding: 12px 25px; cursor: pointer; font-weight: 800; font-size: 11px; color: #999; text-transform: uppercase; transition: 0.3s; border-radius: 8px 8px 0 0; }
@@ -702,6 +705,7 @@
                 <button class="btn-premium" onclick="switchKpiTab(event, 'kpi-deportivos')" style="font-size: 10px; padding: 10px 20px; background: #E31E24; border-color: #E31E24; border-radius: 8px;">DEPORTIVOS</button>
                 <button class="btn-fin" onclick="switchKpiTab(event, 'kpi-financieros')" style="font-size: 10px; padding: 10px 20px; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; border-radius: 8px; justify-content: center;">PAGOS PENDIENTES</button>
                 <button class="btn-fin" onclick="switchKpiTab(event, 'kpi-rrss')" style="font-size: 10px; padding: 10px 20px; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; border-radius: 8px; justify-content: center;">RRSS</button>
+                <button class="btn-fin" onclick="switchKpiTab(event, 'kpi-estadisticas')" style="font-size: 10px; padding: 10px 20px; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; border-radius: 8px; justify-content: center;">ESTADÍSTICAS</button>
             </div>
 
             <!-- KPIs Deportivos -->
@@ -803,6 +807,26 @@
                 </div>
                 <div style="margin-top: 15px; font-size: 11px; color: #999; font-weight: 800;">
                     * Los datos se guardan automáticamente al modificar los valores.
+                </div>
+            </div>
+
+            <!-- KPIs Estadísticas (Colegios + Mapa) -->
+            <div id="kpi-estadisticas" class="kpi-content" style="display: none;">
+                <div id="filasEstadisticasColegios" style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 25px;"></div>
+
+                <div style="background: white; border-radius: 12px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow-x: auto; margin-bottom: 25px;">
+                    <div style="padding: 14px 20px; border-bottom: 1px solid #eee; font-size: 12px; font-weight: 900; color: #333; text-transform: uppercase;">
+                        <i class="fas fa-table" style="color:#E31E24;"></i> Tabla por Colegio (vista Excel)
+                    </div>
+                    <table id="tablaColegiosExcel" style="width:100%; border-collapse: collapse; font-size: 11px;"></table>
+                </div>
+
+                <div style="background: white; border-radius: 12px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden;">
+                    <div style="padding: 14px 20px; border-bottom: 1px solid #eee; font-size: 12px; font-weight: 900; color: #333; text-transform: uppercase;">
+                        <i class="fas fa-map-marked-alt" style="color:#E31E24;"></i> Mapa de Direcciones — Total
+                    </div>
+                    <div id="mapaJugadores" style="width: 100%; height: 520px;"></div>
+                    <div id="mapaLoadingMsg" style="display:none; padding: 10px 15px; font-size: 10px; color: #999; border-top: 1px solid #eee;"><i class="fas fa-spinner fa-spin"></i> Localizando direcciones en el mapa...</div>
                 </div>
             </div>
         </div>
@@ -2602,6 +2626,7 @@
         if (kpiId === 'kpi-deportivos') loadKpiDeportivos();
         if (kpiId === 'kpi-financieros') loadKpiPagos();
         if (kpiId === 'kpi-rrss') loadKpiRrss();
+        if (kpiId === 'kpi-estadisticas') loadKpiEstadisticas();
     }
 
     // Custom select dropdown helpers
@@ -3180,6 +3205,197 @@
             tbody.innerHTML = html;
         } catch(e) {
             console.error(e);
+        }
+    }
+
+    // --- KPIs ESTADÍSTICAS (Colegios + Mapa de direcciones) ---
+    let kpiEstadisticasCache = [];
+    let chartInstancesColegios = {};
+    let mapaJugadoresInstance = null;
+    let mapaMarkersLayer = null;
+
+    async function loadKpiEstadisticas() {
+        try {
+            const res = await fetch('/api/kpis_estadisticas');
+            const data = await res.json();
+            kpiEstadisticasCache = data.jugadores || [];
+            renderEstadisticas(data.equipos || []);
+        } catch (e) {
+            console.error('Error cargando estadísticas:', e);
+        }
+    }
+
+    function coloresPaleta(n) {
+        const base = ['#E31E24', '#1e293b', '#198754', '#fd7e14', '#6366f1', '#0ea5e9', '#a855f7', '#f59e0b', '#14b8a6', '#ec4899'];
+        const out = [];
+        for (let i = 0; i < n; i++) out.push(base[i % base.length]);
+        return out;
+    }
+
+    function slugify(s) {
+        return (s || '').toString().replace(/[^a-zA-Z0-9]/g, '_');
+    }
+
+    function renderFilaColegio(slug, label, lista) {
+        const conteo = {};
+        lista.forEach(j => {
+            const c = j.colegio || 'Sin dato';
+            conteo[c] = (conteo[c] || 0) + 1;
+        });
+        const labels = Object.keys(conteo).sort((a, b) => conteo[b] - conteo[a]);
+        const valores = labels.map(l => conteo[l]);
+        const total = lista.length || 1;
+        const colores = coloresPaleta(labels.length);
+
+        const breakdownHtml = labels.map((l, i) => {
+            const pct = ((valores[i] / total) * 100).toFixed(1);
+            return `<div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid #f1f5f9;">
+                        <span style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:${colores[i]}; display:inline-block;"></span>${l}</span>
+                        <b>${valores[i]} (${pct}%)</b>
+                    </div>`;
+        }).join('');
+
+        const fila = document.createElement('div');
+        fila.style = "display:grid; grid-template-columns: 200px 1fr 160px; gap:20px; align-items:center; background:white; border-radius:12px; border:1px solid #eee; box-shadow:0 4px 15px rgba(0,0,0,0.05); padding:16px 20px;";
+        fila.innerHTML = `
+            <div>
+                <div style="font-weight:900; font-size:13px; color:#1e293b; text-transform:uppercase;">${label}</div>
+                <div style="font-size:10px; color:#999; font-weight:700;">${lista.length} jugadores</div>
+            </div>
+            <div style="font-size:11px;">${breakdownHtml || '<span style="color:#999;">Sin jugadores</span>'}</div>
+            <div style="display:flex; justify-content:center;"><canvas id="chartColegio_${slug}" width="130" height="130"></canvas></div>
+        `;
+        document.getElementById('filasEstadisticasColegios').appendChild(fila);
+
+        if (labels.length) {
+            const ctx = fila.querySelector(`#chartColegio_${slug}`).getContext('2d');
+            if (chartInstancesColegios[slug]) chartInstancesColegios[slug].destroy();
+            chartInstancesColegios[slug] = new Chart(ctx, {
+                type: 'pie',
+                data: { labels, datasets: [{ data: valores, backgroundColor: colores }] },
+                options: { plugins: { legend: { display: false } } }
+            });
+        }
+    }
+
+    function renderEstadisticas(equipos) {
+        document.getElementById('filasEstadisticasColegios').innerHTML = '';
+        Object.values(chartInstancesColegios).forEach(c => c.destroy());
+        chartInstancesColegios = {};
+
+        renderFilaColegio('TOTAL', 'TOTAL (TODOS LOS EQUIPOS)', kpiEstadisticasCache);
+        equipos.sort().forEach(eq => {
+            renderFilaColegio(slugify(eq), eq, kpiEstadisticasCache.filter(j => j.equipo === eq));
+        });
+
+        renderTablaColegiosExcel(equipos);
+        renderMapaJugadores(kpiEstadisticasCache);
+    }
+
+    function renderTablaColegiosExcel(equipos) {
+        const porColegio = {};
+        kpiEstadisticasCache.forEach(j => {
+            const c = j.colegio || 'Sin dato';
+            if (!porColegio[c]) porColegio[c] = { total: 0, porEquipo: {} };
+            porColegio[c].total++;
+            if (!porColegio[c].porEquipo[j.equipo]) porColegio[c].porEquipo[j.equipo] = [];
+            porColegio[c].porEquipo[j.equipo].push(j.nombre);
+        });
+
+        const totalGeneral = kpiEstadisticasCache.length || 1;
+        const colegiosOrdenados = Object.keys(porColegio).sort((a, b) => porColegio[b].total - porColegio[a].total);
+        const celda = 'padding:8px 12px; border:1px solid #e2e8f0; text-align:left; white-space:nowrap;';
+
+        let html = `<thead><tr style="background:#1e293b; color:white;">
+            <th style="${celda}">COLEGIO</th>
+            <th style="${celda} text-align:center;">TOTAL</th>
+            <th style="${celda} text-align:center;">%</th>
+            ${equipos.map(eq => `<th style="${celda} text-align:center;">${eq}</th>`).join('')}
+        </tr></thead><tbody>`;
+
+        colegiosOrdenados.forEach((colegio, idx) => {
+            const datos = porColegio[colegio];
+            const pct = ((datos.total / totalGeneral) * 100).toFixed(1);
+            const bg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+            html += `<tr style="background:${bg};">
+                <td style="${celda} font-weight:800;">${colegio}</td>
+                <td style="${celda} text-align:center; font-weight:800;">${datos.total}</td>
+                <td style="${celda} text-align:center; color:#64748b;">${pct}%</td>
+                ${equipos.map(eq => {
+                    const jugs = datos.porEquipo[eq];
+                    return `<td style="${celda}">${jugs ? jugs.join(', ') : '<span style="color:#cbd5e1;">-</span>'}</td>`;
+                }).join('')}
+            </tr>`;
+        });
+
+        const totalesPorEquipo = equipos.map(eq => kpiEstadisticasCache.filter(j => j.equipo === eq).length);
+        html += `<tr style="background:#f1f5f9; font-weight:900;">
+            <td style="${celda}">TOTAL</td>
+            <td style="${celda} text-align:center;">${totalGeneral}</td>
+            <td style="${celda} text-align:center;">100%</td>
+            ${totalesPorEquipo.map(n => `<td style="${celda} text-align:center;">${n}</td>`).join('')}
+        </tr>`;
+        html += '</tbody>';
+
+        document.getElementById('tablaColegiosExcel').innerHTML = html;
+    }
+
+    function getGeocodeCache() {
+        try { return JSON.parse(localStorage.getItem('geocodeCacheClubFR') || '{}'); } catch (e) { return {}; }
+    }
+    function setGeocodeCache(cache) {
+        try { localStorage.setItem('geocodeCacheClubFR', JSON.stringify(cache)); } catch (e) {}
+    }
+
+    async function geocodificarDireccion(direccion) {
+        const cache = getGeocodeCache();
+        if (cache[direccion]) return cache[direccion];
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(direccion + ', España')}`);
+            const data = await res.json();
+            if (data && data[0]) {
+                const coords = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+                cache[direccion] = coords;
+                setGeocodeCache(cache);
+                return coords;
+            }
+        } catch (e) {
+            console.error('Error geocodificando', direccion, e);
+        }
+        return null;
+    }
+
+    async function renderMapaJugadores(lista) {
+        if (!mapaJugadoresInstance) {
+            mapaJugadoresInstance = L.map('mapaJugadores').setView([40.4168, -3.7038], 11);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(mapaJugadoresInstance);
+            mapaMarkersLayer = L.layerGroup().addTo(mapaJugadoresInstance);
+        }
+        mapaMarkersLayer.clearLayers();
+
+        const conDireccion = lista.filter(j => j.domicilio);
+        const cache = getGeocodeCache();
+        const pendientes = conDireccion.filter(j => !cache[j.domicilio]).length;
+        const loadingMsg = document.getElementById('mapaLoadingMsg');
+        loadingMsg.style.display = pendientes > 0 ? 'block' : 'none';
+
+        const puntos = [];
+        for (const j of conDireccion) {
+            const coords = await geocodificarDireccion(j.domicilio);
+            if (!coords) continue;
+            const marker = L.marker([coords.lat, coords.lon]).bindPopup(`<b>${j.nombre}</b><br>${j.equipo}<br>${j.domicilio}`);
+            mapaMarkersLayer.addLayer(marker);
+            puntos.push([coords.lat, coords.lon]);
+            // Respetamos el límite de Nominatim (máx. 1 petición/seg) solo si no estaba ya en caché
+            if (!cache[j.domicilio]) await new Promise(r => setTimeout(r, 1000));
+        }
+
+        loadingMsg.style.display = 'none';
+        if (puntos.length) {
+            mapaJugadoresInstance.fitBounds(puntos, { padding: [30, 30] });
         }
     }
 

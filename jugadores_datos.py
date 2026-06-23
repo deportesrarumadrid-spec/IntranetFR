@@ -13,6 +13,7 @@ try:
 except ImportError:
     fitz = None
 import gspread
+from gspread.utils import rowcol_to_a1
 try:
     import google.generativeai as genai
 except ImportError:
@@ -303,3 +304,31 @@ def get_datos_jugadores():
         return jsonify(sheet.get_all_records())
     except:
         return jsonify([])
+
+@jugadores_datos_bp.route('/api/jugadores_datos/actualizar', methods=['POST'])
+def actualizar_datos_jugador():
+    from app import client, NOMBRE_EXCEL
+    data = request.json or {}
+    idx = data.get('idx')
+    campos = data.get('campos') or {}
+    if idx is None:
+        return jsonify({"status": "error", "message": "Falta el índice de la ficha"}), 400
+
+    try:
+        sheet = client.open(NOMBRE_EXCEL).worksheet("DATOS JUGADORES")
+        headers = [h.strip().upper() for h in sheet.row_values(1)]
+        fila_sheet = int(idx) + 2  # +1 cabecera, +1 porque idx es base 0
+
+        updates = []
+        for col, val in campos.items():
+            if col in headers:
+                col_idx = headers.index(col) + 1
+                updates.append({'range': f"'DATOS JUGADORES'!{rowcol_to_a1(fila_sheet, col_idx)}", 'values': [[val]]})
+
+        if updates:
+            sheet.spreadsheet.values_batch_update({'valueInputOption': 'USER_ENTERED', 'data': updates})
+
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error actualizando ficha de jugador: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500

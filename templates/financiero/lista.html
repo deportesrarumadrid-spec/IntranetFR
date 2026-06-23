@@ -3,6 +3,8 @@
 {% block content %}
 <style>
     .fin-card { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; overflow: hidden; }
+    .revision-equipo-header { background: #1e293b; color: white; padding: 10px 14px; border-radius: 8px; font-weight: 800; font-size: 12px; cursor: pointer; margin-top: 10px; text-transform: uppercase; }
+    .revision-equipo-body { border: 1px solid #f1f5f9; border-top: none; border-radius: 0 0 8px 8px; }
     .fin-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
     .fin-header h2 { font-size: 14px; font-weight: 900; color: #333; text-transform: uppercase; margin: 0; }
     .fin-table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -428,12 +430,16 @@
             <div class="fin-header">
                 <h2><i class="fas fa-id-card" style="color: #E31E24; margin-right: 10px;"></i> FICHAS TÉCNICAS Y DATOS BANCARIOS</h2>
                 <div style="display: flex; gap: 10px;">
-                    <select id="filtroEquipoDatos" onchange="filtrarTablaDatos()" style="padding: 8px; border-radius: 8px; border: 1px solid #ddd; font-weight: 800; font-size: 11px;">
-                        <option value="">TODOS LOS EQUIPOS</option>
-                        {% for eq in equipos %}
-                        <option value="{{ eq }}">{{ eq }}</option>
-                        {% endfor %}
-                    </select>
+                    <input type="text" id="buscadorDatosJugador" oninput="filtrarTablaDatos()" placeholder="Buscar (nombre, equipo, colegio, IBAN, padre/madre...)" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd; font-weight: 700; font-size: 11px; width: 280px;">
+                    <button id="btnToggleEdicionDatos" class="btn-fin" style="background: #f8f9fa; color: #333; border: 1px solid #e2e8f0;" onclick="toggleModoEdicionDatos()">
+                        <i class="fas fa-pencil-alt"></i> EDITAR
+                    </button>
+                    <button class="btn-fin" style="background: #f8f9fa; color: #333; border: 1px solid #e2e8f0;" onclick="abrirRevisionHojas()">
+                        <i class="fas fa-clipboard-check"></i> REVISIÓN HOJAS DE REGISTRO
+                    </button>
+                    <button class="btn-fin" style="background: #1e293b; color: white;" onclick="copiarLinkHojaRegistro(this)">
+                        <i class="fas fa-link"></i> LINK HOJA DE REGISTRO
+                    </button>
                     <button class="btn-fin" style="background: #28a745; color: white;" onclick="document.getElementById('inputFichaIA').click()">
                         <i class="fas fa-robot"></i> ESCANEAR FICHA IA
                     </button>
@@ -449,7 +455,12 @@
                 <table class="fin-table" id="tablaDatosJugadores">
                     <thead>
                         <tr>
-                            <th>EQUIPO</th>
+                            <th id="thEditarDatos" style="display:none; width:30px;"></th>
+                            <th>
+                                <span id="spanFiltroEquipo" onclick="toggleFiltroEquipoCol(event)" style="cursor:pointer; display:inline-flex; align-items:center; gap:5px; user-select:none;">
+                                    EQUIPO <i id="iconFiltroEquipo" class="fas fa-filter" style="font-size:9px; color:#94a3b8;"></i>
+                                </span>
+                            </th>
                             <th>NOMBRE JUGADOR</th>
                             <th>COLEGIO</th>
                             <th>DOMICILIO / CP</th>
@@ -468,6 +479,7 @@
                     <tbody></tbody>
                 </table>
             </div>
+            <div id="popoverFiltroEquipo" style="display:none; position:fixed; background:white; border:1px solid #ddd; border-radius:8px; box-shadow:0 6px 16px rgba(0,0,0,0.2); z-index:5000; min-width:170px; max-height:240px; overflow-y:auto; text-align:left;"></div>
         </div>
     </div>
 </div>
@@ -623,6 +635,39 @@
                 <button class="btn-fin" style="flex:1; background:#E31E24; color:white;" onclick="procesarEdicionFinalAsiento(this)">GUARDAR CAMBIOS</button>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- MODAL EDITAR FICHA JUGADOR -->
+<div id="modalEditarFicha" class="modal">
+    <div class="modal-content" style="width: 560px; max-height: 85vh; overflow-y: auto;">
+        <h3 style="font-size: 14px; font-weight: 900; margin-bottom: 20px; border-bottom: 2px solid #E31E24; padding-bottom: 10px;">
+            <i class="fas fa-pencil-alt"></i> EDITAR FICHA DEL JUGADOR
+        </h3>
+        <div id="camposEditarFicha" style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;"></div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn-fin" style="flex:1; background:#eee;" onclick="document.getElementById('modalEditarFicha').style.display='none'">CANCELAR</button>
+            <button class="btn-fin" style="flex:1; background:#E31E24; color:white;" onclick="guardarEdicionFicha(this)">GUARDAR CAMBIOS</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL REVISIÓN HOJAS DE REGISTRO -->
+<div id="modalRevisionHojas" class="modal">
+    <div class="modal-content" style="width: 1000px; max-width: 95vw; max-height: 88vh; overflow-y: auto;">
+        <h3 style="font-size: 14px; font-weight: 900; margin-bottom: 16px; border-bottom: 2px solid #E31E24; padding-bottom: 10px; display:flex; align-items:center; justify-content:space-between;">
+            <span><i class="fas fa-clipboard-check"></i> REVISIÓN HOJAS DE REGISTRO</span>
+            <button onclick="document.getElementById('modalRevisionHojas').style.display='none'" style="background: none; border: none; font-size: 24px; color: #94a3b8; cursor: pointer; line-height: 1; transition: color 0.2s;" onmouseover="this.style.color='#E31E24'" onmouseout="this.style.color='#94a3b8'">&times;</button>
+        </h3>
+        <div style="display:flex; gap:10px; align-items:center; margin-bottom:16px;">
+            <select id="filtroEquipoRevision" onchange="renderRevisionHojas()" style="padding:8px 12px; border-radius:8px; border:1px solid #ddd; font-weight:800; font-size:11px;">
+                <option value="">TODOS LOS EQUIPOS</option>
+            </select>
+            <button class="btn-fin" style="background:#198754; color:white; margin-left:auto;" onclick="exportarRevisionHojasExcel()">
+                <i class="fas fa-file-excel"></i> EXPORTAR EXCEL
+            </button>
+        </div>
+        <div id="cuerpoRevisionHojas"></div>
     </div>
 </div>
 
@@ -1497,6 +1542,22 @@ function switchTab(event, id) {
     }
 }
 
+function copiarLinkHojaRegistro(btn) {
+    const link = window.location.origin + '/inscripcion';
+    const textoOriginal = btn.innerHTML;
+
+    const marcarCopiado = () => {
+        btn.innerHTML = '<i class="fas fa-check"></i> ENLACE COPIADO';
+        setTimeout(() => { btn.innerHTML = textoOriginal; }, 2000);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).then(marcarCopiado).catch(() => prompt('Copia el enlace:', link));
+    } else {
+        prompt('Copia el enlace:', link);
+    }
+}
+
 // Lógica para Fichas de Jugadores e IA
 async function procesarFichaConIA(input) {
     if (!input.files.length) return;
@@ -1586,15 +1647,82 @@ async function confirmarFichaDefinitiva(btn) {
     }
 }
 
+let datosJugadoresCache = [];
+let modoEdicionDatos = false;
+let filtroEquipoColActivo = '';
+
 async function cargarTablaDatosJugadores() {
     try {
         const res = await fetch('/api/jugadores_datos');
         const data = await res.json();
-        const tbody = document.querySelector('#tablaDatosJugadores tbody');
-        if (!tbody) return;
-        
-        tbody.innerHTML = data.map(j => `
+        datosJugadoresCache = data.map((j, i) => ({ ...j, _idx: i }));
+        filtrarTablaDatos();
+    } catch (e) { console.error("Error al cargar datos de jugadores:", e); }
+}
+
+function toggleModoEdicionDatos() {
+    modoEdicionDatos = !modoEdicionDatos;
+    const btn = document.getElementById('btnToggleEdicionDatos');
+    const th = document.getElementById('thEditarDatos');
+    th.style.display = modoEdicionDatos ? 'table-cell' : 'none';
+    btn.style.background = modoEdicionDatos ? '#E31E24' : '#f8f9fa';
+    btn.style.color = modoEdicionDatos ? 'white' : '#333';
+    btn.innerHTML = modoEdicionDatos ? '<i class="fas fa-check"></i> EDITANDO' : '<i class="fas fa-pencil-alt"></i> EDITAR';
+    filtrarTablaDatos();
+}
+
+function toggleFiltroEquipoCol(e) {
+    e.stopPropagation();
+    const pop = document.getElementById('popoverFiltroEquipo');
+    const abrir = pop.style.display === 'none';
+    if (!abrir) { pop.style.display = 'none'; return; }
+
+    const rect = document.getElementById('spanFiltroEquipo').getBoundingClientRect();
+    pop.style.top = (rect.bottom + 4) + 'px';
+    pop.style.left = rect.left + 'px';
+
+    const equiposUnicos = [...new Set(datosJugadoresCache.map(j => j.JUGADOR_EQUIPO_LETRA).filter(Boolean))].sort();
+    let html = `<div onclick="seleccionarFiltroEquipoCol('')" style="padding:8px 12px; font-size:11px; font-weight:800; cursor:pointer; border-bottom:1px solid #eee; ${!filtroEquipoColActivo ? 'color:#E31E24;' : ''}">TODOS LOS EQUIPOS</div>`;
+    html += equiposUnicos.map(eq => `<div onclick="seleccionarFiltroEquipoCol('${eq.replace(/'/g, "\\'")}')" style="padding:8px 12px; font-size:11px; font-weight:700; cursor:pointer; ${filtroEquipoColActivo === eq ? 'color:#E31E24; background:#fef2f2;' : ''}">${eq}</div>`).join('');
+    pop.innerHTML = html;
+    pop.style.display = 'block';
+}
+
+function seleccionarFiltroEquipoCol(equipo) {
+    filtroEquipoColActivo = equipo;
+    document.getElementById('popoverFiltroEquipo').style.display = 'none';
+    document.getElementById('iconFiltroEquipo').style.color = equipo ? '#E31E24' : '#94a3b8';
+    filtrarTablaDatos();
+}
+
+document.addEventListener('click', (e) => {
+    const pop = document.getElementById('popoverFiltroEquipo');
+    if (pop && pop.style.display === 'block' && !pop.contains(e.target)) pop.style.display = 'none';
+});
+
+function filtrarTablaDatos() {
+    const inputBusqueda = document.getElementById('buscadorDatosJugador');
+    const texto = (inputBusqueda ? inputBusqueda.value : '').trim().toLowerCase();
+
+    let lista = datosJugadoresCache;
+    if (filtroEquipoColActivo) lista = lista.filter(j => j.JUGADOR_EQUIPO_LETRA === filtroEquipoColActivo);
+    if (texto) lista = lista.filter(j => Object.values(j).some(v => (v || '').toString().toLowerCase().includes(texto)));
+
+    renderTablaDatosJugadores(lista);
+}
+
+function renderTablaDatosJugadores(data) {
+    const tbody = document.querySelector('#tablaDatosJugadores tbody');
+    if (!tbody) return;
+
+    if (!data.length) {
+        tbody.innerHTML = `<tr><td colspan="15" style="text-align:center; color:#999; padding:20px;">Sin resultados</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = data.map(j => `
             <tr>
+                ${modoEdicionDatos ? `<td style="text-align:center;"><i class="fas fa-pencil-alt" style="cursor:pointer; color:#E31E24;" onclick="abrirModalEditarFicha(${j._idx})"></i></td>` : ''}
                 <td style="font-weight:900; color:#E31E24;">${j.JUGADOR_EQUIPO_LETRA || '-'}</td>
                 <td>
                     <div style="font-weight:900;">${j.JUGADOR_NOMBRE || ''} ${j.JUGADOR_APELLIDOS || ''}</div>
@@ -1630,7 +1758,227 @@ async function cargarTablaDatosJugadores() {
                 </td>
             </tr>
         `).join('');
-    } catch (e) { console.error("Error al cargar datos de jugadores:", e); }
+}
+
+const CAMPOS_EDITABLES_FICHA = [
+    { key: 'JUGADOR_NOMBRE', label: 'NOMBRE' },
+    { key: 'JUGADOR_APELLIDOS', label: 'APELLIDOS' },
+    { key: 'JUGADOR_COLEGIO', label: 'COLEGIO' },
+    { key: 'JUGADOR_FECHA_NACIMIENTO', label: 'FECHA NACIMIENTO' },
+    { key: 'JUGADOR_EQUIPO_LETRA', label: 'EQUIPO' },
+    { key: 'JUGADOR_DOMICILIO_CP', label: 'DOMICILIO / CP' },
+    { key: 'JUGADOR_TELEFONO_MOVIL', label: 'TELÉFONO' },
+    { key: 'JUGADOR_EMAIL', label: 'EMAIL' },
+    { key: 'FAMILIA_NOMBRE_PADRE', label: 'NOMBRE PADRE' },
+    { key: 'FAMILIA_NOMBRE_MADRE', label: 'NOMBRE MADRE' },
+    { key: 'PAGO_MODALIDAD', label: 'FORMA DE PAGO' },
+    { key: 'SEPA_NOMBRE_DEUDOR', label: 'TITULAR SEPA' },
+    { key: 'SEPA_DIRECCION_DEUDOR', label: 'DIRECCIÓN SEPA' },
+    { key: 'SEPA_SWIFT_BIC', label: 'SWIFT/BIC' },
+    { key: 'SEPA_IBAN', label: 'IBAN' },
+    { key: 'SEPA_TIPO_PAGO', label: 'TIPO PAGO SEPA' },
+    { key: 'AUTORIZA_TUTOR_NOMBRE', label: 'TUTOR FIRMANTE' },
+    { key: 'AUTORIZA_JUGADOR_DNI', label: 'DNI TUTOR' },
+    { key: 'CIERRE_FECHA_LOCALIDAD', label: 'FECHA - LOCALIDAD' }
+];
+
+let fichaEditandoIdx = null;
+
+function abrirModalEditarFicha(idx) {
+    const ficha = datosJugadoresCache.find(j => j._idx === idx);
+    if (!ficha) return;
+    fichaEditandoIdx = idx;
+
+    const cont = document.getElementById('camposEditarFicha');
+    cont.innerHTML = CAMPOS_EDITABLES_FICHA.map(c => `
+        <div>
+            <label style="font-size:9px; font-weight:800; color:#999; display:block; margin-bottom:4px;">${c.label}</label>
+            <input type="text" data-key="${c.key}" class="input-editar-ficha" value="${(ficha[c.key] || '').toString().replace(/"/g, '&quot;')}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; font-size:12px;">
+        </div>
+    `).join('');
+
+    document.getElementById('modalEditarFicha').style.display = 'flex';
+}
+
+async function guardarEdicionFicha(btn) {
+    if (fichaEditandoIdx === null) return;
+    const campos = {};
+    document.querySelectorAll('.input-editar-ficha').forEach(inp => { campos[inp.dataset.key] = inp.value; });
+
+    btn.disabled = true;
+    try {
+        const res = await fetch('/api/jugadores_datos/actualizar', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ idx: fichaEditandoIdx, campos })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            document.getElementById('modalEditarFicha').style.display = 'none';
+            await cargarTablaDatosJugadores();
+        } else {
+            alert('Error al guardar: ' + (data.message || 'desconocido'));
+        }
+    } catch (e) {
+        alert('Error de conexión al guardar la ficha.');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+// --- REVISIÓN HOJAS DE REGISTRO (cruce con roster oficial de jugadoresRaw) ---
+function normalizarNombreRevision(s) {
+    return (s || '').toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function tieneHojaRegistro(equipoOficial, nombreOficial) {
+    const nOf = normalizarNombreRevision(nombreOficial);
+    const eOf = normalizarNombreRevision(equipoOficial);
+    return datosJugadoresCache.some(j => {
+        const nReg = normalizarNombreRevision(j.JUGADOR_NOMBRE);
+        const eReg = normalizarNombreRevision(j.JUGADOR_EQUIPO_LETRA);
+        return nReg === nOf && (eReg.includes(eOf) || eOf.includes(eReg));
+    });
+}
+
+function fichaCoincideConRoster(ficha) {
+    const nReg = normalizarNombreRevision(ficha.JUGADOR_NOMBRE);
+    return jugadoresRaw.some(p => normalizarNombreRevision(p.NOMBRE) === nReg);
+}
+
+async function abrirRevisionHojas() {
+    document.getElementById('modalRevisionHojas').style.display = 'flex';
+    document.getElementById('cuerpoRevisionHojas').innerHTML = '<div style="text-align:center; padding:30px; color:#999;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+
+    const equiposUnicos = [...new Set(jugadoresRaw.map(p => p.EQUIPO).filter(Boolean))].sort();
+    const selectEq = document.getElementById('filtroEquipoRevision');
+    selectEq.innerHTML = `<option value="">TODOS LOS EQUIPOS</option>` + equiposUnicos.map(eq => `<option value="${eq}">${eq}</option>`).join('');
+
+    await cargarTablaDatosJugadores();
+    renderRevisionHojas();
+}
+
+function toggleEquipoRevision(el) {
+    const body = el.nextElementSibling;
+    const visible = body.style.display !== 'none';
+    body.style.display = visible ? 'none' : 'block';
+    const icon = el.querySelector('i');
+    icon.classList.toggle('fa-chevron-down', visible);
+    icon.classList.toggle('fa-chevron-up', !visible);
+}
+
+function renderRevisionHojas() {
+    const equipoFiltro = document.getElementById('filtroEquipoRevision').value;
+
+    const equiposMap = {};
+    jugadoresRaw.forEach(p => {
+        if (!p.EQUIPO || !p.NOMBRE) return;
+        if (equipoFiltro && p.EQUIPO !== equipoFiltro) return;
+        if (!equiposMap[p.EQUIPO]) equiposMap[p.EQUIPO] = [];
+        equiposMap[p.EQUIPO].push(p.NOMBRE);
+    });
+
+    let html = '';
+    Object.keys(equiposMap).sort().forEach(eq => {
+        html += `<div class="revision-equipo-header" onclick="toggleEquipoRevision(this)">
+                    <i class="fas fa-chevron-down"></i> ${eq}
+                    <span style="float:right; font-size:10px; opacity:0.75; font-weight:700;">${equiposMap[eq].length} JUGADORES</span>
+                 </div>
+                 <div class="revision-equipo-body">`;
+        equiposMap[eq].forEach(nombre => {
+            const tiene = tieneHojaRegistro(eq, nombre);
+            html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:9px 14px; border-bottom:1px solid #f1f5f9;">
+                        <span style="font-weight:700; font-size:12px;">${nombre}</span>
+                        <span style="background:${tiene ? '#dcfce7' : '#fee2e2'}; color:${tiene ? '#15803d' : '#b91c1c'}; padding:3px 10px; border-radius:6px; font-size:10px; font-weight:800;">${tiene ? 'SI' : 'NO'}</span>
+                     </div>`;
+        });
+        html += `</div>`;
+    });
+
+    const noCoinciden = datosJugadoresCache.filter(j => !fichaCoincideConRoster(j));
+    const equiposUnicos = [...new Set(jugadoresRaw.map(p => p.EQUIPO).filter(Boolean))].sort();
+    html += `<div style="margin-top:22px; border-top:2px solid #f59e0b; padding-top:14px;">
+                <h4 style="color:#b45309; font-size:12px; margin-bottom:10px; text-transform:uppercase;"><i class="fas fa-triangle-exclamation"></i> Hojas sin coincidencia en jugadores (${noCoinciden.length})</h4>`;
+
+    if (!noCoinciden.length) {
+        html += `<div style="color:#999; font-size:11px;">Todas las hojas de registro coinciden con un jugador del roster.</div>`;
+    } else {
+        noCoinciden.forEach(j => {
+            html += `<div style="display:flex; align-items:center; gap:8px; padding:9px 0; border-bottom:1px solid #f1f5f9;">
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:800; font-size:12px;">${j.JUGADOR_NOMBRE || ''} ${j.JUGADOR_APELLIDOS || ''}</div>
+                            <div style="font-size:10px; color:#666;">Ficha registrada con equipo: ${j.JUGADOR_EQUIPO_LETRA || '-'}</div>
+                        </div>
+                        <select id="vincularEquipo_${j._idx}" onchange="actualizarJugadoresVincular(${j._idx})" style="font-size:10px; padding:6px; border-radius:6px; border:1px solid #ddd; max-width:150px;">
+                            <option value="">-- Equipo --</option>
+                            ${equiposUnicos.map(eq => `<option value="${eq}">${eq}</option>`).join('')}
+                        </select>
+                        <select id="vincularJugador_${j._idx}" disabled style="font-size:10px; padding:6px; border-radius:6px; border:1px solid #ddd; max-width:150px;">
+                            <option value="">-- Jugador --</option>
+                        </select>
+                        <button class="btn-fin" style="background:#1e293b; color:white; padding:6px 12px; font-size:10px;" onclick="vincularFichaManual(${j._idx}, this)">VINCULAR</button>
+                     </div>`;
+        });
+    }
+    html += `</div>`;
+
+    document.getElementById('cuerpoRevisionHojas').innerHTML = html;
+}
+
+function actualizarJugadoresVincular(idx) {
+    const equipo = document.getElementById('vincularEquipo_' + idx).value;
+    const selJugador = document.getElementById('vincularJugador_' + idx);
+    if (!equipo) { selJugador.innerHTML = '<option value="">-- Jugador --</option>'; selJugador.disabled = true; return; }
+
+    const jugadoresDelEquipo = jugadoresRaw.filter(p => p.EQUIPO === equipo).map(p => p.NOMBRE);
+    selJugador.innerHTML = '<option value="">-- Jugador --</option>' + jugadoresDelEquipo.map(n => `<option value="${n}">${n}</option>`).join('');
+    selJugador.disabled = false;
+}
+
+function exportarRevisionHojasExcel() {
+    const csv = [["EQUIPO", "JUGADOR", "TIENE HOJA DE REGISTRO"].join(";")];
+    const equipoFiltro = document.getElementById('filtroEquipoRevision').value;
+
+    jugadoresRaw.forEach(p => {
+        if (!p.EQUIPO || !p.NOMBRE) return;
+        if (equipoFiltro && p.EQUIPO !== equipoFiltro) return;
+        const tiene = tieneHojaRegistro(p.EQUIPO, p.NOMBRE) ? 'SI' : 'NO';
+        csv.push([`"${p.EQUIPO}"`, `"${p.NOMBRE}"`, tiene].join(";"));
+    });
+
+    const csvContent = "\uFEFF" + csv.join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `revision_hojas_registro_${new Date().toLocaleDateString()}.csv`);
+    link.click();
+}
+
+async function vincularFichaManual(idx, btn) {
+    const equipo = document.getElementById('vincularEquipo_' + idx).value;
+    const nombre = document.getElementById('vincularJugador_' + idx).value;
+    if (!equipo || !nombre) { alert('Selecciona primero el equipo y el jugador real al que pertenece esta hoja.'); return; }
+
+    btn.disabled = true;
+    try {
+        const res = await fetch('/api/jugadores_datos/actualizar', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ idx, campos: { JUGADOR_NOMBRE: nombre, JUGADOR_EQUIPO_LETRA: equipo } })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            await cargarTablaDatosJugadores();
+            renderRevisionHojas();
+        } else {
+            alert('Error al vincular: ' + (data.message || 'desconocido'));
+            btn.disabled = false;
+        }
+    } catch (e) {
+        alert('Error de conexión al vincular la ficha.');
+        btn.disabled = false;
+    }
 }
 
 function filtrarJugadores() {
