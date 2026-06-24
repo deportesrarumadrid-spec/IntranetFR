@@ -1706,6 +1706,59 @@ def api_sincronizar_rffm():
         return jsonify({"status": "error", "message": message}), 400
 
 
+@deportivo_bp.route('/api/informes/colores_rivales', methods=['GET'])
+def api_informes_colores_get():
+    from competicion_scraper import load_kit_clash_report
+    data = load_kit_clash_report()
+    if not data:
+        return jsonify({"status": "empty", "entries": []})
+    return jsonify(data)
+
+
+@deportivo_bp.route('/api/informes/colores_rivales', methods=['POST'])
+def api_informes_colores_generar():
+    usuario = session.get('usuario')
+    if not usuario:
+        return jsonify({"status": "error", "message": "No session"}), 401
+
+    data = request.json or {}
+    username_rffm = data.get('usuario_rffm', '').strip()
+    password_rffm = data.get('password_rffm', '').strip()
+
+    if not username_rffm or not password_rffm:
+        return jsonify({"status": "error", "message": "Faltan credenciales"}), 400
+
+    from competicion_scraper import build_kit_clash_report
+
+    ok, message, report = build_kit_clash_report(username_rffm, password_rffm)
+    if ok:
+        return jsonify({**report, "message": message})
+    else:
+        return jsonify({"status": "error", "message": message}), 400
+
+
+@deportivo_bp.route('/api/informes/checklist_equipacion', methods=['GET'])
+def api_checklist_equipacion_get():
+    from competicion_scraper import load_checklist_equipacion
+    return jsonify(load_checklist_equipacion())
+
+
+@deportivo_bp.route('/api/informes/checklist_equipacion', methods=['POST'])
+def api_checklist_equipacion_guardar():
+    if not session.get('usuario'):
+        return jsonify({"status": "error", "message": "No session"}), 401
+
+    data = request.json or {}
+    match_key = data.get('match_key', '').strip()
+    campos = data.get('campos') or {}
+    if not match_key:
+        return jsonify({"status": "error", "message": "Falta match_key"}), 400
+
+    from competicion_scraper import guardar_checklist_equipacion
+    actual = guardar_checklist_equipacion(match_key, campos)
+    return jsonify({"status": "success", "data": actual})
+
+
 @deportivo_bp.route('/api/shield_proxy')
 def api_shield_proxy():
     """Proxy para servir escudos de la RFFM localmente desde static/shields/."""

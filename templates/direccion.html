@@ -833,7 +833,57 @@
     </div>
 
     <div id="tab-otros" class="tab-content">
-        <div class="card-coord" style="text-align: center; padding: 50px; color: #999;">Módulo de Informes Técnicos</div>
+        <div class="card-coord" style="padding: 22px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+                <h3 style="margin: 0; font-size: 14px; font-weight: 900; color: #1e293b;"><img src="/static/shield_local_icon.png" style="height:14px; margin-right: 6px; vertical-align:-2px;"> EQUIPACIONES COINCIDENCIAS - USO SEGUNDA EQUIPACIÓN</h3>
+                <span id="coloresLastUpdated" style="font-size: 9px; color: #999;"></span>
+            </div>
+
+            <div id="coloresResumenContainer" style="display:none; margin-bottom: 18px;">
+                <div style="font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 7px; letter-spacing: 0.5px;">Resumen de coincidencias (fin de semana seleccionado)</div>
+                <div id="coloresResumenCards" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+            </div>
+
+            <div id="coloresFiltroFinde" style="display:none; align-items:center; position:relative; min-height:50px; margin-bottom: 14px;">
+                <select id="selectFindeSemana" onchange="renderTablaFindeSemana()" style="display:none;"></select>
+
+                <div style="display:flex; align-items:center; gap:1px; background:#f1f5f9; border-radius:14px; padding:5px; position:absolute; left:50%; top:50%; transform:translate(-50%, -50%);">
+                    <button onclick="document.getElementById('inputFechaManual').showPicker ? document.getElementById('inputFechaManual').showPicker() : document.getElementById('inputFechaManual').click()" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='transparent'" style="background:transparent; color:#475569; border:none; border-radius:10px; font-size:17px; padding:10px 14px; cursor:pointer; transition:0.15s;" title="Elegir fecha manualmente">
+                        <i class="fas fa-calendar-days"></i>
+                    </button>
+                    <div style="width:1px; height:22px; background:#e2e8f0; margin:0 2px;"></div>
+                    <button id="btnFindeAnterior" class="btn-fin" onclick="irAFindeRelativo(-1)" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='transparent'" style="background:transparent; color:#64748b; border:none; border-radius:10px; font-size:11px; padding:10px 14px; font-weight:700; transition:0.15s;"></button>
+                    <span id="labelFindeActual" style="font-size:12px; font-weight:900; color:#1e293b; padding:10px 18px; background:white; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,0.1);"></span>
+                    <button id="btnFindeSiguiente" class="btn-fin" onclick="irAFindeRelativo(1)" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='transparent'" style="background:transparent; color:#64748b; border:none; border-radius:10px; font-size:11px; padding:10px 14px; font-weight:700; transition:0.15s;"></button>
+                </div>
+
+                <input type="date" id="inputFechaManual" onchange="irAFechaManual()" style="position:absolute; opacity:0; width:1px; height:1px;">
+
+                <button id="btnSoloCoincidencias" class="btn-fin" onclick="toggleSoloCoincidencias()" style="margin-left:auto; background:#f8f9fa; color:#64748b; border:1px solid #e2e8f0; font-size:9px; padding:8px 12px;">
+                    <i class="fas fa-triangle-exclamation"></i> SOLO COINCIDENCIAS
+                </button>
+            </div>
+
+            <div id="coloresRivalesContainer">
+                <div style="text-align: center; padding: 30px; color: #999;"><i class="fas fa-spinner fa-spin"></i> Cargando informe...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOCADILLO (POPOVER) DE EQUIPACIÓN LLEVADA POR PARTIDO -->
+    <div id="popoverEquipacion" style="display:none; position:fixed; background:white; border:1px solid #cbd5e1; border-radius:14px; box-shadow:0 14px 36px rgba(0,0,0,0.22); z-index:10010; width:380px; padding:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <span id="popoverEquipacionTitulo" style="font-size:13px; font-weight:900; color:#1e293b;"></span>
+            <span onclick="document.getElementById('popoverEquipacion').style.display='none'" style="cursor:pointer; color:#999; font-size:18px; line-height:1;">&times;</span>
+        </div>
+        <div id="popoverLlevoDevuelvo" style="margin-bottom:14px;"></div>
+        <div style="border-top:1px solid #f1f5f9; padding-top:13px;">
+            <label style="font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:7px;">Tallas que me llevo</label>
+            <div id="popoverTallasGrid" style="display:grid; grid-template-columns: repeat(4,1fr); gap:7px; margin-bottom:13px;"></div>
+            <label style="font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:6px;">Comentario</label>
+            <textarea id="popoverComentario" rows="3" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:8px; font-family:inherit; font-size:13px; resize:vertical; box-sizing:border-box;"></textarea>
+        </div>
+        <button class="btn-fin" style="width:100%; margin-top:14px; background:#E31E24; color:white; font-size:13px; padding:11px;" onclick="guardarPopoverEquipacion()">GUARDAR</button>
     </div>
 
     {% if usuario|lower == 'admin' %}
@@ -1975,8 +2025,410 @@
                 renderFullCalendar();
                 renderTecCalendar();
             }
+            if (tabId === 'tab-otros') {
+                cargarInformeColoresExistente();
+            }
         } catch (err) { console.error("Error switchTab:", err); }
     }
+
+    // --- INFORME DE COLORES DE EQUIPACIÓN DE RIVALES (VISITANTE) ---
+    function abrirModalCredencialesColores() {
+        document.getElementById('coloresModalError').style.display = 'none';
+        document.getElementById('modalCredencialesColores').style.display = 'flex';
+    }
+
+    let coloresEntriesCache = [];
+    let checklistEquipacionCache = {};
+    let soloCoincidencias = false;
+    const TALLAS_DISPONIBLES = ['3-4XS', '2XS', 'XS', 'S', 'M', 'L', 'XL', '2XL'];
+
+    async function cargarInformeColoresExistente() {
+        try {
+            const [resInforme, resChecklist] = await Promise.all([
+                fetch('/api/informes/colores_rivales'),
+                fetch('/api/informes/checklist_equipacion')
+            ]);
+            const data = await resInforme.json();
+            checklistEquipacionCache = await resChecklist.json();
+            if (data.status === 'success' && data.entries && data.entries.length) {
+                montarInformeColores(data.entries, data.last_updated);
+            } else {
+                mostrarVacioInformeColores();
+            }
+        } catch (e) {
+            console.error('Error cargando informe de colores:', e);
+        }
+    }
+
+    function mostrarVacioInformeColores() {
+        document.getElementById('coloresResumenContainer').style.display = 'none';
+        document.getElementById('coloresFiltroFinde').style.display = 'none';
+        document.getElementById('coloresRivalesContainer').innerHTML = `
+            <div style="text-align:center; padding:30px; color:#999;">
+                <img src="/static/shield_local_icon.png" style="height:30px; display:block; margin:0 auto 10px;">
+                Todavía no hay informe generado para esta temporada.
+            </div>`;
+    }
+
+    function montarInformeColores(entries, lastUpdated) {
+        coloresEntriesCache = entries || [];
+        document.getElementById('coloresLastUpdated').textContent = lastUpdated ? `Última actualización: ${lastUpdated}` : '';
+
+        if (!coloresEntriesCache.length) {
+            mostrarVacioInformeColores();
+            return;
+        }
+
+        poblarSelectorFindes();
+        renderTablaFindeSemana();
+    }
+
+    function campoCorto(campoFull) {
+        // Muestra solo el nombre del campo hasta "(HA)" (o similar código entre paréntesis); el resto se ve al hacer click
+        const m = campoFull.match(/^(.*?)\s*\([A-Z]{1,4}\)/);
+        return m ? m[1].trim() : campoFull;
+    }
+
+    function toggleCampoDetalle(el) {
+        const expandido = el.dataset.expandido === '1';
+        el.textContent = expandido ? el.dataset.short : el.dataset.full;
+        el.dataset.expandido = expandido ? '0' : '1';
+    }
+
+    function nombreEquipoConCategoria(e) {
+        if (!e.nuestro_equipo) return e.nuestro_equipo;
+        if (!e.categoria) return e.nuestro_equipo;
+        return e.nuestro_equipo.replace(/CLUB\s+FUENTELARREYNA/i, e.categoria);
+    }
+
+    function renderResumenColores(partidosFinde) {
+        const porEquipo = {};
+        let totalAvisos = 0;
+        partidosFinde.forEach(e => {
+            if (!e.warning) return;
+            totalAvisos++;
+            const eq = `${e.categoria || ''} ${e.letra || ''}`.trim() || 'SIN EQUIPO';
+            porEquipo[eq] = (porEquipo[eq] || 0) + 1;
+        });
+
+        const cont = document.getElementById('coloresResumenContainer');
+        const cardsCont = document.getElementById('coloresResumenCards');
+        cont.style.display = 'block';
+
+        const totalBg = totalAvisos ? '#1e293b' : '#16a34a';
+        let html = `<div style="background:${totalBg}; border-radius:10px; padding:9px 16px; display:flex; align-items:center; gap:9px; font-size:10px; font-weight:800; color:white; letter-spacing:0.3px;">
+            <span style="text-transform:uppercase; opacity:0.85;">Total</span>
+            <span style="background:rgba(255,255,255,0.18); border-radius:20px; padding:2px 10px; font-size:11px; font-weight:900;">${totalAvisos}</span>
+        </div>`;
+
+        Object.keys(porEquipo).sort().forEach(eq => {
+            html += `<div style="background:white; border:1px solid #f1f5f9; border-radius:10px; padding:9px 16px; display:flex; align-items:center; font-size:10px; font-weight:700; color:#334155; box-shadow:0 1px 3px rgba(0,0,0,0.05); text-transform:uppercase;">
+                ${eq}
+            </div>`;
+        });
+
+        cardsCont.innerHTML = html;
+    }
+
+    function obtenerViernesDeSemana(fechaStr) {
+        // fechaStr formato DD-MM-YYYY. El "fin de semana" agrupa Viernes-Sábado-Domingo.
+        const [d, m, y] = fechaStr.split('-').map(Number);
+        const fecha = new Date(y, m - 1, d);
+        const dia = fecha.getDay(); // 0=Domingo, 1=Lunes ... 5=Viernes, 6=Sábado
+        const diasDesdeViernes = (dia - 5 + 7) % 7; // Viernes->0, Sábado->1, Domingo->2, Lunes->3 ... Jueves->6
+        fecha.setDate(fecha.getDate() - diasDesdeViernes);
+        return fecha;
+    }
+
+    function formatoCorto(fecha) {
+        return fecha.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+    }
+
+    const DIAS_SEMANA_LETRA = ['D', 'L', 'M', 'X', 'J', 'V', 'S']; // getDay(): 0=Domingo...6=Sábado
+
+    function formatoFechaCorta(fechaStr) {
+        // fechaStr formato DD-MM-YYYY -> "V 15 may"
+        if (!fechaStr) return '-';
+        const [d, m, y] = fechaStr.split('-').map(Number);
+        const fecha = new Date(y, m - 1, d);
+        const letra = DIAS_SEMANA_LETRA[fecha.getDay()];
+        return `${letra} ${formatoCorto(fecha)}`;
+    }
+
+    function fechaKeyLocal(fecha) {
+        // Clave AAAA-MM-DD en hora LOCAL (toISOString() convierte a UTC y desplaza el día en horario de Madrid)
+        return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
+    }
+
+    function poblarSelectorFindes() {
+        const findesMap = {};
+        coloresEntriesCache.forEach(e => {
+            if (!e.fecha) return;
+            const viernes = obtenerViernesDeSemana(e.fecha);
+            const key = fechaKeyLocal(viernes);
+            if (!findesMap[key]) findesMap[key] = viernes;
+        });
+
+        const claves = Object.keys(findesMap).sort();
+        const select = document.getElementById('selectFindeSemana');
+        const hoy = new Date();
+
+        select.innerHTML = claves.map(key => {
+            const viernes = findesMap[key];
+            const domingo = new Date(viernes); domingo.setDate(viernes.getDate() + 2);
+            const label = `${formatoCorto(viernes)} - ${formatoCorto(domingo)} ${domingo.getFullYear()}`;
+            return `<option value="${key}">${label}</option>`;
+        }).join('');
+
+        // Seleccionar por defecto el fin de semana más próximo a hoy (futuro más cercano, o el último si no quedan)
+        let defaultKey = claves[claves.length - 1];
+        const hoyStr = `${String(hoy.getDate()).padStart(2,'0')}-${String(hoy.getMonth()+1).padStart(2,'0')}-${hoy.getFullYear()}`;
+        const hoyKey = fechaKeyLocal(obtenerViernesDeSemana(hoyStr));
+        for (const key of claves) {
+            if (key >= hoyKey) { defaultKey = key; break; }
+        }
+        select.value = defaultKey;
+        document.getElementById('coloresFiltroFinde').style.display = 'flex';
+        actualizarLabelsFindeNav();
+    }
+
+    function labelFindeDeKey(key) {
+        const [y, m, d] = key.split('-').map(Number);
+        const viernes = new Date(y, m - 1, d);
+        const domingo = new Date(viernes); domingo.setDate(viernes.getDate() + 2);
+        return `${formatoCorto(viernes)} - ${formatoCorto(domingo)} ${domingo.getFullYear()}`;
+    }
+
+    function actualizarLabelsFindeNav() {
+        const select = document.getElementById('selectFindeSemana');
+        const idx = select.selectedIndex;
+        document.getElementById('labelFindeActual').textContent = select.options[idx] ? labelFindeDeKey(select.options[idx].value) : '';
+
+        const btnAnt = document.getElementById('btnFindeAnterior');
+        if (idx > 0) {
+            btnAnt.textContent = `« ${labelFindeDeKey(select.options[idx - 1].value)}`;
+            btnAnt.disabled = false;
+            btnAnt.style.opacity = '1';
+        } else {
+            btnAnt.textContent = '« —';
+            btnAnt.disabled = true;
+            btnAnt.style.opacity = '0.4';
+        }
+
+        const btnSig = document.getElementById('btnFindeSiguiente');
+        if (idx >= 0 && idx < select.options.length - 1) {
+            btnSig.textContent = `${labelFindeDeKey(select.options[idx + 1].value)} »`;
+            btnSig.disabled = false;
+            btnSig.style.opacity = '1';
+        } else {
+            btnSig.textContent = '— »';
+            btnSig.disabled = true;
+            btnSig.style.opacity = '0.4';
+        }
+    }
+
+    function irAFindeRelativo(direccion) {
+        const select = document.getElementById('selectFindeSemana');
+        const nuevoIndex = select.selectedIndex + direccion;
+        if (nuevoIndex < 0 || nuevoIndex >= select.options.length) return;
+        select.selectedIndex = nuevoIndex;
+        actualizarLabelsFindeNav();
+        renderTablaFindeSemana();
+    }
+
+    function irAFechaManual() {
+        const valor = document.getElementById('inputFechaManual').value; // YYYY-MM-DD
+        if (!valor) return;
+        const [y, m, d] = valor.split('-').map(Number);
+        const fechaStr = `${String(d).padStart(2,'0')}-${String(m).padStart(2,'0')}-${y}`;
+        const key = fechaKeyLocal(obtenerViernesDeSemana(fechaStr));
+        const select = document.getElementById('selectFindeSemana');
+        const opciones = Array.from(select.options).map(o => o.value);
+
+        let claveDestino = opciones.find(k => k === key);
+        if (!claveDestino) {
+            // Si ese fin de semana exacto no tiene partidos, usamos el más cercano disponible
+            claveDestino = opciones.reduce((mejor, k) => {
+                if (!mejor) return k;
+                return Math.abs(new Date(k) - new Date(key)) < Math.abs(new Date(mejor) - new Date(key)) ? k : mejor;
+            }, null);
+        }
+        if (!claveDestino) return;
+        select.value = claveDestino;
+        actualizarLabelsFindeNav();
+        renderTablaFindeSemana();
+    }
+
+    function toggleSoloCoincidencias() {
+        soloCoincidencias = !soloCoincidencias;
+        const btn = document.getElementById('btnSoloCoincidencias');
+        btn.style.background = soloCoincidencias ? '#dc2626' : '#f8f9fa';
+        btn.style.color = soloCoincidencias ? 'white' : '#64748b';
+        btn.style.border = soloCoincidencias ? 'none' : '1px solid #e2e8f0';
+        renderTablaFindeSemana();
+    }
+
+    function renderTablaFindeSemana() {
+        const key = document.getElementById('selectFindeSemana').value;
+        const cont = document.getElementById('coloresRivalesContainer');
+        if (!key) { cont.innerHTML = ''; return; }
+
+        const partidosFinde = coloresEntriesCache.filter(e => {
+            if (!e.fecha) return false;
+            return fechaKeyLocal(obtenerViernesDeSemana(e.fecha)) === key;
+        }).sort((a, b) => {
+            const da = a.fecha.split('-').reverse().join('') + (a.hora || '');
+            const db = b.fecha.split('-').reverse().join('') + (b.hora || '');
+            return da.localeCompare(db);
+        });
+
+        renderResumenColores(partidosFinde);
+
+        const partidos = soloCoincidencias ? partidosFinde.filter(e => e.warning) : partidosFinde;
+
+        if (!partidos.length) {
+            cont.innerHTML = `<div style="text-align:center; padding:30px; color:#999; font-size:11px;">${soloCoincidencias ? 'Ninguna coincidencia de rojo ese fin de semana.' : 'No hay partidos ese fin de semana.'}</div>`;
+            return;
+        }
+
+        let html = `<div style="overflow-x:auto;">
+            <table class="table-coord" style="width:100%; font-size:10px;">
+                <thead style="background:#f8f9fa;">
+                    <tr>
+                        <th>EQUIPACIÓN LLEVADA</th>
+                        <th>VISITANTE</th>
+                        <th>FECHA</th>
+                        <th>HORA</th>
+                        <th>PARTIDO</th>
+                        <th>COMPETICIÓN</th>
+                        <th>CAMPO</th>
+                        <th>CAMISETA RIVAL</th>
+                        <th>PANTALÓN RIVAL</th>
+                        <th>MEDIAS RIVAL</th>
+                        <th style="text-align:center;">AVISO</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+        partidos.forEach(e => {
+            const rowBg = e.warning ? 'background:#fee2e2;' : '';
+            const nuestroNombre = nombreEquipoConCategoria(e);
+            const partidoTxt = e.es_visitante ? `${e.rival || '?'} <i class="fas fa-house" style="font-size:8px; color:#999;"></i> vs ${nuestroNombre || '?'}` : `${nuestroNombre || '?'} <i class="fas fa-house" style="font-size:8px; color:#999;"></i> vs ${e.rival || '?'}`;
+            const ck = checklistEquipacionCache[e.match_key] || {};
+            const tieneAlgo = ['camiseta', 'pantalon', 'medias'].some(c => ck[c + '_llevo'] || ck[c + '_devuelvo']) || (ck.tallas && Object.values(ck.tallas).some(v => v)) || ck.comentario;
+            html += `<tr style="${rowBg}">
+                <td style="text-align:center;">
+                    <button onclick="abrirPopoverEquipacion(event, '${e.match_key}')" class="btn-fin" style="background:${tieneAlgo ? '#1e293b' : '#f1f5f9'}; color:${tieneAlgo ? 'white' : '#64748b'}; font-size:11px; padding:6px 10px;" title="Equipación llevada">
+                        <i class="fas fa-shirt"></i>
+                    </button>
+                </td>
+                <td style="text-align:center;">${e.es_visitante ? '<span style="background:#1e293b; color:white; font-size:8px; padding:2px 7px; border-radius:5px; font-weight:900;">VISITANTE</span>' : ''}</td>
+                <td style="white-space:nowrap;">${formatoFechaCorta(e.fecha)}</td>
+                <td>${e.hora || '-'}</td>
+                <td style="font-weight:800;">${partidoTxt}</td>
+                <td style="font-size:9px; color:#666;">${e.competicion || '-'}</td>
+                <td style="font-size:9px; color:#666; cursor:pointer; max-width:160px;" title="Click para ver el detalle completo" onclick="toggleCampoDetalle(this)" data-short="${escapeHtml(campoCorto((e.campo || '-').split(' - ').pop()))}" data-full="${escapeHtml((e.campo || '-').split(' - ').pop())}">${escapeHtml(campoCorto((e.campo || '-').split(' - ').pop()))}</td>
+                <td>${e.camiseta || (e.sin_datos ? '<span style="color:#999;">Sin datos</span>' : '-')}</td>
+                <td>${e.pantalon || '-'}</td>
+                <td>${e.medias || '-'}</td>
+                <td style="text-align:center;">
+                    ${e.warning ? '<span style="background:#dc2626; color:white; padding:3px 9px; border-radius:6px; font-size:9px; font-weight:900; white-space:nowrap; display:inline-block;"><i class="fas fa-triangle-exclamation"></i> COINCIDE ROJO</span>' : ''}
+                </td>
+            </tr>`;
+        });
+
+        html += `</tbody></table></div>`;
+        cont.innerHTML = html;
+    }
+
+    let matchKeyPopoverActivo = null;
+
+    function abrirPopoverEquipacion(evt, matchKey) {
+        evt.stopPropagation();
+        matchKeyPopoverActivo = matchKey;
+        const ck = checklistEquipacionCache[matchKey] || {};
+        const tallas = ck.tallas || {};
+        const partido = coloresEntriesCache.find(e => e.match_key === matchKey);
+        const pop = document.getElementById('popoverEquipacion');
+
+        document.getElementById('popoverEquipacionTitulo').textContent = partido ? `${partido.nuestro_equipo} vs ${partido.rival} (${partido.fecha})` : '';
+
+        const campos = [
+            { key: 'camiseta', label: 'Camiseta' },
+            { key: 'pantalon', label: 'Pantalón' },
+            { key: 'medias', label: 'Medias' }
+        ];
+        let html = `<div style="display:grid; grid-template-columns:80px 1fr 1fr; gap:6px; font-size:10px; color:#94a3b8; font-weight:800; margin-bottom:5px;">
+            <div></div><div style="text-align:center;">Llevo</div><div style="text-align:center;">Devuelvo</div>
+        </div>`;
+        campos.forEach(c => {
+            html += `<div style="display:grid; grid-template-columns:80px 1fr 1fr; gap:6px; align-items:center; margin-bottom:6px;">
+                <div style="font-size:12px; color:#475569; font-weight:700;">${c.label}</div>
+                <input type="number" min="0" value="${ck[c.key + '_llevo'] ?? ''}" id="pop_${c.key}_llevo" style="width:100%; padding:6px; font-size:13px; border:1px solid #ddd; border-radius:6px; text-align:center; box-sizing:border-box;">
+                <input type="number" min="0" value="${ck[c.key + '_devuelvo'] ?? ''}" id="pop_${c.key}_devuelvo" style="width:100%; padding:6px; font-size:13px; border:1px solid #ddd; border-radius:6px; text-align:center; box-sizing:border-box;">
+            </div>`;
+        });
+        document.getElementById('popoverLlevoDevuelvo').innerHTML = html;
+
+        document.getElementById('popoverTallasGrid').innerHTML = TALLAS_DISPONIBLES.map(t => `
+            <div>
+                <label style="font-size:9px; font-weight:800; color:#64748b; display:block; margin-bottom:3px;">${t}</label>
+                <input type="number" min="0" id="poptalla_${t}" value="${tallas[t] ?? ''}" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:6px; text-align:center; font-size:12px; box-sizing:border-box;">
+            </div>
+        `).join('');
+        document.getElementById('popoverComentario').value = ck.comentario || '';
+
+        // Posicionar el bocadillo cerca del botón pulsado
+        const rect = evt.currentTarget.getBoundingClientRect();
+        pop.style.display = 'block';
+        const popWidth = pop.offsetWidth || 380;
+        let left = rect.left;
+        if (left + popWidth > window.innerWidth - 10) left = window.innerWidth - popWidth - 10;
+        pop.style.left = `${Math.max(10, left)}px`;
+        let top = rect.bottom + 6;
+        const popHeight = pop.offsetHeight || 460;
+        if (top + popHeight > window.innerHeight - 10) top = Math.max(10, rect.top - popHeight - 6);
+        pop.style.top = `${top}px`;
+    }
+
+    async function guardarPopoverEquipacion() {
+        const matchKey = matchKeyPopoverActivo;
+        if (!matchKey) return;
+        const campos = {};
+        ['camiseta', 'pantalon', 'medias'].forEach(c => {
+            campos[c + '_llevo'] = document.getElementById(`pop_${c}_llevo`).value;
+            campos[c + '_devuelvo'] = document.getElementById(`pop_${c}_devuelvo`).value;
+        });
+        const tallas = {};
+        TALLAS_DISPONIBLES.forEach(t => {
+            const v = document.getElementById(`poptalla_${t}`).value;
+            if (v) tallas[t] = v;
+        });
+        campos.tallas = tallas;
+        campos.comentario = document.getElementById('popoverComentario').value.trim();
+
+        if (!checklistEquipacionCache[matchKey]) checklistEquipacionCache[matchKey] = {};
+        Object.assign(checklistEquipacionCache[matchKey], campos);
+
+        try {
+            await fetch('/api/informes/checklist_equipacion', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ match_key: matchKey, campos })
+            });
+            document.getElementById('popoverEquipacion').style.display = 'none';
+            renderTablaFindeSemana();
+        } catch (e) {
+            alert('Error al guardar la equipación.');
+        }
+    }
+
+    document.addEventListener('click', function(evt) {
+        const pop = document.getElementById('popoverEquipacion');
+        if (pop && pop.style.display === 'block' && !pop.contains(evt.target)) {
+            pop.style.display = 'none';
+        }
+    });
 
     // Full Calendar Logic
     let currentCalendarDate = new Date(); // Tracks the month/year of the calendar

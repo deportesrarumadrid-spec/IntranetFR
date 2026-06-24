@@ -211,59 +211,54 @@
         box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
     }
 
-    .timeline-table {
+    .timeline-table-v {
         border-collapse: collapse;
-        width: max-content;
-        min-width: 100%;
+        width: 100%;
         font-family: 'Montserrat', sans-serif;
     }
 
-    .timeline-table td {
+    .timeline-table-v th, .timeline-table-v td {
         border: 1px solid #cbd5e1;
         padding: 8px 10px;
         text-align: center;
         vertical-align: middle;
     }
 
-    .timeline-label-col {
-        background-color: #f1f5f9;
-        color: #0f172a;
+    .timeline-table-v thead th {
+        background-color: #1e293b;
+        color: white;
         font-weight: 900;
         font-size: 0.7rem;
-        min-width: 130px;
-        max-width: 130px;
-        position: sticky;
-        left: 0;
-        z-index: 10;
-        box-shadow: 2px 0 5px rgba(0,0,0,0.05);
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
 
-    .timeline-rival-cell {
+    .timeline-rival-cell-v {
         background-color: #f8fafc;
         color: #1e293b;
-        font-size: 0.68rem;
+        font-size: 0.7rem;
         font-weight: 900;
-        min-width: 120px;
-        max-width: 120px;
-        height: 85px;
+        text-align: left;
         white-space: normal;
         word-wrap: break-word;
-        padding: 6px !important;
-        vertical-align: middle;
     }
 
-    .timeline-rival-cell .rival-text {
+    .rival-header-content-v {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .rival-text-v {
         text-transform: uppercase;
         line-height: 1.2;
-        margin-top: 4px;
     }
 
     .timeline-shield-img {
-        width: 24px;
-        height: 24px;
+        width: 22px;
+        height: 22px;
         object-fit: contain;
+        flex-shrink: 0;
     }
 
     .rival-shield-container {
@@ -271,18 +266,6 @@
         display: flex;
         align-items: center;
         justify-content: center;
-    }
-
-    .rival-header-content {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .timeline-result-cell.empty-result {
-        background-color: #f8fafc !important;
-        color: #94a3b8 !important;
     }
 
     .timeline-shield-fallback {
@@ -295,35 +278,36 @@
         font-size: 14px;
     }
 
-    .timeline-result-cell {
-        font-size: 0.8rem;
+    .timeline-result-cell-v {
+        font-size: 0.85rem;
         font-weight: 900;
         color: white;
-        min-width: 120px;
-        max-width: 120px;
-        height: 35px;
+        width: 90px;
     }
 
-    .timeline-result-cell.outcome-G {
+    .timeline-result-cell-v.empty-result {
+        background-color: #f8fafc !important;
+        color: #94a3b8 !important;
+    }
+
+    .timeline-result-cell-v.outcome-G {
         background-color: var(--green-state) !important;
         color: white !important;
     }
 
-    .timeline-result-cell.outcome-E {
+    .timeline-result-cell-v.outcome-E {
         background-color: var(--yellow-state) !important;
         color: #1e293b !important;
     }
 
-    .timeline-result-cell.outcome-P {
+    .timeline-result-cell-v.outcome-P {
         background-color: var(--red-state) !important;
         color: white !important;
     }
 
-    .timeline-objective-cell {
+    .timeline-objective-cell-v {
         background-color: white;
-        height: 25px;
-        min-width: 120px;
-        max-width: 120px;
+        width: 90px;
     }
 
     .table-shield {
@@ -1180,70 +1164,6 @@
         `;
     }
 
-    // Generar un color único y consistente para cada equipo basado en su nombre
-    function stringToColor(str) {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            hash = str.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        const colors = [
-            '#1e40af','#7c3aed','#0369a1','#047857','#b45309',
-            '#9d174d','#dc2626','#0891b2','#4338ca','#065f46',
-            '#92400e','#6d28d9','#1d4ed8','#15803d','#b91c1c',
-            '#1e3a5f','#6b21a8','#155e75','#14532d','#78350f'
-        ];
-        return colors[Math.abs(hash) % colors.length];
-    }
-
-    // Generar iniciales del equipo para el escudo SVG
-    function getInitials(name) {
-        const clean = (name || '').replace(/["'()]/g, '').trim().toUpperCase();
-        // Quitar prefijos comunes
-        const withoutPrefix = clean.replace(/^(C\.D\.|A\.D\.|C\.F\.|S\.A\.D\.|R\.C\.|R\.C\.D\.|U\.D\.|ESC\.FUT\.|A\.D\.C\.\s*)/, '').trim();
-        const words = withoutPrefix.split(/\s+/).filter(w => w.length > 2 && !['DEL','DE','LA','LOS','LAS','EL'].includes(w));
-        if (words.length === 0) return clean.substring(0, 2);
-        if (words.length === 1) return words[0].substring(0, 2);
-        return words[0][0] + words[1][0];
-    }
-
-    // Generar escudo SVG con iniciales - siempre visible, profesional
-    function generateInitialShield(teamName) {
-        const initials = getInitials(teamName);
-        const color = stringToColor(teamName.toUpperCase());
-        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="32" height="32">
-          <circle cx="20" cy="20" r="19" fill="${color}" stroke="white" stroke-width="1.5"/>
-          <text x="20" y="25" text-anchor="middle" fill="white" font-size="13" font-weight="800" font-family="Montserrat,Arial,sans-serif">${initials}</text>
-        </svg>`;
-        return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-    }
-
-    function getShieldHtmlForTimeline(teamName, shieldUrl) {
-        const cleanName = (teamName || '').replace(/['"“”]/g, '').trim().toUpperCase();
-        const isFuente = cleanName.includes("FUENTELARREYNA");
-        
-        if (isFuente) {
-            return `<img src="/static/ESCUDO SIN FONDO.png" alt="Escudo" class="timeline-shield-img"
-                        onerror="this.onerror=null; this.src='${generateInitialShield(teamName || 'CF')}'">`;
-        }
-        
-        // Siempre mostrar el SVG de iniciales inmediatamente (fiable)
-        const svgSrc = generateInitialShield(teamName || 'CF');
-        
-        let finalSrc = shieldUrl || '';
-        if (finalSrc && finalSrc.startsWith('http')) {
-            finalSrc = `/api/shield_proxy?url=${encodeURIComponent(finalSrc)}`;
-        }
-        
-        if (finalSrc) {
-            // URL local o proxy - usarla directamente
-            return `<img src="${finalSrc}" alt="Escudo" class="timeline-shield-img"
-                        onerror="this.onerror=null; this.src='${svgSrc}'">`;
-        }
-        
-        // Sin URL real o URL externa no accesible - usar SVG directamente
-        return `<img src="${svgSrc}" alt="${cleanName}" class="timeline-shield-img">`;
-    }
-
     function renderCalendarioHorizontal(calendario, equipoLetra, categoriaName) {
         const container = document.getElementById("calendarioContainer");
         if (!calendario || calendario.length === 0) {
@@ -1270,130 +1190,61 @@
             const cleanRival = rawRival.replace(/['"\u201c\u201d]/g, '').trim().toUpperCase();
             if (!groups[cleanRival]) {
                 groups[cleanRival] = [];
-                rivalOrder.push({
-                    raw: rawRival,
-                    clean: cleanRival,
-                    shield: p.rival_shield || ''  // Escudo pre-calculado desde Python
-                });
+                rivalOrder.push({ raw: rawRival, clean: cleanRival });
             }
             groups[cleanRival].push(p);
         });
-
-        // Crear mapa de escudos de la clasificación del equipo activo
-        // Indexamos por múltiples variantes del nombre para encontrar siempre el escudo
-        const shieldLookup = {};
-        const activeTeam = equipos[selectedTeamIndex];
-        if (activeTeam && activeTeam.clasificacion) {
-            activeTeam.clasificacion.forEach(item => {
-                if (!item.shield) return;
-                // Guardamos por nombre completo limpio
-                const cleanFull = item.equipo.replace(/['"“”]/g, '').trim().toUpperCase();
-                shieldLookup[cleanFull] = item.shield;
-                // También por nombre sin la letra final (ej: "C.D. RUPE SAHAGUN A" -> "C.D. RUPE SAHAGUN")
-                const withoutLetter = cleanFull.replace(/\s+[A-E]$/, '').trim();
-                if (!shieldLookup[withoutLetter]) shieldLookup[withoutLetter] = item.shield;
-                // También por las palabras clave del nombre (sin prefijos C.D., A.D., etc.)
-                const keywords = cleanFull.replace(/^(C\.D\.|A\.D\.|C\.F\.|A\.D\.C\.|S\.A\.D\.|R\.C\.|R\.C\.D\.|U\.D\.|ESC\.FUT\.)\s*/i, '').split(/\s+[A-E]$/)[0].trim();
-                if (keywords && !shieldLookup[keywords]) shieldLookup[keywords] = item.shield;
-            });
-        }
-
-        function findShieldForRival(rivalClean, rivalRaw) {
-            // 1. Buscar directamente (nombre limpio)
-            if (shieldLookup[rivalClean]) return shieldLookup[rivalClean];
-            // 2. Buscar sin la letra final
-            const withoutLetter = rivalClean.replace(/\s+[A-E]$/, '').trim();
-            if (shieldLookup[withoutLetter]) return shieldLookup[withoutLetter];
-            // 3. Buscar por keywords
-            const keywords = rivalClean.replace(/^(C\.D\.|A\.D\.|C\.F\.|A\.D\.C\.|S\.A\.D\.|R\.C\.|R\.C\.D\.|U\.D\.|ESC\.FUT\.)\s*/i, '').split(/\s+[A-E]$/)[0].trim();
-            if (keywords && shieldLookup[keywords]) return shieldLookup[keywords];
-            // 4. Búsqueda parcial
-            for (const key of Object.keys(shieldLookup)) {
-                if (key.length > 5 && (rivalClean.includes(key) || key.includes(rivalClean))) {
-                    return shieldLookup[key];
-                }
-            }
-            return '';
-        }
 
         // Limpiar letra y categoría del equipo
         const cleanLetra = equipoLetra.replace(/['"“”]/g, '').trim();
         const teamLabel = `${categoriaName} ${cleanLetra}`.toUpperCase();
 
-        let headerRow = `<td class="timeline-label-col">RIVAL</td>`;
-        let idaRow = `<td class="timeline-label-col" rowspan="2">${teamLabel}</td>`;
-        let vueltaRow = ``;
-        let objectiveRow = `<td class="timeline-label-col">OBJETIVO</td>`;
+        // Tabla en vertical: una fila por rival (Rival | Ida | Vuelta | Objetivo) para no requerir scroll lateral
+        let bodyRows = '';
 
         rivalOrder.forEach(rivalInfo => {
             const matches = groups[rivalInfo.clean];
             const matchIda = matches[0];
             const matchVuelta = matches[1];
 
-            // Usar escudo pre-calculado desde Python; JS lookup como fallback
-            const shieldUrl = rivalInfo.shield || findShieldForRival(rivalInfo.clean, rivalInfo.raw);
-            const shieldHtml = getShieldHtmlForTimeline(rivalInfo.raw, shieldUrl);
+            const idaCell = matchIda
+                ? `<td class="timeline-result-cell-v outcome-${matchIda.estado || 'G'}"><span class="result-text">${matchIda.resultado || '-'}</span></td>`
+                : `<td class="timeline-result-cell-v empty-result"><span class="result-text">-</span></td>`;
 
-            headerRow += `
-                <td class="timeline-rival-cell">
-                    <div class="rival-header-content">
-                        <div class="rival-text">${rivalInfo.clean}</div>
-                    </div>
-                </td>
-            `;
+            const vueltaCell = matchVuelta
+                ? `<td class="timeline-result-cell-v outcome-${matchVuelta.estado || 'G'}"><span class="result-text">${matchVuelta.resultado || '-'}</span></td>`
+                : `<td class="timeline-result-cell-v empty-result"><span class="result-text">-</span></td>`;
 
-            // Ida
-            if (matchIda) {
-                const outcomeClass = matchIda.estado || 'G';
-                idaRow += `
-                    <td class="timeline-result-cell outcome-${outcomeClass}">
-                        <span class="result-text">${matchIda.resultado || '-'}</span>
+            bodyRows += `
+                <tr>
+                    <td class="timeline-rival-cell-v">
+                        <div class="rival-header-content-v">
+                            <div class="rival-text-v">${rivalInfo.clean}</div>
+                        </div>
                     </td>
-                `;
-            } else {
-                idaRow += `
-                    <td class="timeline-result-cell empty-result">
-                        <span class="result-text">-</span>
-                    </td>
-                `;
-            }
-
-            // Vuelta
-            if (matchVuelta) {
-                const outcomeClass = matchVuelta.estado || 'G';
-                vueltaRow += `
-                    <td class="timeline-result-cell outcome-${outcomeClass}">
-                        <span class="result-text">${matchVuelta.resultado || '-'}</span>
-                    </td>
-                `;
-            } else {
-                vueltaRow += `
-                    <td class="timeline-result-cell empty-result">
-                        <span class="result-text">-</span>
-                    </td>
-                `;
-            }
-
-            objectiveRow += `
-                <td class="timeline-objective-cell"></td>
+                    ${idaCell}
+                    ${vueltaCell}
+                    <td class="timeline-objective-cell-v"></td>
+                </tr>
             `;
         });
 
         container.innerHTML = `
             <div class="calendario-box">
                 <div class="clasificacion-header">
-                    <i class="fas fa-file-invoice"></i> Ficha de Competición (Jornadas)
+                    <i class="fas fa-file-invoice"></i> Ficha de Competición (Jornadas) — ${teamLabel}
                 </div>
                 <div class="timeline-scroll-container">
-                    <table class="timeline-table">
+                    <table class="timeline-table-v">
                         <thead>
-                            <tr>${headerRow}</tr>
+                            <tr>
+                                <th class="timeline-rival-cell-v">RIVAL</th>
+                                <th class="timeline-result-cell-v">IDA</th>
+                                <th class="timeline-result-cell-v">VUELTA</th>
+                                <th class="timeline-objective-cell-v">OBJETIVO</th>
+                            </tr>
                         </thead>
-                        <tbody>
-                            <tr>${idaRow}</tr>
-                            <tr>${vueltaRow}</tr>
-                            <tr>${objectiveRow}</tr>
-                        </tbody>
+                        <tbody>${bodyRows}</tbody>
                     </table>
                 </div>
             </div>

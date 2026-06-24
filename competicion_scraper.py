@@ -11,6 +11,9 @@ CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 
 SHIELDS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'shields')
 os.makedirs(SHIELDS_DIR, exist_ok=True)
 
+KIT_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'kit_colors_cache.json')
+KIT_REPORT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'kit_clash_report.json')
+
 def get_session():
     session = requests.Session()
     session.headers.update({
@@ -1113,3 +1116,271 @@ def load_cached_data():
         "equipos": equipos_data
     }
     return demo_data
+
+
+# --- INFORME DE COLORES DE EQUIPACIÓN (Listado de Partidos -> "Ver equipaciones") ---
+
+CLUB_FUENTELARREYNA_ID = '4239'
+
+def _load_kit_cache():
+    if os.path.exists(KIT_CACHE_FILE):
+        try:
+            with open(KIT_CACHE_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+def _save_kit_cache(cache):
+    os.makedirs(os.path.dirname(KIT_CACHE_FILE), exist_ok=True)
+    with open(KIT_CACHE_FILE, 'w', encoding='utf-8') as f:
+        json.dump(cache, f, ensure_ascii=False, indent=2)
+
+def _es_color_rojo(color):
+    return 'ROJ' in (color or '').upper()
+
+def _temporada_actual():
+    """Calcula el código y fechas de la temporada actual (01/08 - 31/07)."""
+    hoy = datetime.now()
+    if hoy.month >= 9:
+        anio_ini, anio_fin = hoy.year, hoy.year + 1
+    else:
+        anio_ini, anio_fin = hoy.year - 1, hoy.year
+    # Códigos de temporada de la RFFM: 21 = 2025-2026, 20 = 2024-2025, ...
+    cod_temporada = str(21 - (2025 - anio_ini))
+    fecha_desde = f"01-09-{anio_ini}"
+    fecha_hasta = f"31-08-{anio_fin}"
+    return cod_temporada, fecha_desde, fecha_hasta
+
+def fetch_temporada_matches(session, club_id=CLUB_FUENTELARREYNA_ID, cod_temporada=None, fecha_desde=None, fecha_hasta=None):
+    """Descarga el Listado de Partidos completo del club para toda la temporada
+    (ruta Competición > Campos y Horas > Listado de Partidos), usando la exportación
+    "Descargar Excel Agrupado por Día": la vista HTML interactiva tiene un límite oculto
+    de ~300 resultados en pantalla, mientras que la exportación devuelve todos (verificado
+    contra el total real: 661 partidos en la temporada 2025-2026)."""
+    if not cod_temporada:
+        cod_temporada, fecha_desde, fecha_hasta = _temporada_actual()
+
+    params = {
+        'cod_primaria': '1000139',
+        'Consulta': '1',
+        'Sch_Cod_Temporada': cod_temporada,
+        'Sch_Fecha_Desde': fecha_desde,
+        'Sch_Fecha_Hasta': fecha_hasta,
+        'Club': club_id,
+        'Sch_Clave_Acceso_Club': club_id,
+        'NPcd_PageLines': '5000',
+        'NPcd_File': '1',
+        'excel': '1',
+    }
+    r = session.get('https://intranet.ffmadrid.es/nfg/NPcd/NFG_LstPartidos', params=params, timeout=60)
+    r.encoding = 'iso-8859-1'
+    soup = BeautifulSoup(r.text, 'html.parser')
+
+    equipo_re = re.compile(r'^(\d+)\s*-\s*(.+)$')
+    matches = []
+
+    for tr in soup.find_all('tr'):
+        tds = tr.find_all('td')
+        if len(tds) < 10:
+            continue
+
+        m_local = equipo_re.match(tds[5].get_text(strip=True))
+        m_visit = equipo_re.match(tds[6].get_text(strip=True))
+        if not m_local or not m_visit:
+            continue
+
+        cod_equipo_casa, nombre_casa = m_local.groups()
+        cod_equipo_fuera, nombre_visit = m_visit.groups()
+
+        competicion = f"{tds[1].get_text(strip=True)}, {tds[2].get_text(strip=True)}"
+
+        matches.append({
+            'fecha': tds[8].get_text(strip=True),
+            'competicion': competicion,
+            'campo': tds[7].get_text(strip=True),
+            'hora': tds[9].get_text(strip=True),
+            'jornada': tds[4].get_text(strip=True),
+            'resultado': '',
+            'nombre_casa': nombre_casa.strip(),
+            'cod_equipo_casa': cod_equipo_casa,
+            'nombre_fuera': nombre_visit.strip(),
+            'cod_equipo_fuera': cod_equipo_fuera,
+        })
+
+    return matches
+
+def get_match_kit_colors(session, cod_equipo_casa, cod_equipo_fuera):
+    """Llama al mismo endpoint que el icono "Ver equipaciones" de la web para un partido concreto.
+    Devuelve los colores (1ª equipación) de ambos equipos exactamente como en ese partido.
+    El código de club no influye en el resultado (verificado), solo el código de equipo."""
+    url = "https://intranet.ffmadrid.es/nfg/NPcd/NFG_VisEquipacion"
+    params = {
+        'cod_primaria': '1000139',
+        'cod_club_casa': '0',
+        'cod_equipo_casa': cod_equipo_casa,
+        'cod_club_fuera': '0',
+        'cod_equipo_fuera': cod_equipo_fuera,
+    }
+    resultado = {'casa': None, 'fuera': None}
+    try:
+        r = session.get(url, params=params, timeout=10)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        divs = soup.find_all('div', class_='equipo')
+        for i, key in enumerate(['casa', 'fuera']):
+            if i >= len(divs):
+                continue
+            d = divs[i]
+            h3 = d.find('h3')
+            nombre = h3.get_text(strip=True) if h3 else ''
+            colores = {'camiseta': '', 'pantalon': '', 'medias': ''}
+            for p in d.find_all('p'):
+                txt = p.get_text(' ', strip=True)
+                if ':' not in txt:
+                    continue
+                label, _, valor = txt.partition(':')
+                label = label.strip()
+                valor = re.sub(r'\s+', ' ', valor).strip()
+                if 'Camiseta' in label:
+                    colores['camiseta'] = valor
+                elif 'Pantal' in label:
+                    colores['pantalon'] = valor
+                elif 'Medias' in label:
+                    colores['medias'] = valor
+            resultado[key] = {'nombre': nombre, **colores}
+    except Exception as e:
+        print(f"Aviso: no se pudo obtener equipación del partido ({cod_equipo_casa} vs {cod_equipo_fuera}): {e}")
+    return resultado
+
+def build_kit_clash_report(username, password):
+    """Genera el informe de colores de equipación usando el Listado de Partidos oficial del club
+    (más preciso que inferir por nombre: usa directamente los códigos de equipo de cada partido)."""
+    url_login = "https://intranet.ffmadrid.es/nfg/NLogin"
+    session = get_session()
+    payload = {"NUser": username, "NPass": password, "LoginAjax": "1"}
+
+    try:
+        res_login = session.post(url_login, data=payload)
+        match_est = re.search(r'var estado="(\d+)"', res_login.text)
+        estado = match_est.group(1) if match_est else "2"
+        if estado != "1":
+            return False, "Credenciales incorrectas o error de acceso.", None
+
+        cod_temporada, fecha_desde, fecha_hasta = _temporada_actual()
+        matches = fetch_temporada_matches(session, CLUB_FUENTELARREYNA_ID, cod_temporada, fecha_desde, fecha_hasta)
+        if not matches:
+            return False, "No se encontraron partidos en el Listado de Partidos de la RFFM.", None
+
+        kit_cache = _load_kit_cache()
+        report_entries = []
+
+        for match in matches:
+            somos_casa = 'FUENTELARREYNA' in match['nombre_casa'].upper()
+            somos_fuera = 'FUENTELARREYNA' in match['nombre_fuera'].upper()
+            es_visitante = somos_fuera and not somos_casa
+            if not somos_casa and not somos_fuera:
+                continue  # Defensivo: no debería ocurrir, el listado ya está filtrado por nuestro club
+            if somos_casa and somos_fuera:
+                continue  # Partido entre dos de nuestros propios equipos: no aplica el aviso de coincidencia
+
+            cache_key = f"{match['cod_equipo_casa']}_{match['cod_equipo_fuera']}"
+            if cache_key in kit_cache:
+                colores = kit_cache[cache_key]
+            else:
+                colores = get_match_kit_colors(session, match['cod_equipo_casa'], match['cod_equipo_fuera'])
+                kit_cache[cache_key] = colores
+
+            casa = colores.get('casa')
+            fuera = colores.get('fuera')
+            # El aviso de coincidencia de rojo solo aplica cuando jugamos de visitante
+            # (el rival, que juega en casa, es quien debe adaptar su color si coincide con el nuestro)
+            warning = es_visitante and bool(casa) and (_es_color_rojo(casa.get('camiseta')) or _es_color_rojo(casa.get('pantalon')))
+
+            cat, letra = detect_categoria_y_letra(match['competicion'])
+            nuestro_lado = fuera if es_visitante else casa
+            rival_lado = casa if es_visitante else fuera
+            nuestro_nombre = (nuestro_lado.get('nombre') if nuestro_lado else '') or match['nombre_fuera' if es_visitante else 'nombre_casa']
+            rival_nombre = (rival_lado.get('nombre') if rival_lado else '') or match['nombre_casa' if es_visitante else 'nombre_fuera']
+            nuestro_equipo = nuestro_nombre or f"{cat or ''} {letra or ''}".strip()
+
+            match_key = f"{match['fecha']}_{match['hora']}_{match['cod_equipo_casa']}_{match['cod_equipo_fuera']}"
+
+            report_entries.append({
+                "match_key": match_key,
+                "fecha": match['fecha'],
+                "jornada": match['jornada'],
+                "hora": match['hora'],
+                "campo": match['campo'],
+                "resultado": match['resultado'],
+                "competicion": match['competicion'],
+                "categoria": cat or '',
+                "letra": letra or '',
+                "es_visitante": es_visitante,
+                "nuestro_equipo": nuestro_equipo,
+                "rival": rival_nombre,
+                "camiseta": rival_lado.get('camiseta', '') if rival_lado else '',
+                "pantalon": rival_lado.get('pantalon', '') if rival_lado else '',
+                "medias": rival_lado.get('medias', '') if rival_lado else '',
+                "warning": warning,
+                "sin_datos": rival_lado is None
+            })
+
+        _save_kit_cache(kit_cache)
+
+        def parse_fecha_sort(f):
+            m = re.search(r'(\d{2})-(\d{2})-(\d{4})', f or '')
+            if m:
+                return (m.group(3), m.group(2), m.group(1))
+            return ('0000', '00', '00')
+
+        report_entries.sort(key=lambda x: parse_fecha_sort(x['fecha']))
+
+        report_data = {
+            "status": "success",
+            "last_updated": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+            "temporada": f"{fecha_desde} a {fecha_hasta}",
+            "entries": report_entries
+        }
+        os.makedirs(os.path.dirname(KIT_REPORT_FILE), exist_ok=True)
+        with open(KIT_REPORT_FILE, 'w', encoding='utf-8') as f:
+            json.dump(report_data, f, ensure_ascii=False, indent=2)
+
+        return True, f"Informe generado: {len(report_entries)} partidos de visitante analizados.", report_data
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return False, f"Error generando el informe: {str(e)}", None
+
+def load_kit_clash_report():
+    if os.path.exists(KIT_REPORT_FILE):
+        try:
+            with open(KIT_REPORT_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return None
+
+# --- CHECKLIST DE EQUIPACIÓN LLEVADA POR PARTIDO (llevo / devuelvo, tallas, comentario) ---
+
+CHECKLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'equipacion_checklist.json')
+
+def load_checklist_equipacion():
+    if os.path.exists(CHECKLIST_FILE):
+        try:
+            with open(CHECKLIST_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+def guardar_checklist_equipacion(match_key, datos):
+    """Actualiza (merge) los datos del checklist de un partido concreto y los persiste."""
+    checklist = load_checklist_equipacion()
+    actual = checklist.get(match_key, {})
+    actual.update(datos)
+    checklist[match_key] = actual
+    os.makedirs(os.path.dirname(CHECKLIST_FILE), exist_ok=True)
+    with open(CHECKLIST_FILE, 'w', encoding='utf-8') as f:
+        json.dump(checklist, f, ensure_ascii=False, indent=2)
+    return actual
