@@ -241,6 +241,12 @@
                 <!-- Rellenado por JS -->
             </div>
         </div>
+
+        <!-- Bloque 6: Convocatorias (Full width) -->
+        <div class="card-modern" style="grid-column: 1 / -1;">
+            <div class="card-title" style="margin-bottom: 15px;"><i class="fas fa-bell-concierge"></i> CONVOCATORIAS</div>
+            <div id="containerConvocatoriasMiEquipo"></div>
+        </div>
     </div>
 </div>
 
@@ -264,6 +270,7 @@
         renderMonthlyRankings(allAsistenciaData); // New call
         
         cargarHistorialPartidos(); // Cargar formularios de partido
+        cargarYRenderConvocatorias("{{ equipo }}", 'containerConvocatoriasMiEquipo');
     }
     
     function parseDateString(dateStr) {

@@ -1,4 +1,6 @@
 import csv
+import os
+import re
 from io import StringIO
 import json
 import gspread
@@ -16,6 +18,9 @@ from datetime import datetime # Import datetime for sorting
 
 # Creamos el Blueprint para la sección financiera
 financiero_bp = Blueprint('financiero', __name__)
+
+FACTURAS_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'facturas')
+os.makedirs(FACTURAS_FOLDER, exist_ok=True)
 
 def normalizar_cabeceras(headers):
     """Normaliza las cabeceras del Excel para que coincidan con las claves del sistema."""
@@ -70,11 +75,25 @@ def get_or_create_sheet(client, nombre_excel, sheet_name):
 def parse_date_for_sort(date_str):
     if not date_str or date_str == '-':
         return datetime.min
-    for fmt in ('%d/%m/%Y', '%Y-%m-%d', '%d-%m-%Y'):
+    s = str(date_str).strip()
+    for fmt in ('%d/%m/%Y', '%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y %H:%M:%S', '%Y-%m-%d %H:%M:%S'):
         try:
-            return datetime.strptime(date_str, fmt)
+            return datetime.strptime(s, fmt)
         except ValueError:
             continue
+    # Fallback tolerante: extraer 3 grupos numéricos (día/mes/año en cualquier orden con separador / o -)
+    # y corregir años mal tecleados (p.ej. 5 dígitos por error de escritura).
+    m = re.match(r'^(\d{1,4})[/\-](\d{1,2})[/\-](\d{1,4})', s)
+    if m:
+        g1, g2, g3 = m.groups()
+        try:
+            if len(g1) >= 4:  # YYYY-MM-DD (recortamos años con dígitos de más)
+                anio, mes, dia = int(g1[:4]), int(g2), int(g3)
+            else:  # DD/MM/YYYY
+                dia, mes, anio = int(g1), int(g2), int(g3[:4])
+            return datetime(anio, mes, dia)
+        except (ValueError, IndexError):
+            pass
     return datetime.min
 
 # Helper function to parse and format dates
@@ -312,20 +331,20 @@ def api_presupuesto():
         try:
             sheet_fin = client.open(NOMBRE_EXCEL).worksheet("FINANCIERO")
         except gspread.exceptions.WorksheetNotFound:
-            sheet_fin = client.open(NOMBRE_EXCEL).add_worksheet(title="FINANCIERO", rows="1000", cols="10")
-            sheet_fin.update('A1', [["FECHA", "Nº ASIENTO", "DEPARTAMENTO", "PILAR", "DESCRIPCION", "IMPORTE", "NOMBRE", "EQUIPO", "CONCEPTO", "ESPERADO"]])
+            sheet_fin = client.open(NOMBRE_EXCEL).add_worksheet(title="FINANCIERO", rows="1000", cols="11")
+            sheet_fin.update('A1', [["FECHA", "Nº ASIENTO", "DEPARTAMENTO", "PILAR", "DESCRIPCION", "IMPORTE", "NOMBRE", "EQUIPO", "CONCEPTO", "ESPERADO", "FACTURA"]])
 
         all_fin = sheet_fin.get_all_values()
         headers_fin_raw = all_fin[0] if all_fin else []
         headers_fin_norm = normalizar_cabeceras(headers_fin_raw)
         
         if 'N_ASIENTO' not in headers_fin_norm:
-            sheet_fin.update('A1', [["FECHA", "Nº ASIENTO", "DEPARTAMENTO", "PILAR", "DESCRIPCION", "IMPORTE", "NOMBRE", "EQUIPO", "CONCEPTO", "ESPERADO"]])
+            sheet_fin.update('A1', [["FECHA", "Nº ASIENTO", "DEPARTAMENTO", "PILAR", "DESCRIPCION", "IMPORTE", "NOMBRE", "EQUIPO", "CONCEPTO", "ESPERADO", "FACTURA"]])
             all_fin = sheet_fin.get_all_values()
             headers_fin_raw = all_fin[0]
             headers_fin_norm = normalizar_cabeceras(headers_fin_raw)
         else:
-            missing = [c for c in ["NOMBRE", "EQUIPO", "CONCEPTO", "ESPERADO"] if c not in headers_fin_norm]
+            missing = [c for c in ["NOMBRE", "EQUIPO", "CONCEPTO", "ESPERADO", "FACTURA"] if c not in headers_fin_norm]
             if missing:
                 new_headers_raw = headers_fin_raw + missing
                 sheet_fin.update('A1', [new_headers_raw])
@@ -407,7 +426,8 @@ def api_presupuesto():
             "NOMBRE": datos.get('nombre', ''),
             "EQUIPO": datos.get('equipo', ''),
             "CONCEPTO": datos.get('concepto', ''),
-            "ESPERADO": datos.get('esperado', datos.get('importe', 0))
+            "ESPERADO": datos.get('esperado', datos.get('importe', 0)),
+            "FACTURA": datos.get('factura_estado', '')
         }
 
         nueva_fila_fin = []
@@ -418,6 +438,166 @@ def api_presupuesto():
         return jsonify({"status": "success", "asiento": num_asiento})
     except Exception as e:
         print(f"Error en api_presupuesto: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@financiero_bp.route('/api/asiento/subir_factura', methods=['POST'])
+def api_subir_factura():
+    from app import client, NOMBRE_EXCEL
+
+    n_asiento = (request.form.get('n_asiento') or '').strip()
+    archivo = request.files.get('factura')
+    sin_factura = (request.form.get('sin_factura') or '').strip() == '1'
+    if not n_asiento or (not archivo and not sin_factura):
+        return jsonify({"status": "error", "message": "Falta el nº de asiento, el archivo o marcar 'sin factura'"}), 400
+
+    try:
+        if sin_factura:
+            valor_factura = 'SIN_FACTURA'
+        else:
+            ext = os.path.splitext(archivo.filename)[1].lower()
+            valor_factura = f"factura_{n_asiento}{ext}"
+            archivo.save(os.path.join(FACTURAS_FOLDER, valor_factura))
+
+        sheet_fin = client.open(NOMBRE_EXCEL).worksheet("FINANCIERO")
+        all_fin = sheet_fin.get_all_values()
+        headers_fin_norm = normalizar_cabeceras(all_fin[0])
+
+        if 'FACTURA' not in headers_fin_norm:
+            sheet_fin.update('A1', [all_fin[0] + ["FACTURA"]])
+            all_fin = sheet_fin.get_all_values()
+            headers_fin_norm = normalizar_cabeceras(all_fin[0])
+
+        idx_asi = -1
+        for variant in ['N_ASIENTO', 'Nº_ASIENTO', 'ASIENTO']:
+            if variant in headers_fin_norm:
+                idx_asi = headers_fin_norm.index(variant)
+                break
+        idx_fac = headers_fin_norm.index('FACTURA')
+
+        for i, row in enumerate(all_fin):
+            if i == 0:
+                continue
+            if idx_asi != -1 and len(row) > idx_asi and str(row[idx_asi]).strip().replace('#', '') == str(n_asiento):
+                sheet_fin.update_cell(i + 1, idx_fac + 1, valor_factura)
+                break
+
+        return jsonify({"status": "success", "archivo": valor_factura})
+    except Exception as e:
+        print(f"Error subiendo factura: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@financiero_bp.route('/api/asiento/asignar_jugador', methods=['POST'])
+def api_asignar_jugador_asiento():
+    from app import client, NOMBRE_EXCEL
+
+    datos = request.json or {}
+    n_asiento = str(datos.get('n_asiento', '')).strip()
+    accion = datos.get('accion')
+    if not n_asiento or accion not in ('asignar', 'no_asignar'):
+        return jsonify({"status": "error", "message": "Datos incompletos"}), 400
+
+    try:
+        sheet_fin = client.open(NOMBRE_EXCEL).worksheet("FINANCIERO")
+        all_fin = sheet_fin.get_all_values()
+        headers_fin_norm = normalizar_cabeceras(all_fin[0])
+
+        missing = [c for c in ["NOMBRE", "EQUIPO", "CONCEPTO", "ASIGNACION"] if c not in headers_fin_norm]
+        if missing:
+            sheet_fin.update('A1', [all_fin[0] + missing])
+            all_fin = sheet_fin.get_all_values()
+            headers_fin_norm = normalizar_cabeceras(all_fin[0])
+
+        idx_asi = -1
+        for variant in ['N_ASIENTO', 'Nº_ASIENTO', 'ASIENTO']:
+            if variant in headers_fin_norm:
+                idx_asi = headers_fin_norm.index(variant)
+                break
+
+        idx_fila = -1
+        fila_actual = None
+        for i, row in enumerate(all_fin):
+            if i == 0:
+                continue
+            if idx_asi != -1 and len(row) > idx_asi and str(row[idx_asi]).strip().replace('#', '') == n_asiento:
+                idx_fila = i + 1
+                fila_actual = row
+                break
+        if idx_fila == -1:
+            return jsonify({"status": "error", "message": "Asiento no encontrado"}), 404
+
+        idx_asignacion = headers_fin_norm.index('ASIGNACION')
+
+        if accion == 'no_asignar':
+            sheet_fin.update_cell(idx_fila, idx_asignacion + 1, 'NO_ASIGNAR')
+            return jsonify({"status": "success"})
+
+        equipo = (datos.get('equipo') or '').strip()
+        nombre = (datos.get('nombre') or '').strip()
+        concepto = (datos.get('concepto') or '').strip()
+        if not equipo or not nombre or not concepto:
+            return jsonify({"status": "error", "message": "Faltan equipo, jugador o concepto"}), 400
+
+        idx_nombre = headers_fin_norm.index('NOMBRE')
+        idx_equipo = headers_fin_norm.index('EQUIPO')
+        idx_concepto = headers_fin_norm.index('CONCEPTO')
+        idx_pilar = headers_fin_norm.index('PILAR') if 'PILAR' in headers_fin_norm else -1
+        idx_importe = headers_fin_norm.index('IMPORTE') if 'IMPORTE' in headers_fin_norm else -1
+        idx_descripcion = headers_fin_norm.index('DESCRIPCION') if 'DESCRIPCION' in headers_fin_norm else -1
+        idx_fecha = headers_fin_norm.index('FECHA') if 'FECHA' in headers_fin_norm else -1
+
+        importe = parse_amount(fila_actual[idx_importe]) if idx_importe != -1 and len(fila_actual) > idx_importe else 0
+        fecha_actual = fila_actual[idx_fecha] if idx_fecha != -1 and len(fila_actual) > idx_fecha else ''
+
+        updates = [
+            {'range': f"'FINANCIERO'!{rowcol_to_a1(idx_fila, idx_nombre + 1)}", 'values': [[nombre]]},
+            {'range': f"'FINANCIERO'!{rowcol_to_a1(idx_fila, idx_equipo + 1)}", 'values': [[equipo]]},
+            {'range': f"'FINANCIERO'!{rowcol_to_a1(idx_fila, idx_concepto + 1)}", 'values': [[concepto]]},
+            {'range': f"'FINANCIERO'!{rowcol_to_a1(idx_fila, idx_asignacion + 1)}", 'values': [['']]},
+        ]
+        if idx_pilar != -1:
+            updates.append({'range': f"'FINANCIERO'!{rowcol_to_a1(idx_fila, idx_pilar + 1)}", 'values': [['Cuotas']]})
+        sheet_fin.spreadsheet.values_batch_update({'valueInputOption': 'USER_ENTERED', 'data': updates})
+
+        # Reflejar también en PAGOS JUGADORES, igual que en el alta normal de un asiento
+        try:
+            sheet_pj = client.open(NOMBRE_EXCEL).worksheet("PAGOS JUGADORES")
+        except gspread.exceptions.WorksheetNotFound:
+            sheet_pj = client.open(NOMBRE_EXCEL).add_worksheet(title="PAGOS JUGADORES", rows="100", cols="20")
+            sheet_pj.append_row(["FECHA", "EQUIPO", "NOMBRE", "TIPO PAGO", "FORMA PAGO", "CONCEPTO", "PAGADO", "ESPERADO"])
+
+        all_pj = sheet_pj.get_all_values()
+        headers_pj = normalizar_cabeceras(all_pj[0]) if all_pj else []
+        idx_eq_pj = headers_pj.index('EQUIPO') if 'EQUIPO' in headers_pj else 1
+        idx_nom_pj = headers_pj.index('NOMBRE') if 'NOMBRE' in headers_pj else 2
+        idx_con_pj = headers_pj.index('CONCEPTO') if 'CONCEPTO' in headers_pj else 5
+        idx_pag_pj = headers_pj.index('PAGADO') if 'PAGADO' in headers_pj else 6
+
+        idx_existente = -1
+        con_norm = normalizar_concepto_interno(concepto)
+        for i, row in enumerate(all_pj):
+            if i == 0:
+                continue
+            if len(row) > max(idx_eq_pj, idx_nom_pj, idx_con_pj):
+                if (row[idx_eq_pj].strip().lower() == equipo.lower() and
+                        row[idx_nom_pj].strip().lower() == nombre.lower() and
+                        normalizar_concepto_interno(row[idx_con_pj]) == con_norm):
+                    idx_existente = i + 1
+                    break
+
+        if idx_existente != -1:
+            sheet_pj.update_cell(idx_existente, idx_pag_pj + 1, importe)
+        else:
+            nueva = [''] * len(headers_pj)
+            nueva[0] = fecha_actual
+            nueva[idx_eq_pj] = equipo
+            nueva[idx_nom_pj] = nombre
+            nueva[idx_con_pj] = concepto
+            nueva[idx_pag_pj] = importe
+            sheet_pj.append_row(nueva)
+
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error asignando jugador a asiento: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @financiero_bp.route('/api/borrar_pago', methods=['POST'])

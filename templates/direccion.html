@@ -526,6 +526,7 @@
         {% if usuario|lower == 'admin' %}
         <div class="tab-item" onclick="switchTab(event, 'tab-usuarios')">USUARIOS Y CONTRASEÑAS</div>
         {% endif %}
+        <div class="tab-item" onclick="switchTab(event, 'tab-push')">PUSH</div>
     </div>
 
     <!-- SUBPESTAÑA: COORDINACIÓN -->
@@ -655,6 +656,17 @@
             <div style="margin-top: 10px; font-size: 11px; color: #999; font-weight: 800; text-align: center;">
                 * Haz clic en el <i class="fas fa-check-circle" style="color:#10b981;"></i> para ver los detalles del informe del entrenador.
             </div>
+        </div>
+
+        <!-- Convocatorias -->
+        <div style="margin-top: 30px; border-top: 3px solid #E31E24; padding-top: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="font-weight: 900; text-transform: uppercase; color: #333; margin: 0;"><i class="fas fa-clipboard-list" style="color: #E31E24;"></i> Convocatorias</h3>
+                <button onclick="abrirModalActualizarConvocatorias()" style="padding: 9px 16px; background: #1e293b; color: white; border: none; border-radius: 8px; font-weight: 800; font-size: 11px; cursor: pointer;">
+                    <i class="fas fa-rotate"></i> ACTUALIZAR CONVOCATORIAS
+                </button>
+            </div>
+            <div id="containerConvocatoriasCoord" class="card-coord"></div>
         </div>
 
         <!-- Calendario de Tecnificaciones -->
@@ -867,6 +879,46 @@
             <div id="coloresRivalesContainer">
                 <div style="text-align: center; padding: 30px; color: #999;"><i class="fas fa-spinner fa-spin"></i> Cargando informe...</div>
             </div>
+        </div>
+    </div>
+
+    <div id="tab-push" class="tab-content">
+        <div class="card-coord" style="padding: 22px; max-width: 480px;">
+            <h3 style="margin: 0 0 14px 0; font-size: 14px; font-weight: 900; color: #1e293b;"><i class="fas fa-bell" style="color:#E31E24; margin-right: 6px;"></i> Enviar aviso push</h3>
+
+            <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 5px;">Partido relacionado (opcional)</label>
+            <select id="pushTabSelectPartido" style="width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid #ddd; font-size: 12px; box-sizing: border-box; margin-bottom: 14px; font-family: inherit;">
+                <option value="">— Ninguno —</option>
+            </select>
+
+            <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 5px;">Usuario destinatario (intranet)</label>
+            <input type="text" id="pushTabDestinatario" placeholder="ej: admin" style="width: 100%; padding: 9px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 12px; box-sizing: border-box; margin-bottom: 14px; font-family: inherit;">
+
+            <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 5px;">Comentario</label>
+            <textarea id="pushTabComentario" rows="4" style="width: 100%; padding: 9px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 12px; resize: vertical; box-sizing: border-box; font-family: inherit; margin-bottom: 14px;"></textarea>
+
+            <button onclick="enviarPushTab()" style="width: 100%; background: #E31E24; color: white; border: none; border-radius: 9px; padding: 11px; font-weight: 800; font-size: 13px; cursor: pointer; font-family: inherit;">
+                <i class="fas fa-paper-plane"></i> ENVIAR PUSH
+            </button>
+            <div id="pushTabEstado" style="font-size: 11px; margin-top: 10px; text-align: center; font-weight: 700;"></div>
+        </div>
+    </div>
+
+    <!-- MODAL ACTUALIZAR CONVOCATORIAS -->
+    <div id="modalActualizarConvocatorias" class="modal-backdrop" style="display:none; position:fixed; z-index:30000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:16px; padding:24px; width:380px; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+            <h3 style="margin:0 0 6px 0; font-size:14px; font-weight:900; color:#1e293b;">Actualizar convocatorias</h3>
+            <p style="margin:0 0 14px 0; font-size:11px; color:#999;">Descarga y procesa las actas de todos los partidos de la temporada. Puede tardar varios minutos.</p>
+            <div id="convErrorBanner" style="display:none; background:#fee2e2; color:#dc2626; padding:8px 10px; border-radius:8px; font-size:11px; margin-bottom:10px;"></div>
+            <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:5px;">Usuario RFFM</label>
+            <input type="text" id="convUsuarioRffm" placeholder="ej: C30048" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:8px; font-size:12px; box-sizing:border-box; margin-bottom:10px; font-family:inherit;">
+            <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:5px;">Contraseña RFFM</label>
+            <input type="password" id="convPasswordRffm" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:8px; font-size:12px; box-sizing:border-box; margin-bottom:14px; font-family:inherit;">
+            <div style="display:flex; gap:10px;">
+                <button onclick="document.getElementById('modalActualizarConvocatorias').style.display='none'" style="flex:1; background:#eee; color:#333; border:none; border-radius:9px; padding:10px; font-weight:800; font-size:12px; cursor:pointer; font-family:inherit;">CERRAR</button>
+                <button id="btnLanzarActualizarConv" onclick="lanzarActualizarConvocatorias()" style="flex:1; background:#E31E24; color:white; border:none; border-radius:9px; padding:10px; font-weight:800; font-size:12px; cursor:pointer; font-family:inherit;">INICIAR</button>
+            </div>
+            <div id="convEstadoActualizar" style="font-size:11px; margin-top:10px; text-align:center; font-weight:700;"></div>
         </div>
     </div>
 
@@ -2028,6 +2080,13 @@
             if (tabId === 'tab-otros') {
                 cargarInformeColoresExistente();
             }
+            if (tabId === 'tab-push') {
+                if (coloresEntriesCache && coloresEntriesCache.length) {
+                    prepararTabPush();
+                } else {
+                    cargarInformeColoresExistente().then(prepararTabPush);
+                }
+            }
         } catch (err) { console.error("Error switchTab:", err); }
     }
 
@@ -2317,8 +2376,8 @@
             const ck = checklistEquipacionCache[e.match_key] || {};
             const tieneAlgo = ['camiseta', 'pantalon', 'medias'].some(c => ck[c + '_llevo'] || ck[c + '_devuelvo']) || (ck.tallas && Object.values(ck.tallas).some(v => v)) || ck.comentario;
             html += `<tr style="${rowBg}">
-                <td style="text-align:center;">
-                    <button onclick="abrirPopoverEquipacion(event, '${e.match_key}')" class="btn-fin" style="background:${tieneAlgo ? '#1e293b' : '#f1f5f9'}; color:${tieneAlgo ? 'white' : '#64748b'}; font-size:11px; padding:6px 10px;" title="Equipación llevada">
+                <td style="text-align:center; white-space:nowrap;">
+                    <button onclick="abrirPopoverEquipacion(event, '${e.match_key}')" class="btn-fin" style="background:${tieneAlgo ? '#1e293b' : '#f1f5f9'}; color:${tieneAlgo ? 'white' : '#64748b'}; font-size:11px; padding:6px 9px;" title="Equipación llevada">
                         <i class="fas fa-shirt"></i>
                     </button>
                 </td>
@@ -2429,6 +2488,104 @@
             pop.style.display = 'none';
         }
     });
+
+    function prepararTabPush() {
+        const select = document.getElementById('pushTabSelectPartido');
+        const opciones = (coloresEntriesCache || []).map(e => {
+            const nombre = nombreEquipoConCategoria(e);
+            const txt = `${e.fecha || ''} - ${nombre || '?'} vs ${e.rival || '?'}${e.warning ? ' ⚠ COINCIDE ROJO' : ''}`;
+            return { txt, contexto: `${nombre || '?'} vs ${e.rival || '?'} (${e.fecha || ''})` };
+        });
+        select.innerHTML = '<option value="">— Ninguno —</option>' + opciones.map((o, i) => `<option value="${i}">${o.txt}</option>`).join('');
+        select.dataset.contextos = JSON.stringify(opciones.map(o => o.contexto));
+        document.getElementById('pushTabEstado').textContent = '';
+    }
+
+    async function enviarPushTab() {
+        const usuario = document.getElementById('pushTabDestinatario').value.trim();
+        const comentario = document.getElementById('pushTabComentario').value.trim();
+        const select = document.getElementById('pushTabSelectPartido');
+        const estado = document.getElementById('pushTabEstado');
+        let contexto = '';
+        if (select.value !== '') {
+            const contextos = JSON.parse(select.dataset.contextos || '[]');
+            contexto = contextos[parseInt(select.value)] || '';
+        }
+        if (!usuario || !comentario) {
+            estado.style.color = '#dc2626';
+            estado.textContent = 'Indica usuario destinatario y comentario.';
+            return;
+        }
+        estado.style.color = '#64748b';
+        estado.textContent = 'Enviando...';
+        try {
+            const res = await fetch('/api/informes/enviar_push_equipacion', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ usuario, comentario, contexto })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                estado.style.color = '#16a34a';
+                estado.textContent = '✓ Enviado correctamente.';
+                document.getElementById('pushTabComentario').value = '';
+            } else {
+                estado.style.color = '#dc2626';
+                estado.textContent = data.message || 'Error al enviar.';
+            }
+        } catch (e) {
+            estado.style.color = '#dc2626';
+            estado.textContent = 'Error de conexión.';
+        }
+    }
+
+    function abrirModalActualizarConvocatorias() {
+        document.getElementById('convErrorBanner').style.display = 'none';
+        document.getElementById('convEstadoActualizar').textContent = '';
+        document.getElementById('modalActualizarConvocatorias').style.display = 'flex';
+    }
+
+    async function lanzarActualizarConvocatorias() {
+        const usuario_rffm = document.getElementById('convUsuarioRffm').value.trim();
+        const password_rffm = document.getElementById('convPasswordRffm').value.trim();
+        const estado = document.getElementById('convEstadoActualizar');
+        const banner = document.getElementById('convErrorBanner');
+        banner.style.display = 'none';
+        if (!usuario_rffm || !password_rffm) {
+            banner.style.display = 'block';
+            banner.textContent = 'Indica usuario y contraseña.';
+            return;
+        }
+        const btn = document.getElementById('btnLanzarActualizarConv');
+        btn.disabled = true;
+        estado.style.color = '#64748b';
+        estado.textContent = 'Descargando y procesando actas... esto puede tardar varios minutos.';
+        try {
+            const res = await fetch('/api/convocatorias', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ usuario_rffm, password_rffm })
+            });
+            const data = await res.json();
+            if (data.entries) {
+                estado.style.color = '#16a34a';
+                estado.textContent = data.message || 'Convocatorias actualizadas correctamente.';
+                convocatoriasCacheGlobal = null;
+                const equipo = document.getElementById('selectEquipoCoord').value;
+                if (equipo) cargarYRenderConvocatorias(equipo, 'containerConvocatoriasCoord');
+            } else {
+                banner.style.display = 'block';
+                banner.textContent = data.message || 'Error al actualizar.';
+                estado.textContent = '';
+            }
+        } catch (e) {
+            banner.style.display = 'block';
+            banner.textContent = 'Error de conexión.';
+            estado.textContent = '';
+        } finally {
+            btn.disabled = false;
+        }
+    }
 
     // Full Calendar Logic
     let currentCalendarDate = new Date(); // Tracks the month/year of the calendar
@@ -2573,11 +2730,14 @@
         if (!equipo) {
             titulo.style.display = 'none';
             cuerpo.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 40px; color: #999; font-weight: 700;">Selecciona un equipo para comenzar</td></tr>';
+            document.getElementById('containerConvocatoriasCoord').innerHTML = '<div style="text-align:center; padding:20px; color:#999; font-size:12px;">Selecciona un equipo arriba para ver sus convocatorias.</div>';
             return;
         }
 
         titulo.innerText = equipo;
         titulo.style.display = 'block';
+
+        cargarYRenderConvocatorias(equipo, 'containerConvocatoriasCoord');
 
         const filtrados = jugadoresRaw.filter(j => j.EQUIPO === equipo);
         cuerpo.innerHTML = filtrados.map(j => `

@@ -203,6 +203,15 @@
         font-size: 10px;
         font-weight: 900;
     }
+    .compensacion-input {
+        appearance: textfield;
+        -moz-appearance: textfield;
+    }
+    .compensacion-input::-webkit-inner-spin-button,
+    .compensacion-input::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
 </style>
 
 <div style="padding: 10px;">
@@ -221,6 +230,12 @@
                 <h2><i class="fas fa-file-invoice-dollar" style="color: #E31E24; margin-right: 10px;"></i> PRESUPUESTO</h2>
                 <button class="btn-fin" style="background: #333; color: white; display: flex; align-items: center; gap: 8px; padding: 8px 15px;" onclick="abrirEstadisticas()">
                     <i class="fas fa-chart-line"></i> ESTADÍSTICAS
+                </button>
+                <button id="btnFacturasFaltantes" class="btn-fin" style="background: #fff; border: 1px solid #fca5a5; color: #dc2626; display: none; align-items: center; gap: 8px; padding: 8px 15px;" onclick="toggleDetalleFacturasFaltantes()">
+                    <i class="fas fa-file-circle-exclamation"></i> <span id="txtFacturasFaltantes">0</span> FACTURAS PENDIENTES
+                </button>
+                <button id="btnCobrosPendientes" class="btn-fin" style="background: #fff; border: 1px solid #fcd34d; color: #b45309; display: none; align-items: center; gap: 8px; padding: 8px 15px;" onclick="toggleDetalleCobrosPendientes()">
+                    <i class="fas fa-user-clock"></i> <span id="txtCobrosPendientes">0</span> COBROS PENDIENTES ASIGNAR
                 </button>
             </div>
             <div style="display: flex; gap: 10px;">
@@ -246,8 +261,35 @@
                 </select>
                 <input type="text" id="asientoPilar" placeholder="Pilar">
                 <input type="text" id="asientoDesc" placeholder="Descripción">
-                <input type="number" id="asientoImporte" placeholder="Importe €">
+                <input type="number" id="asientoImporte" placeholder="Importe €" oninput="onCambioImporteAsiento()">
                 <button class="btn-fin" style="background: #E31E24; color: white;" onclick="guardarAsientoManual(this)">Guardar asiento</button>
+            </div>
+
+            <!-- Ingreso (+): asociar el asiento a un jugador, para que aparezca también en Pago Jugadores -->
+            <div id="filaAsientoJugador" style="display:none; margin-top: 10px;">
+                <div class="form-asiento">
+                    <select id="asientoEquipoAsoc" onchange="actualizarJugadoresAsiento()">
+                        <option value="">Equipo...</option>
+                        {% for equipo in equipos %}
+                        <option value="{{ equipo }}">{{ equipo }}</option>
+                        {% endfor %}
+                    </select>
+                    <select id="asientoJugadorAsoc" onchange="actualizarGridConceptoAsiento()">
+                        <option value="">Jugador...</option>
+                    </select>
+                    <input type="hidden" id="asientoConceptoAsoc" value="">
+                    <span style="font-size: 10px; color: #999; align-self: center;">Elige el concepto en la cuadrícula y también se reflejará en PAGO JUGADORES.</span>
+                </div>
+                <div id="gridConceptoAsientoCont" style="margin-top: 8px; overflow-x: auto;"></div>
+                <div id="conceptoAsientoSeleccionadoTxt" style="font-size: 11px; font-weight: 800; color: #16a34a; margin-top: 6px;"></div>
+            </div>
+
+            <!-- Gasto (-): adjuntar factura o marcar como sin factura -->
+            <div id="filaAsientoFactura" style="display:none; margin-top: 10px; align-items: center;" class="form-asiento">
+                <input type="file" id="asientoFacturaFile" accept=".pdf,.jpg,.jpeg,.png" onchange="document.getElementById('asientoSinFactura').checked=false">
+                <label style="display:flex; align-items:center; gap:6px; font-size: 11px; font-weight: 700; color: #555; cursor: pointer;">
+                    <input type="checkbox" id="asientoSinFactura" onchange="if(this.checked){document.getElementById('asientoFacturaFile').value='';}"> Sin factura
+                </label>
             </div>
         </div>
 
@@ -287,6 +329,16 @@
             <input type="text" id="filtroPilar" placeholder="Pilar..." oninput="aplicarFiltros()">
         </div>
 
+        <div id="panelDetalleFacturasFaltantes" style="display:none; padding: 12px 20px; border-top: 1px solid #fecaca; background: #fef2f2;">
+            <div style="font-size: 10px; font-weight: 900; color: #dc2626; text-transform: uppercase; margin-bottom: 8px;">Líneas de gasto sin factura adjunta</div>
+            <div id="listaDetalleFacturasFaltantes" style="display:flex; flex-direction:column; gap:4px;"></div>
+        </div>
+
+        <div id="panelDetalleCobrosPendientes" style="display:none; padding: 12px 20px; border-top: 1px solid #fde68a; background: #fffbeb;">
+            <div style="font-size: 10px; font-weight: 900; color: #b45309; text-transform: uppercase; margin-bottom: 8px;">Cobros (+) sin asignar a jugador</div>
+            <div id="listaDetalleCobrosPendientes" style="display:flex; flex-direction:column; gap:4px;"></div>
+        </div>
+
         <div style="padding: 10px 20px; border-top: 1px solid #eee; background: #f8f9fa;">
             <h3 style="font-size: 11px; font-weight: 900; color: #666; margin: 0; text-transform: uppercase;">Historial de Asientos</h3>
         </div>
@@ -295,12 +347,13 @@
             <table class="fin-table" id="tablaPresupuesto">
                 <thead>
                     <tr>
-                        <th>FECHA</th>
-                        <th onclick="toggleSortAsiento()" style="cursor: pointer; background: #f1f5f9;">Nº ASIENTO <i id="iconSortAsi" class="fas fa-sort" style="margin-left: 5px; opacity: 0.5;"></i></th>
-                        <th>DEPARTAMENTO</th>
-                        <th>PILAR</th>
-                        <th>DESCRIPCIÓN</th>
-                        <th>IMPORTE</th>
+                        <th onclick="toggleSortColumna('FECHA')" style="cursor: pointer;">FECHA <i id="iconSort_FECHA" class="fas fa-sort icon-sort-col" style="margin-left: 5px; opacity: 0.5;"></i></th>
+                        <th onclick="toggleSortColumna('Nº_ASIENTO_GLOBAL')" style="cursor: pointer; background: #f1f5f9;">Nº ASIENTO <i id="iconSort_Nº_ASIENTO_GLOBAL" class="fas fa-sort-down icon-sort-col" style="margin-left: 5px; opacity: 1;"></i></th>
+                        <th onclick="toggleSortColumna('DEPARTAMENTO')" style="cursor: pointer;">DEPARTAMENTO <i id="iconSort_DEPARTAMENTO" class="fas fa-sort icon-sort-col" style="margin-left: 5px; opacity: 0.5;"></i></th>
+                        <th onclick="toggleSortColumna('PILAR')" style="cursor: pointer;">PILAR <i id="iconSort_PILAR" class="fas fa-sort icon-sort-col" style="margin-left: 5px; opacity: 0.5;"></i></th>
+                        <th onclick="toggleSortColumna('DESCRIPCION')" style="cursor: pointer;">DESCRIPCIÓN <i id="iconSort_DESCRIPCION" class="fas fa-sort icon-sort-col" style="margin-left: 5px; opacity: 0.5;"></i></th>
+                        <th onclick="toggleSortColumna('IMPORTE')" style="cursor: pointer;">IMPORTE <i id="iconSort_IMPORTE" class="fas fa-sort icon-sort-col" style="margin-left: 5px; opacity: 0.5;"></i></th>
+                        <th onclick="toggleSortColumna('FACTURA')" style="cursor: pointer; text-align: center;">FACTURA <i id="iconSort_FACTURA" class="fas fa-sort icon-sort-col" style="margin-left: 5px; opacity: 0.5;"></i></th>
                         <th style="text-align: center;">ACCIONES</th>
                     </tr>
                 </thead>
@@ -538,6 +591,45 @@
             </div>
         </div>
     </div>
+
+<!-- BOCADILLO (POPOVER) ADJUNTAR FACTURA / SIN FACTURA -->
+<div id="popoverFactura" style="display:none; position:fixed; background:white; border:1px solid #cbd5e1; border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,0.2); z-index:30000; width:260px; padding:16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <span style="font-size:11px; font-weight:900; color:#1e293b;">Factura del gasto</span>
+        <span onclick="document.getElementById('popoverFactura').style.display='none'" style="cursor:pointer; color:#999; font-size:15px; line-height:1;">&times;</span>
+    </div>
+    <label style="font-size:9px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:5px;">Adjuntar archivo</label>
+    <input type="file" id="popFacturaFile" accept=".pdf,.jpg,.jpeg,.png" style="width:100%; font-size:11px; margin-bottom:10px;">
+    <button onclick="adjuntarFacturaPopover()" style="width:100%; background:#E31E24; color:white; border:none; border-radius:8px; padding:8px; font-weight:800; font-size:11px; cursor:pointer; margin-bottom:8px;">ADJUNTAR</button>
+    <button onclick="marcarSinFacturaPopover()" style="width:100%; background:#f1f5f9; color:#475569; border:none; border-radius:8px; padding:8px; font-weight:800; font-size:11px; cursor:pointer;">SIN FACTURA</button>
+    <div id="popFacturaEstado" style="font-size:10px; margin-top:8px; text-align:center; font-weight:700;"></div>
+</div>
+
+<!-- BOCADILLO (POPOVER) ASIGNAR COBRO A JUGADOR -->
+<div id="popoverAsignarJugador" style="display:none; position:fixed; background:white; border:1px solid #cbd5e1; border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,0.2); z-index:30000; width:420px; padding:16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <span style="font-size:11px; font-weight:900; color:#1e293b;">Asignar cobro a jugador</span>
+        <span onclick="document.getElementById('popoverAsignarJugador').style.display='none'" style="cursor:pointer; color:#999; font-size:15px; line-height:1;">&times;</span>
+    </div>
+    <div style="display:flex; gap:8px; margin-bottom:8px;">
+        <select id="asignEquipoSel" onchange="actualizarJugadoresAsignar()" style="flex:1; padding:7px; border-radius:7px; border:1px solid #ddd; font-size:11px;">
+            <option value="">Equipo...</option>
+            {% for equipo in equipos %}
+            <option value="{{ equipo }}">{{ equipo }}</option>
+            {% endfor %}
+        </select>
+        <select id="asignJugadorSel" onchange="actualizarGridConceptoAsignar()" style="flex:1; padding:7px; border-radius:7px; border:1px solid #ddd; font-size:11px;">
+            <option value="">Jugador...</option>
+        </select>
+    </div>
+    <div id="gridConceptoAsignarCont" style="overflow-x:auto; margin-bottom:8px;"></div>
+    <div id="conceptoAsignarSeleccionadoTxt" style="font-size:10px; font-weight:800; color:#16a34a; margin-bottom:8px;"></div>
+    <div style="display:flex; gap:8px;">
+        <button onclick="confirmarAsignarJugador()" style="flex:1; background:#E31E24; color:white; border:none; border-radius:8px; padding:8px; font-weight:800; font-size:11px; cursor:pointer;">ASIGNAR</button>
+        <button onclick="marcarNoAsignarJugador()" style="flex:1; background:#f1f5f9; color:#475569; border:none; border-radius:8px; padding:8px; font-weight:800; font-size:11px; cursor:pointer;">NO ASIGNAR</button>
+    </div>
+    <div id="popAsignarEstado" style="font-size:10px; margin-top:8px; text-align:center; font-weight:700;"></div>
+</div>
 
 <!-- MODAL ACCIONES ASIENTO -->
 <div id="modalAccionAsiento" class="modal">
@@ -2432,8 +2524,85 @@ async function actualizarPago(btn) {
     }
 }
 
+function onCambioImporteAsiento() {
+    const val = parseFloat(document.getElementById('asientoImporte').value);
+    document.getElementById('filaAsientoJugador').style.display = (val > 0) ? 'grid' : 'none';
+    document.getElementById('filaAsientoFactura').style.display = (val < 0) ? 'grid' : 'none';
+}
+
+function actualizarJugadoresAsiento() {
+    const equipo = document.getElementById('asientoEquipoAsoc').value;
+    const sel = document.getElementById('asientoJugadorAsoc');
+    const nombres = jugadoresRaw.filter(p => p.EQUIPO === equipo).map(p => p.NOMBRE);
+    sel.innerHTML = '<option value="">Jugador...</option>' + nombres.map(n => `<option value="${n}">${n}</option>`).join('');
+    actualizarGridConceptoAsiento();
+}
+
+function actualizarGridConceptoAsiento() {
+    const equipo = document.getElementById('asientoEquipoAsoc').value;
+    const nombre = document.getElementById('asientoJugadorAsoc').value;
+    const cont = document.getElementById('gridConceptoAsientoCont');
+    document.getElementById('asientoConceptoAsoc').value = '';
+    document.getElementById('conceptoAsientoSeleccionadoTxt').textContent = '';
+
+    if (!equipo || !nombre) { cont.innerHTML = ''; return; }
+
+    const filaOriginal = document.querySelector(`.fila-jugador[data-equipo="${CSS.escape(equipo)}"][data-nombre="${CSS.escape(nombre)}"]`);
+    if (!filaOriginal) {
+        cont.innerHTML = '<div style="font-size:10px; color:#999;">Sin datos de pagos para este jugador.</div>';
+        return;
+    }
+
+    // Las primeras 14 celdas .pago-cell de la fila real son: Inscripción + Enero..Diciembre + Pack Ropa
+    const celdasOrigen = Array.from(filaOriginal.querySelectorAll('td.pago-cell')).slice(0, 14);
+    const labels = ['INSCR.', 'ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC', 'ROPA'];
+    const tipoPago = filaOriginal.querySelector('.span-tipo-pago')?.innerText || '-';
+    const formaPago = filaOriginal.querySelector('.span-forma-pago')?.innerText || '-';
+
+    let html = `<table style="border-collapse:collapse; font-size:10px;">
+        <thead><tr>
+            <th style="padding:5px 8px; background:#f8f9fa; border:1px solid #e5e7eb; text-align:left;">${tipoPago} · ${formaPago}</th>
+            ${labels.map(l => `<th style="padding:5px 8px; background:#f8f9fa; border:1px solid #e5e7eb; font-size:9px; color:#94a3b8;">${l}</th>`).join('')}
+        </tr></thead>
+        <tbody><tr>
+            <td style="padding:5px 8px; border:1px solid #e5e7eb; font-weight:700; white-space:nowrap;">${nombre}</td>
+            <td colspan="${labels.length}" id="gridConceptoAsientoCeldas" style="padding:0; border:1px solid #e5e7eb;">
+                <div style="display:grid; grid-template-columns: repeat(${labels.length}, 1fr);"></div>
+            </td>
+        </tr></tbody>
+    </table>`;
+    cont.innerHTML = html;
+
+    const fila = cont.querySelector('#gridConceptoAsientoCeldas > div');
+    celdasOrigen.forEach(origCell => {
+        const clon = origCell.cloneNode(true);
+        clon.removeAttribute('onclick');
+        clon.style.cursor = 'pointer';
+        clon.style.textAlign = 'center';
+        clon.style.padding = '6px 4px';
+        clon.style.fontSize = '9px';
+        clon.style.borderRight = '1px solid #e5e7eb';
+        clon.addEventListener('click', () => seleccionarConceptoDesdeGrid(clon));
+        fila.appendChild(clon);
+    });
+}
+
+function seleccionarConceptoDesdeGrid(celda) {
+    const concepto = celda.dataset.concepto || '';
+    if (!concepto) return;
+    document.getElementById('asientoConceptoAsoc').value = concepto;
+
+    const cont = document.getElementById('gridConceptoAsientoCont');
+    cont.querySelectorAll('#gridConceptoAsientoCeldas > div > td, #gridConceptoAsientoCeldas > div > *').forEach(c => c.style.outline = '');
+    celda.style.outline = '3px solid #E31E24';
+
+    const labelsMap = { 'Inscripción': 'Inscripción', '01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio','07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre', 'PACK_ROPA':'Pack Ropa' };
+    document.getElementById('conceptoAsientoSeleccionadoTxt').textContent = `Concepto seleccionado: ${labelsMap[concepto] || concepto}`;
+}
+
 async function guardarAsientoManual(btn) {
     if (isSaving) return;
+    const importeVal = parseFloat(document.getElementById('asientoImporte').value);
     const asiento = {
         fecha: document.getElementById('asientoFecha').value,
         departamento: document.getElementById('asientoDepto').value,
@@ -2443,7 +2612,55 @@ async function guardarAsientoManual(btn) {
         tipo_origen: 'MANUAL'
     };
 
+    if (importeVal > 0) {
+        const equipoAsoc = document.getElementById('asientoEquipoAsoc').value;
+        const jugadorAsoc = document.getElementById('asientoJugadorAsoc').value;
+        const conceptoAsoc = document.getElementById('asientoConceptoAsoc').value;
+        if (equipoAsoc && jugadorAsoc && conceptoAsoc) {
+            const filaReal = document.querySelector(`.fila-jugador[data-equipo="${CSS.escape(equipoAsoc)}"][data-nombre="${CSS.escape(jugadorAsoc)}"]`);
+            const celdaReal = filaReal ? Array.from(filaReal.querySelectorAll('td.pago-cell')).find(td => td.dataset.concepto === conceptoAsoc) : null;
+            const esperadoReal = celdaReal ? (parseFloat(celdaReal.dataset.esperado) || 0) : 0;
+
+            if (celdaReal && (celdaReal.classList.contains('pago-verde') || celdaReal.classList.contains('pago-naranja'))) {
+                alert('Este concepto ya tiene un pago registrado para este jugador. Edítalo desde la pestaña PAGO JUGADORES.');
+                return;
+            }
+
+            if (esperadoReal > 0 && importeVal > esperadoReal) {
+                // El importe supera lo esperado para ese concepto: abrimos aquí mismo el reparto
+                // de sobrante (mismo flujo que en PAGO JUGADORES) sin cambiar de pestaña.
+                seleccionarPago({ stopPropagation: () => {}, ctrlKey: false }, celdaReal, conceptoAsoc);
+                abrirModalCompensacion(importeVal, esperadoReal, btn);
+                ['asientoFecha', 'asientoPilar', 'asientoDesc', 'asientoImporte'].forEach(id => document.getElementById(id).value = "");
+                document.getElementById('asientoEquipoAsoc').value = "";
+                document.getElementById('asientoJugadorAsoc').innerHTML = '<option value="">Jugador...</option>';
+                document.getElementById('asientoConceptoAsoc').value = "";
+                document.getElementById('gridConceptoAsientoCont').innerHTML = "";
+                document.getElementById('conceptoAsientoSeleccionadoTxt').textContent = "";
+                document.getElementById('filaAsientoJugador').style.display = 'none';
+                return;
+            }
+
+            asiento.pilar = 'Cuotas';
+            asiento.equipo = equipoAsoc;
+            asiento.nombre = jugadorAsoc;
+            asiento.concepto = conceptoAsoc;
+        }
+    }
+
+    let archivoFactura = null;
+    if (importeVal < 0) {
+        const fileInput = document.getElementById('asientoFacturaFile');
+        archivoFactura = fileInput.files[0] || null;
+        if (document.getElementById('asientoSinFactura').checked) {
+            asiento.factura_estado = 'SIN_FACTURA';
+        }
+    }
+
     if (!asiento.fecha || !asiento.importe) return alert("Fecha e Importe son obligatorios");
+    if (importeVal < 0 && !archivoFactura && !document.getElementById('asientoSinFactura').checked) {
+        return alert("Para un gasto, adjunta la factura o marca 'Sin factura'.");
+    }
 
     btn.disabled = true;
     isSaving = true;
@@ -2456,9 +2673,25 @@ async function guardarAsientoManual(btn) {
         });
 
         if (res.ok) {
+            const data = await res.json();
+            if (archivoFactura && data.asiento) {
+                const fd = new FormData();
+                fd.append('n_asiento', data.asiento);
+                fd.append('factura', archivoFactura);
+                await fetch('/api/asiento/subir_factura', { method: 'POST', body: fd });
+            }
             await cargarPresupuesto();
             // Limpiar campos
             ['asientoFecha', 'asientoPilar', 'asientoDesc', 'asientoImporte'].forEach(id => document.getElementById(id).value = "");
+            document.getElementById('asientoEquipoAsoc').value = "";
+            document.getElementById('asientoJugadorAsoc').innerHTML = '<option value="">Jugador...</option>';
+            document.getElementById('asientoConceptoAsoc').value = "";
+            document.getElementById('gridConceptoAsientoCont').innerHTML = "";
+            document.getElementById('conceptoAsientoSeleccionadoTxt').textContent = "";
+            document.getElementById('asientoFacturaFile').value = "";
+            document.getElementById('asientoSinFactura').checked = false;
+            document.getElementById('filaAsientoJugador').style.display = 'none';
+            document.getElementById('filaAsientoFactura').style.display = 'none';
         } else {
             alert("Error al guardar en el servidor");
         }
@@ -2470,6 +2703,351 @@ async function guardarAsientoManual(btn) {
     }
 }
 
+function celdaFacturaHtml(a, importe, real_id) {
+    const factura = a.FACTURA || '';
+    const nAsiento = a.N_ASIENTO || real_id;
+    if (importe >= 0) {
+        if (a.NOMBRE && a.EQUIPO) return `<i class="fas fa-circle-check" style="color:#16a34a;" title="Asignado a ${a.NOMBRE} (${a.EQUIPO})"></i>`;
+        if (a.ASIGNACION === 'NO_ASIGNAR') return '<span style="font-size:9px; color:#999; font-weight:700;">SIN ASIGNAR</span>';
+        return `<i class="fas fa-user" style="color:#b45309; cursor:pointer;" title="Asignar a jugador o marcar sin asignar" onclick="abrirPopoverAsignarJugador(event, '${nAsiento}', ${importe})"></i>`;
+    }
+    if (factura === 'SIN_FACTURA') return '<span style="font-size:9px; color:#999; font-weight:700;">SIN FRA.</span>';
+    if (factura) return `<a href="/static/facturas/${encodeURIComponent(factura)}" target="_blank" title="Ver factura"><i class="fas fa-file-pdf" style="color:#16a34a;"></i></a>`;
+    return `<i class="fas fa-triangle-exclamation" style="color:#dc2626; cursor:pointer;" title="Adjuntar factura o marcar sin factura" onclick="abrirPopoverFactura(event, '${nAsiento}')"></i>`;
+}
+
+let facturaPopoverActivo = null;
+
+function abrirPopoverFactura(evt, nAsiento) {
+    evt.stopPropagation();
+    facturaPopoverActivo = nAsiento;
+    document.getElementById('popFacturaFile').value = '';
+    document.getElementById('popFacturaEstado').textContent = '';
+    const pop = document.getElementById('popoverFactura');
+    const rect = evt.currentTarget.getBoundingClientRect();
+    pop.style.display = 'block';
+    const popWidth = pop.offsetWidth || 260;
+    let left = rect.left;
+    if (left + popWidth > window.innerWidth - 10) left = window.innerWidth - popWidth - 10;
+    pop.style.left = `${Math.max(10, left)}px`;
+    let top = rect.bottom + 6;
+    const popHeight = pop.offsetHeight || 220;
+    if (top + popHeight > window.innerHeight - 10) top = Math.max(10, rect.top - popHeight - 6);
+    pop.style.top = `${top}px`;
+}
+
+async function adjuntarFacturaPopover() {
+    const archivo = document.getElementById('popFacturaFile').files[0];
+    const estado = document.getElementById('popFacturaEstado');
+    if (!archivo) { estado.style.color = '#dc2626'; estado.textContent = 'Elige un archivo primero.'; return; }
+    estado.style.color = '#64748b'; estado.textContent = 'Subiendo...';
+    try {
+        const fd = new FormData();
+        fd.append('n_asiento', facturaPopoverActivo);
+        fd.append('factura', archivo);
+        const res = await fetch('/api/asiento/subir_factura', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.status === 'success') {
+            document.getElementById('popoverFactura').style.display = 'none';
+            await cargarPresupuesto();
+        } else {
+            estado.style.color = '#dc2626'; estado.textContent = data.message || 'Error al adjuntar.';
+        }
+    } catch (e) {
+        estado.style.color = '#dc2626'; estado.textContent = 'Error de conexión.';
+    }
+}
+
+async function marcarSinFacturaPopover() {
+    const estado = document.getElementById('popFacturaEstado');
+    estado.style.color = '#64748b'; estado.textContent = 'Guardando...';
+    try {
+        const fd = new FormData();
+        fd.append('n_asiento', facturaPopoverActivo);
+        fd.append('sin_factura', '1');
+        const res = await fetch('/api/asiento/subir_factura', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.status === 'success') {
+            document.getElementById('popoverFactura').style.display = 'none';
+            await cargarPresupuesto();
+        } else {
+            estado.style.color = '#dc2626'; estado.textContent = data.message || 'Error al guardar.';
+        }
+    } catch (e) {
+        estado.style.color = '#dc2626'; estado.textContent = 'Error de conexión.';
+    }
+}
+
+document.addEventListener('click', function(evt) {
+    const pop = document.getElementById('popoverFactura');
+    if (pop && pop.style.display === 'block' && !pop.contains(evt.target)) {
+        pop.style.display = 'none';
+    }
+});
+
+function actualizarContadorFacturasFaltantes() {
+    const faltantes = (presupuestoData || []).filter(a => {
+        const importe = parseFloat(a.IMPORTE) || 0;
+        return importe < 0 && a.FACTURA !== 'SIN_FACTURA' && !a.FACTURA;
+    });
+    const btn = document.getElementById('btnFacturasFaltantes');
+    const txt = document.getElementById('txtFacturasFaltantes');
+    if (!faltantes.length) {
+        btn.style.display = 'none';
+        document.getElementById('panelDetalleFacturasFaltantes').style.display = 'none';
+        return;
+    }
+    btn.style.display = 'flex';
+    txt.textContent = faltantes.length;
+
+    const lista = document.getElementById('listaDetalleFacturasFaltantes');
+    lista.innerHTML = faltantes.map(a => {
+        const nAsiento = a.N_ASIENTO || a.REAL_ID || '';
+        return `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:11px; padding:6px 8px; background:white; border-radius:6px; border:1px solid #fecaca;">
+            <span><b>${formatearFechaUnificada(a.FECHA)}</b> · ${a.DEPARTAMENTO || '-'} / ${a.PILAR || '-'} — ${a.DESCRIPCION || '-'}</span>
+            <span style="display:flex; align-items:center; gap:10px;">
+                <span style="color:#dc2626; font-weight:800;">${(parseFloat(a.IMPORTE) || 0).toLocaleString('es-ES', {minimumFractionDigits:2})}€</span>
+                <i class="fas fa-paperclip" style="color:#64748b; cursor:pointer;" title="Adjuntar factura o marcar sin factura" onclick="abrirPopoverFactura(event, '${nAsiento}')"></i>
+            </span>
+        </div>
+    `;
+    }).join('');
+}
+
+function toggleDetalleFacturasFaltantes() {
+    const panel = document.getElementById('panelDetalleFacturasFaltantes');
+    panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
+}
+
+function actualizarContadorCobrosPendientes() {
+    const pendientes = (presupuestoData || []).filter(a => {
+        const importe = parseFloat(a.IMPORTE) || 0;
+        return importe >= 0 && !(a.NOMBRE && a.EQUIPO) && a.ASIGNACION !== 'NO_ASIGNAR';
+    });
+    const btn = document.getElementById('btnCobrosPendientes');
+    const txt = document.getElementById('txtCobrosPendientes');
+    if (!pendientes.length) {
+        btn.style.display = 'none';
+        document.getElementById('panelDetalleCobrosPendientes').style.display = 'none';
+        return;
+    }
+    btn.style.display = 'flex';
+    txt.textContent = pendientes.length;
+
+    const lista = document.getElementById('listaDetalleCobrosPendientes');
+    lista.innerHTML = pendientes.map(a => {
+        const nAsiento = a.N_ASIENTO || a.REAL_ID || '';
+        const importe = parseFloat(a.IMPORTE) || 0;
+        return `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:11px; padding:6px 8px; background:white; border-radius:6px; border:1px solid #fde68a;">
+            <span><b>${formatearFechaUnificada(a.FECHA)}</b> · ${a.DEPARTAMENTO || '-'} / ${a.PILAR || '-'} — ${a.DESCRIPCION || '-'}</span>
+            <span style="display:flex; align-items:center; gap:10px;">
+                <span style="color:#16a34a; font-weight:800;">${importe.toLocaleString('es-ES', {minimumFractionDigits:2})}€</span>
+                <i class="fas fa-user-plus" style="color:#b45309; cursor:pointer;" title="Asignar a jugador o marcar sin asignar" onclick="abrirPopoverAsignarJugador(event, '${nAsiento}', ${importe})"></i>
+            </span>
+        </div>`;
+    }).join('');
+}
+
+function toggleDetalleCobrosPendientes() {
+    const panel = document.getElementById('panelDetalleCobrosPendientes');
+    panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
+}
+
+let asignarJugadorActivo = { nAsiento: null, importe: 0 };
+let conceptoAsignarSeleccionado = '';
+
+function abrirPopoverAsignarJugador(evt, nAsiento, importe) {
+    evt.stopPropagation();
+    asignarJugadorActivo = { nAsiento, importe };
+    conceptoAsignarSeleccionado = '';
+    document.getElementById('asignEquipoSel').value = '';
+    document.getElementById('asignJugadorSel').innerHTML = '<option value="">Jugador...</option>';
+    document.getElementById('gridConceptoAsignarCont').innerHTML = '';
+    document.getElementById('conceptoAsignarSeleccionadoTxt').textContent = '';
+    document.getElementById('popAsignarEstado').textContent = '';
+
+    const pop = document.getElementById('popoverAsignarJugador');
+    const rect = evt.currentTarget.getBoundingClientRect();
+    pop.style.display = 'block';
+    const popWidth = pop.offsetWidth || 420;
+    let left = rect.left;
+    if (left + popWidth > window.innerWidth - 10) left = window.innerWidth - popWidth - 10;
+    pop.style.left = `${Math.max(10, left)}px`;
+    let top = rect.bottom + 6;
+    pop.style.top = `${top}px`;
+}
+
+function actualizarJugadoresAsignar() {
+    const equipo = document.getElementById('asignEquipoSel').value;
+    const sel = document.getElementById('asignJugadorSel');
+    const nombres = jugadoresRaw.filter(p => p.EQUIPO === equipo).map(p => p.NOMBRE);
+    sel.innerHTML = '<option value="">Jugador...</option>' + nombres.map(n => `<option value="${n}">${n}</option>`).join('');
+    document.getElementById('gridConceptoAsignarCont').innerHTML = '';
+    document.getElementById('conceptoAsignarSeleccionadoTxt').textContent = '';
+    conceptoAsignarSeleccionado = '';
+}
+
+function actualizarGridConceptoAsignar() {
+    const equipo = document.getElementById('asignEquipoSel').value;
+    const nombre = document.getElementById('asignJugadorSel').value;
+    const cont = document.getElementById('gridConceptoAsignarCont');
+    conceptoAsignarSeleccionado = '';
+    document.getElementById('conceptoAsignarSeleccionadoTxt').textContent = '';
+    if (!equipo || !nombre) { cont.innerHTML = ''; return; }
+
+    const filaOriginal = document.querySelector(`.fila-jugador[data-equipo="${CSS.escape(equipo)}"][data-nombre="${CSS.escape(nombre)}"]`);
+    if (!filaOriginal) {
+        cont.innerHTML = '<div style="font-size:10px; color:#999;">Sin datos de pagos para este jugador.</div>';
+        return;
+    }
+
+    const celdasOrigen = Array.from(filaOriginal.querySelectorAll('td.pago-cell')).slice(0, 14);
+    const labels = ['INSCR.', 'ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC', 'ROPA'];
+    const tipoPago = filaOriginal.querySelector('.span-tipo-pago')?.innerText || '-';
+    const formaPago = filaOriginal.querySelector('.span-forma-pago')?.innerText || '-';
+
+    let html = `<table style="border-collapse:collapse; font-size:10px;">
+        <thead><tr>
+            <th style="padding:5px 8px; background:#f8f9fa; border:1px solid #e5e7eb; text-align:left;">${tipoPago} · ${formaPago}</th>
+            ${labels.map(l => `<th style="padding:5px 8px; background:#f8f9fa; border:1px solid #e5e7eb; font-size:9px; color:#94a3b8;">${l}</th>`).join('')}
+        </tr></thead>
+        <tbody><tr>
+            <td style="padding:5px 8px; border:1px solid #e5e7eb; font-weight:700; white-space:nowrap;">${nombre}</td>
+            <td colspan="${labels.length}" id="gridConceptoAsignarCeldas" style="padding:0; border:1px solid #e5e7eb;">
+                <div style="display:grid; grid-template-columns: repeat(${labels.length}, 1fr);"></div>
+            </td>
+        </tr></tbody>
+    </table>`;
+    cont.innerHTML = html;
+
+    const filaDiv = cont.querySelector('#gridConceptoAsignarCeldas > div');
+    celdasOrigen.forEach(origCell => {
+        const clon = origCell.cloneNode(true);
+        clon.removeAttribute('onclick');
+        clon.style.cursor = 'pointer';
+        clon.style.textAlign = 'center';
+        clon.style.padding = '6px 4px';
+        clon.style.fontSize = '9px';
+        clon.style.borderRight = '1px solid #e5e7eb';
+        clon.addEventListener('click', () => seleccionarConceptoAsignar(clon));
+        filaDiv.appendChild(clon);
+    });
+}
+
+function seleccionarConceptoAsignar(celda) {
+    const concepto = celda.dataset.concepto || '';
+    if (!concepto) return;
+    conceptoAsignarSeleccionado = concepto;
+    const cont = document.getElementById('gridConceptoAsignarCont');
+    cont.querySelectorAll('#gridConceptoAsignarCeldas > div > *').forEach(c => c.style.outline = '');
+    celda.style.outline = '3px solid #E31E24';
+    const labelsMap = { 'Inscripción': 'Inscripción', '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril', '05': 'Mayo', '06': 'Junio', '07': 'Julio', '08': 'Agosto', '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre', 'PACK_ROPA': 'Pack Ropa' };
+    document.getElementById('conceptoAsignarSeleccionadoTxt').textContent = `Concepto seleccionado: ${labelsMap[concepto] || concepto}`;
+}
+
+async function confirmarAsignarJugador() {
+    const equipo = document.getElementById('asignEquipoSel').value;
+    const nombre = document.getElementById('asignJugadorSel').value;
+    const concepto = conceptoAsignarSeleccionado;
+    const estado = document.getElementById('popAsignarEstado');
+    if (!equipo || !nombre || !concepto) {
+        estado.style.color = '#dc2626';
+        estado.textContent = 'Elige equipo, jugador y concepto.';
+        return;
+    }
+
+    const filaReal = document.querySelector(`.fila-jugador[data-equipo="${CSS.escape(equipo)}"][data-nombre="${CSS.escape(nombre)}"]`);
+    const celdaReal = filaReal ? Array.from(filaReal.querySelectorAll('td.pago-cell')).find(td => td.dataset.concepto === concepto) : null;
+    const esperadoReal = celdaReal ? (parseFloat(celdaReal.dataset.esperado) || 0) : 0;
+    const importe = asignarJugadorActivo.importe;
+
+    if (celdaReal && (celdaReal.classList.contains('pago-verde') || celdaReal.classList.contains('pago-naranja'))) {
+        estado.style.color = '#dc2626';
+        estado.textContent = 'Ese concepto ya tiene un pago. Edítalo desde PAGO JUGADORES.';
+        return;
+    }
+
+    if (esperadoReal > 0 && importe > esperadoReal) {
+        // El importe ya estaba contabilizado en este asiento sin asignar. Para repartir el sobrante
+        // sin duplicar el ingreso, primero quitamos este asiento "genérico" y luego abrimos el mismo
+        // reparto de sobrante de PAGO JUGADORES, que creará las líneas correctas por concepto.
+        estado.style.color = '#64748b';
+        estado.textContent = 'Preparando reparto...';
+        try {
+            await fetch('/api/operacion_asiento', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accion: 'borrar', id: asignarJugadorActivo.nAsiento, tipo_origen: 'MANUAL' })
+            });
+        } catch (e) { /* seguimos igualmente */ }
+
+        document.getElementById('popoverAsignarJugador').style.display = 'none';
+        await cargarPresupuesto();
+
+        const filaReal2 = document.querySelector(`.fila-jugador[data-equipo="${CSS.escape(equipo)}"][data-nombre="${CSS.escape(nombre)}"]`);
+        const celdaReal2 = filaReal2 ? Array.from(filaReal2.querySelectorAll('td.pago-cell')).find(td => td.dataset.concepto === concepto) : null;
+        if (celdaReal2) {
+            seleccionarPago({ stopPropagation: () => {}, ctrlKey: false }, celdaReal2, concepto);
+            abrirModalCompensacion(importe, esperadoReal, { disabled: false });
+        }
+        return;
+    }
+
+    estado.style.color = '#64748b';
+    estado.textContent = 'Guardando...';
+    try {
+        const res = await fetch('/api/asiento/asignar_jugador', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ n_asiento: asignarJugadorActivo.nAsiento, accion: 'asignar', equipo, nombre, concepto })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            document.getElementById('popoverAsignarJugador').style.display = 'none';
+            await cargarPresupuesto();
+        } else {
+            estado.style.color = '#dc2626';
+            estado.textContent = data.message || 'Error al asignar.';
+        }
+    } catch (e) {
+        estado.style.color = '#dc2626';
+        estado.textContent = 'Error de conexión.';
+    }
+}
+
+async function marcarNoAsignarJugador() {
+    const estado = document.getElementById('popAsignarEstado');
+    estado.style.color = '#64748b';
+    estado.textContent = 'Guardando...';
+    try {
+        const res = await fetch('/api/asiento/asignar_jugador', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ n_asiento: asignarJugadorActivo.nAsiento, accion: 'no_asignar' })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            document.getElementById('popoverAsignarJugador').style.display = 'none';
+            await cargarPresupuesto();
+        } else {
+            estado.style.color = '#dc2626';
+            estado.textContent = data.message || 'Error al guardar.';
+        }
+    } catch (e) {
+        estado.style.color = '#dc2626';
+        estado.textContent = 'Error de conexión.';
+    }
+}
+
+document.addEventListener('click', function(evt) {
+    const pop = document.getElementById('popoverAsignarJugador');
+    if (pop && pop.style.display === 'block' && !pop.contains(evt.target)) {
+        pop.style.display = 'none';
+    }
+});
+
 async function cargarPresupuesto() {
     showLoader();
     try {
@@ -2478,6 +3056,8 @@ async function cargarPresupuesto() {
         presupuestoData = Array.isArray(data) ? data : [];
         aplicarFiltros();
         cargarPagosEnTabla();
+        actualizarContadorFacturasFaltantes();
+        actualizarContadorCobrosPendientes();
     } catch (e) {
         console.error("Error cargando presupuesto:", e);
         presupuestoData = []; // Aseguramos que sea un array vacío para evitar errores posteriores
@@ -2704,15 +3284,39 @@ function cargarPagosEnTabla() {
     });
 }
 
-let currentSortOrder = 'desc'; // Por defecto los últimos arriba
-function toggleSortAsiento() {
-    currentSortOrder = (currentSortOrder === 'desc') ? 'asc' : 'desc';
-    const icon = document.getElementById('iconSortAsi');
+let sortColumnaActual = 'Nº_ASIENTO_GLOBAL'; // Por defecto los últimos arriba
+let sortOrdenActual = 'desc';
+
+function toggleSortColumna(campo) {
+    if (sortColumnaActual === campo) {
+        sortOrdenActual = (sortOrdenActual === 'desc') ? 'asc' : 'desc';
+    } else {
+        sortColumnaActual = campo;
+        sortOrdenActual = 'desc';
+    }
+    document.querySelectorAll('.icon-sort-col').forEach(ic => {
+        ic.className = 'fas fa-sort icon-sort-col';
+        ic.style.opacity = '0.5';
+    });
+    const icon = document.getElementById('iconSort_' + campo);
     if (icon) {
-        icon.className = currentSortOrder === 'desc' ? 'fas fa-sort-numeric-down-alt' : 'fas fa-sort-numeric-up';
-        icon.style.opacity = "1";
+        icon.className = (sortOrdenActual === 'desc' ? 'fas fa-sort-down' : 'fas fa-sort-up') + ' icon-sort-col';
+        icon.style.opacity = '1';
     }
     aplicarFiltros();
+}
+
+function fechaComparable(fechaStr) {
+    const f = formatearFechaUnificada(fechaStr);
+    const m = f.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    return m ? `${m[3]}${m[2]}${m[1]}` : '';
+}
+
+function valorOrdenable(a, campo) {
+    if (campo === 'FECHA') return fechaComparable(a.FECHA);
+    if (campo === 'Nº_ASIENTO_GLOBAL') return parseInt(a.Nº_ASIENTO_GLOBAL) || 0;
+    if (campo === 'IMPORTE') return parseFloat(a.IMPORTE) || 0;
+    return (a[campo] || '').toString().toLowerCase();
 }
 
 function aplicarFiltros() {
@@ -2730,12 +3334,31 @@ function aplicarFiltros() {
     });
 
     filtrados.sort((a, b) => {
-        const valA = parseInt(a.Nº_ASIENTO_GLOBAL);
-        const valB = parseInt(b.Nº_ASIENTO_GLOBAL);
-        return (currentSortOrder === 'desc') ? (valB - valA) : (valA - valB);
+        const valA = valorOrdenable(a, sortColumnaActual);
+        const valB = valorOrdenable(b, sortColumnaActual);
+        let cmp = (typeof valA === 'number') ? (valA - valB) : String(valA).localeCompare(String(valB));
+        return (sortOrdenActual === 'desc') ? -cmp : cmp;
     });
 
     renderizarTablaPresupuesto(filtrados);
+}
+
+function formatearFechaUnificada(fechaStr) {
+    if (!fechaStr || fechaStr === '-') return '-';
+    const s = String(fechaStr).trim();
+    // YYYY-MM-DD (admite años con dígitos de más por error de tecleo, se recortan a 4)
+    let m = s.match(/^(\d{4,})-(\d{1,2})-(\d{1,2})/);
+    if (m) {
+        const [, anio, mes, dia] = m;
+        return `${dia.padStart(2, '0')}/${mes.padStart(2, '0')}/${anio.slice(0, 4)}`;
+    }
+    // DD/MM/YYYY o DD-MM-YYYY
+    m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4,})/);
+    if (m) {
+        const [, dia, mes, anio] = m;
+        return `${dia.padStart(2, '0')}/${mes.padStart(2, '0')}/${anio.slice(0, 4)}`;
+    }
+    return s;
 }
 
 function renderizarTablaPresupuesto(datos) {
@@ -2758,7 +3381,7 @@ function renderizarTablaPresupuesto(datos) {
 
         return `
             <tr style="${rowStyle}">
-                <td style="white-space: nowrap;">${a.FECHA || '-'}</td>
+                <td style="white-space: nowrap;">${formatearFechaUnificada(a.FECHA)}</td>
                 <td style="font-weight:bold; color: #E31E24;">#${id_global}</td>
                 <td>${a.DEPARTAMENTO || '-'}</td>
                 <td>${a.PILAR || '-'}</td>
@@ -2766,8 +3389,9 @@ function renderizarTablaPresupuesto(datos) {
                 <td style="color: ${importe >= 0 ? '#28a745' : '#dc3545'}; font-weight:bold; text-align: right;">
                     ${importe.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
                 </td>
+                <td style="text-align: center;">${celdaFacturaHtml(a, importe, real_id)}</td>
                 <td style="text-align: center;">
-                    <i class="fas fa-pencil-alt" style="cursor:pointer; color:#333; font-size: 14px;" 
+                    <i class="fas fa-pencil-alt" style="cursor:pointer; color:#333; font-size: 14px;"
                        onclick="abrirAccionAsiento('${id_global}', '${real_id}', '${tipo_origen}', '${nombreOrig}', '${conceptoOrig}', '${fechaOrig}')"></i>
                 </td>
             </tr>
@@ -5190,39 +5814,10 @@ function abrirModalCompensacion(totalPagado, totalEsperado, btnOriginal) {
         todosConceptos.push({ concepto: 'Inscripción', cell: cellInsc });
     }
     
-    // Pre-asignación del sobrante en base al orden: Inscripción -> Meses -> Ropa/Otros
-    const preselectOrder = [];
-    if (cellInsc && cellInsc.style.display !== 'none') preselectOrder.push('Inscripción');
-    SEASON_ORDER_MONTHS.forEach(m => {
-        const cell = celdas.find(el => el.dataset.concepto === m);
-        if (cell && cell.style.display !== 'none') preselectOrder.push(m);
-    });
-    if (cellRopa && cellRopa.style.display !== 'none') preselectOrder.push('PACK_ROPA');
-    celdas.forEach((cell) => {
-        const concepto = cell.dataset.concepto;
-        if (concepto && concepto !== 'Inscripción' && concepto !== 'PACK_ROPA' && !SEASON_ORDER_MONTHS.includes(concepto) && cell.style.display !== 'none') {
-            preselectOrder.push(concepto);
-        }
-    });
-    
-    let saldoSobrante = sobrante;
+    // Sin preasignación automática: el usuario decide manualmente en qué conceptos
+    // se reparte el sobrante, empezando todos los importes en 0€.
     const allocations = {};
-    
-    preselectOrder.forEach(concepto => {
-        const cell = celdas.find(el => el.dataset.concepto === concepto);
-        const isSelectedInMain = conceptosSeleccionados.includes(concepto);
-        const pag = parseFloat(cell.dataset.importe) || 0;
-        const esp = parseFloat(cell.dataset.esperado) || 0;
-        const falta = esp - pag;
-        
-        if (isSelectedInMain || falta <= 0) {
-            allocations[concepto] = 0;
-        } else {
-            const asignado = Math.min(saldoSobrante, falta);
-            allocations[concepto] = asignado;
-            saldoSobrante -= asignado;
-        }
-    });
+    todosConceptos.forEach(({ concepto }) => { allocations[concepto] = 0; });
     
     // Renderizar Inscripción
     let inscHtml = '';

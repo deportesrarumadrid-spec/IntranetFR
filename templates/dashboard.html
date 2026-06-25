@@ -244,6 +244,35 @@
 .btn-ia-fixed img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .btn-ia-fixed:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 6px 16px rgba(168, 85, 247, 0.5); }
 
+.btn-search-fixed {
+    position: fixed; top: 28px; right: 355px; width: 40px; height: 40px;
+    border-radius: 50%; background: white; color: #E31E24;
+    border: 2px solid #E31E24; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; font-size: 16px;
+    z-index: 20000; transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.btn-search-fixed:hover { background: #E31E24; color: white; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(227, 30, 36, 0.3); }
+.btn-quickconfig-fixed {
+    position: fixed; top: 28px; right: 405px; width: 40px; height: 40px;
+    border-radius: 50%; background: white; color: #E31E24;
+    border: 2px solid #E31E24; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; font-size: 15px;
+    z-index: 20000; transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.btn-quickconfig-fixed:hover { background: #E31E24; color: white; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(227, 30, 36, 0.3); }
+.btn-quickaccess-fixed {
+    position: fixed; top: 28px; width: 40px; height: 40px;
+    border-radius: 50%; background: white; color: #E31E24;
+    border: 2px solid #E31E24; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; font-size: 14px;
+    z-index: 20000; transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-decoration: none;
+}
+.btn-quickaccess-fixed:hover { background: #E31E24; color: white; transform: translateY(-2px); }
+.item-buscador-intranet { transition: background 0.15s; }
+
 .modal-ia { display: none; position: fixed; z-index: 30000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.7); align-items: center; justify-content: center; backdrop-filter: blur(4px); }
 .modal-ia-content { width: 480px; max-width: 92vw; height: 640px; max-height: 88vh; background: white; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.4); }
 .modal-ia-header { background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%); color: white; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; }
@@ -351,12 +380,53 @@
             <span id="badgeCronoGlobal" class="badge-crono">1</span>
         </button>
         {% endif %}
+        <button class="btn-search-fixed" onclick="toggleBuscadorIntranet(event)" title="Buscar en la intranet">
+            <i class="fas fa-magnifying-glass"></i>
+        </button>
+        <button class="btn-quickconfig-fixed" onclick="abrirConfigAccesosRapidos()" title="Configurar accesos rápidos">
+            <i class="fas fa-gear"></i>
+        </button>
+        <div id="contenedorAccesosRapidos"></div>
+
+        <!-- PANEL BUSCADOR INTRANET -->
+        <div id="panelBuscadorIntranet" style="display:none; position:fixed; top:75px; right:355px; width:320px; background:white; border-radius:14px; box-shadow:0 14px 36px rgba(0,0,0,0.2); z-index:30000; padding:14px;">
+            <input type="text" id="inputBuscadorIntranet" placeholder="Buscar sección, apartado..." oninput="filtrarBuscadorIntranet()" style="width:100%; padding:9px 12px; border:1px solid #ddd; border-radius:9px; font-size:13px; box-sizing:border-box; font-family:inherit;">
+            <div id="resultadosBuscadorIntranet" style="margin-top:8px; max-height:340px; overflow-y:auto;"></div>
+        </div>
+
+        <!-- MODAL CONFIGURACIÓN ACCESOS RÁPIDOS -->
+        <div id="modalConfigAccesos" class="modal-backdrop" style="display:none; position:fixed; z-index:30000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center;">
+            <div style="background:white; border-radius:16px; padding:24px; width:420px; max-height:80vh; overflow-y:auto; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+                <h3 style="margin:0 0 4px 0; font-size:15px; font-weight:900; color:#1e293b;"><i class="fas fa-gear" style="color:#E31E24;"></i> Accesos rápidos</h3>
+                <p style="margin:0 0 14px 0; font-size:11px; color:#999;">Elige los apartados o sub-apartados que quieres tener como icono de acceso directo arriba.</p>
+                <div id="listaConfigAccesos" style="display:flex; flex-direction:column; gap:6px;"></div>
+                <div style="display:flex; gap:10px; margin-top:18px;">
+                    <button style="flex:1; background:#eee; color:#333; border:none; border-radius:9px; padding:11px; font-weight:800; font-size:12px; cursor:pointer; font-family:inherit;" onclick="document.getElementById('modalConfigAccesos').style.display='none'">CERRAR</button>
+                    <button style="flex:1; background:#E31E24; color:white; border:none; border-radius:9px; padding:11px; font-weight:800; font-size:12px; cursor:pointer; font-family:inherit;" onclick="guardarConfigAccesos()">GUARDAR</button>
+                </div>
+            </div>
+        </div>
 
         <div class="render-area">
             {% block content %}
             <!-- Esto se sobreescribirá -->
             {% endblock %}
         </div>
+    </div>
+
+    <!-- BOCADILLO (POPOVER) EDITAR CELDA DE CONVOCATORIA -->
+    <div id="popoverAnotacionConvocatoria" style="display:none; position:fixed; background:white; border:1px solid #cbd5e1; border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,0.2); z-index:30000; width:260px; padding:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:11px; font-weight:900; color:#1e293b;">Editar convocatoria</span>
+            <span onclick="document.getElementById('popoverAnotacionConvocatoria').style.display='none'" style="cursor:pointer; color:#999; font-size:15px; line-height:1;">&times;</span>
+        </div>
+        <p id="anotJugadorLabel" style="margin:0 0 10px 0; font-size:10px; color:#999;"></p>
+        <label style="display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; color:#334155; margin-bottom:10px; cursor:pointer;">
+            <input type="checkbox" id="anotConvocadoCheck" style="width:16px; height:16px;"> Convocado
+        </label>
+        <label style="font-size:9px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:5px;">Comentario</label>
+        <textarea id="anotComentario" rows="3" style="width:100%; padding:7px; border:1px solid #ddd; border-radius:7px; font-size:11px; resize:vertical; box-sizing:border-box; font-family:inherit;"></textarea>
+        <button onclick="guardarAnotacionConvocatoria()" style="width:100%; margin-top:10px; background:#E31E24; color:white; border:none; border-radius:8px; padding:8px; font-weight:800; font-size:11px; cursor:pointer; font-family:inherit;">GUARDAR</button>
     </div>
 
     <!-- MODAL ASISTENTE IA -->
@@ -405,6 +475,398 @@
     </div>
 
     <script>
+        // === ÍNDICE DE NAVEGACIÓN (buscador + accesos rápidos) ===
+        const INDICE_NAVEGACION = [
+            { label: 'Mi Equipo', ruta: '/mi-equipo', keywords: 'jugadores plantilla' },
+            { label: 'Entrenamientos', ruta: '/deportivo', keywords: 'sesiones ejercicios' },
+            { label: 'Asistencias', ruta: '/asistencias', keywords: 'faltas convocatoria' },
+            { label: 'Financiero - Presupuestos', ruta: '/financiero', tab: 'tab-presupuesto', keywords: 'dinero gastos ingresos' },
+            { label: 'Financiero - Pago Jugadores', ruta: '/financiero', tab: 'tab-jugadores', keywords: 'cuotas recibos pagos jugadores' },
+            { label: 'Financiero - Pago Staff', ruta: '/financiero', tab: 'tab-staff', keywords: 'nominas entrenadores pagos staff' },
+            { label: 'Financiero - Datos Jugadores', ruta: '/financiero', tab: 'tab-datos-jugadores', keywords: 'fichas contacto telefono' },
+            { label: 'D. Deportiva - Coordinación', ruta: '/direccion_deportiva', tab: 'tab-coordinacion', keywords: 'reuniones' },
+            { label: 'D. Deportiva - Gestión Estratégica', ruta: '/direccion_deportiva', tab: 'tab-d-deportiva', subtab: 'subtab-gestion-estrategica', keywords: 'objetivos estrategia' },
+            { label: 'D. Deportiva - KPIs', ruta: '/direccion_deportiva', tab: 'tab-d-deportiva', subtab: 'subtab-kpis', keywords: 'indicadores estadisticas' },
+            { label: 'D. Deportiva - Informes', ruta: '/direccion_deportiva', tab: 'tab-otros', keywords: 'equipaciones coincidencias segunda equipacion colores rivales camiseta pantalon medias roja partidos visitante' },
+            { label: 'D. Deportiva - Usuarios y Contraseñas', ruta: '/direccion_deportiva', tab: 'tab-usuarios', keywords: 'claves accesos permisos' },
+            { label: 'Clasificaciones y Resultados', ruta: '/clasificaciones', keywords: 'liga tabla puntos partidos resultados' },
+        ];
+
+        function toggleBuscadorIntranet(evt) {
+            if (evt) evt.stopPropagation();
+            const panel = document.getElementById('panelBuscadorIntranet');
+            const abrir = panel.style.display === 'none';
+            panel.style.display = abrir ? 'block' : 'none';
+            if (abrir) {
+                document.getElementById('inputBuscadorIntranet').value = '';
+                renderResultadosBuscador(INDICE_NAVEGACION);
+                setTimeout(() => document.getElementById('inputBuscadorIntranet').focus(), 50);
+            }
+        }
+
+        function normalizarBusqueda(t) {
+            return (t || '').toLowerCase().normalize('NFD').replace(new RegExp('[̀-ͯ]', 'g'), '');
+        }
+
+        function filtrarBuscadorIntranet() {
+            const q = normalizarBusqueda(document.getElementById('inputBuscadorIntranet').value.trim());
+            const filtrados = !q ? INDICE_NAVEGACION : INDICE_NAVEGACION.filter(it => {
+                const texto = normalizarBusqueda(`${it.label} ${it.keywords || ''}`);
+                return texto.includes(q);
+            });
+            renderResultadosBuscador(filtrados);
+        }
+
+        function renderResultadosBuscador(items) {
+            const cont = document.getElementById('resultadosBuscadorIntranet');
+            if (!items.length) { cont.innerHTML = '<div style="padding:10px; color:#999; font-size:11px;">Sin resultados.</div>'; return; }
+            cont.innerHTML = items.map((it, idx) => `
+                <div class="item-buscador-intranet" data-idx="${idx}" style="padding:10px 12px; border-radius:9px; cursor:pointer; font-size:12px; color:#334155; font-weight:600;">
+                    <i class="fas fa-arrow-right" style="font-size:9px; color:#E31E24; margin-right:7px;"></i>${it.label}
+                </div>
+            `).join('');
+            cont.querySelectorAll('.item-buscador-intranet').forEach(el => {
+                el.addEventListener('mouseover', () => el.style.background = '#f1f5f9');
+                el.addEventListener('mouseout', () => el.style.background = 'transparent');
+                el.addEventListener('click', () => {
+                    const it = items[parseInt(el.dataset.idx)];
+                    irADestino(it.ruta, it.tab, it.subtab);
+                });
+            });
+        }
+
+        function irADestino(ruta, tab, subtab) {
+            let url = ruta;
+            const params = [];
+            if (tab) params.push(`goto=${tab}`);
+            if (subtab) params.push(`subgoto=${subtab}`);
+            if (params.length) url += '?' + params.join('&');
+            showLoader();
+            window.location.href = url;
+        }
+
+        document.addEventListener('click', function(evt) {
+            const panel = document.getElementById('panelBuscadorIntranet');
+            if (panel && panel.style.display === 'block' && !panel.contains(evt.target) && !evt.target.closest('.btn-search-fixed')) {
+                panel.style.display = 'none';
+            }
+        });
+
+        // === ACCESOS RÁPIDOS CONFIGURABLES ===
+        let accesosRapidosSeleccionados = [];
+
+        async function cargarAccesosRapidos() {
+            try {
+                const res = await fetch('/api/accesos_rapidos');
+                const data = await res.json();
+                accesosRapidosSeleccionados = Array.isArray(data) ? data : [];
+                renderAccesosRapidosFixed();
+            } catch (e) { console.error('Error cargando accesos rápidos', e); }
+        }
+
+        function renderAccesosRapidosFixed() {
+            const cont = document.getElementById('contenedorAccesosRapidos');
+            cont.innerHTML = accesosRapidosSeleccionados.map((it, i) => {
+                const right = 455 + (i * 50);
+                return `<button class="btn-quickaccess-fixed" data-idx="${i}" style="right:${right}px;" title="${it.label}">
+                    <i class="fas fa-star"></i>
+                </button>`;
+            }).join('');
+            cont.querySelectorAll('.btn-quickaccess-fixed').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const it = accesosRapidosSeleccionados[parseInt(btn.dataset.idx)];
+                    irADestino(it.ruta, it.tab, it.subtab);
+                });
+            });
+        }
+
+        function abrirConfigAccesosRapidos() {
+            const cont = document.getElementById('listaConfigAccesos');
+            cont.innerHTML = INDICE_NAVEGACION.map((it, idx) => {
+                const marcado = accesosRapidosSeleccionados.some(a => a.label === it.label);
+                return `<label style="display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:8px; background:${marcado ? '#fee2e2' : '#f8f9fa'}; cursor:pointer; font-size:12px; font-weight:600; color:#334155;">
+                    <input type="checkbox" data-idx="${idx}" ${marcado ? 'checked' : ''} style="width:15px; height:15px;">
+                    ${it.label}
+                </label>`;
+            }).join('');
+            document.getElementById('modalConfigAccesos').style.display = 'flex';
+        }
+
+        async function guardarConfigAccesos() {
+            const checks = document.querySelectorAll('#listaConfigAccesos input[type=checkbox]');
+            const seleccion = [];
+            checks.forEach(c => {
+                if (c.checked) seleccion.push(INDICE_NAVEGACION[parseInt(c.dataset.idx)]);
+            });
+            accesosRapidosSeleccionados = seleccion;
+            renderAccesosRapidosFixed();
+            document.getElementById('modalConfigAccesos').style.display = 'none';
+            try {
+                await fetch('/api/accesos_rapidos', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ accesos: seleccion })
+                });
+            } catch (e) { console.error('Error guardando accesos rápidos', e); }
+        }
+
+        cargarAccesosRapidos();
+
+        // === CONVOCATORIAS (compartido entre Asistencias, Mi Equipo y D.Deportiva-Coordinación) ===
+        let convocatoriasCacheGlobal = null;
+
+        function normalizarEquipoConvocatoria(t) {
+            return (t || '').toUpperCase().normalize('NFD').replace(new RegExp('[̀-ͯ]', 'g'), '').trim();
+        }
+
+        async function obtenerConvocatoriasEquipo(nombreEquipo, forzarRecarga) {
+            if (!convocatoriasCacheGlobal || forzarRecarga) {
+                try {
+                    const res = await fetch('/api/convocatorias');
+                    const data = await res.json();
+                    convocatoriasCacheGlobal = data.entries || [];
+                } catch (e) {
+                    convocatoriasCacheGlobal = [];
+                }
+            }
+            const norm = normalizarEquipoConvocatoria(nombreEquipo);
+            return convocatoriasCacheGlobal.filter(e => normalizarEquipoConvocatoria(`${e.categoria} ${e.letra}`) === norm);
+        }
+
+        let anotacionesConvocatoriaCache = null;
+
+        async function cargarAnotacionesConvocatoria(forzarRecarga) {
+            if (anotacionesConvocatoriaCache && !forzarRecarga) return;
+            try {
+                const res = await fetch('/api/convocatorias/anotaciones');
+                anotacionesConvocatoriaCache = await res.json();
+            } catch (e) {
+                anotacionesConvocatoriaCache = {};
+            }
+        }
+
+        function interpolarVerde(fraccion) {
+            // fraccion 0 = verde oscuro (más convocado), fraccion 1 = verde clarito (menos convocado)
+            const oscuro = [21, 128, 61];   // #15803d
+            const claro = [187, 247, 208];  // #bbf7d0
+            const r = Math.round(oscuro[0] + (claro[0] - oscuro[0]) * fraccion);
+            const g = Math.round(oscuro[1] + (claro[1] - oscuro[1]) * fraccion);
+            const b = Math.round(oscuro[2] + (claro[2] - oscuro[2]) * fraccion);
+            return `rgb(${r},${g},${b})`;
+        }
+
+        const MESES_ABREV_CONVOCATORIA = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+
+        function formatoFechaCortaConvocatoria(fechaStr) {
+            // "DD-MM-YYYY" -> "DD MES"
+            if (!fechaStr) return '-';
+            const [d, m] = fechaStr.split('-');
+            const mes = MESES_ABREV_CONVOCATORIA[parseInt(m, 10) - 1] || '';
+            return `${d} ${mes}`;
+        }
+
+        function formatearNombreJugador(nombreCompleto) {
+            // "APELLIDO1 APELLIDO2, NOMBRE" -> "Nombre Apellido1" (solo el primer apellido)
+            const partes = (nombreCompleto || '').split(',');
+            if (partes.length < 2) return nombreCompleto || '';
+            const primerApellido = partes[0].trim().split(' ')[0];
+            const nombre = partes.slice(1).join(',').trim();
+            return `${nombre} ${primerApellido}`;
+        }
+
+        function primerNombreJugador(nombreCompleto) {
+            const partes = (nombreCompleto || '').split(',');
+            if (partes.length < 2) return nombreCompleto || '';
+            return partes.slice(1).join(',').trim();
+        }
+
+        function estaConvocadoCelda(entry, nombre) {
+            const anot = (anotacionesConvocatoriaCache || {})[`${entry.match_key}|${nombre}`];
+            if (anot && anot.convocado === true) return true;
+            if (anot && anot.convocado === false) return false;
+            return (entry.convocados || []).some(j => j.nombre === nombre);
+        }
+
+        function esTitularCelda(entry, nombre) {
+            const j = (entry.convocados || []).find(j => j.nombre === nombre);
+            return j ? j.titular : false;
+        }
+
+        function renderTablaConvocatorias(entries, contenedorId) {
+            const cont = document.getElementById(contenedorId);
+            if (!cont) return;
+            window._convocatoriasUltimoEntries = entries;
+            window._convocatoriasUltimoContenedor = contenedorId;
+
+            if (!entries || !entries.length) {
+                cont.innerHTML = '<div style="text-align:center; padding:25px; color:#999; font-size:11px;">No hay convocatorias disponibles todavía para este equipo. Pide a un administrador que las actualice desde D. Deportiva - Coordinación.</div>';
+                return;
+            }
+
+            const jugadoresSet = new Set();
+            entries.forEach(e => (e.convocados || []).forEach(j => jugadoresSet.add(j.nombre)));
+            Object.keys(anotacionesConvocatoriaCache || {}).forEach(clave => {
+                const idxSep = clave.lastIndexOf('|');
+                const matchKey = clave.slice(0, idxSep);
+                const nombre = clave.slice(idxSep + 1);
+                if ((anotacionesConvocatoriaCache[clave] || {}).convocado === true && entries.some(e => e.match_key === matchKey)) {
+                    jugadoresSet.add(nombre);
+                }
+            });
+
+            if (!jugadoresSet.size) {
+                cont.innerHTML = '<div style="text-align:center; padding:25px; color:#999; font-size:11px;">Hay partidos registrados pero ninguno tiene todavía el acta de convocatoria publicada.</div>';
+                return;
+            }
+
+            const stats = {};
+            Array.from(jugadoresSet).forEach(nombre => {
+                let count = 0;
+                entries.forEach(e => { if (estaConvocadoCelda(e, nombre)) count++; });
+                stats[nombre] = { count, total: entries.length, pct: entries.length ? Math.round(count / entries.length * 100) : 0 };
+            });
+
+            const jugadores = Array.from(jugadoresSet).sort((a, b) => {
+                if (stats[b].count !== stats[a].count) return stats[b].count - stats[a].count;
+                return primerNombreJugador(a).localeCompare(primerNombreJugador(b));
+            });
+
+            let html = `<div style="overflow-x:auto; width:100%; max-width:100%;"><table style="border-collapse:collapse; font-size:10px; table-layout:auto;">
+                <thead><tr>
+                    <th style="position:sticky; left:0; background:#f8f9fa; padding:8px; width:160px; z-index:2; border:1px solid #e5e7eb;"></th>
+                    ${entries.map(e => `<th style="padding:8px 6px; width:100px; background:#f8f9fa; border:1px solid #e5e7eb; vertical-align:top;">
+                        <div style="font-size:10px; color:#1e293b; font-weight:800; line-height:1.25; white-space:normal; min-height:36px;">${e.rival || ''}</div>
+                        <div style="border:1px solid #cbd5e1; border-radius:6px; padding:3px 6px; font-size:10px; font-weight:800; color:#334155; margin-top:6px;">${formatoFechaCortaConvocatoria(e.fecha)}</div>
+                        <div style="border:1px solid #cbd5e1; border-radius:6px; padding:3px 6px; font-size:10px; font-weight:900; color:#1e293b; margin-top:4px;">J${e.jornada || '-'}</div>
+                    </th>`).join('')}
+                </tr></thead><tbody>`;
+
+            jugadores.forEach((nombre, idx) => {
+                const s = stats[nombre];
+                // Degradado basado en la posición del ranking (no en el % bruto) para que SIEMPRE sea perceptible,
+                // aunque varios jugadores tengan porcentajes muy parecidos: el primero siempre más ancho/verde oscuro,
+                // el último siempre más fino/verde clarito.
+                const fraccionRanking = jugadores.length > 1 ? idx / (jugadores.length - 1) : 0;
+                const anchoBarra = Math.round(10 - fraccionRanking * 8); // 10px arriba -> 2px abajo
+                const colorBarra = interpolarVerde(fraccionRanking);
+                html += `<tr>
+                    <td style="position:sticky; left:0; background:white; padding:8px 10px; font-weight:500; font-size:13px; border:1px solid #e5e7eb; border-left:${anchoBarra}px solid ${colorBarra}; white-space:nowrap; width:160px;">
+                        ${formatearNombreJugador(nombre)}
+                        <div style="font-size:13px; color:#15803d; font-weight:900; margin-top:2px;">${s.count} de ${s.total} (${s.pct}%)</div>
+                    </td>
+                    ${entries.map(e => {
+                        const conv = estaConvocadoCelda(e, nombre);
+                        const titular = esTitularCelda(e, nombre);
+                        const clave = `${e.match_key}|${nombre}`;
+                        const anot = (anotacionesConvocatoriaCache || {})[clave];
+                        const tieneComentario = anot && anot.comentario;
+                        let bg = 'white';
+                        if (conv) {
+                            bg = (e.es_futbol_11 && !titular) ? '#fde047' : '#15803d';
+                        }
+                        const nombreEscapado = nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                        return `<td onclick="abrirPopoverAnotacionConvocatoria(event, '${e.match_key}', '${nombreEscapado}', ${conv})"
+                            style="text-align:center; cursor:pointer; background:${bg}; border:1px solid #e5e7eb; position:relative; width:100px; height:32px;"
+                            title="${e.rival || ''}">
+                            ${conv ? '' : '<span style="color:#000; font-weight:900; font-size:11px;">-</span>'}
+                            ${tieneComentario ? '<span style="position:absolute; top:2px; right:2px; width:6px; height:6px; background:#E31E24; border-radius:50%;"></span>' : ''}
+                        </td>`;
+                    }).join('')}
+                </tr>`;
+            });
+
+            html += `</tbody></table></div>`;
+            if (entries.some(e => e.es_futbol_11)) {
+                html += `<div style="margin-top:8px; font-size:9px; color:#666;"><span style="background:#15803d; color:white; padding:2px 7px; border-radius:5px;">Titular</span> &nbsp; <span style="background:#fde047; padding:2px 7px; border-radius:5px;">Suplente</span></div>`;
+            }
+            cont.innerHTML = html;
+        }
+
+        async function cargarYRenderConvocatorias(nombreEquipo, contenedorId) {
+            const cont = document.getElementById(contenedorId);
+            if (cont) cont.innerHTML = '<div style="text-align:center; padding:25px; color:#999;"><i class="fas fa-spinner fa-spin"></i> Cargando convocatorias...</div>';
+            const entries = await obtenerConvocatoriasEquipo(nombreEquipo);
+            await cargarAnotacionesConvocatoria();
+            renderTablaConvocatorias(entries, contenedorId);
+        }
+
+        let anotacionConvocatoriaActiva = { matchKey: null, nombre: null };
+
+        function abrirPopoverAnotacionConvocatoria(evt, matchKey, nombre, convActual) {
+            evt.stopPropagation();
+            anotacionConvocatoriaActiva = { matchKey, nombre };
+            const clave = `${matchKey}|${nombre}`;
+            const anot = (anotacionesConvocatoriaCache || {})[clave] || {};
+            document.getElementById('anotConvocadoCheck').checked = anot.convocado !== undefined ? !!anot.convocado : convActual;
+            document.getElementById('anotComentario').value = anot.comentario || '';
+            document.getElementById('anotJugadorLabel').textContent = formatearNombreJugador(nombre);
+            const pop = document.getElementById('popoverAnotacionConvocatoria');
+            const rect = evt.currentTarget.getBoundingClientRect();
+            pop.style.display = 'block';
+            const popWidth = pop.offsetWidth || 260;
+            let left = rect.left;
+            if (left + popWidth > window.innerWidth - 10) left = window.innerWidth - popWidth - 10;
+            pop.style.left = `${Math.max(10, left)}px`;
+            let top = rect.bottom + 6;
+            const popHeight = pop.offsetHeight || 200;
+            if (top + popHeight > window.innerHeight - 10) top = Math.max(10, rect.top - popHeight - 6);
+            pop.style.top = `${top}px`;
+        }
+
+        async function guardarAnotacionConvocatoria() {
+            const { matchKey, nombre } = anotacionConvocatoriaActiva;
+            if (!matchKey || !nombre) return;
+            const convocado = document.getElementById('anotConvocadoCheck').checked;
+            const comentario = document.getElementById('anotComentario').value.trim();
+            const clave = `${matchKey}|${nombre}`;
+            if (!anotacionesConvocatoriaCache) anotacionesConvocatoriaCache = {};
+            anotacionesConvocatoriaCache[clave] = { convocado, comentario };
+            try {
+                await fetch('/api/convocatorias/anotaciones', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ clave, campos: { convocado, comentario } })
+                });
+            } catch (e) {
+                console.error('Error guardando anotación de convocatoria', e);
+            }
+            document.getElementById('popoverAnotacionConvocatoria').style.display = 'none';
+            if (window._convocatoriasUltimoContenedor) {
+                renderTablaConvocatorias(window._convocatoriasUltimoEntries, window._convocatoriasUltimoContenedor);
+            }
+        }
+
+        document.addEventListener('click', function(evt) {
+            const pop = document.getElementById('popoverAnotacionConvocatoria');
+            if (pop && pop.style.display === 'block' && !pop.contains(evt.target)) {
+                pop.style.display = 'none';
+            }
+        });
+
+        // === DEEP-LINK: activar tab/subtab indicado por ?goto=&subgoto= al cargar la página ===
+        (function activarDeepLinkTabs() {
+            const params = new URLSearchParams(window.location.search);
+            const goto = params.get('goto');
+            const subgoto = params.get('subgoto');
+            function activar(tabId) {
+                if (!tabId) return;
+                let el = document.querySelector(`[data-tab="${tabId}"]`);
+                if (!el) {
+                    el = Array.from(document.querySelectorAll('[onclick*="switchTab"], [onclick*="switchSubTab"]')).find(e => (e.getAttribute('onclick') || '').includes(`'${tabId}'`));
+                }
+                if (el) el.click();
+            }
+            function intentar() {
+                if (goto) activar(goto);
+                if (subgoto) setTimeout(() => activar(subgoto), 150);
+            }
+            if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                setTimeout(intentar, 200);
+            } else {
+                document.addEventListener('DOMContentLoaded', () => setTimeout(intentar, 200));
+            }
+        })();
+
         let selectedCronoUser = null;
 
         function selectCronoProfile(user, btn) {

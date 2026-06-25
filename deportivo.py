@@ -1737,6 +1737,57 @@ def api_informes_colores_generar():
         return jsonify({"status": "error", "message": message}), 400
 
 
+@deportivo_bp.route('/api/convocatorias', methods=['GET'])
+def api_convocatorias_get():
+    from competicion_scraper import load_convocatorias_report
+    data = load_convocatorias_report()
+    if not data:
+        return jsonify({"status": "empty", "entries": []})
+    return jsonify(data)
+
+
+@deportivo_bp.route('/api/convocatorias', methods=['POST'])
+def api_convocatorias_generar():
+    usuario = session.get('usuario')
+    if not usuario:
+        return jsonify({"status": "error", "message": "No session"}), 401
+
+    data = request.json or {}
+    username_rffm = data.get('usuario_rffm', '').strip()
+    password_rffm = data.get('password_rffm', '').strip()
+
+    if not username_rffm or not password_rffm:
+        return jsonify({"status": "error", "message": "Faltan credenciales"}), 400
+
+    from competicion_scraper import build_convocatorias_report
+
+    ok, message, report = build_convocatorias_report(username_rffm, password_rffm)
+    if ok:
+        return jsonify({**report, "message": message})
+    else:
+        return jsonify({"status": "error", "message": message}), 400
+
+
+@deportivo_bp.route('/api/convocatorias/anotaciones', methods=['GET'])
+def api_convocatorias_anotaciones_get():
+    from competicion_scraper import load_convocatoria_anotaciones
+    return jsonify(load_convocatoria_anotaciones())
+
+
+@deportivo_bp.route('/api/convocatorias/anotaciones', methods=['POST'])
+def api_convocatorias_anotaciones_post():
+    if not session.get('usuario'):
+        return jsonify({"status": "error", "message": "No session"}), 401
+    data = request.json or {}
+    clave = (data.get('clave') or '').strip()
+    campos = data.get('campos') or {}
+    if not clave:
+        return jsonify({"status": "error", "message": "Falta clave"}), 400
+    from competicion_scraper import guardar_convocatoria_anotacion
+    actual = guardar_convocatoria_anotacion(clave, campos)
+    return jsonify({"status": "success", "data": actual})
+
+
 @deportivo_bp.route('/api/informes/checklist_equipacion', methods=['GET'])
 def api_checklist_equipacion_get():
     from competicion_scraper import load_checklist_equipacion

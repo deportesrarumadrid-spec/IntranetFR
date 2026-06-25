@@ -1,7 +1,10 @@
 import os
 import json
+import calendar
 import requests
 import re
+import io
+import pdfplumber
 from bs4 import BeautifulSoup
 from datetime import datetime
 from urllib.parse import urljoin
@@ -13,6 +16,9 @@ os.makedirs(SHIELDS_DIR, exist_ok=True)
 
 KIT_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'kit_colors_cache.json')
 KIT_REPORT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'kit_clash_report.json')
+
+CONVOCATORIAS_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'convocatorias_cache.json')
+CONVOCATORIAS_REPORT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'convocatorias_report.json')
 
 def get_session():
     session = requests.Session()
@@ -1202,6 +1208,7 @@ def fetch_temporada_matches(session, club_id=CLUB_FUENTELARREYNA_ID, cod_tempora
             'hora': tds[9].get_text(strip=True),
             'jornada': tds[4].get_text(strip=True),
             'resultado': '',
+            'deporte': tds[0].get_text(strip=True),
             'nombre_casa': nombre_casa.strip(),
             'cod_equipo_casa': cod_equipo_casa,
             'nombre_fuera': nombre_visit.strip(),
@@ -1209,6 +1216,148 @@ def fetch_temporada_matches(session, club_id=CLUB_FUENTELARREYNA_ID, cod_tempora
         })
 
     return matches
+
+
+def fetch_codacta_map(session, club_id=CLUB_FUENTELARREYNA_ID, cod_temporada=None, fecha_desde=None, fecha_hasta=None):
+    """Devuelve un dict {match_key: codacta} recorriendo el Listado de Partidos (vista
+    interactiva, no la exportación Excel, porque solo la vista interactiva incluye el
+    'Cod. Partido' que abre el PDF de alineaciones). La vista interactiva tiene un límite
+    oculto de ~300 resultados, así que se trocea mes a mes para no superarlo nunca."""
+    if not cod_temporada:
+        cod_temporada, fecha_desde, fecha_hasta = _temporada_actual()
+
+    d_ini, m_ini, y_ini = fecha_desde.split('-')
+    d_fin, m_fin, y_fin = fecha_hasta.split('-')
+    y_ini, m_ini, y_fin, m_fin = int(y_ini), int(m_ini), int(y_fin), int(m_fin)
+
+    meses = []
+    y, m = y_ini, m_ini
+    while (y, m) <= (y_fin, m_fin):
+        meses.append((y, m))
+        m += 1
+        if m > 12:
+            m = 1
+            y += 1
+
+    day_pattern = re.compile(r'<b>(\d{2}-\d{2}-\d{4}),')
+    row_pattern = re.compile(
+        r'descarga_alineaciones\((\d+)\);.*?camisetas\((\d+),(\d+),(\d+),(\d+)\);.*?(\d{2}:\d{2})&nbsp;',
+        re.DOTALL
+    )
+
+    resultado = {}
+    for (anio, mes) in meses:
+        desde = f"01-{mes:02d}-{anio}"
+        ultimo_dia = calendar.monthrange(anio, mes)[1]
+        hasta = f"{ultimo_dia:02d}-{mes:02d}-{anio}"
+        params = {
+            'cod_primaria': '1000139',
+            'Consulta': '1',
+            'Sch_Cod_Temporada': cod_temporada,
+            'Sch_Fecha_Desde': desde,
+            'Sch_Fecha_Hasta': hasta,
+            'Club': club_id,
+            'Sch_Clave_Acceso_Club': club_id,
+            'NPcd_PageLines': '5000',
+        }
+        try:
+            r = session.get('https://intranet.ffmadrid.es/nfg/NPcd/NFG_LstPartidos', params=params, timeout=60)
+            r.encoding = 'iso-8859-1'
+        except Exception:
+            continue
+
+        partes = day_pattern.split(r.text)
+        for i in range(1, len(partes), 2):
+            fecha = partes[i]
+            contenido = partes[i + 1] if i + 1 < len(partes) else ''
+            for m_row in row_pattern.finditer(contenido):
+                codacta, _cod_club_casa, cod_equipo_casa, _cod_club_fuera, cod_equipo_fuera, hora = m_row.groups()
+                key = f"{fecha}_{hora}_{cod_equipo_casa}_{cod_equipo_fuera}"
+                resultado[key] = codacta
+
+    return resultado
+
+
+def _load_convocatorias_cache():
+    if os.path.exists(CONVOCATORIAS_CACHE_FILE):
+        try:
+            with open(CONVOCATORIAS_CACHE_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
+def _save_convocatorias_cache(cache):
+    os.makedirs(os.path.dirname(CONVOCATORIAS_CACHE_FILE), exist_ok=True)
+    with open(CONVOCATORIAS_CACHE_FILE, 'w', encoding='utf-8') as f:
+        json.dump(cache, f, ensure_ascii=False, indent=2)
+
+
+def fetch_alineacion_convocados(session, codacta, es_futbol_11):
+    """Descarga y parsea el PDF de alineaciones de un partido (NFG_CMP_Alineacion),
+    devolviendo {'casa': [...], 'fuera': [...]} con los convocados de cada equipo.
+    El PDF no incluye la etiqueta TITULARES/SUPLENTES como texto; se asume (igual que
+    en la propia acta) que los primeros 11 (fútbol-11) o 7 (fútbol-7) jugadores listados
+    de cada equipo son titulares y el resto suplentes."""
+    cutoff = 11 if es_futbol_11 else 7
+    r = session.get(
+        'https://intranet.ffmadrid.es/nfg/NPcd/NFG_CMP_Alineacion',
+        params={'cod_primaria': '1000139', 'codacta': codacta, 'NPcd_Pdf': '1'},
+        timeout=60
+    )
+    if r.status_code != 200 or not r.content:
+        return None
+
+    jugador_re = re.compile(r'^(\d+)\s+(.+)$')
+
+    try:
+        with pdfplumber.open(io.BytesIO(r.content)) as pdf:
+            page = pdf.pages[0]
+            words = page.extract_words()
+            mitad = page.width / 2
+
+            def extraer_lado(min_x, max_x, top_min, top_max):
+                filas = {}
+                for w in words:
+                    if min_x <= w['x0'] < max_x and top_min <= w['top'] <= top_max:
+                        t = round(w['top'] / 4) * 4  # agrupar palabras de la misma fila
+                        filas.setdefault(t, []).append((w['x0'], w['text']))
+                jugadores = []
+                for t in sorted(filas.keys()):
+                    palabras = [txt for _, txt in sorted(filas[t])]
+                    texto = ' '.join(palabras)
+                    m = jugador_re.match(texto)
+                    if not m:
+                        continue
+                    numero, resto = m.groups()
+                    portero = '(P)' in resto
+                    capitan = '(C)' in resto
+                    nombre = resto.replace('(P)', '').replace('(C)', '').strip()
+                    jugadores.append({'numero': numero, 'nombre': nombre, 'portero': portero, 'capitan': capitan})
+                for idx, j in enumerate(jugadores):
+                    j['titular'] = idx < cutoff
+                return jugadores
+
+            # La franja de jugadores empieza tras la cabecera "Nº JUGADOR/A..." y termina antes de "ENTRENADOR/A"
+            top_jugadores_ini = None
+            top_jugadores_fin = None
+            for w in words:
+                if w['text'] == 'JUGADOR/A' and top_jugadores_ini is None:
+                    top_jugadores_ini = w['bottom']
+                if 'ENTRENADOR' in w['text'] and (top_jugadores_fin is None or w['top'] < top_jugadores_fin):
+                    top_jugadores_fin = w['top']
+            if top_jugadores_ini is None:
+                top_jugadores_ini = 0
+            if top_jugadores_fin is None:
+                top_jugadores_fin = page.height
+
+            casa = extraer_lado(0, mitad, top_jugadores_ini, top_jugadores_fin)
+            fuera = extraer_lado(mitad, page.width, top_jugadores_ini, top_jugadores_fin)
+            return {'casa': casa, 'fuera': fuera}
+    except Exception as e:
+        print(f"Error parseando acta {codacta}: {e}")
+        return None
 
 def get_match_kit_colors(session, cod_equipo_casa, cod_equipo_fuera):
     """Llama al mismo endpoint que el icono "Ver equipaciones" de la web para un partido concreto.
@@ -1361,6 +1510,119 @@ def load_kit_clash_report():
             pass
     return None
 
+
+def build_convocatorias_report(username, password):
+    """Genera el informe de convocatorias (jugadores llamados a cada partido) a partir
+    del Listado de Partidos + el PDF de alineaciones (Acta) de cada partido jugado."""
+    url_login = "https://intranet.ffmadrid.es/nfg/NLogin"
+    session = get_session()
+    payload = {"NUser": username, "NPass": password, "LoginAjax": "1"}
+
+    try:
+        res_login = session.post(url_login, data=payload)
+        match_est = re.search(r'var estado="(\d+)"', res_login.text)
+        estado = match_est.group(1) if match_est else "2"
+        if estado != "1":
+            return False, "Credenciales incorrectas o error de acceso.", None
+
+        cod_temporada, fecha_desde, fecha_hasta = _temporada_actual()
+        matches = fetch_temporada_matches(session, CLUB_FUENTELARREYNA_ID, cod_temporada, fecha_desde, fecha_hasta)
+        if not matches:
+            return False, "No se encontraron partidos en el Listado de Partidos de la RFFM.", None
+
+        codacta_map = fetch_codacta_map(session, CLUB_FUENTELARREYNA_ID, cod_temporada, fecha_desde, fecha_hasta)
+        convocatorias_cache = _load_convocatorias_cache()
+
+        report_entries = []
+        for match in matches:
+            somos_casa = 'FUENTELARREYNA' in match['nombre_casa'].upper()
+            somos_fuera = 'FUENTELARREYNA' in match['nombre_fuera'].upper()
+            es_visitante = somos_fuera and not somos_casa
+            if not somos_casa and not somos_fuera:
+                continue
+            if somos_casa and somos_fuera:
+                continue
+
+            match_key = f"{match['fecha']}_{match['hora']}_{match['cod_equipo_casa']}_{match['cod_equipo_fuera']}"
+            codacta = codacta_map.get(match_key)
+
+            cat, letra_heuristica = detect_categoria_y_letra(match['competicion'])
+            es_futbol_11 = 'futbol-11' in (match.get('deporte') or '').lower().replace(' ', '')
+
+            convocados = None
+            if codacta:
+                if codacta in convocatorias_cache:
+                    convocados = convocatorias_cache[codacta]
+                else:
+                    parsed = fetch_alineacion_convocados(session, codacta, es_futbol_11)
+                    if parsed:
+                        convocados = parsed['fuera'] if es_visitante else parsed['casa']
+                        convocatorias_cache[codacta] = convocados
+
+            nuestro_nombre = match['nombre_fuera'] if es_visitante else match['nombre_casa']
+            rival_nombre = match['nombre_casa'] if es_visitante else match['nombre_fuera']
+            # El "letra" heurístico de detect_categoria_y_letra viene del nombre de la competición
+            # (grupo, fase...) y NO distingue entre nuestros propios sub-equipos (Fuentelarreyna "A" vs "B" vs "C"...).
+            # Para identificar el equipo real usamos el sufijo entre comillas del nombre RFFM de nuestro equipo.
+            m_letra_real = re.search(r'"([^"]+)"', nuestro_nombre or '')
+            letra = m_letra_real.group(1) if m_letra_real else letra_heuristica
+            nuestro_equipo = nuestro_nombre or f"{cat or ''} {letra or ''}".strip()
+
+            report_entries.append({
+                "match_key": match_key,
+                "fecha": match['fecha'],
+                "jornada": match['jornada'],
+                "hora": match['hora'],
+                "campo": match['campo'],
+                "competicion": match['competicion'],
+                "categoria": cat or '',
+                "letra": letra or '',
+                "es_visitante": es_visitante,
+                "es_futbol_11": es_futbol_11,
+                "nuestro_equipo": nuestro_equipo,
+                "rival": rival_nombre,
+                "convocados": convocados or [],
+                "sin_datos": convocados is None
+            })
+
+        _save_convocatorias_cache(convocatorias_cache)
+
+        def parse_fecha_sort(f):
+            m = re.search(r'(\d{2})-(\d{2})-(\d{4})', f or '')
+            if m:
+                return (m.group(3), m.group(2), m.group(1))
+            return ('0000', '00', '00')
+
+        report_entries.sort(key=lambda x: parse_fecha_sort(x['fecha']))
+
+        report_data = {
+            "status": "success",
+            "last_updated": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+            "temporada": f"{fecha_desde} a {fecha_hasta}",
+            "entries": report_entries
+        }
+        os.makedirs(os.path.dirname(CONVOCATORIAS_REPORT_FILE), exist_ok=True)
+        with open(CONVOCATORIAS_REPORT_FILE, 'w', encoding='utf-8') as f:
+            json.dump(report_data, f, ensure_ascii=False, indent=2)
+
+        con_datos = sum(1 for e in report_entries if not e['sin_datos'])
+        return True, f"Informe generado: {len(report_entries)} partidos, {con_datos} con convocatoria disponible.", report_data
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return False, f"Error generando el informe: {str(e)}", None
+
+
+def load_convocatorias_report():
+    if os.path.exists(CONVOCATORIAS_REPORT_FILE):
+        try:
+            with open(CONVOCATORIAS_REPORT_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return None
+
 # --- CHECKLIST DE EQUIPACIÓN LLEVADA POR PARTIDO (llevo / devuelvo, tallas, comentario) ---
 
 CHECKLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'equipacion_checklist.json')
@@ -1383,4 +1645,28 @@ def guardar_checklist_equipacion(match_key, datos):
     os.makedirs(os.path.dirname(CHECKLIST_FILE), exist_ok=True)
     with open(CHECKLIST_FILE, 'w', encoding='utf-8') as f:
         json.dump(checklist, f, ensure_ascii=False, indent=2)
+    return actual
+
+# --- ANOTACIONES MANUALES DE CONVOCATORIA (editar convocado/no convocado + comentario por celda) ---
+
+CONVOCATORIA_ANOTACIONES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'convocatorias_anotaciones.json')
+
+def load_convocatoria_anotaciones():
+    if os.path.exists(CONVOCATORIA_ANOTACIONES_FILE):
+        try:
+            with open(CONVOCATORIA_ANOTACIONES_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+def guardar_convocatoria_anotacion(clave, datos):
+    """clave = '<match_key>|<nombre_jugador>'. Permite sobreescribir manualmente si fue convocado y/o añadir un comentario."""
+    anotaciones = load_convocatoria_anotaciones()
+    actual = anotaciones.get(clave, {})
+    actual.update(datos)
+    anotaciones[clave] = actual
+    os.makedirs(os.path.dirname(CONVOCATORIA_ANOTACIONES_FILE), exist_ok=True)
+    with open(CONVOCATORIA_ANOTACIONES_FILE, 'w', encoding='utf-8') as f:
+        json.dump(anotaciones, f, ensure_ascii=False, indent=2)
     return actual

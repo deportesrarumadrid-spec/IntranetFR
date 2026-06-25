@@ -1746,6 +1746,51 @@ def api_cronograma_edit():
         print(f"Error en api_cronograma_edit: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+# --- PUSH DE AVISO + COMENTARIO (INFORMES) ---
+@app.route('/api/informes/enviar_push_equipacion', methods=['POST'])
+def api_enviar_push_equipacion():
+    if not session.get('usuario'):
+        return jsonify({"status": "error", "message": "No session"}), 401
+    data = request.json or {}
+    destinatario = (data.get('usuario') or '').strip()
+    comentario = (data.get('comentario') or '').strip()
+    contexto = (data.get('contexto') or '').strip()
+    if not destinatario or not comentario:
+        return jsonify({"status": "error", "message": "Falta usuario destinatario o comentario"}), 400
+    mensaje = f"{contexto}\n\n{comentario}" if contexto else comentario
+    try:
+        enviar_push(destinatario, mensaje)
+        return jsonify({"status": "success", "message": f"Push enviado a {destinatario}"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# --- ACCESOS RÁPIDOS CONFIGURABLES (buscador/cabecera) ---
+ACCESOS_RAPIDOS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data')
+
+@app.route('/api/accesos_rapidos', methods=['GET'])
+def api_accesos_rapidos_get():
+    usuario = session.get('usuario')
+    if not usuario:
+        return jsonify([])
+    path = os.path.join(ACCESOS_RAPIDOS_DIR, f'accesos_rapidos_{usuario}.json')
+    if os.path.exists(path):
+        with open(path, 'r', encoding='utf-8') as f:
+            return jsonify(json.load(f))
+    return jsonify([])
+
+@app.route('/api/accesos_rapidos', methods=['POST'])
+def api_accesos_rapidos_post():
+    usuario = session.get('usuario')
+    if not usuario:
+        return jsonify({"status": "error", "message": "No session"}), 401
+    data = request.json or {}
+    accesos = data.get('accesos', [])
+    os.makedirs(ACCESOS_RAPIDOS_DIR, exist_ok=True)
+    path = os.path.join(ACCESOS_RAPIDOS_DIR, f'accesos_rapidos_{usuario}.json')
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(accesos, f, ensure_ascii=False, indent=2)
+    return jsonify({"status": "success"})
+
 # --- REGISTRO DE BLUEPRINTS ---
 from financiero import financiero_bp
 from deportivo import deportivo_bp

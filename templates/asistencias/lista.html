@@ -6,7 +6,7 @@
     <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: flex-end;">
         <div style="flex: 1; min-width: 200px;">
             <label style="font-size: 10px; font-weight: 900; color: #444;">EQUIPO</label>
-            <select id="selectEquipo" onchange="generarCalendario()" style="width: 100%; padding: 10px; border-radius: 8px; font-weight: 700; border: 1px solid #ddd;">
+            <select id="selectEquipo" onchange="onCambioEquipoAsistConv()" style="width: 100%; padding: 10px; border-radius: 8px; font-weight: 700; border: 1px solid #ddd;">
                 <option value="">Seleccionar...</option>
                 {% for equipo in equipos %}
                 <option value="{{ equipo }}">{{ equipo }}</option>
@@ -50,6 +50,17 @@
             </button>
         </div>
     </div>
+
+    <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+        <button id="btnVistaAsistencias" onclick="cambiarVistaAsistConv('asistencias')" style="padding: 9px 16px; border-radius: 8px; border: 2px solid #E31E24; background: #E31E24; color: white; font-weight: 900; font-size: 11px; cursor: pointer;">
+            <i class="fas fa-calendar-check"></i> ASISTENCIAS
+        </button>
+        <button id="btnVistaConvocatorias" onclick="cambiarVistaAsistConv('convocatorias')" style="padding: 9px 16px; border-radius: 8px; border: 2px solid #e2e8f0; background: white; color: #64748b; font-weight: 900; font-size: 11px; cursor: pointer;">
+            <i class="fas fa-clipboard-list"></i> CONVOCATORIAS
+        </button>
+    </div>
+
+    <div id="contenedorConvocatorias" style="display: none; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); padding: 18px;"></div>
 
     <div id="contenedorTabla" style="display: none; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden;">
         <div style="overflow-x: auto;">
@@ -507,6 +518,42 @@ function parsearFechaLocal(str) {
     }
     const [y, m, d] = str.split('-').map(Number);
     return new Date(y, m - 1, d);
+}
+
+let vistaActualAsistConv = 'asistencias';
+
+function onCambioEquipoAsistConv() {
+    if (vistaActualAsistConv === 'convocatorias') {
+        const equipo = document.getElementById('selectEquipo').value;
+        if (equipo) cargarYRenderConvocatorias(equipo, 'contenedorConvocatorias');
+    } else {
+        generarCalendario();
+    }
+}
+
+function cambiarVistaAsistConv(vista) {
+    vistaActualAsistConv = vista;
+    const btnA = document.getElementById('btnVistaAsistencias');
+    const btnC = document.getElementById('btnVistaConvocatorias');
+    const contConv = document.getElementById('contenedorConvocatorias');
+
+    if (vista === 'asistencias') {
+        btnA.style.background = '#E31E24'; btnA.style.color = 'white'; btnA.style.borderColor = '#E31E24';
+        btnC.style.background = 'white'; btnC.style.color = '#64748b'; btnC.style.borderColor = '#e2e8f0';
+        contConv.style.display = 'none';
+        generarCalendario();
+    } else {
+        btnC.style.background = '#E31E24'; btnC.style.color = 'white'; btnC.style.borderColor = '#E31E24';
+        btnA.style.background = 'white'; btnA.style.color = '#64748b'; btnA.style.borderColor = '#e2e8f0';
+        document.getElementById('contenedorTabla').style.display = 'none';
+        contConv.style.display = 'block';
+        const equipo = document.getElementById('selectEquipo').value;
+        if (!equipo) {
+            contConv.innerHTML = '<div style="text-align:center; padding:20px; color:#999; font-size:12px;">Selecciona un equipo arriba.</div>';
+            return;
+        }
+        cargarYRenderConvocatorias(equipo, 'contenedorConvocatorias');
+    }
 }
 
 async function generarCalendario() {
