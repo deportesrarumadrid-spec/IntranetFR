@@ -339,9 +339,6 @@
         {% if session.get('permisos', {}).get('ENTRENAMIENTOS') == 'SI' or session.get('permisos', {}).get('D.DEPORTIVA') == 'SI' or usuario|lower == 'admin' %}
         <a href="/clasificaciones" class="menu-item {{ 'active' if request.path == '/clasificaciones' }}" onclick="showLoader()">CLASIFICACIONES Y RESULTADOS</a>
         {% endif %}
-        {% if usuario|lower == 'admin' %}
-        <a href="#" class="menu-item" onclick="event.preventDefault();">ALQUILERES</a>
-        {% endif %}
     </div>
 
     <div id="sidebarAvisos" class="avisos-sidebar">

@@ -516,6 +516,8 @@
         border: 1px solid #ddd;
         color: #666;
     }
+    .fila-horario:hover .btn-borrar-fila-horario { opacity: 1 !important; }
+    .fila-alquiler-horario td { background: #fef9c3 !important; }
 </style>
 
 <div style="padding: 10px;">
@@ -690,6 +692,7 @@
         <div class="tabs-container" style="margin-bottom: 20px; background: #f8fafc; border: 1px solid #e2e8f0;">
             <div class="tab-item active" onclick="switchSubTab(event, 'subtab-gestion-estrategica')" style="font-size: 11px;">GESTIÓN ESTRATÉGICA</div>
             <div class="tab-item" onclick="switchSubTab(event, 'subtab-kpis')" style="font-size: 11px;">KPIs</div>
+            <div class="tab-item" onclick="switchSubTab(event, 'subtab-horarios')" style="font-size: 11px;">HORARIOS</div>
         </div>
         
         <div id="subtab-gestion-estrategica" class="subtab-content active" style="display: grid; grid-template-columns: 1fr 350px; gap: 20px;">
@@ -841,6 +844,25 @@
                     <div id="mapaLoadingMsg" style="display:none; padding: 10px 15px; font-size: 10px; color: #999; border-top: 1px solid #eee;"><i class="fas fa-spinner fa-spin"></i> Localizando direcciones en el mapa...</div>
                 </div>
             </div>
+        </div>
+
+        <!-- SUBTAB: HORARIOS -->
+        <div id="subtab-horarios" class="subtab-content" style="display: none;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 10px;">
+                <div id="navSemanaHorarios" style="display: flex; align-items: center; gap: 8px; background: white; border-radius: 12px; padding: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);"></div>
+                <button class="btn-premium" onclick="guardarPlantillaHorarios()" style="font-size: 11px; padding: 10px 22px;"><i class="fas fa-save"></i> GUARDAR PLANTILLA</button>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button class="btn-fin" onclick="cargarOpcionesHorarios()" style="font-size: 10px; padding: 10px 16px; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;"><i class="fas fa-rotate"></i> ACTUALIZAR RFFM</button>
+                    <button class="btn-fin" onclick="descargarHorariosPDF()" style="font-size: 10px; padding: 10px 16px; background: #1e293b; color: white; border: none;"><i class="fas fa-file-pdf"></i> DESCARGAR PDF</button>
+                    <button class="btn-fin" onclick="descargarHorariosImagen()" style="font-size: 10px; padding: 10px 16px; background: #1e293b; color: white; border: none;"><i class="fas fa-image"></i> DESCARGAR IMAGEN</button>
+                </div>
+            </div>
+
+            <div id="opcionesArrastrablesHorarios" style="background: white; border-radius: 12px; padding: 14px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); min-height: 50px;"></div>
+
+            <div id="avisoConflictosHorarios" style="display: none; background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; font-size: 11px; font-weight: 700;"></div>
+
+            <div id="contenedorPlantillaHorarios"></div>
         </div>
     </div>
 
@@ -3219,6 +3241,9 @@
         if (tabId === 'subtab-kpis') {
             loadKpiDeportivos();
         }
+        if (tabId === 'subtab-horarios') {
+            initHorarios();
+        }
     }
 
     window.switchKpiTab = function(evt, kpiId) {
@@ -3239,6 +3264,630 @@
         if (kpiId === 'kpi-financieros') loadKpiPagos();
         if (kpiId === 'kpi-rrss') loadKpiRrss();
         if (kpiId === 'kpi-estadisticas') loadKpiEstadisticas();
+    }
+
+    // ==========================================
+    // LÓGICA HORARIOS (plantilla campo + RFFM)
+    // ==========================================
+    const MESES_HORARIOS = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+    const MESES_HORARIOS_LARGO = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const DIAS_HORARIOS = [
+        { key: 'VIERNES', label: 'Viernes', offset: 0, filas: 6 },
+        { key: 'SABADO', label: 'Sábado', offset: 1, filas: 12 },
+        { key: 'DOMINGO', label: 'Domingo', offset: 2, filas: 12 }
+    ];
+
+    let horariosViernesActivo = null; // Date del viernes de la semana mostrada
+    let horariosOpciones = [];
+    let horariosOffsets = {};
+    let horariosInicializado = false;
+
+    function pad2(n) { return String(n).padStart(2, '0'); }
+
+    function formatoFechaDDMMYYYY(d) { return `${pad2(d.getDate())}-${pad2(d.getMonth() + 1)}-${d.getFullYear()}`; }
+    function formatoFechaISO(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+
+    function viernesDeSemana(fecha) {
+        const f = new Date(fecha);
+        f.setHours(0, 0, 0, 0);
+        const dow = f.getDay(); // 0=domingo...5=viernes,6=sabado
+        let diffAViernes;
+        if (dow === 6) diffAViernes = -1; // sabado -> viernes fue ayer
+        else if (dow === 0) diffAViernes = -2; // domingo -> viernes fue hace 2 dias
+        else diffAViernes = 5 - dow; // lunes(1)..viernes(5): dias hasta el viernes de esta semana
+        const v = new Date(f);
+        v.setDate(f.getDate() + diffAViernes);
+        return v;
+    }
+
+    function viernesDeReferencia() { return viernesDeSemana(new Date()); }
+
+    function etiquetaRangoSemana(viernes) {
+        const domingo = new Date(viernes);
+        domingo.setDate(viernes.getDate() + 2);
+        const mesV = MESES_HORARIOS[viernes.getMonth()];
+        const mesD = MESES_HORARIOS[domingo.getMonth()];
+        if (viernes.getMonth() === domingo.getMonth()) {
+            return `${pad2(viernes.getDate())} - ${pad2(domingo.getDate())} ${mesV} ${domingo.getFullYear()}`;
+        }
+        return `${pad2(viernes.getDate())} ${mesV} - ${pad2(domingo.getDate())} ${mesD} ${domingo.getFullYear()}`;
+    }
+
+    function renderNavSemanaHorarios() {
+        const cont = document.getElementById('navSemanaHorarios');
+        const actual = horariosViernesActivo;
+        const hoyViernes = viernesDeReferencia();
+        const esActualHoy = formatoFechaISO(actual) === formatoFechaISO(hoyViernes);
+
+        cont.innerHTML = `
+            <button onclick="cambiarSemanaHorarios(-7)" style="border:none; background:#f1f5f9; color:#64748b; width:30px; height:30px; border-radius:8px; cursor:pointer; font-weight:900;">«</button>
+            <button onclick="abrirSelectorFechaHorarios()" title="Elegir fin de semana" style="border:none; background:${esActualHoy ? '#fee2e2' : '#f1f5f9'}; color:${esActualHoy ? '#E31E24' : '#64748b'}; width:34px; height:30px; border-radius:8px; cursor:pointer;"><i class="fas fa-calendar-day"></i></button>
+            <input type="date" id="inputFechaHorarios" onchange="onFechaPickerHorarios(this.value)" style="position:absolute; opacity:0; width:0; height:0; pointer-events:none;">
+            <span style="font-weight:900; font-size:12px; color:#1e293b; padding:0 10px; white-space:nowrap;">${etiquetaRangoSemana(actual)}</span>
+            <button onclick="cambiarSemanaHorarios(7)" style="border:none; background:#f1f5f9; color:#64748b; width:30px; height:30px; border-radius:8px; cursor:pointer; font-weight:900;">»</button>
+        `;
+    }
+
+    window.abrirSelectorFechaHorarios = function() {
+        const input = document.getElementById('inputFechaHorarios');
+        input.value = formatoFechaISO(horariosViernesActivo);
+        if (input.showPicker) input.showPicker();
+        else input.click();
+    }
+
+    window.onFechaPickerHorarios = function(value) {
+        if (!value) return;
+        horariosViernesActivo = viernesDeSemana(new Date(value + 'T00:00:00'));
+        renderNavSemanaHorarios();
+        renderPlantillaHorarios();
+        cargarOpcionesHorarios();
+        cargarPlantillaHorarios();
+    }
+
+    window.cambiarSemanaHorarios = function(dias) {
+        horariosViernesActivo.setDate(horariosViernesActivo.getDate() + dias);
+        renderNavSemanaHorarios();
+        renderPlantillaHorarios();
+        cargarOpcionesHorarios();
+        cargarPlantillaHorarios();
+    }
+
+    function renderPlantillaHorarios() {
+        const cont = document.getElementById('contenedorPlantillaHorarios');
+        const viernes = horariosViernesActivo;
+        let html = '';
+        DIAS_HORARIOS.forEach(dia => {
+            const fecha = new Date(viernes);
+            fecha.setDate(viernes.getDate() + dia.offset);
+            const tituloFecha = `${dia.label.toUpperCase()}, ${fecha.getDate()} de ${MESES_HORARIOS_LARGO[fecha.getMonth()]} de ${fecha.getFullYear()}`;
+            html += `
+                <div style="background:white; border-radius:12px; padding:18px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+                    <h3 onclick="toggleDiaHorarios('${dia.key}')" style="cursor:pointer; text-align:center; font-size:13px; font-weight:900; color:#1e293b; margin:0 0 14px 0; text-transform:uppercase; display:flex; align-items:center; justify-content:center; gap:8px;">
+                        <i id="chevron_${dia.key}" class="fas fa-chevron-down" style="font-size:11px; color:#94a3b8;"></i> ${tituloFecha}
+                    </h3>
+                    <div id="diaContenido_${dia.key}" style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                        ${renderTablaHorarios(dia.key, 'F7', 'FÚTBOL 7', dia.filas)}
+                        ${renderTablaHorarios(dia.key, 'F11', 'FÚTBOL 11', dia.filas)}
+                    </div>
+                </div>
+            `;
+        });
+        cont.innerHTML = html;
+    }
+
+    window.toggleDiaHorarios = function(dia) {
+        const cont = document.getElementById(`diaContenido_${dia}`);
+        const chevron = document.getElementById(`chevron_${dia}`);
+        const colapsado = cont.style.display === 'none';
+        cont.style.display = colapsado ? 'grid' : 'none';
+        chevron.className = colapsado ? 'fas fa-chevron-down' : 'fas fa-chevron-right';
+    }
+
+    function renderTablaHorarios(dia, deporte, titulo, numFilas) {
+        let filas = '';
+        for (let i = 1; i <= numFilas; i++) {
+            const id = `${dia}_${deporte}_${i}`;
+            const args = `'${dia}','${deporte}',${i}`;
+            filas += `
+                <tr class="fila-horario">
+                    <td style="padding:0; border:1px solid #e2e8f0; width:22px; text-align:center;">
+                        <button onclick="borrarFilaHorarios(${args})" class="btn-borrar-fila-horario" tabindex="-1"
+                                style="opacity:0; transition:0.15s; border:none; background:transparent; color:#dc2626; cursor:pointer; width:100%; height:100%; padding:4px 0; font-size:10px;">
+                            <i class="fas fa-xmark"></i>
+                        </button>
+                    </td>
+                    <td style="padding:0; border:1px solid #e2e8f0;">
+                        <input type="text" id="inicio_${id}" placeholder="--:--" maxlength="5"
+                               oninput="formatearInputHora(this)" onblur="onInicioCambiada(${args})"
+                               onkeydown="onKeydownCeldaHorarios(event,${args},'inicio')"
+                               style="width:100%; border:none; padding:6px 4px; text-align:center; font-size:11px; font-weight:800; box-sizing:border-box;">
+                    </td>
+                    <td id="final_${id}" contenteditable="true" onkeydown="onKeydownCeldaHorarios(event,${args},'final')"
+                        oninput="onFinalEditada(${args})" onblur="onFinalEditada(${args})"
+                        style="padding:6px 4px; border:1px solid #e2e8f0; font-size:11px; font-weight:800; color:#475569; text-align:center; background:#f1f5f9;"></td>
+                    <td id="local_${id}" contenteditable="true" ondragover="event.preventDefault()" ondrop="onDropHorarios(event,${args})"
+                        oninput="onCeldaEditada(${args})" onblur="onCeldaEditada(${args})" onkeydown="onKeydownCeldaHorarios(event,${args},'local')"
+                        style="padding:6px 6px; border:1px solid #e2e8f0; font-size:10px; font-weight:800; color:#1e293b; min-width:60px;"></td>
+                    <td id="visitante_${id}" contenteditable="true" ondragover="event.preventDefault()" ondrop="onDropHorarios(event,${args})"
+                        oninput="onCeldaEditada(${args})" onblur="onCeldaEditada(${args})" onkeydown="onKeydownCeldaHorarios(event,${args},'visitante')"
+                        style="padding:6px 6px; border:1px solid #e2e8f0; font-size:10px; font-weight:700; color:#334155; min-width:80px;"></td>
+                </tr>
+            `;
+        }
+        return `
+            <div>
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr><th colspan="5" style="background:#1e293b; color:white; padding:6px; font-size:11px; border:1px solid #1e293b;">${titulo}</th></tr>
+                        <tr style="background:#f8fafc;">
+                            <th style="padding:5px; border:1px solid #e2e8f0;"></th>
+                            <th style="padding:5px; border:1px solid #e2e8f0; font-size:9px; width:55px; color:#1e293b;">INICIO</th>
+                            <th style="padding:5px; border:1px solid #e2e8f0; font-size:9px; width:55px; color:#1e293b;">FINAL</th>
+                            <th style="padding:5px; border:1px solid #e2e8f0; font-size:9px; color:#1e293b;">LOCAL</th>
+                            <th style="padding:5px; border:1px solid #e2e8f0; font-size:9px; color:#1e293b;">VISITANTE</th>
+                        </tr>
+                    </thead>
+                    <tbody>${filas}</tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    window.borrarFilaHorarios = function(dia, deporte, fila) {
+        const id = `${dia}_${deporte}_${fila}`;
+        const localActual = document.getElementById(`local_${id}`)?.textContent || '';
+        const visitanteActual = document.getElementById(`visitante_${id}`)?.textContent || '';
+
+        document.getElementById(`inicio_${id}`).value = '';
+        document.getElementById(`final_${id}`).textContent = '';
+        delete document.getElementById(`final_${id}`).dataset.manual;
+        document.getElementById(`local_${id}`).textContent = '';
+        document.getElementById(`visitante_${id}`).textContent = '';
+        document.getElementById(`inicio_${id}`).closest('tr')?.classList.remove('fila-alquiler-horario');
+
+        // Si la fila borrada correspondía a una opción arrastrada, la marcamos de nuevo como disponible.
+        const opcion = horariosOpciones.find(op => op.usada && op.categoria_label === localActual && op.rival === visitanteActual);
+        if (opcion) {
+            opcion.usada = false;
+            renderOpcionesArrastrablesHorarios();
+        }
+    }
+
+    const COLUMNAS_HORARIOS = ['inicio', 'final', 'local', 'visitante'];
+
+    function enfocarCeldaHorarios(dia, deporte, fila, columna, alFinal) {
+        const el = document.getElementById(`${columna}_${dia}_${deporte}_${fila}`);
+        if (!el) return false;
+        el.focus();
+        if (el.tagName === 'INPUT') {
+            const pos = alFinal ? el.value.length : 0;
+            el.setSelectionRange(pos, pos);
+        } else {
+            const range = document.createRange();
+            const sel = window.getSelection();
+            range.selectNodeContents(el);
+            range.collapse(!alFinal);
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+        return true;
+    }
+
+    function cursorAlInicioCelda(el) {
+        if (el.tagName === 'INPUT') return el.selectionStart === 0 && el.selectionEnd === 0;
+        const sel = window.getSelection();
+        if (!sel.rangeCount) return true;
+        const range = sel.getRangeAt(0);
+        const pre = range.cloneRange();
+        pre.selectNodeContents(el);
+        pre.setEnd(range.startContainer, range.startOffset);
+        return pre.toString().length === 0;
+    }
+    function cursorAlFinalCelda(el) {
+        if (el.tagName === 'INPUT') return el.selectionStart === el.value.length && el.selectionEnd === el.value.length;
+        const sel = window.getSelection();
+        if (!sel.rangeCount) return true;
+        const range = sel.getRangeAt(0);
+        const post = range.cloneRange();
+        post.selectNodeContents(el);
+        post.setStart(range.endContainer, range.endOffset);
+        return post.toString().length === 0;
+    }
+
+    function moverFocoCeldaHorarios(dia, deporte, fila, columna, deltaFila) {
+        const tablaDia = DIAS_HORARIOS.find(d => d.key === dia);
+        const nuevaFila = fila + deltaFila;
+        if (!tablaDia || nuevaFila < 1 || nuevaFila > tablaDia.filas) return;
+        enfocarCeldaHorarios(dia, deporte, nuevaFila, columna, true);
+    }
+
+    window.onKeydownCeldaHorarios = function(evt, dia, deporte, fila, columna) {
+        if (evt.key === 'ArrowDown') { evt.preventDefault(); moverFocoCeldaHorarios(dia, deporte, fila, columna, 1); return; }
+        if (evt.key === 'ArrowUp') { evt.preventDefault(); moverFocoCeldaHorarios(dia, deporte, fila, columna, -1); return; }
+
+        const idx = COLUMNAS_HORARIOS.indexOf(columna);
+        if (evt.key === 'ArrowRight' && cursorAlFinalCelda(evt.target)) {
+            if (idx < COLUMNAS_HORARIOS.length - 1) {
+                evt.preventDefault();
+                enfocarCeldaHorarios(dia, deporte, fila, COLUMNAS_HORARIOS[idx + 1], false);
+            }
+        } else if (evt.key === 'ArrowLeft' && cursorAlInicioCelda(evt.target)) {
+            if (idx > 0) {
+                evt.preventDefault();
+                enfocarCeldaHorarios(dia, deporte, fila, COLUMNAS_HORARIOS[idx - 1], true);
+            }
+        }
+    }
+
+    window.formatearInputHora = function(input) {
+        let v = input.value.replace(/[^0-9]/g, '');
+        if (v.length > 4) v = v.slice(0, 4);
+        if (v.length >= 3) v = v.slice(0, 2) + ':' + v.slice(2);
+        input.value = v;
+    }
+
+    function horaAMinutos(hhmm) {
+        const m = (hhmm || '').match(/^(\d{1,2}):(\d{2})$/);
+        if (!m) return null;
+        return parseInt(m[1]) * 60 + parseInt(m[2]);
+    }
+    function minutosAHora(mins) {
+        mins = ((mins % 1440) + 1440) % 1440;
+        return `${pad2(Math.floor(mins / 60))}:${pad2(mins % 60)}`;
+    }
+
+    function detectarCategoriaBase(texto) {
+        const t = (texto || '').toUpperCase();
+        const claves = Object.keys(horariosOffsets).sort((a, b) => b.length - a.length);
+        for (const c of claves) { if (t.includes(c)) return c; }
+        return null;
+    }
+
+    function flashCampo(el) {
+        el.style.transition = 'none';
+        el.style.background = '#fee2e2';
+        setTimeout(() => { el.style.transition = 'background 0.6s'; el.style.background = ''; }, 50);
+    }
+
+    window.onInicioCambiada = function(dia, deporte, fila) {
+        const id = `${dia}_${deporte}_${fila}`;
+        const inicioInput = document.getElementById(`inicio_${id}`);
+        const finalCell = document.getElementById(`final_${id}`);
+        if (!inicioInput) return;
+
+        let minutos = horaAMinutos(inicioInput.value);
+
+        // No puede ser anterior a la hora final del partido anterior en esta misma tabla
+        if (minutos !== null && fila > 1) {
+            const finalAnteriorTxt = document.getElementById(`final_${dia}_${deporte}_${fila - 1}`)?.textContent;
+            const finalAnteriorMin = horaAMinutos(finalAnteriorTxt);
+            if (finalAnteriorMin !== null && minutos < finalAnteriorMin) {
+                minutos = finalAnteriorMin;
+                inicioInput.value = minutosAHora(minutos);
+                flashCampo(inicioInput);
+            }
+        }
+
+        const localTexto = document.getElementById(`local_${id}`)?.textContent || '';
+        const esAlquiler = localTexto.trim().toUpperCase() === 'ALQUILER';
+        const esManual = finalCell.dataset.manual === '1';
+
+        if (!esAlquiler && !esManual) {
+            if (minutos === null) {
+                finalCell.textContent = '';
+            } else {
+                const catBase = detectarCategoriaBase(localTexto);
+                const offsetMin = catBase ? horariosOffsets[catBase] : null;
+                finalCell.textContent = offsetMin ? minutosAHora(minutos + offsetMin) : '';
+            }
+        }
+        // Si es un alquiler o el usuario editó FINAL a mano, no se recalcula aquí.
+        const finMin = horaAMinutos(finalCell.textContent);
+
+        // Propagar en cascada a la fila siguiente de la misma tabla:
+        // si está vacía, se sugiere por defecto la hora final del partido anterior + 5 minutos.
+        const tablaDia = DIAS_HORARIOS.find(d => d.key === dia);
+        if (tablaDia && fila < tablaDia.filas) {
+            if (finMin !== null) {
+                const siguienteInput = document.getElementById(`inicio_${dia}_${deporte}_${fila + 1}`);
+                if (siguienteInput && horaAMinutos(siguienteInput.value) === null) {
+                    siguienteInput.value = minutosAHora(finMin + 5);
+                }
+            }
+            onInicioCambiada(dia, deporte, fila + 1);
+        }
+    }
+
+    window.onCeldaEditada = function(dia, deporte, fila) {
+        onInicioCambiada(dia, deporte, fila);
+    }
+
+    window.onFinalEditada = function(dia, deporte, fila) {
+        const id = `${dia}_${deporte}_${fila}`;
+        document.getElementById(`final_${id}`).dataset.manual = '1';
+        onInicioCambiada(dia, deporte, fila);
+    }
+
+    window.onDropHorarios = function(evt, dia, deporte, fila) {
+        evt.preventDefault();
+        const idx = evt.dataTransfer.getData('text/plain');
+        const opcion = horariosOpciones[idx];
+        if (!opcion) return;
+        const id = `${dia}_${deporte}_${fila}`;
+        document.getElementById(`local_${id}`).textContent = opcion.categoria_label;
+        document.getElementById(`visitante_${id}`).textContent = opcion.rival;
+        delete document.getElementById(`final_${id}`).dataset.manual;
+        opcion.usada = true;
+        renderOpcionesArrastrablesHorarios();
+        onInicioCambiada(dia, deporte, fila);
+    }
+
+    function renderOpcionesArrastrablesHorarios() {
+        const cont = document.getElementById('opcionesArrastrablesHorarios');
+        if (!horariosOpciones.length) {
+            cont.innerHTML = '<div style="font-size:11px; color:#999; text-align:center; padding:10px;">No hay partidos en nuestro campo (106) para esta semana.</div>';
+            return;
+        }
+        cont.innerHTML = `<div style="display:flex; flex-wrap:wrap; gap:6px;">
+            ${horariosOpciones.map((op, idx) => `
+                <div draggable="true" ondragstart="event.dataTransfer.setData('text/plain', '${idx}')"
+                     title="${op.local} vs ${op.visitante} · ${op.hora_rffm} · ${op.deporte}"
+                     style="cursor:grab; background:${op.usada ? '#ffffff' : '#fee2e2'}; border:1px solid ${op.usada ? '#e2e8f0' : '#fca5a5'}; color:${op.usada ? '#cbd5e1' : '#991b1b'}; border-radius:8px; padding:6px 10px; font-size:10px; font-weight:800;">
+                    ${op.label}
+                </div>
+            `).join('')}
+        </div>`;
+    }
+
+    async function cargarOpcionesHorarios() {
+        const cont = document.getElementById('opcionesArrastrablesHorarios');
+        cont.innerHTML = '<div style="font-size:11px; color:#999; text-align:center; padding:10px;"><i class="fas fa-spinner fa-spin"></i> Cargando partidos desde la RFFM...</div>';
+        try {
+            const viernes = horariosViernesActivo;
+            const domingo = new Date(viernes); domingo.setDate(viernes.getDate() + 2);
+            const res = await fetch(`/api/horarios/opciones?desde=${formatoFechaDDMMYYYY(viernes)}&hasta=${formatoFechaDDMMYYYY(domingo)}`);
+            const data = await res.json();
+            horariosOpciones = Array.isArray(data) ? data : [];
+            renderOpcionesArrastrablesHorarios();
+        } catch (e) {
+            cont.innerHTML = '<div style="font-size:11px; color:#dc2626; text-align:center; padding:10px;">Error al conectar con la RFFM.</div>';
+            console.error('Error cargando opciones de horarios', e);
+        }
+    }
+
+    async function cargarPlantillaHorarios() {
+        try {
+            const res = await fetch(`/api/horarios/plantilla?semana=${formatoFechaISO(horariosViernesActivo)}`);
+            const data = await res.json();
+            if (!Array.isArray(data)) return;
+            data.forEach(f => {
+                const id = `${f.dia}_${f.deporte}_${f.fila}`;
+                const inicioInput = document.getElementById(`inicio_${id}`);
+                if (!inicioInput) return;
+                inicioInput.value = f.hora || '';
+                document.getElementById(`local_${id}`).textContent = f.local || '';
+                document.getElementById(`visitante_${id}`).textContent = f.visitante || '';
+                if ((f.local || '').trim().toUpperCase() === 'ALQUILER') {
+                    inicioInput.closest('tr')?.classList.add('fila-alquiler-horario');
+                }
+            });
+            DIAS_HORARIOS.forEach(dia => {
+                ['F7', 'F11'].forEach(deporte => onInicioCambiada(dia.key, deporte, 1));
+            });
+        } catch (e) { console.error('Error cargando plantilla de horarios', e); }
+        await cargarAlquileresParaHorarios();
+    }
+
+    // ==========================================
+    // VINCULACIÓN DE ALQUILERES EN LA PLANTILLA
+    // ==========================================
+    function abreviarCampoAlquiler(campo) {
+        const c = (campo || '').toUpperCase();
+        if (c.includes('ENTERO')) return 'F11 Entero';
+        if (c.includes('1/2') && c.includes('1')) return '1/2 F11 (1)';
+        if (c.includes('1/2') && c.includes('2')) return '1/2 F11 (2)';
+        if (c.includes('F7')) return 'Campo F7';
+        return campo || '';
+    }
+
+    function deporteTablaParaCampo(campo) {
+        return (campo || '').toUpperCase().includes('ENTERO') ? 'F11' : 'F7';
+    }
+
+    function buscarFilaAlquilerExistente(dia, deporte, numFilas, etiquetaEsperada) {
+        for (let i = 1; i <= numFilas; i++) {
+            const id = `${dia}_${deporte}_${i}`;
+            const local = (document.getElementById(`local_${id}`)?.textContent || '').trim().toUpperCase();
+            const visitante = (document.getElementById(`visitante_${id}`)?.textContent || '').trim();
+            if (local === 'ALQUILER' && visitante === etiquetaEsperada) return i;
+        }
+        return null;
+    }
+
+    function buscarFilaVaciaCercana(dia, deporte, numFilas, filaIdeal) {
+        for (let dist = 0; dist < numFilas; dist++) {
+            for (const cand of [filaIdeal - dist, filaIdeal + dist]) {
+                if (cand < 1 || cand > numFilas) continue;
+                const id = `${dia}_${deporte}_${cand}`;
+                const inicioVal = document.getElementById(`inicio_${id}`)?.value || '';
+                const localVal = (document.getElementById(`local_${id}`)?.textContent || '').trim();
+                if (!inicioVal && !localVal) return cand;
+                if (dist === 0) break;
+            }
+        }
+        return null;
+    }
+
+    async function cargarAlquileresParaHorarios() {
+        const banner = document.getElementById('avisoConflictosHorarios');
+        try {
+            const viernes = horariosViernesActivo;
+            const domingo = new Date(viernes); domingo.setDate(viernes.getDate() + 2);
+            const res = await fetch(`/api/alquileres_rango?desde=${formatoFechaISO(viernes)}&hasta=${formatoFechaISO(domingo)}`);
+            const data = await res.json();
+            if (!Array.isArray(data)) return;
+
+            const conflictos = [];
+
+            data.forEach(al => {
+                const horarioPartes = (al.horario || '').split(' a ').map(s => s.trim());
+                const inicioMin = horaAMinutos(horarioPartes[0]);
+                const finMin = horaAMinutos(horarioPartes[1]);
+                if (inicioMin === null || finMin === null) return;
+
+                const fechaAl = new Date(al.fecha_iso + 'T00:00:00');
+                const diffDias = Math.round((fechaAl - viernes) / 86400000);
+                const diaObj = DIAS_HORARIOS.find(d => d.offset === diffDias);
+                if (!diaObj) return;
+
+                const deporte = deporteTablaParaCampo(al.campo);
+                const etiqueta = `${al.nombre || 'Alquiler'} - ${abreviarCampoAlquiler(al.campo)}`;
+
+                // Comprobar solapamiento con partidos ya colocados (filas con INICIO y FINAL, que no sean ya este mismo alquiler)
+                let solapa = false;
+                for (let i = 1; i <= diaObj.filas; i++) {
+                    const id = `${diaObj.key}_${deporte}_${i}`;
+                    const localTxt = (document.getElementById(`local_${id}`)?.textContent || '').trim().toUpperCase();
+                    if (localTxt === 'ALQUILER') continue;
+                    const iMin = horaAMinutos(document.getElementById(`inicio_${id}`)?.value);
+                    const fMin = horaAMinutos(document.getElementById(`final_${id}`)?.textContent);
+                    if (iMin === null || fMin === null) continue;
+                    if (inicioMin < fMin && iMin < finMin) { solapa = true; break; }
+                }
+                if (solapa) {
+                    conflictos.push(`${diaObj.label} ${horarioPartes[0]}-${horarioPartes[1]} (${etiqueta}) se solapa con un partido ya programado`);
+                    return;
+                }
+
+                let filaDestino = buscarFilaAlquilerExistente(diaObj.key, deporte, diaObj.filas, etiqueta);
+                if (filaDestino === null) {
+                    const horasDia = 23 * 60 - 9 * 60;
+                    const filaIdeal = Math.min(diaObj.filas, Math.max(1, Math.round(((inicioMin - 9 * 60) / horasDia) * (diaObj.filas - 1)) + 1));
+                    filaDestino = buscarFilaVaciaCercana(diaObj.key, deporte, diaObj.filas, filaIdeal);
+                }
+                if (filaDestino === null) {
+                    conflictos.push(`${diaObj.label} ${horarioPartes[0]}-${horarioPartes[1]} (${etiqueta}): sin hueco libre en la tabla`);
+                    return;
+                }
+
+                const id = `${diaObj.key}_${deporte}_${filaDestino}`;
+                document.getElementById(`inicio_${id}`).value = horarioPartes[0];
+                document.getElementById(`final_${id}`).textContent = horarioPartes[1];
+                document.getElementById(`local_${id}`).textContent = 'ALQUILER';
+                document.getElementById(`visitante_${id}`).textContent = etiqueta;
+                document.getElementById(`inicio_${id}`).closest('tr')?.classList.add('fila-alquiler-horario');
+                onInicioCambiada(diaObj.key, deporte, filaDestino);
+            });
+
+            if (banner) {
+                if (conflictos.length) {
+                    banner.style.display = 'block';
+                    banner.innerHTML = `<i class="fas fa-triangle-exclamation"></i> ${conflictos.length} alquiler(es) no se pudieron colocar automáticamente:<ul style="margin:6px 0 0 18px;">${conflictos.map(c => `<li>${c}</li>`).join('')}</ul>`;
+                } else {
+                    banner.style.display = 'none';
+                }
+            }
+        } catch (e) { console.error('Error vinculando alquileres con horarios', e); }
+    }
+
+    window.guardarPlantillaHorarios = async function() {
+        const filas = [];
+        DIAS_HORARIOS.forEach(dia => {
+            ['F7', 'F11'].forEach(deporte => {
+                for (let i = 1; i <= dia.filas; i++) {
+                    const id = `${dia.key}_${deporte}_${i}`;
+                    const hora = document.getElementById(`inicio_${id}`)?.value || '';
+                    const local = document.getElementById(`local_${id}`)?.textContent || '';
+                    const visitante = document.getElementById(`visitante_${id}`)?.textContent || '';
+                    if (hora || local || visitante) {
+                        filas.push({ dia: dia.key, deporte, fila: i, hora, categ: '', local, visitante });
+                    }
+                }
+            });
+        });
+        try {
+            const res = await fetch('/api/horarios/guardar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ semana: formatoFechaISO(horariosViernesActivo), filas })
+            });
+            if (res.ok) alert('Plantilla guardada correctamente.');
+            else alert('Error al guardar la plantilla.');
+        } catch (e) {
+            alert('Error de conexión al guardar.');
+            console.error(e);
+        }
+    }
+
+    function generarHTMLExportHorarios() {
+        let html = '';
+        DIAS_HORARIOS.forEach(dia => {
+            const fecha = new Date(horariosViernesActivo);
+            fecha.setDate(horariosViernesActivo.getDate() + dia.offset);
+            const tituloFecha = `${dia.label.toUpperCase()}, ${fecha.getDate()} de ${MESES_HORARIOS_LARGO[fecha.getMonth()]} de ${fecha.getFullYear()}`;
+            html += `<h3 style="text-align:center; margin:14px 0 8px 0;">${tituloFecha}</h3><div style="display:flex; gap:12px;">`;
+            ['F7', 'F11'].forEach(deporte => {
+                html += `<table style="flex:1;"><tr><th colspan="4" style="background:#1e293b; color:white;">${deporte === 'F7' ? 'FÚTBOL 7' : 'FÚTBOL 11'}</th></tr>
+                    <tr><th>INICIO</th><th>FINAL</th><th>LOCAL</th><th>VISITANTE</th></tr>`;
+                for (let i = 1; i <= dia.filas; i++) {
+                    const id = `${dia.key}_${deporte}_${i}`;
+                    const inicio = document.getElementById(`inicio_${id}`)?.value || '';
+                    const final = document.getElementById(`final_${id}`)?.textContent || '';
+                    const local = document.getElementById(`local_${id}`)?.textContent || '';
+                    const visitante = document.getElementById(`visitante_${id}`)?.textContent || '';
+                    html += `<tr><td>${inicio}</td><td>${final}</td><td>${local}</td><td>${visitante}</td></tr>`;
+                }
+                html += `</table>`;
+            });
+            html += `</div>`;
+        });
+        return html;
+    }
+
+    window.descargarHorariosPDF = function() {
+        const ventana = window.open('', '_blank');
+        ventana.document.write(`
+            <html><head><title>Horarios ${formatoFechaISO(horariosViernesActivo)}</title>
+            <style>
+                @page { size: landscape; margin: 10mm; }
+                body { font-family: Arial, sans-serif; }
+                table { width:100%; border-collapse:collapse; }
+                th, td { border:1px solid #ccc; padding:4px; font-size:11px; text-align:center; }
+            </style>
+            </head><body>${generarHTMLExportHorarios()}</body></html>
+        `);
+        ventana.document.close();
+        setTimeout(() => { ventana.focus(); ventana.print(); }, 400);
+    }
+
+    window.descargarHorariosImagen = async function() {
+        showLoader();
+        try {
+            const cont = document.getElementById('contenedorPlantillaHorarios');
+            const canvas = await html2canvas(cont, { backgroundColor: '#ffffff', scale: 2 });
+            const link = document.createElement('a');
+            link.download = `horarios_${formatoFechaISO(horariosViernesActivo)}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } catch (e) {
+            alert('Error al generar la imagen.');
+            console.error(e);
+        } finally { hideLoader(); }
+    }
+
+    async function initHorarios() {
+        if (!horariosViernesActivo) horariosViernesActivo = viernesDeReferencia();
+        renderNavSemanaHorarios();
+        renderPlantillaHorarios();
+        if (!horariosInicializado) {
+            try {
+                const res = await fetch('/api/horarios/offsets');
+                horariosOffsets = await res.json();
+            } catch (e) { console.error('Error cargando offsets de horarios', e); }
+            horariosInicializado = true;
+        }
+        await cargarOpcionesHorarios();
+        await cargarPlantillaHorarios();
     }
 
     // Custom select dropdown helpers

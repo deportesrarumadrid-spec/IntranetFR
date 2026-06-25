@@ -1809,7 +1809,7 @@ def api_alquileres_proximos():
                 f = datetime(int(r['anio']), int(r['mes']), int(r['dia'])).date()
             except (ValueError, TypeError):
                 continue
-            if hoy <= f <= limite:
+            if hoy <= f <= limite and str(r.get('pagado', '')).strip().upper() != 'SI':
                 r2 = dict(r)
                 r2['fecha_iso'] = f.isoformat()
                 out.append(r2)
@@ -1817,6 +1817,33 @@ def api_alquileres_proximos():
         return jsonify(out)
     except Exception as e:
         print(f"Error en api_alquileres_proximos: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/alquileres_rango')
+def api_alquileres_rango():
+    if not session.get('usuario'): return jsonify({"status": "error", "message": "No session"}), 401
+    desde = request.args.get('desde')  # YYYY-MM-DD
+    hasta = request.args.get('hasta')  # YYYY-MM-DD
+    if not desde or not hasta:
+        return jsonify({"status": "error", "message": "Faltan fechas (desde/hasta)"}), 400
+    try:
+        d1 = datetime.strptime(desde, '%Y-%m-%d').date()
+        d2 = datetime.strptime(hasta, '%Y-%m-%d').date()
+        _, rows = _leer_alquileres_rows()
+        out = []
+        for r in rows:
+            try:
+                f = datetime(int(r['anio']), int(r['mes']), int(r['dia'])).date()
+            except (ValueError, TypeError):
+                continue
+            if d1 <= f <= d2:
+                r2 = dict(r)
+                r2['fecha_iso'] = f.isoformat()
+                out.append(r2)
+        out.sort(key=lambda r: (r['fecha_iso'], r.get('horario', '')))
+        return jsonify(out)
+    except Exception as e:
+        print(f"Error en api_alquileres_rango: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/alquiler_save', methods=['POST'])
@@ -1967,6 +1994,7 @@ from mi_equipo import mi_equipo_bp
 from formulario_partido import formulario_partido_bp # Importar el nuevo blueprint
 from inscripcion import inscripcion_bp # Importar el blueprint de inscripción
 from asistente_ia import asistente_bp # Importar el blueprint del asistente IA
+from horarios import horarios_bp # Importar el blueprint de horarios (RFFM)
 app.register_blueprint(financiero_bp)
 app.register_blueprint(deportivo_bp)
 app.register_blueprint(jugadores_datos_bp)
@@ -1977,6 +2005,7 @@ app.register_blueprint(mi_equipo_bp)
 app.register_blueprint(formulario_partido_bp)
 app.register_blueprint(inscripcion_bp) # Registrar el blueprint de inscripción
 app.register_blueprint(asistente_bp) # Registrar el blueprint del asistente IA
+app.register_blueprint(horarios_bp) # Registrar el blueprint de horarios (RFFM)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001, use_reloader=True)
