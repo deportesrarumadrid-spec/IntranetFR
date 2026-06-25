@@ -104,6 +104,9 @@
         .ev-otros { background: #f1f5f9; border-left-color: #d1d5db; color: #475569; }
 
         .btn-fin { border: none; padding: 12px; border-radius: 12px; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 11px; text-transform: uppercase; }
+        .alquiler-item { background: #eff6ff; border-left: 4px solid #60a5fa; border-radius: 8px; padding: 5px 10px; margin-bottom: 4px; font-size: 10px; color: #1e3a8a; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.2s; overflow: hidden; }
+        .alquiler-item:hover { transform: translateX(4px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .alquiler-item span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .form-control { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; font-family: inherit; font-size: 13px; font-weight: 600; outline: none; transition: 0.3s; }
         .form-control:focus { border-color: #E31E24; box-shadow: 0 0 0 3px rgba(227,30,36,0.1); }
     </style>
@@ -141,6 +144,16 @@
                     </button>
                 </div>
                 <div class="lista-eventos" id="events-anual-{{ m.num }}-{{ m.anio }}"></div>
+
+                <div class="alquileres-mes" style="margin-top: 12px; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 9px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;"><i class="fa-solid fa-key" style="margin-right: 4px;"></i>Alquileres</span>
+                        <button class="btn-plus-dia" style="font-size: 16px;" onclick="nuevoAlquiler({{ m.num }}, {{ m.anio }})" title="Añadir alquiler">
+                            <i class="fa-solid fa-circle-plus"></i>
+                        </button>
+                    </div>
+                    <div class="lista-alquileres" id="alquileres-{{ m.num }}-{{ m.anio }}" style="margin-top: 6px;"></div>
+                </div>
             </div>
             {% endfor %}
         </div>
@@ -201,6 +214,89 @@
         </div>
     </div>
 
+    <!-- MODAL ALQUILER DE CAMPO -->
+    <div id="modalAlquiler" class="modal">
+        <div class="modal-content" style="position: relative;">
+            <span onclick="closeAlquilerModal()" style="position: absolute; top: 22px; right: 25px; color: white; font-size: 32px; cursor: pointer; z-index: 1000; font-weight: 900; transition: 0.3s; line-height: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.2);" onmouseover="this.style.transform='scale(1.2) rotate(90deg)'" onmouseout="this.style.transform='scale(1) rotate(0deg)'">&times;</span>
+            <div style="background: #E31E24; color: white; padding: 25px 20px; text-align: center;">
+                <h3 id="modalAlquilerTitle" style="margin: 0; text-transform: uppercase; font-size: 14px; letter-spacing: 1px;">Nuevo Alquiler</h3>
+            </div>
+
+            <div style="padding: 30px;">
+                <div style="margin-bottom: 20px;">
+                    <label style="font-size: 9px; font-weight: 900; color: #999; text-transform: uppercase; display: block; margin-bottom: 8px;">Nombre</label>
+                    <input type="text" id="alqNombre" class="form-control" placeholder="Ej: Juan Pérez">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="font-size: 9px; font-weight: 900; color: #999; text-transform: uppercase; display: block; margin-bottom: 8px;">Día</label>
+                    <input type="date" id="alqDia" class="form-control">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div>
+                        <label style="font-size: 9px; font-weight: 900; color: #999; text-transform: uppercase; display: block; margin-bottom: 8px;">Desde</label>
+                        <input type="time" id="alqHoraDesde" class="form-control">
+                    </div>
+                    <div>
+                        <label style="font-size: 9px; font-weight: 900; color: #999; text-transform: uppercase; display: block; margin-bottom: 8px;">Hasta</label>
+                        <input type="time" id="alqHoraHasta" class="form-control">
+                    </div>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="font-size: 9px; font-weight: 900; color: #999; text-transform: uppercase; display: block; margin-bottom: 8px;">Teléfono</label>
+                    <input type="text" id="alqTelefono" class="form-control" placeholder="Ej: 600 000 000">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="font-size: 9px; font-weight: 900; color: #999; text-transform: uppercase; display: block; margin-bottom: 8px;">Campo</label>
+                    <select id="alqCampo" class="form-control">
+                        <option value="CAMPO F7">CAMPO F7</option>
+                        <option value="1/2 CAMPO F11 - 1">1/2 CAMPO F11 - 1</option>
+                        <option value="1/2 CAMPO F11 - 2">1/2 CAMPO F11 - 2</option>
+                        <option value="CAMPO F11 ENTERO">CAMPO F11 ENTERO</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="font-size: 9px; font-weight: 900; color: #999; text-transform: uppercase; display: block; margin-bottom: 8px;">Comentario</label>
+                    <textarea id="alqComentario" class="form-control" rows="3" placeholder="Notas adicionales..."></textarea>
+                </div>
+                <div style="display: grid; grid-template-columns: auto 1fr; gap: 15px; margin-bottom: 25px; align-items: center;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 900; color: #333; text-transform: uppercase; cursor: pointer; white-space: nowrap;">
+                        <input type="checkbox" id="alqPagado" style="width: 18px; height: 18px; cursor: pointer;"> Pagado
+                    </label>
+                    <input type="number" id="alqImporte" class="form-control" placeholder="Importe €" step="0.01">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+                    <button class="btn-fin" onclick="closeAlquilerModal()" style="background: #f1f5f9; color: #64748b;">CANCELAR</button>
+                    <button id="btnSaveAlquiler" class="btn-fin" onclick="guardarAlquilerDefinitivo()" style="background: #E31E24; color: white; box-shadow: 0 8px 15px rgba(227,30,36,0.2);">GUARDAR ALQUILER</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETALLE ALQUILER (VISTA ANUAL) -->
+    <div id="modalDetalleAlquilerAnual" class="modal">
+        <div class="modal-content" style="position: relative; width: 420px;">
+            <span onclick="document.getElementById('modalDetalleAlquilerAnual').style.display='none'" style="position: absolute; top: 22px; right: 25px; color: white; font-size: 32px; cursor: pointer; z-index: 1000; font-weight: 900; line-height: 1;">&times;</span>
+            <div style="background: #E31E24; color: white; padding: 25px 20px; text-align: center;">
+                <h3 style="margin: 0; text-transform: uppercase; font-size: 14px; letter-spacing: 1px;">Detalle Alquiler</h3>
+            </div>
+            <div style="padding: 30px;">
+                <div id="detalleAlquilerAnualBody" style="margin-bottom: 20px;"></div>
+
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 25px; flex-wrap: wrap;">
+                    <span id="badgePagoAlquilerAnual" onclick="revertirPagoAlquilerAnual()" style="cursor: pointer; font-weight: 900; font-size: 11px; padding: 8px 14px; border-radius: 10px; text-transform: uppercase; white-space: nowrap;">PENDIENTE</span>
+                    <input type="number" id="inputImporteAlquilerAnual" class="form-control" placeholder="Importe €" step="0.01" style="flex: 1; min-width: 90px;">
+                    <button onclick="guardarPagoAlquilerAnual()" style="background: #16a34a; color: white; border: none; border-radius: 8px; padding: 0 16px; height: 42px; font-weight: 900; font-size: 10px; cursor: pointer; white-space: nowrap;">GUARDAR</button>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <button class="btn-fin" onclick="editarAlquilerDesdeDetalle()" style="background: #f1f5f9; color: #1e3a8a;"><i class="fa-solid fa-pencil"></i> EDITAR</button>
+                    <button class="btn-fin" onclick="eliminarAlquilerDesdeDetalle()" style="background: #fee2e2; color: #dc3545;"><i class="fa-solid fa-trash"></i> ELIMINAR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- VISTA SEMANAL -->
     <div id="view-semanal" class="view-container active">
         <div id="main-grid-semanal" class="grid-semanal">
@@ -222,6 +318,7 @@
     <script>
         let currentIsoFecha = '';
         let CATEGORIAS = ['DEPORTIVO', 'MK', 'OFICINA', 'OTROS'];
+        const ALQUILERES_CAMPOS = ["CAMPO F7", "1/2 CAMPO F11 - 1", "1/2 CAMPO F11 - 2", "CAMPO F11 ENTERO"];
         const urlParams = new URLSearchParams(window.location.search);
         const PERSONA_MOSTRADA = urlParams.get('user') || '{{ usuario_sesion }}';
         const SECCION_VIEW = '{{ view }}';
@@ -344,13 +441,71 @@
                 if (btn) changeView(viewParam, btn);
             }
             
+            // Título con el nombre en rojo
+            document.getElementById('crono-title-header').innerHTML = `CRONOGRAMA DEPORTIVO - <span style="color: #E31E24;">${PERSONA_MOSTRADA.toUpperCase()}</span>`;
+
             if (PERSONA_MOSTRADA.toUpperCase() === 'RUBEN') {
                 prepareRubenExtraViews();
             }
-
-            // Título con el nombre en rojo
-            document.getElementById('crono-title-header').innerHTML = `CRONOGRAMA DEPORTIVO - <span style="color: #E31E24;">${PERSONA_MOSTRADA.toUpperCase()}</span>`;
         });
+
+        // Rubén puede ver además los cronogramas de Raúl y Gonzalo debajo del suyo.
+        // La vista Anual de Raúl ya está unificada con la de Rubén (identidad compartida "Raru"),
+        // así que solo se duplica su vista Semanal (personal); la de Gonzalo se duplica entera.
+        function prepareRubenExtraViews() {
+            const anualCont = document.getElementById('extra-anual-container');
+            const semanalCont = document.getElementById('extra-semanal-container');
+            if (!anualCont || !semanalCont) return;
+
+            const others = [
+                { name: 'Raul', label: 'Raúl', suffix: '-raul', soloSemanal: true },
+                { name: 'Gonzalo', label: 'Gonzalo', suffix: '-gonzalo', soloSemanal: false }
+            ];
+
+            others.forEach(user => {
+                const hSem = document.createElement('h2');
+                hSem.style.cssText = "margin-top: 50px; padding: 10px 20px; background: #eee; border-radius: 10px; font-size: 16px; text-transform: uppercase;";
+                hSem.innerText = `Cronograma ${user.label}`;
+                semanalCont.appendChild(hSem);
+
+                const gridSem = document.createElement('div');
+                gridSem.className = 'grid-semanal';
+                gridSem.style.marginTop = '10px';
+                gridSem.innerHTML = document.getElementById('main-grid-semanal').innerHTML;
+                gridSem.querySelectorAll('.lista-eventos').forEach(el => {
+                    el.id = el.id + user.suffix;
+                    el.innerHTML = '';
+                });
+                gridSem.querySelectorAll('.btn-plus-dia').forEach(btn => {
+                    btn.setAttribute('onclick', btn.getAttribute('onclick').replace(', null', `, '${user.name}'`));
+                });
+                semanalCont.appendChild(gridSem);
+                renderUserSchedule(user.name, user.suffix, 'SEMANAL');
+
+                if (user.soloSemanal) return;
+
+                const hAnu = document.createElement('h2');
+                hAnu.style.cssText = "margin-top: 50px; padding: 10px 20px; background: #eee; border-radius: 10px; font-size: 16px; text-transform: uppercase;";
+                hAnu.innerText = `Cronograma ${user.label}`;
+                anualCont.appendChild(hAnu);
+
+                const gridAnu = document.createElement('div');
+                gridAnu.className = 'grid-anual'; gridAnu.style.marginTop = '10px';
+                gridAnu.innerHTML = document.getElementById('main-grid-anual').innerHTML;
+                gridAnu.querySelectorAll('.mes-card').forEach(el => {
+                    el.className += ' ' + user.suffix;
+                    const list = el.querySelector('.lista-eventos');
+                    if (list) { list.id = list.id + user.suffix; list.innerHTML = ''; }
+                    const alqCont = el.querySelector('.alquileres-mes');
+                    if (alqCont) alqCont.remove();
+                });
+                gridAnu.querySelectorAll('.btn-plus-dia').forEach(btn => {
+                    btn.setAttribute('onclick', btn.getAttribute('onclick').replace(', null', `, '${user.name}'`));
+                });
+                anualCont.appendChild(gridAnu);
+                renderUserSchedule(user.name, user.suffix, 'ANUAL');
+            });
+        }
 
         // Lógica para el rango Sep-Ago en Anual
         function ordenarMesesTemporada() {
@@ -377,59 +532,16 @@
             element.classList.toggle('selected'); 
         }
 
-        function getSelectedOwners() {
-            const pills = document.querySelectorAll('#groupOwner .pill-opt.selected');
-            if (pills.length === 0) return PERSONA_MOSTRADA;
-            return Array.from(pills).map(p => p.innerText.trim()).join(',');
+        function mapOwnerParaVista(nombre) {
+            const norm = (nombre || '').trim().toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+            if (currentView === 'anual' && (norm === 'RAUL' || norm === 'RUBEN')) return 'Raru';
+            return (nombre || '').trim();
         }
 
-        function prepareRubenExtraViews() {
-            const anualCont = document.getElementById('extra-anual-container');
-            const semanalCont = document.getElementById('extra-semanal-container');
-            if (!anualCont || !semanalCont) return;
-
-            const others = [
-                { name: 'Raul', label: 'Raúl', suffix: '-raul' },
-                { name: 'Gonzalo', label: 'Gonzalo', suffix: '-gonzalo' }
-            ];
-
-            others.forEach(user => {
-                const hSem = document.createElement('h2');
-                hSem.style.cssText = "margin-top: 50px; padding: 10px 20px; background: #eee; border-radius: 10px; font-size: 16px; text-transform: uppercase;";
-                hSem.innerText = `Cronograma ${user.label}`;
-                semanalCont.appendChild(hSem);
-
-                const gridSem = document.createElement('div');
-                gridSem.className = 'grid-semanal';
-                gridSem.style.marginTop = '10px';
-                gridSem.innerHTML = document.getElementById('main-grid-semanal').innerHTML;
-                gridSem.querySelectorAll('.lista-eventos').forEach(el => {
-                    el.id = el.id + user.suffix;
-                    el.innerHTML = '';
-                });
-                gridSem.querySelectorAll('.btn-plus-dia').forEach(btn => {
-                    btn.setAttribute('onclick', btn.getAttribute('onclick').replace(', null', `, '${user.name}'`));
-                });
-                semanalCont.appendChild(gridSem);
-
-                const hAnu = document.createElement('h2');
-                hAnu.style.cssText = "margin-top: 50px; padding: 10px 20px; background: #eee; border-radius: 10px; font-size: 16px; text-transform: uppercase;";
-                hAnu.innerText = `Cronograma ${user.label}`;
-                anualCont.appendChild(hAnu);
-
-                const gridAnu = document.createElement('div');
-                gridAnu.className = 'grid-anual'; gridAnu.style.marginTop = '10px';
-                gridAnu.innerHTML = document.getElementById('main-grid-anual').innerHTML;
-                gridAnu.querySelectorAll('.mes-card').forEach(el => {
-                    el.className += ' ' + user.suffix;
-                    const list = el.querySelector('.lista-eventos');
-                    if (list) { list.id = list.id + user.suffix; list.innerHTML = ''; }
-                });
-                gridAnu.querySelectorAll('.btn-plus-dia').forEach(btn => {
-                    btn.setAttribute('onclick', btn.getAttribute('onclick').replace(', null', `, '${user.name}'`));
-                });
-                anualCont.appendChild(gridAnu);
-            });
+        function getSelectedOwners() {
+            const pills = document.querySelectorAll('#groupOwner .pill-opt.selected');
+            if (pills.length === 0) return mapOwnerParaVista(PERSONA_MOSTRADA);
+            return Array.from(pills).map(p => mapOwnerParaVista(p.innerText)).join(',');
         }
 
         function closeTaskModal() {
@@ -494,10 +606,16 @@
 
         function toggleMultiPill(element, value) { element.classList.toggle('selected'); }
 
+        function mapOwnerParaVista(nombre) {
+            const norm = (nombre || '').trim().toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+            if (currentView === 'anual' && (norm === 'RAUL' || norm === 'RUBEN')) return 'Raru';
+            return (nombre || '').trim();
+        }
+
         function getSelectedOwners() {
             const pills = document.querySelectorAll('#groupOwner .pill-opt.selected');
-            if (pills.length === 0) return PERSONA_MOSTRADA;
-            return Array.from(pills).map(p => p.innerText.trim()).join(',');
+            if (pills.length === 0) return mapOwnerParaVista(PERSONA_MOSTRADA);
+            return Array.from(pills).map(p => mapOwnerParaVista(p.innerText)).join(',');
         }
 
         async function guardarTareaDefinitiva() {
@@ -571,41 +689,53 @@
         const sanitizeClass = (str) => "cat-sec-" + (str || 'otros').replace(/[^a-z0-9]/gi, '-').toLowerCase();
 
         // Cargar datos desde la API
-        async function initCargaCronograma() {
-            await renderUserSchedule(PERSONA_MOSTRADA, '');
-            if (PERSONA_MOSTRADA.toUpperCase() === 'RUBEN') {
-                await renderUserSchedule('Raul', '-raul');
-                await renderUserSchedule('Gonzalo', '-gonzalo');
-            }
-            ordenarMesesTemporada();
+        // NOTA: la vista Semanal es siempre personal (Raúl y Rubén ven cada uno la suya);
+        // la vista Anual se unifica para ambos bajo la identidad compartida "Raru".
+        function personaAnualEfectiva() {
+            const p = PERSONA_MOSTRADA.toUpperCase();
+            return (p === 'RUBEN' || p === 'RAUL') ? 'Raru' : PERSONA_MOSTRADA;
         }
 
-        async function renderUserSchedule(user, suffix) {
+        async function initCargaCronograma() {
+            await renderUserSchedule(PERSONA_MOSTRADA, '', 'SEMANAL');
+            await renderUserSchedule(personaAnualEfectiva(), '', 'ANUAL');
+            ordenarMesesTemporada();
+            cargarTodosLosAlquileres();
+        }
+
+        async function renderUserSchedule(user, suffix, modo) {
             try {
-                const res = await fetch(`/api/cronograma_data?user=${user}&_t=${new Date().getTime()}`);
+                const res = await fetch(`/api/cronograma_data?user=${user}&view=${modo}&_t=${new Date().getTime()}`);
                 const data = await res.json();
                 if (!Array.isArray(data)) return;
 
-                document.querySelectorAll(`.lista-eventos[id$="${suffix}"]`).forEach(el => el.innerHTML = '');
-                
+                if (modo === 'SEMANAL') {
+                    document.querySelectorAll(`#view-semanal .lista-eventos[id$="${suffix}"]`).forEach(el => el.innerHTML = '');
+                } else {
+                    document.querySelectorAll(`#view-anual .lista-eventos[id$="${suffix}"]`).forEach(el => el.innerHTML = '');
+                }
+
                 data.forEach(ev => {
                     const diasRepeticion = (ev.FRECUENCIA || "").split(',').map(s => s.trim()).filter(x => x);
                     const tipoLimpio = (ev.TIPO || 'OTROS').toUpperCase();
                     const tareaLimpia = (ev.TAREA || '').trim();
                     if (!tareaLimpia) return;
-                    processTaskForUser(ev, user, suffix, tipoLimpio, tareaLimpia, diasRepeticion);
+                    processTaskForUser(ev, user, suffix, tipoLimpio, tareaLimpia, diasRepeticion, modo);
                 });
             } catch (err) { console.error("Error rendering schedule for " + user, err); }
         }
 
-        function processTaskForUser(ev, user, suffix, tipoLimpio, tareaLimpia, diasRepeticion) {
-            const weekContainerIds = Array.from(document.querySelectorAll(`#view-semanal .lista-eventos`))
-                                        .map(el => el.id).filter(id => id.startsWith('events-week-') && id.endsWith(suffix));
-            
-            weekContainerIds.forEach(id => {
-                const isoDate = id.replace('events-week-', '').replace(suffix, '');
-                if (shouldShowTask(ev, isoDate, diasRepeticion)) renderTaskItemWeekly(document.getElementById(id), ev, tipoLimpio, tareaLimpia);
-            });
+        function processTaskForUser(ev, user, suffix, tipoLimpio, tareaLimpia, diasRepeticion, modo) {
+            if (modo === 'SEMANAL') {
+                const weekContainerIds = Array.from(document.querySelectorAll(`#view-semanal .lista-eventos`))
+                                            .map(el => el.id).filter(id => id.startsWith('events-week-') && id.endsWith(suffix));
+
+                weekContainerIds.forEach(id => {
+                    const isoDate = id.replace('events-week-', '').replace(suffix, '');
+                    if (shouldShowTask(ev, isoDate, diasRepeticion)) renderTaskItemWeekly(document.getElementById(id), ev, tipoLimpio, tareaLimpia);
+                });
+                return;
+            }
 
             const tEsc = tareaLimpia.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
             const fEsc = (ev.FECHA_ISO || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
@@ -682,65 +812,6 @@
                 </div>
             `;
             section.appendChild(evDiv);
-        }
-
-        function prepareRubenExtraViews() {
-            const anualCont = document.getElementById('extra-anual-container');
-            const semanalCont = document.getElementById('extra-semanal-container');
-            if (!anualCont || !semanalCont) return;
-
-            const others = [
-                { name: 'Raul', label: 'Raúl', suffix: '-raul' },
-                { name: 'Gonzalo', label: 'Gonzalo', suffix: '-gonzalo' }
-            ];
-
-            others.forEach(user => {
-                // Header Semanal
-                const hSem = document.createElement('h2');
-                hSem.style.cssText = "margin-top: 50px; padding: 10px 20px; background: #eee; border-radius: 10px; font-size: 16px; text-transform: uppercase;";
-                hSem.innerText = `Cronograma ${user.label}`;
-                semanalCont.appendChild(hSem);
-
-                const gridSem = document.createElement('div');
-                gridSem.className = 'grid-semanal';
-                gridSem.style.marginTop = '10px';
-                gridSem.innerHTML = document.getElementById('main-grid-semanal').innerHTML;
-                gridSem.querySelectorAll('.lista-eventos').forEach(el => {
-                    el.id = el.id + user.suffix;
-                    el.innerHTML = '';
-                });
-                gridSem.querySelectorAll('.btn-plus-dia').forEach(btn => {
-                    const currentOnclick = btn.getAttribute('onclick');
-                    const newOnclick = currentOnclick.replace(', null', `, '${user.name}'`);
-                    btn.setAttribute('onclick', newOnclick);
-                });
-                semanalCont.appendChild(gridSem);
-
-                // Header Anual
-                const hAnu = document.createElement('h2');
-                hAnu.style.cssText = "margin-top: 50px; padding: 10px 20px; background: #eee; border-radius: 10px; font-size: 16px; text-transform: uppercase;";
-                hAnu.innerText = `Cronograma ${user.label}`;
-                anualCont.appendChild(hAnu);
-
-                const gridAnu = document.createElement('div');
-                gridAnu.className = 'grid-anual';
-                gridAnu.style.marginTop = '10px';
-                gridAnu.innerHTML = document.getElementById('main-grid-anual').innerHTML;
-                gridAnu.querySelectorAll('.mes-card').forEach(el => {
-                    el.className += ' ' + user.suffix;
-                    const list = el.querySelector('.lista-eventos');
-                    if (list) {
-                        list.id = list.id + user.suffix;
-                        list.innerHTML = '';
-                    }
-                });
-                gridAnu.querySelectorAll('.btn-plus-dia').forEach(btn => {
-                    const currentOnclick = btn.getAttribute('onclick');
-                    const newOnclick = currentOnclick.replace(', null', `, '${user.name}'`);
-                    btn.setAttribute('onclick', newOnclick);
-                });
-                anualCont.appendChild(gridAnu);
-            });
         }
 
         // Función auxiliar para renderizar tareas en los meses de la vista anual
@@ -893,6 +964,246 @@
         function getCatColor(cat) {
             const colors = { 'DEPORTIVO': '#fda4af', 'DEPORTIVA': '#fda4af', 'MK': '#93c5fd', 'OFICINA': '#cbd5e1', 'OTROS': '#d1d5db' };
             return colors[cat] || '#ccc';
+        }
+
+        // === ALQUILERES DE CAMPO ===
+        let editingAlquilerId = null;
+        let alquilerMesActivo = null;
+        let alquilerAnioActivo = null;
+        let alquileresCache = {};
+
+        function closeAlquilerModal() {
+            document.getElementById('modalAlquiler').style.display = 'none';
+        }
+
+        function limitesMes(mes, anio) {
+            const mesNum = parseInt(mes), anioNum = parseInt(anio);
+            const lastDay = new Date(anioNum, mesNum, 0).getDate();
+            const pad = (n) => String(n).padStart(2, '0');
+            return {
+                min: `${anioNum}-${pad(mesNum)}-01`,
+                max: `${anioNum}-${pad(mesNum)}-${pad(lastDay)}`
+            };
+        }
+
+        function nuevoAlquiler(mes, anio) {
+            editingAlquilerId = null;
+            alquilerMesActivo = mes;
+            alquilerAnioActivo = anio;
+            document.getElementById('modalAlquilerTitle').innerText = "Nuevo Alquiler";
+            document.getElementById('btnSaveAlquiler').innerText = "GUARDAR ALQUILER";
+            document.getElementById('alqNombre').value = '';
+            const lim = limitesMes(mes, anio);
+            const diaInput = document.getElementById('alqDia');
+            diaInput.min = lim.min; diaInput.max = lim.max; diaInput.value = lim.min;
+            document.getElementById('alqHoraDesde').value = '';
+            document.getElementById('alqHoraHasta').value = '';
+            document.getElementById('alqTelefono').value = '';
+            document.getElementById('alqCampo').value = ALQUILERES_CAMPOS[0];
+            document.getElementById('alqComentario').value = '';
+            document.getElementById('alqPagado').checked = false;
+            document.getElementById('alqImporte').value = '';
+            document.getElementById('modalAlquiler').style.display = 'flex';
+        }
+
+        function editarAlquiler(rowId) {
+            const al = alquileresCache[rowId];
+            if (!al) return;
+            editingAlquilerId = rowId;
+            alquilerMesActivo = al.mes;
+            alquilerAnioActivo = al.anio;
+            document.getElementById('modalAlquilerTitle').innerText = "Modificar Alquiler";
+            document.getElementById('btnSaveAlquiler').innerText = "ACTUALIZAR CAMBIOS";
+            document.getElementById('alqNombre').value = al.nombre || '';
+
+            const lim = limitesMes(al.mes, al.anio);
+            const pad = (n) => String(n).padStart(2, '0');
+            const diaInput = document.getElementById('alqDia');
+            diaInput.min = lim.min; diaInput.max = lim.max;
+            diaInput.value = `${al.anio}-${pad(al.mes)}-${pad(al.dia)}`;
+
+            const partesHorario = (al.horario || '').split(' a ').map(s => s.trim());
+            document.getElementById('alqHoraDesde').value = partesHorario[0] || '';
+            document.getElementById('alqHoraHasta').value = partesHorario[1] || '';
+
+            document.getElementById('alqTelefono').value = al.telefono || '';
+            document.getElementById('alqCampo').value = al.campo || ALQUILERES_CAMPOS[0];
+            document.getElementById('alqComentario').value = al.comentario || '';
+            document.getElementById('alqPagado').checked = (al.pagado || '').toUpperCase() === 'SI';
+            document.getElementById('alqImporte').value = al.importe || '';
+            document.getElementById('modalAlquiler').style.display = 'flex';
+        }
+
+        async function guardarAlquilerDefinitivo() {
+            const diaFull = document.getElementById('alqDia').value;
+            if (!diaFull) return alert("El día es obligatorio.");
+            const dia = parseInt(diaFull.split('-')[2]);
+
+            const desde = document.getElementById('alqHoraDesde').value;
+            const hasta = document.getElementById('alqHoraHasta').value;
+            const horario = (desde && hasta) ? `${desde} a ${hasta}` : (desde || hasta || '');
+
+            const payload = {
+                anio: alquilerAnioActivo, mes: alquilerMesActivo, dia,
+                nombre: document.getElementById('alqNombre').value.trim(),
+                horario,
+                telefono: document.getElementById('alqTelefono').value.trim(),
+                campo: document.getElementById('alqCampo').value,
+                comentario: document.getElementById('alqComentario').value.trim(),
+                pagado: document.getElementById('alqPagado').checked,
+                importe: document.getElementById('alqImporte').value.trim()
+            };
+            if (editingAlquilerId) payload.row_id = editingAlquilerId;
+
+            showLoader();
+            try {
+                const url = editingAlquilerId ? '/api/alquiler_edit' : '/api/alquiler_save';
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    closeAlquilerModal();
+                    await cargarTodosLosAlquileres();
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    alert("Error al guardar el alquiler: " + (err.message || ''));
+                }
+            } catch (e) {
+                alert("Error de conexión al guardar el alquiler.");
+            } finally { hideLoader(); }
+        }
+
+        let alquilerDetalleActivoId = null;
+
+        function abrirDetalleAlquilerAnual(rowId) {
+            const al = alquileresCache[rowId];
+            if (!al) return;
+            alquilerDetalleActivoId = rowId;
+            document.getElementById('detalleAlquilerAnualBody').innerHTML = `
+                <div style="line-height: 1.9; font-size: 12px; color: #333;">
+                    <div><strong>Nombre:</strong> ${al.nombre || '-'}</div>
+                    <div><strong>Fecha:</strong> ${al.dia}/${al.mes}/${al.anio}</div>
+                    <div><strong>Horario:</strong> ${al.horario || '-'}</div>
+                    <div><strong>Teléfono:</strong> ${al.telefono || '-'}</div>
+                    <div><strong>Campo:</strong> ${al.campo || '-'}</div>
+                    <div><strong>Comentario:</strong> ${al.comentario || '-'}</div>
+                </div>
+            `;
+            actualizarBadgePagoAlquilerAnual(al);
+            document.getElementById('inputImporteAlquilerAnual').value = al.importe || '';
+            document.getElementById('modalDetalleAlquilerAnual').style.display = 'flex';
+        }
+
+        function actualizarBadgePagoAlquilerAnual(al) {
+            const pagado = (al.pagado || '').toUpperCase() === 'SI';
+            const badge = document.getElementById('badgePagoAlquilerAnual');
+            badge.textContent = pagado ? `${al.importe ? al.importe + '€ · ' : ''}PAGADO` : 'PENDIENTE';
+            badge.style.background = pagado ? '#dcfce7' : '#fee2e2';
+            badge.style.color = pagado ? '#15803d' : '#b91c1c';
+        }
+
+        async function guardarPagoAlquilerAnual() {
+            const rowId = alquilerDetalleActivoId;
+            if (!rowId) return;
+            const importe = document.getElementById('inputImporteAlquilerAnual').value.trim();
+            showLoader();
+            try {
+                const res = await fetch('/api/alquiler_pagado', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ row_id: rowId, pagado: true, importe })
+                });
+                if (res.ok) {
+                    await cargarTodosLosAlquileres();
+                    actualizarBadgePagoAlquilerAnual(alquileresCache[rowId] || { pagado: 'SI', importe });
+                } else { alert("No se pudo actualizar el pago."); }
+            } catch (e) {
+                console.error("Error actualizando pago:", e);
+            } finally { hideLoader(); }
+        }
+
+        async function revertirPagoAlquilerAnual() {
+            const rowId = alquilerDetalleActivoId;
+            const al = alquileresCache[rowId];
+            if (!al || (al.pagado || '').toUpperCase() !== 'SI') return;
+            if (!confirm("¿Marcar este alquiler como pendiente de pago?")) return;
+            showLoader();
+            try {
+                const res = await fetch('/api/alquiler_pagado', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ row_id: rowId, pagado: false, importe: al.importe })
+                });
+                if (res.ok) {
+                    await cargarTodosLosAlquileres();
+                    actualizarBadgePagoAlquilerAnual(alquileresCache[rowId] || { pagado: 'NO' });
+                } else { alert("No se pudo actualizar el pago."); }
+            } catch (e) {
+                console.error("Error actualizando pago:", e);
+            } finally { hideLoader(); }
+        }
+
+        function editarAlquilerDesdeDetalle() {
+            document.getElementById('modalDetalleAlquilerAnual').style.display = 'none';
+            editarAlquiler(alquilerDetalleActivoId);
+        }
+
+        function eliminarAlquilerDesdeDetalle() {
+            document.getElementById('modalDetalleAlquilerAnual').style.display = 'none';
+            eliminarAlquiler(alquilerDetalleActivoId);
+        }
+
+        async function eliminarAlquiler(rowId) {
+            if (!confirm("¿Seguro que quieres eliminar este alquiler?")) return;
+            showLoader();
+            try {
+                const res = await fetch('/api/alquiler_delete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ row_id: rowId })
+                });
+                if (res.ok) {
+                    await cargarTodosLosAlquileres();
+                } else {
+                    alert("No se pudo eliminar el alquiler.");
+                }
+            } catch (e) {
+                console.error("Error al eliminar alquiler:", e);
+            } finally { hideLoader(); }
+        }
+
+        async function cargarTodosLosAlquileres() {
+            const cards = document.querySelectorAll('#main-grid-anual .mes-card');
+            for (const card of cards) {
+                const mes = card.dataset.mes;
+                const anio = card.dataset.anio;
+                await cargarAlquileresMes(mes, anio);
+            }
+        }
+
+        async function cargarAlquileresMes(mes, anio) {
+            const cont = document.getElementById(`alquileres-${mes}-${anio}`);
+            if (!cont) return;
+            try {
+                const res = await fetch(`/api/alquileres_data?anio=${anio}&mes=${mes}&_t=${new Date().getTime()}`);
+                const data = await res.json();
+                if (!Array.isArray(data)) return;
+                data.sort((a, b) => (parseInt(a.dia) || 0) - (parseInt(b.dia) || 0));
+                data.forEach(al => { alquileresCache[al.row_id] = al; });
+                const diaAbrevs = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
+                cont.innerHTML = data.map(al => {
+                    const fDate = new Date(parseInt(al.anio), parseInt(al.mes) - 1, parseInt(al.dia));
+                    const diaTxt = `${diaAbrevs[fDate.getDay()]} ${String(al.dia).padStart(2, '0')}/${String(al.mes).padStart(2, '0')}`;
+                    const pagado = (al.pagado || '').toUpperCase() === 'SI';
+                    return `<div class="alquiler-item" onclick="abrirDetalleAlquilerAnual(${al.row_id})">
+                        <span style="font-weight:900;">${diaTxt}</span>
+                        <span style="font-weight:700;">${al.nombre || ''}</span>
+                        ${pagado ? '<span style="margin-left:auto; font-size:8px; font-weight:900; color:#15803d; background:#dcfce7; padding:1px 5px; border-radius:5px; white-space:nowrap;">PAGADO</span>' : ''}
+                    </div>`;
+                }).join('');
+            } catch (e) { console.error("Error cargando alquileres", e); }
         }
     </script>
 </body>

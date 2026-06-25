@@ -46,6 +46,7 @@
     flex-direction: column;
     height: 100vh;
     flex-shrink: 0 !important;
+    overflow-y: auto !important;
 }
 
 .main-content {
@@ -142,6 +143,12 @@
             gap: 8px;
         }
         .aviso-item i { color: #E31E24; width: 12px; text-align: center; }
+
+        .alquiler-sidebar-row { display: flex; align-items: center; gap: 6px; padding: 3px 4px; cursor: pointer; border-radius: 5px; color: rgba(255,255,255,0.9); transition: 0.15s; }
+        .alquiler-sidebar-row:hover { background: rgba(255,255,255,0.12); }
+        .alquiler-sidebar-row span:first-child { font-weight: 900; color: white; }
+        .alquiler-sidebar-row span:last-child { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .alquiler-sidebar-row .badge-pagado-mini { margin-left: auto; font-size: 0.5rem; font-weight: 900; color: #15803d; background: #dcfce7; padding: 1px 5px; border-radius: 5px; white-space: nowrap; }
 
         .tareas-box {
             background: white;
@@ -332,6 +339,9 @@
         {% if session.get('permisos', {}).get('ENTRENAMIENTOS') == 'SI' or session.get('permisos', {}).get('D.DEPORTIVA') == 'SI' or usuario|lower == 'admin' %}
         <a href="/clasificaciones" class="menu-item {{ 'active' if request.path == '/clasificaciones' }}" onclick="showLoader()">CLASIFICACIONES Y RESULTADOS</a>
         {% endif %}
+        {% if usuario|lower == 'admin' %}
+        <a href="#" class="menu-item" onclick="event.preventDefault();">ALQUILERES</a>
+        {% endif %}
     </div>
 
     <div id="sidebarAvisos" class="avisos-sidebar">
@@ -343,6 +353,27 @@
             <h4><i class="fas fa-arrow-up"></i> Valoraciones</h4>
             <div id="listaVals"></div>
         </div>
+    </div>
+
+    {% if usuario|lower == 'admin' %}
+    <div id="panelAlquileresSidebar" style="margin: 8px 20px 15px 20px; padding: 8px 10px; background: rgba(255,255,255,0.08); border-radius: 8px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: rgba(255,255,255,0.8); margin-bottom: 5px;">
+            <span><i class="fas fa-calendar-days" style="color: white; font-size: 0.66rem; margin-right: 4px;"></i> Alquileres · 7 días</span>
+            <span id="badgeAlquileresSidebar" style="display: none; background: white; color: #E31E24; border-radius: 999px; font-size: 0.58rem; padding: 1px 6px; font-weight: 900;"></span>
+        </div>
+        <div id="listaAlquileresSidebar" style="font-size: 0.62rem;">Cargando...</div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- MODAL DETALLE ALQUILER (SIDEBAR) -->
+<div id="modalDetalleAlquiler" class="modal-backdrop" style="display:none; position:fixed; z-index:30000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:16px; padding:24px; width:380px; max-height:80vh; overflow-y:auto; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <h3 style="margin:0; font-size:14px; font-weight:900; color:#1e293b; text-transform:uppercase;"><i class="fas fa-calendar-days" style="color:#E31E24;"></i> Detalle Alquiler</h3>
+            <span onclick="document.getElementById('modalDetalleAlquiler').style.display='none'" style="cursor:pointer; color:#999; font-size:20px; line-height:1;">&times;</span>
+        </div>
+        <div id="detalleAlquilerBody" style="font-size:12px; color:#333;"></div>
     </div>
 </div>
 
@@ -611,6 +642,110 @@
         }
 
         cargarAccesosRapidos();
+
+        // === ALQUILERES (widget sidebar, solo ADMIN) ===
+        let alquileresProximosCache = {};
+        let alquilerSidebarDetalleActivoId = null;
+
+        async function cargarAlquileresSidebar() {
+            const cont = document.getElementById('listaAlquileresSidebar');
+            if (!cont) return;
+            try {
+                const res = await fetch('/api/alquileres_proximos');
+                const data = await res.json();
+                const badge = document.getElementById('badgeAlquileresSidebar');
+                if (!Array.isArray(data) || data.length === 0) {
+                    badge.style.display = 'none';
+                    cont.innerHTML = '<div style="padding:2px 4px; color:rgba(255,255,255,0.55);">No hay nada</div>';
+                    return;
+                }
+                badge.textContent = data.length;
+                badge.style.display = 'inline-block';
+                const diasAbrev = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
+                alquileresProximosCache = {};
+                data.forEach(al => { alquileresProximosCache[al.row_id] = al; });
+                cont.innerHTML = data.map(al => {
+                    const f = new Date(al.fecha_iso + 'T00:00:00');
+                    const diaTxt = `${diasAbrev[f.getDay()]} ${String(f.getDate()).padStart(2, '0')}/${String(f.getMonth() + 1).padStart(2, '0')}`;
+                    const pagado = (al.pagado || '').toUpperCase() === 'SI';
+                    return `<div class="alquiler-sidebar-row" onclick="abrirDetalleAlquilerSidebar(${al.row_id})">
+                        <span>${diaTxt}</span>
+                        <span>${al.nombre || ''}</span>
+                        ${pagado ? '<span class="badge-pagado-mini">PAGADO</span>' : ''}
+                    </div>`;
+                }).join('');
+            } catch (e) { console.error('Error cargando alquileres sidebar', e); }
+        }
+
+        function abrirDetalleAlquilerSidebar(rowId) {
+            const al = alquileresProximosCache[rowId];
+            if (!al) return;
+            alquilerSidebarDetalleActivoId = rowId;
+            document.getElementById('detalleAlquilerBody').innerHTML = `
+                <div style="line-height:1.9;">
+                    <div><strong>Nombre:</strong> ${al.nombre || '-'}</div>
+                    <div><strong>Fecha:</strong> ${al.dia}/${al.mes}/${al.anio}</div>
+                    <div><strong>Horario:</strong> ${al.horario || '-'}</div>
+                    <div><strong>Teléfono:</strong> ${al.telefono || '-'}</div>
+                    <div><strong>Campo:</strong> ${al.campo || '-'}</div>
+                    <div><strong>Comentario:</strong> ${al.comentario || '-'}</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; margin-top:16px; flex-wrap:wrap;">
+                    <span id="badgePagoAlquilerSidebar" onclick="revertirPagoAlquilerSidebar()" style="cursor:pointer; font-weight:900; font-size:11px; padding:8px 14px; border-radius:10px; text-transform:uppercase; white-space:nowrap;">PENDIENTE</span>
+                    <input type="number" id="inputImportePagoAlquilerSidebar" placeholder="Importe €" step="0.01" style="flex:1; min-width:90px; padding:9px; border-radius:8px; border:1px solid #e2e8f0;">
+                    <button onclick="guardarPagoAlquilerSidebar()" style="background:#16a34a; color:white; border:none; border-radius:8px; padding:0 16px; height:40px; font-weight:900; font-size:10px; cursor:pointer; white-space:nowrap;">GUARDAR</button>
+                </div>
+            `;
+            actualizarBadgePagoAlquilerSidebar(al);
+            document.getElementById('inputImportePagoAlquilerSidebar').value = al.importe || '';
+            document.getElementById('modalDetalleAlquiler').style.display = 'flex';
+        }
+
+        function actualizarBadgePagoAlquilerSidebar(al) {
+            const pagado = (al.pagado || '').toUpperCase() === 'SI';
+            const badge = document.getElementById('badgePagoAlquilerSidebar');
+            if (!badge) return;
+            badge.textContent = pagado ? `${al.importe ? al.importe + '€ · ' : ''}PAGADO` : 'PENDIENTE';
+            badge.style.background = pagado ? '#dcfce7' : '#fee2e2';
+            badge.style.color = pagado ? '#15803d' : '#b91c1c';
+        }
+
+        async function guardarPagoAlquilerSidebar() {
+            const rowId = alquilerSidebarDetalleActivoId;
+            if (!rowId) return;
+            const importe = document.getElementById('inputImportePagoAlquilerSidebar').value.trim();
+            try {
+                const res = await fetch('/api/alquiler_pagado', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ row_id: rowId, pagado: true, importe })
+                });
+                if (res.ok) {
+                    await cargarAlquileresSidebar();
+                    actualizarBadgePagoAlquilerSidebar(alquileresProximosCache[rowId] || { pagado: 'SI', importe });
+                } else { alert("No se pudo actualizar el pago."); }
+            } catch (e) { console.error('Error actualizando pago', e); }
+        }
+
+        async function revertirPagoAlquilerSidebar() {
+            const rowId = alquilerSidebarDetalleActivoId;
+            const al = alquileresProximosCache[rowId];
+            if (!al || (al.pagado || '').toUpperCase() !== 'SI') return;
+            if (!confirm("¿Marcar este alquiler como pendiente de pago?")) return;
+            try {
+                const res = await fetch('/api/alquiler_pagado', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ row_id: rowId, pagado: false, importe: al.importe })
+                });
+                if (res.ok) {
+                    await cargarAlquileresSidebar();
+                    actualizarBadgePagoAlquilerSidebar(alquileresProximosCache[rowId] || { pagado: 'NO' });
+                } else { alert("No se pudo actualizar el pago."); }
+            } catch (e) { console.error('Error actualizando pago', e); }
+        }
+
+        cargarAlquileresSidebar();
 
         // === CONVOCATORIAS (compartido entre Asistencias, Mi Equipo y D.Deportiva-Coordinación) ===
         let convocatoriasCacheGlobal = null;

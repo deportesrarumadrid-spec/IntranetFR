@@ -1746,6 +1746,171 @@ def api_cronograma_edit():
         print(f"Error en api_cronograma_edit: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+# --- ALQUILERES DE CAMPO (CRONOGRAMA - VISTA ANUAL) ---
+ALQUILERES_HEADERS = ["ANIO", "MES", "DIA", "NOMBRE", "HORARIO", "TELEFONO", "CAMPO", "COMENTARIO", "PAGADO", "IMPORTE"]
+ALQUILERES_CAMPOS = ["CAMPO F7", "1/2 CAMPO F11 - 1", "1/2 CAMPO F11 - 2", "CAMPO F11 ENTERO"]
+
+def _leer_alquileres_rows():
+    client = app.gs_client
+    nombre_excel = app.gs_name
+    spreadsheet = client.open(nombre_excel)
+    todas_hojas = {s.title.upper().strip(): s for s in spreadsheet.worksheets()}
+    if "ALQUILERES" not in todas_hojas:
+        return None, []
+    sheet = todas_hojas["ALQUILERES"]
+    all_v = sheet.get_all_values()
+    if len(all_v) < 2:
+        return sheet, []
+    headers = [normalizar_cabecera_universal(h) for h in all_v[0]]
+    def idx(name):
+        return headers.index(name) if name in headers else -1
+    cols = {k: idx(k) for k in ['ANIO', 'MES', 'DIA', 'NOMBRE', 'HORARIO', 'TELEFONO', 'CAMPO', 'COMENTARIO', 'PAGADO', 'IMPORTE']}
+
+    out = []
+    for row_num, row in enumerate(all_v[1:], start=2):
+        if not any(str(c).strip() for c in row): continue
+        def get(key):
+            i = cols[key]
+            return row[i] if i != -1 and i < len(row) else ""
+        out.append({
+            "row_id": row_num, "anio": get('ANIO'), "mes": get('MES'), "dia": get('DIA'),
+            "nombre": get('NOMBRE'), "horario": get('HORARIO'), "telefono": get('TELEFONO'),
+            "campo": get('CAMPO'), "comentario": get('COMENTARIO'),
+            "pagado": get('PAGADO'), "importe": get('IMPORTE'),
+        })
+    return sheet, out
+
+@app.route('/api/alquileres_data')
+def api_alquileres_data():
+    if not session.get('usuario'): return jsonify({"status": "error", "message": "No session"}), 401
+    anio = request.args.get('anio')
+    mes = request.args.get('mes')
+    try:
+        _, rows = _leer_alquileres_rows()
+        out = [r for r in rows if (not anio or str(r['anio']).strip() == str(anio).strip())
+               and (not mes or str(r['mes']).strip() == str(mes).strip())]
+        return jsonify(out)
+    except Exception as e:
+        print(f"Error en api_alquileres_data: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/alquileres_proximos')
+def api_alquileres_proximos():
+    if not session.get('usuario'): return jsonify({"status": "error", "message": "No session"}), 401
+    if session.get('usuario', '').lower() != 'admin':
+        return jsonify({"status": "error", "message": "No autorizado"}), 403
+    try:
+        _, rows = _leer_alquileres_rows()
+        hoy = datetime.now().date()
+        limite = hoy + timedelta(days=7)
+        out = []
+        for r in rows:
+            try:
+                f = datetime(int(r['anio']), int(r['mes']), int(r['dia'])).date()
+            except (ValueError, TypeError):
+                continue
+            if hoy <= f <= limite:
+                r2 = dict(r)
+                r2['fecha_iso'] = f.isoformat()
+                out.append(r2)
+        out.sort(key=lambda r: r['fecha_iso'])
+        return jsonify(out)
+    except Exception as e:
+        print(f"Error en api_alquileres_proximos: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/alquiler_save', methods=['POST'])
+def api_alquiler_save():
+    if not session.get('usuario'): return jsonify({"status": "error", "message": "No session"}), 401
+    data = request.json or {}
+    anio = str(data.get('anio', '')).strip()
+    mes = str(data.get('mes', '')).strip()
+    dia = str(data.get('dia', '')).strip()
+    if not anio or not mes or not dia:
+        return jsonify({"status": "error", "message": "Año, mes y día son obligatorios"}), 400
+    try:
+        client = app.gs_client
+        nombre_excel = app.gs_name
+        spreadsheet = client.open(nombre_excel)
+        todas_hojas = {s.title.upper().strip(): s for s in spreadsheet.worksheets()}
+        if "ALQUILERES" in todas_hojas:
+            sheet = todas_hojas["ALQUILERES"]
+        else:
+            sheet = spreadsheet.add_worksheet(title="ALQUILERES", rows="1000", cols=str(len(ALQUILERES_HEADERS)))
+            sheet.append_row(ALQUILERES_HEADERS)
+
+        fila = [anio, mes, dia, str(data.get('nombre', '')).strip(), str(data.get('horario', '')).strip(),
+                str(data.get('telefono', '')).strip(), str(data.get('campo', '')).strip(),
+                str(data.get('comentario', '')).strip(), 'SI' if data.get('pagado') else 'NO',
+                str(data.get('importe', '')).strip()]
+        sheet.append_row(fila, value_input_option='USER_ENTERED')
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error guardando alquiler: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/alquiler_edit', methods=['POST'])
+def api_alquiler_edit():
+    if not session.get('usuario'): return jsonify({"status": "error", "message": "No session"}), 401
+    data = request.json or {}
+    row_id = data.get('row_id')
+    if not row_id:
+        return jsonify({"status": "error", "message": "Falta row_id"}), 400
+    try:
+        client = app.gs_client
+        nombre_excel = app.gs_name
+        sheet = client.open(nombre_excel).worksheet("ALQUILERES")
+        fila = [str(data.get('anio', '')).strip(), str(data.get('mes', '')).strip(), str(data.get('dia', '')).strip(),
+                str(data.get('nombre', '')).strip(), str(data.get('horario', '')).strip(),
+                str(data.get('telefono', '')).strip(), str(data.get('campo', '')).strip(),
+                str(data.get('comentario', '')).strip(), 'SI' if data.get('pagado') else 'NO',
+                str(data.get('importe', '')).strip()]
+        sheet.update(range_name=f"A{row_id}:J{row_id}", values=[fila], value_input_option='USER_ENTERED')
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error editando alquiler: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/alquiler_pagado', methods=['POST'])
+def api_alquiler_pagado():
+    if not session.get('usuario'): return jsonify({"status": "error", "message": "No session"}), 401
+    data = request.json or {}
+    row_id = data.get('row_id')
+    if not row_id:
+        return jsonify({"status": "error", "message": "Falta row_id"}), 400
+    try:
+        client = app.gs_client
+        nombre_excel = app.gs_name
+        sheet = client.open(nombre_excel).worksheet("ALQUILERES")
+        headers = [normalizar_cabecera_universal(h) for h in sheet.row_values(1)]
+        i_pag = headers.index('PAGADO') if 'PAGADO' in headers else -1
+        i_imp = headers.index('IMPORTE') if 'IMPORTE' in headers else -1
+        if i_pag != -1:
+            sheet.update_cell(int(row_id), i_pag + 1, 'SI' if data.get('pagado') else 'NO')
+        if i_imp != -1 and data.get('importe') is not None:
+            sheet.update_cell(int(row_id), i_imp + 1, str(data.get('importe', '')).strip())
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error actualizando pago de alquiler: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/alquiler_delete', methods=['POST'])
+def api_alquiler_delete():
+    if not session.get('usuario'): return jsonify({"status": "error", "message": "No session"}), 401
+    data = request.json or {}
+    row_id = data.get('row_id')
+    if not row_id:
+        return jsonify({"status": "error", "message": "Falta row_id"}), 400
+    try:
+        client = app.gs_client
+        nombre_excel = app.gs_name
+        sheet = client.open(nombre_excel).worksheet("ALQUILERES")
+        sheet.delete_rows(int(row_id))
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error eliminando alquiler: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 # --- PUSH DE AVISO + COMENTARIO (INFORMES) ---
 @app.route('/api/informes/enviar_push_equipacion', methods=['POST'])
 def api_enviar_push_equipacion():
