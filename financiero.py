@@ -182,6 +182,30 @@ def financiero():
                            jugadores=jugadores,
                            staff=staff)
 
+@financiero_bp.route('/api/presupuesto/siguiente_numero')
+def api_presupuesto_siguiente_numero():
+    from app import client, NOMBRE_EXCEL
+    try:
+        sheet_fin = client.open(NOMBRE_EXCEL).worksheet("FINANCIERO")
+        all_fin = sheet_fin.get_all_values()
+        headers_fin_norm = normalizar_cabeceras(all_fin[0]) if all_fin else []
+        idx_asi = -1
+        for variant in ['N_ASIENTO', 'Nº_ASIENTO', 'ASIENTO']:
+            if variant in headers_fin_norm:
+                idx_asi = headers_fin_norm.index(variant); break
+        max_asi = 0
+        for row in all_fin[1:]:
+            if idx_asi != -1 and len(row) > idx_asi and row[idx_asi]:
+                try:
+                    val_limpio = str(row[idx_asi]).strip().replace('#', '').split('_')[0]
+                    if val_limpio.isdigit():
+                        max_asi = max(max_asi, int(val_limpio))
+                except: continue
+        return jsonify({"numero": max_asi + 1})
+    except Exception as e:
+        print(f"Error en api_presupuesto_siguiente_numero: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @financiero_bp.route('/api/presupuesto', methods=['GET', 'POST'])
 def api_presupuesto():
     from app import client, NOMBRE_EXCEL
@@ -211,10 +235,33 @@ def api_presupuesto():
             # Ordenamos por fecha ascendente para asignar IDs secuenciales correctos (el más viejo es el 1)
             historial_completo.sort(key=lambda x: parse_date_for_sort(x.get('FECHA')))
 
-            # Asignar Nº ASIENTO secuencial global (000001...)
-            for i, item in enumerate(historial_completo):
-                item['Nº_ASIENTO_GLOBAL'] = str(i + 1).zfill(6)
-            
+            # Asignar Nº ASIENTO secuencial global (000001...). Las filas que comparten la misma base
+            # de Nº ASIENTO (p.ej. "47_1" y "47_2", de un pago repartido en varios conceptos) reciben
+            # el mismo número global con su sufijo, en vez de números independientes.
+            grupos_vistos = {}
+            contador_global = 0
+            grupos_totales = {}
+            grupos_conteo = {}
+            for item in historial_completo:
+                raw_n = str(item.get('REAL_ID') or '').strip().replace('#', '')
+                base, _, suf = raw_n.partition('_')
+                if base not in grupos_vistos:
+                    contador_global += 1
+                    grupos_vistos[base] = contador_global
+                numero_global = grupos_vistos[base]
+                item['Nº_ASIENTO_GLOBAL'] = f"{str(numero_global).zfill(6)}_{suf}" if suf else str(numero_global).zfill(6)
+                grupos_conteo[base] = grupos_conteo.get(base, 0) + 1
+                try:
+                    grupos_totales[base] = grupos_totales.get(base, 0) + float(str(item.get('IMPORTE', '0')).replace(',', '.').strip() or 0)
+                except ValueError:
+                    pass
+
+            for item in historial_completo:
+                raw_n = str(item.get('REAL_ID') or '').strip().replace('#', '')
+                base = raw_n.split('_')[0]
+                if grupos_conteo.get(base, 0) > 1:
+                    item['IMPORTE_TOTAL_GRUPO'] = round(grupos_totales[base], 2)
+
             # Invertimos para que por defecto el GET devuelva los más nuevos arriba
             historial_completo.reverse()
 
@@ -405,16 +452,20 @@ def api_presupuesto():
             for row in all_fin[1:]:
                 if idx_asi != -1 and len(row) > idx_asi and row[idx_asi]:
                     try:
-                        val_limpio = str(row[idx_asi]).strip().replace('#','')
+                        val_limpio = str(row[idx_asi]).strip().replace('#', '').split('_')[0]
                         if val_limpio.isdigit():
                             max_asi = max(max_asi, int(val_limpio))
                     except: continue
             num_asiento = max_asi + 1
         else:
-            try: 
-                num_asiento = int(num_asiento)
-            except: 
-                num_asiento = datos.get('n_asiento') # Mantener como string si no es numérico
+            # OJO: int() de Python acepta "_" como separador de miles (PEP 515), p.ej. int("49_1") == 491.
+            # Por eso comprobamos primero si es un número "puro" antes de convertir, para no corromper
+            # los Nº ASIENTO con sufijo de grupo (ej. "49_1", "49_2") usados en pagos repartidos.
+            num_str = str(num_asiento).strip()
+            if num_str.isdigit():
+                num_asiento = int(num_str)
+            else:
+                num_asiento = num_str # Mantener como string (incluye los que llevan sufijo "_N")
 
         mapeo_fila = {
             "FECHA": datos.get('fecha'),
@@ -545,8 +596,12 @@ def api_asignar_jugador_asiento():
         idx_descripcion = headers_fin_norm.index('DESCRIPCION') if 'DESCRIPCION' in headers_fin_norm else -1
         idx_fecha = headers_fin_norm.index('FECHA') if 'FECHA' in headers_fin_norm else -1
 
-        importe = parse_amount(fila_actual[idx_importe]) if idx_importe != -1 and len(fila_actual) > idx_importe else 0
+        importe_original = parse_amount(fila_actual[idx_importe]) if idx_importe != -1 and len(fila_actual) > idx_importe else 0
+        # Permite asignar solo una parte del importe original (reparto multi-concepto desde el frontend).
+        importe_override = datos.get('importe')
+        importe = parse_amount(importe_override) if importe_override is not None else importe_original
         fecha_actual = fila_actual[idx_fecha] if idx_fecha != -1 and len(fila_actual) > idx_fecha else ''
+        nuevo_n_asiento = (datos.get('nuevo_n_asiento') or '').strip()
 
         updates = [
             {'range': f"'FINANCIERO'!{rowcol_to_a1(idx_fila, idx_nombre + 1)}", 'values': [[nombre]]},
@@ -556,6 +611,13 @@ def api_asignar_jugador_asiento():
         ]
         if idx_pilar != -1:
             updates.append({'range': f"'FINANCIERO'!{rowcol_to_a1(idx_fila, idx_pilar + 1)}", 'values': [['Cuotas']]})
+        if importe_override is not None and idx_importe != -1:
+            updates.append({'range': f"'FINANCIERO'!{rowcol_to_a1(idx_fila, idx_importe + 1)}", 'values': [[importe]]})
+        if nuevo_n_asiento and idx_asi != -1:
+            updates.append({'range': f"'FINANCIERO'!{rowcol_to_a1(idx_fila, idx_asi + 1)}", 'values': [[nuevo_n_asiento]]})
+        descripcion_override = (datos.get('descripcion') or '').strip()
+        if descripcion_override and idx_descripcion != -1:
+            updates.append({'range': f"'FINANCIERO'!{rowcol_to_a1(idx_fila, idx_descripcion + 1)}", 'values': [[descripcion_override]]})
         sheet_fin.spreadsheet.values_batch_update({'valueInputOption': 'USER_ENTERED', 'data': updates})
 
         # Reflejar también en PAGOS JUGADORES, igual que en el alta normal de un asiento
@@ -595,7 +657,7 @@ def api_asignar_jugador_asiento():
             nueva[idx_pag_pj] = importe
             sheet_pj.append_row(nueva)
 
-        return jsonify({"status": "success"})
+        return jsonify({"status": "success", "n_asiento": nuevo_n_asiento or n_asiento})
     except Exception as e:
         print(f"Error asignando jugador a asiento: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500

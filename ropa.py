@@ -1,4 +1,5 @@
 import gspread
+from gspread.utils import rowcol_to_a1
 from flask import Blueprint, request, jsonify, session, current_app
 from datetime import datetime
 
@@ -81,6 +82,20 @@ def add_ropa_column():
     nombre = f"PRENDA {nueva_idx - 3}"
     sheet.update_cell(1, nueva_idx, nombre)
     return jsonify({"status": "success", "nombre": nombre})
+
+@ropa_bp.route('/api/ropa/borrar_columna', methods=['POST'])
+def borrar_ropa_columna():
+    """Borrado seguro: vacía la cabecera y todos los datos de la columna, pero no
+    desplaza el resto de columnas (evita romper índices fijos usados en otras partes)."""
+    datos = request.json
+    col_idx = datos.get('col_idx')  # 1-based
+    sheet = get_ropa_sheet()
+    all_v = sheet.get_all_values()
+    num_filas = len(all_v)
+    if num_filas > 0:
+        rango = f"{rowcol_to_a1(1, col_idx)}:{rowcol_to_a1(num_filas, col_idx)}"
+        sheet.batch_clear([rango])
+    return jsonify({"status": "success"})
 
 @ropa_bp.route('/api/ropa/save', methods=['POST'])
 def save_ropa():

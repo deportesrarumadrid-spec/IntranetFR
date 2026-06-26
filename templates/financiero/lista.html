@@ -8,6 +8,11 @@
     .fin-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
     .fin-header h2 { font-size: 14px; font-weight: 900; color: #333; text-transform: uppercase; margin: 0; }
     .fin-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .tabla-scroll-x { scrollbar-width: thin; scrollbar-color: #cbd5e1 #f1f5f9; }
+    .tabla-scroll-x::-webkit-scrollbar { height: 12px; }
+    .tabla-scroll-x::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+    .tabla-scroll-x::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; border: 3px solid #f1f5f9; }
+    .tabla-scroll-x::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     .fin-table th { background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #eee; color: #666; font-weight: 800; }
     .fin-table td { padding: 10px; border-bottom: 1px solid #eee; color: #444; }
     
@@ -23,6 +28,8 @@
     /* ESTILOS ROPA */
     .col-ropa { display: none; border: 1px solid #f0f0f0; min-width: 50px; transition: all 0.3s; }
     .table-ropa-active .col-ropa { display: table-cell; }
+    .table-ropa-active .col-ropa-pack-btn { display: inline-block !important; }
+    .table-ropa-active #thTogglePagoRopa, .table-ropa-active .col-pago-prenda { display: none !important; }
     .table-ropa-active .col-ropa-btn { background-color: #f8fafc !important; border-left: 1px solid #e2e8f0 !important; }
     .celda-ropa { cursor: pointer; font-size: 10px; font-weight: 900; text-align: center; border: 1px solid #e2e8f0; height: 35px; }
     .col-financiera { transition: all 0.3s; }
@@ -68,6 +75,15 @@
     .ropa-estado-llegado { background-color: #6f42c1 !important; color: white !important; }
     .ropa-estado-entregada { background-color: #198754 !important; color: white !important; }
     .ropa-vacia { color: #cbd5e1; }
+
+    /* Grupo de botones Stock/Pedidos */
+    .btn-stock-grupo { padding: 8px 16px; border-radius: 9px; font-size: 10px; font-weight: 800; border: none; background: transparent; color: #0d9488; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; }
+    .btn-stock-grupo:hover { background: #ccfbf1; }
+    .btn-stock-grupo.active-mode, .btn-stock-grupo:active { background: #14b8a6; color: white; box-shadow: 0 4px 10px rgba(20,184,166,0.35); }
+
+    .fila-pedido-realizado { transition: filter 0.15s; }
+    .fila-pedido-realizado:hover { filter: brightness(0.97); }
+
 
     .header-ropa { cursor: pointer; position: relative; background: #fdfdfd !important; color: #94a3b8 !important; font-size: 9px !important; text-align: center !important; border-bottom: 2px solid #eee !important; vertical-align: middle; }
     
@@ -386,6 +402,17 @@
                     <button id="btnExportarRopa" class="btn-fin" style="background: #198754; color: white; border-radius: 10px; display: none; align-items: center; gap: 8px;" onclick="exportarRopaExcel()">
                         <i class="fas fa-file-excel"></i> EXPORTAR ROPA
                     </button>
+                    <div id="grupoStockPedidos" style="display: none; background: #f1f5f9; padding: 4px; border-radius: 12px; gap: 4px; border: 1px solid #e2e8f0; align-items: center;">
+                        <button id="btnStockRopa" class="btn-stock-grupo" onclick="abrirModalStockRopa()">
+                            <i class="fas fa-boxes-stacked"></i> STOCK
+                        </button>
+                        <button id="btnPropuestaPedido" class="btn-stock-grupo" onclick="abrirModalPropuestaPedido()">
+                            <i class="fas fa-file-invoice"></i> PROPUESTA PEDIDO
+                        </button>
+                        <button id="btnPedidosRealizados" class="btn-stock-grupo" onclick="abrirPopoverPedidosRealizados(event)">
+                            <i class="fas fa-truck"></i> PEDIDOS REALIZADOS
+                        </button>
+                    </div>
                     <button id="btnSacarImpagos" class="btn-fin" style="background: #f8f9fa; color: #333; border: 1px solid #e2e8f0; border-radius: 10px; display: flex; align-items: center; gap: 8px;" onclick="generarReporteImpagos()">
                         <i class="fas fa-exclamation-circle"></i> SACAR IMPAGOS
                     </button>
@@ -394,10 +421,23 @@
                     </button>
                 </div>
             </div>
-            <div style="font-size: 10px; color: #999;">Usa <b>CTRL + Clic</b> para selección múltiple</div>
+            <div style="font-size: 10px; color: #999; line-height: 1.6;">
+                <div>Usa <b>CTRL + Clic</b> para selección múltiple</div>
+                <div id="hintClicDerechoRopa" style="display:none;">Usa <b>Clic derecho</b> sobre una cabecera de ROPA para renombrarla o borrarla</div>
+            </div>
         </div>
-        
-        <div style="overflow-x: auto;">
+
+        <div class="tabla-scroll-x" style="overflow-x: auto; padding-right: 18px; padding-bottom: 6px; padding-top: 36px; position: relative;">
+            <div id="pildoraAsignarPackMasivo" style="display:none; position:absolute; top:0; left:0; background:#1e293b; border-radius:0 0 10px 10px; padding:6px 6px; align-items:center; gap:2px; flex-wrap:nowrap; z-index:5;">
+                <select id="selectPackMasivo" style="border:none; background:transparent; font-size:9px; font-weight:800; color:white; padding:4px 6px;">
+                    <option value="pequeno" style="color:black;">PACK PEQUEÑO</option>
+                    <option value="grande" style="color:black;">PACK GRANDE</option>
+                </select>
+                <div style="width:1px; height:16px; background:rgba(255,255,255,0.2);"></div>
+                <button onclick="iniciarAplicarPackMasivo()" style="background:transparent; border:none; cursor:pointer; color:white; font-size:9px; font-weight:800; display:flex; align-items:center; gap:4px; padding:4px 8px; white-space:nowrap;"><i class="fas fa-users"></i> APLICAR</button>
+                <div style="width:1px; height:16px; background:rgba(255,255,255,0.2);"></div>
+                <button onclick="abrirModalConfigPackRopa()" title="Editar qué prendas componen cada pack" style="background:transparent; border:none; cursor:pointer; color:white; font-size:9px; font-weight:800; padding:4px 8px; white-space:nowrap;">EDITAR PACKS</button>
+            </div>
             <table class="fin-table">
                 <thead>
                     <tr>
@@ -442,33 +482,45 @@
                             </div>
                         </th>
                         {% endfor %}
-                        <th class="col-pago-ropa" style="min-width: 60px; padding: 10px 5px; background: #eceef2; border-bottom: 2px solid #dee2e6;">
-                            <div class="pago-cell" style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-                                <span id="labelPackRopa" style="font-size: 9px; color: #475569; font-weight: 800;">PACK ROPA</span>
-                                <i class="fas fa-cog" style="cursor: pointer; color: #E31E24; font-size: 11px;" onclick="abrirModalBulkEsperado('PACK_ROPA')"></i>
-                            </div>
-                        </th>
+                        <th class="col-pago-ropa pago-cell" style="min-width: 4px; max-width: 4px; padding: 0; background: #eceef2; border-bottom: 2px solid #dee2e6;"></th>
                         <!-- ANCLAJE CABECERAS ROPA -->
                         <th class="col-anchor-ropa" id="thBtnRopa"></th>
                         <!-- Contenedor de cabeceras de ropa (se llenará por JS) -->
                         <th id="ropaHeadersContainer" style="display:none; padding:0; border:0;"></th>
+                        <th id="thTogglePagoRopa" style="min-width: 64px; padding: 10px 5px; background: #fdfdfd; border-bottom: 2px solid #eee;">
+                            <div style="display:flex; align-items:center; justify-content:center; gap:4px;">
+                                <button onclick="abrirModalPreciosPrendas()" title="Precio por prenda" style="cursor:pointer; color:#1e293b; font-size:11px; font-weight:900; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:8px; padding:6px 8px;">
+                                    <span id="iconoTogglePagoRopa">€</span>
+                                </button>
+                                <button id="botonToggleChevronPagoRopa" onclick="toggleColumnasPagoRopa()" title="Mostrar/ocultar pagos de ropa" style="cursor:pointer; color:#1e293b; font-size:11px; font-weight:900; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:8px; padding:6px 8px;">
+                                    <i id="flechaTogglePagoRopa" class="fas fa-chevron-right" style="font-size:11px; transition: transform 0.2s;"></i>
+                                </button>
+                            </div>
+                        </th>
+                        <th class="col-anchor-pago-prendas" id="thAnchorPagoPrendas" style="display:none; padding:0; border:0; width:0;"></th>
                     </tr>
                 </thead>
                 <tbody id="cuerpoPagos">
                     {% for j in jugadores %}
                     <tr class="fila-jugador" data-equipo="{{ j.EQUIPO }}" data-nombre="{{ j.NOMBRE }}" onclick="manejarClickFila(event, this)">
                         <td style="font-weight: 800;">{{ j.EQUIPO }}</td>
-                        <td>{{ j.NOMBRE }}</td>
+                        <td>
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
+                                <span>{{ j.NOMBRE }}</span>
+                                <span class="col-ropa-pack-btn" style="display:none; color:#1e293b; cursor:pointer; font-size:9px; font-weight:800; background:#f1f5f9; border-radius:6px; padding:2px 6px; white-space:nowrap;" title="Asignar/cambiar pack" onclick="event.stopPropagation(); abrirPopoverPackRopaJugador(event, this)">PACK</span>
+                            </div>
+                        </td>
                         <td class="col-financiera" onclick="event.stopPropagation(); editarPagoIndividual(this.closest('tr'), 'TIPO_PAGO')"><span class="span-tipo-pago" style="background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-weight: 700; color: #475569; font-size: 10px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#dbeafe'; this.style.color='#1e40af'" onmouseout="this.style.background='#f1f5f9'; this.style.color='#475569'">{{ j.TIPO_PAGO or 'Efectivo' }}</span></td>
                         <td class="col-financiera" onclick="event.stopPropagation(); editarPagoIndividual(this.closest('tr'), 'FORMA_PAGO')"><span class="span-forma-pago" style="background: #eee; padding: 4px 8px; border-radius: 6px; font-weight: 700; color: #475569; font-size: 10px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#dcfce7'; this.style.color='#15803d'" onmouseout="this.style.background='#eee'; this.style.color='#475569'">{{ j.FORMA_PAGO or 'Efectivo' }}</span></td>
                         <td class="pago-cell col-financiera" onclick="seleccionarPago(event, this, 'Inscripción')">-</td>
                         {% for mes in ['01','02','03','04','05','06','07','08','09','10','11','12'] %}
                         <td class="pago-cell col-financiera" onclick="seleccionarPago(event, this, '{{ mes }}')">-</td>
                         {% endfor %}
-                        <td class="pago-cell col-pago-ropa pago-extra-bg" onclick="seleccionarPago(event, this, 'PACK_ROPA')">-</td>
+                        <td class="pago-cell col-pago-ropa pago-extra-bg" onclick="seleccionarPago(event, this, 'PACK_ROPA')" style="min-width: 4px; max-width: 4px; padding: 0;">-</td>
                         <!-- Celdas de Ropa (se añadirán dinámicamente) -->
                         <td class="col-anchor-ropa col-ropa-btn"></td>
                         <td id="filaRopa_{{ loop.index0 }}" class="contenedor-celdas-ropa" style="display:none; padding:0; border:0;"></td>
+                        <td class="col-anchor-pago-prendas anchor-pago-prendas-btn"></td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -631,6 +683,29 @@
     <div id="popAsignarEstado" style="font-size:10px; margin-top:8px; text-align:center; font-weight:700;"></div>
 </div>
 
+<!-- MODAL RECIBO -->
+<div id="modalRecibo" class="modal" onclick="if(event.target === this) this.style.display='none'">
+    <div class="modal-content" style="width: 420px; max-height: 90vh; overflow-y: auto; position: relative;">
+        <span onclick="document.getElementById('modalRecibo').style.display='none'" style="position: absolute; top: 18px; right: 22px; color: #999; font-size: 22px; cursor: pointer; line-height: 1; z-index: 10;">&times;</span>
+        <h3 style="font-size: 14px; font-weight: 900; margin-bottom: 16px; border-bottom: 2px solid #E31E24; padding-bottom: 10px;"><i class="fas fa-receipt" style="color:#E31E24;"></i> RECIBO / JUSTIFICANTE</h3>
+        <div id="reciboEstadoEnvio" style="display:none; font-size:10px; font-weight:800; color:#16a34a; background:#dcfce7; border-radius:8px; padding:8px 10px; margin-bottom:12px;"></div>
+        <div id="reciboPreviewCont" style="display:flex; justify-content:center; margin-bottom:18px;"></div>
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+            <button onclick="imprimirRecibo()" style="flex:1; background:#1e293b; color:white; border:none; border-radius:8px; padding:10px; font-weight:800; font-size:11px; cursor:pointer;"><i class="fas fa-print"></i> IMPRIMIR</button>
+        </div>
+        <div style="border-top: 1px solid #eee; padding-top: 14px;">
+            <label style="font-size:9px; font-weight:900; color:#999; text-transform:uppercase; display:block; margin-bottom:8px;">Enviar por email a</label>
+            <div style="display:flex; gap:8px;">
+                <input type="email" id="inputEmailRecibo" placeholder="email@ejemplo.com" style="flex:1; padding:9px; border-radius:8px; border:1px solid #e2e8f0;">
+                <button onclick="enviarRecibo()" style="background:#E31E24; color:white; border:none; border-radius:8px; padding:0 18px; font-weight:800; font-size:11px; cursor:pointer;"><i class="fas fa-paper-plane"></i> ENVIAR</button>
+            </div>
+        </div>
+        <div style="text-align:center; margin-top:14px;">
+            <span onclick="document.getElementById('modalRecibo').style.display='none'" style="font-size:10px; color:#94a3b8; font-weight:700; cursor:pointer; text-decoration:underline;">AHORA NO, GRACIAS</span>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL ACCIONES ASIENTO -->
 <div id="modalAccionAsiento" class="modal">
     <div class="modal-content" style="width: 320px; text-align: center;">
@@ -687,6 +762,179 @@
         <div style="display: flex; gap: 10px; border-top: 1px solid #f1f5f9; padding-top: 20px;">
             <button class="btn-fin" style="flex: 1; background: #f1f5f9; color: #475569; border-radius: 12px;" onclick="cerrarModalsFin()">CERRAR</button>
             <button id="btnConfirmarRopa" class="btn-fin" style="flex: 1; background: #1e293b; color: white; border-radius: 12px;" onclick="confirmarAccionRopa()">GUARDAR TODO</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL STOCK -->
+<div id="modalStockRopa" class="modal" onclick="if(event.target === this) this.style.display='none'">
+    <div class="modal-content" style="width: 96vw; max-width: 1400px; border-radius: 20px; padding: 28px; position: relative;">
+        <span onclick="document.getElementById('modalStockRopa').style.display='none'" style="position:absolute; top:16px; right:20px; font-size:24px; color:#94a3b8; cursor:pointer; font-weight:700;">&times;</span>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+            <h3 style="font-size: 17px; font-weight: 900; text-transform: uppercase; color: #1e293b; display:flex; align-items:center; gap:10px; margin:0;">
+                <i class="fas fa-boxes-stacked" style="color:#0d9488;"></i> STOCK ROPA
+            </h3>
+            <div style="display:flex; gap:8px;">
+                <button class="btn-fin" style="background:#f0fdfa; color:#0d9488; border:1px solid #99f6e4; border-radius:10px; font-size:11px;" onclick="añadirTallaStock()"><i class="fas fa-ruler"></i> AÑADIR TALLA</button>
+                <button class="btn-fin" style="background:#f0fdfa; color:#0d9488; border:1px solid #99f6e4; border-radius:10px; font-size:11px;" onclick="añadirPrendaStock()"><i class="fas fa-plus"></i> AÑADIR PRENDA</button>
+            </div>
+        </div>
+        <div id="stockRopaContenido" style="max-height: 72vh; overflow:auto;">
+            <div style="text-align:center; padding:30px; color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PROPUESTA PEDIDO -->
+<div id="modalPropuestaPedido" class="modal" onclick="if(event.target === this) this.style.display='none'">
+    <div class="modal-content" style="width: 96vw; max-width: 1100px; border-radius: 20px; padding: 28px; position: relative;">
+        <span onclick="document.getElementById('modalPropuestaPedido').style.display='none'" style="position:absolute; top:16px; right:20px; font-size:22px; color:#94a3b8; cursor:pointer; font-weight:700;">&times;</span>
+        <h3 style="font-size: 15px; font-weight: 900; margin-bottom: 6px; text-transform: uppercase; color: #1e293b; display:flex; align-items:center; gap:10px;">
+            <i class="fas fa-file-invoice" style="color:#f59e0b;"></i> PROPUESTA DE PEDIDO
+        </h3>
+        <div id="txtPedidoNumeroPropuesta" style="font-size:13px; font-weight:900; color:#f59e0b; margin-bottom:10px;"></div>
+        <div style="font-size:11px; color:#94a3b8; margin-bottom:16px;">Tallas asignadas a jugadores que todavía no se han pedido al proveedor. Puedes ajustar las cantidades antes de guardar.</div>
+        <div id="propuestaPedidoContenido" style="max-height: 55vh; overflow:auto;">
+            <div style="text-align:center; padding:30px; color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>
+        </div>
+        <div style="display:flex; gap:10px; border-top:1px solid #f1f5f9; padding-top:18px; margin-top:18px;">
+            <button class="btn-fin" style="flex:1; background:#f1f5f9; color:#475569; border-radius:12px;" onclick="document.getElementById('modalPropuestaPedido').style.display='none'">CANCELAR</button>
+            <button class="btn-fin" style="flex:1; background:#f59e0b; color:white; border-radius:12px;" onclick="guardarPropuestaPedido()">GUARDAR PEDIDO</button>
+        </div>
+    </div>
+</div>
+
+<!-- BOCADILLO PEDIDOS REALIZADOS (popover flotante anclado, sin overlay) -->
+<div id="popoverPedidosRealizados" class="bocadillo-flotante" style="display:none; position:fixed; background:white; border:1px solid #e2e8f0; border-radius:18px; box-shadow:0 18px 40px rgba(0,0,0,0.18); z-index:30000; width:340px; max-width:92vw; padding:18px; overflow:visible;">
+    <div id="flechaPedidosRealizados" style="position:absolute; top:-8px; width:16px; height:16px; background:white; border-left:1px solid #e2e8f0; border-top:1px solid #e2e8f0; transform:rotate(45deg);"></div>
+    <span onclick="cerrarPopoverPedidosRealizados()" style="position:absolute; top:12px; right:14px; font-size:18px; color:#94a3b8; cursor:pointer; font-weight:700;">&times;</span>
+    <h3 style="font-size: 13px; font-weight: 900; margin-bottom: 14px; text-transform: uppercase; color: #1e293b; display:flex; align-items:center; gap:8px;">
+        <i class="fas fa-truck" style="color:#6f42c1;"></i> <span id="tituloPedidosRealizados">PEDIDOS REALIZADOS</span>
+    </h3>
+    <div id="pedidosRealizadosContenido" style="max-height: 60vh; overflow-y:auto; overflow-x:hidden;">
+        <div style="text-align:center; padding:30px; color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>
+    </div>
+</div>
+
+<!-- MODAL DETALLE DE PEDIDO (recuento) -->
+<div id="modalDetallePedido" class="modal" onclick="if(event.target === this) cerrarModalDetallePedido()">
+    <div class="modal-content" style="width: 96vw; max-width: 980px; border-radius: 22px; padding: 32px; position: relative;">
+        <span onclick="cerrarModalDetallePedido()" style="position:absolute; top:18px; right:22px; font-size:24px; color:#94a3b8; cursor:pointer; font-weight:700;">&times;</span>
+        <h3 style="font-size: 18px; font-weight: 900; margin-bottom: 18px; text-transform: uppercase; color: #1e293b; display:flex; align-items:center; gap:10px;">
+            <i class="fas fa-truck" style="color:#6f42c1;"></i> <span id="tituloDetallePedido">PEDIDO</span>
+        </h3>
+        <div id="detallePedidoContenido" style="max-height: 70vh; overflow:auto;">
+            <div style="text-align:center; padding:30px; color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CONFIGURACIÓN COMPOSICIÓN PACK ROPA -->
+<div id="modalConfigPackRopa" class="modal" onclick="if(event.target === this) this.style.display='none'">
+    <div class="modal-content" style="width: 96vw; max-width: 620px; border-radius: 20px; padding: 28px; position: relative;">
+        <span onclick="document.getElementById('modalConfigPackRopa').style.display='none'" style="position:absolute; top:16px; right:20px; font-size:22px; color:#94a3b8; cursor:pointer; font-weight:700;">&times;</span>
+        <h3 style="font-size: 14px; font-weight: 900; margin-bottom: 16px; text-transform: uppercase; color: #1e293b;"><i class="fas fa-box-open" style="color:#E31E24;"></i> COMPOSICIÓN DEL PACK ROPA</h3>
+        <div style="font-size:11px; color:#94a3b8; margin-bottom:16px;">Elige qué prendas incluye cada pack y su precio. Esto es lo que se mostrará al asignar un pack a un jugador.</div>
+        <div style="display:flex; gap:18px;">
+            <div style="flex:1;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                    <span style="font-weight:900; font-size:12px; color:#1e293b; text-transform:uppercase;">Pack Pequeño</span>
+                    <input type="number" id="precioPackPequeno" min="0" step="0.5" style="width:70px; padding:6px; border-radius:8px; border:2px solid #f1f5f9; font-weight:800; text-align:right;">
+                    <span style="color:#94a3b8; font-weight:700;">€</span>
+                </div>
+                <div id="prendasPackPequeno" style="display:flex; flex-direction:column; gap:6px;"></div>
+            </div>
+            <div style="flex:1;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                    <span style="font-weight:900; font-size:12px; color:#1e293b; text-transform:uppercase;">Pack Grande</span>
+                    <input type="number" id="precioPackGrande" min="0" step="0.5" style="width:70px; padding:6px; border-radius:8px; border:2px solid #f1f5f9; font-weight:800; text-align:right;">
+                    <span style="color:#94a3b8; font-weight:700;">€</span>
+                </div>
+                <div id="prendasPackGrande" style="display:flex; flex-direction:column; gap:6px;"></div>
+            </div>
+        </div>
+        <button class="btn-fin" style="width:100%; margin-top:20px; background:#E31E24; color:white; border-radius:12px;" onclick="guardarConfigPackRopa()">GUARDAR COMPOSICIÓN</button>
+    </div>
+</div>
+
+<!-- BOCADILLO PACK ROPA POR JUGADOR -->
+<div id="popoverPackRopaJugador" class="bocadillo-flotante" style="display:none; position:fixed; background:white; border:1px solid #e2e8f0; border-radius:16px; box-shadow:0 18px 40px rgba(0,0,0,0.18); z-index:30000; width:380px; max-width:92vw; padding:18px;">
+    <span onclick="document.getElementById('popoverPackRopaJugador').style.display='none'" style="position:absolute; top:12px; right:14px; font-size:18px; color:#94a3b8; cursor:pointer; font-weight:700;">&times;</span>
+    <h3 id="tituloPackRopaJugador" style="font-size: 12px; font-weight: 900; margin-bottom: 12px; text-transform: uppercase; color: #1e293b;">PACK ROPA</h3>
+    <div id="contenidoPackRopaJugador"></div>
+</div>
+
+<!-- MODAL CONFIRMAR APLICAR PACK MASIVO -->
+<div id="modalConfirmarPackMasivo" class="modal" onclick="if(event.target === this) this.style.display='none'">
+    <div class="modal-content" style="width: 420px; border-radius: 20px; padding: 28px; position: relative;">
+        <span onclick="document.getElementById('modalConfirmarPackMasivo').style.display='none'" style="position:absolute; top:16px; right:20px; font-size:22px; color:#94a3b8; cursor:pointer; font-weight:700;">&times;</span>
+        <h3 style="font-size: 14px; font-weight: 900; margin-bottom: 14px; text-transform: uppercase; color: #1e293b;"><i class="fas fa-users" style="color:#7c3aed;"></i> CONFIRMAR PACK MASIVO</h3>
+        <div id="txtConfirmarPackMasivo" style="font-size:12px; color:#475569; margin-bottom:12px; font-weight:700;"></div>
+        <div id="listaJugadoresPackMasivo" style="background:#f8fafc; border-radius:10px; padding:10px 12px; max-height:180px; overflow:auto; font-size:11px; color:#1e293b; margin-bottom:18px;"></div>
+        <div style="display:flex; gap:10px;">
+            <button class="btn-fin" style="flex:1; background:#f1f5f9; color:#475569; border-radius:12px;" onclick="document.getElementById('modalConfirmarPackMasivo').style.display='none'">CANCELAR</button>
+            <button class="btn-fin" style="flex:1; background:#7c3aed; color:white; border-radius:12px;" onclick="confirmarAplicarPackMasivo()">SÍ, APLICAR</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PRECIOS DE PRENDAS -->
+<div id="modalPreciosPrendas" class="modal" onclick="if(event.target === this) this.style.display='none'">
+    <div class="modal-content" style="width: 420px; border-radius: 20px; padding: 28px; position: relative;">
+        <span onclick="document.getElementById('modalPreciosPrendas').style.display='none'" style="position:absolute; top:16px; right:20px; font-size:22px; color:#94a3b8; cursor:pointer; font-weight:700;">&times;</span>
+        <h3 style="font-size: 14px; font-weight: 900; margin-bottom: 6px; text-transform: uppercase; color: #1e293b;"><i class="fas fa-tags" style="color:#7c3aed;"></i> PRECIO POR PRENDA</h3>
+        <div style="margin-bottom:16px;"><span onclick="document.getElementById('modalPreciosPrendas').style.display='none'; abrirModalConfigPackRopa();" style="font-size:10px; color:#7c3aed; font-weight:700; cursor:pointer; text-decoration:underline;">Editar qué prendas componen cada pack →</span></div>
+        <div id="preciosPrendasContenido" style="display:flex; flex-direction:column; gap:10px; max-height:50vh; overflow:auto;"></div>
+        <button class="btn-fin" style="width:100%; margin-top:18px; background:#7c3aed; color:white; border-radius:12px;" onclick="guardarPreciosPrendas()">GUARDAR PRECIOS</button>
+    </div>
+</div>
+
+<!-- BOCADILLO RENOMBRAR/BORRAR COLUMNA DE ROPA -->
+<div id="popoverEditarColumnaRopa" class="bocadillo-flotante" style="display:none; position:fixed; background:white; border:1px solid #e2e8f0; border-radius:14px; box-shadow:0 18px 40px rgba(0,0,0,0.18); z-index:32000; width:260px; padding:16px;">
+    <span onclick="document.getElementById('popoverEditarColumnaRopa').style.display='none'" style="position:absolute; top:10px; right:12px; font-size:16px; color:#94a3b8; cursor:pointer; font-weight:700;">&times;</span>
+    <div style="font-size:9px; font-weight:800; color:#94a3b8; text-transform:uppercase; margin-bottom:8px;">Renombrar columna</div>
+    <div style="display:flex; gap:6px; margin-bottom:12px;">
+        <input type="text" id="inputRenombrarColumnaRopa" style="flex:1; padding:7px 9px; border-radius:8px; border:2px solid #f1f5f9; font-size:12px; font-weight:700;">
+        <button onclick="confirmarRenombrarColumnaRopa()" style="background:#1e293b; color:white; border:none; border-radius:8px; padding:0 12px; font-size:11px; font-weight:800; cursor:pointer;">OK</button>
+    </div>
+    <div id="btnBorrarColumnaRopaPaso1" style="border-top:1px solid #f1f5f9; padding-top:10px;">
+        <button onclick="iniciarBorrarColumnaRopa()" style="width:100%; background:#fef2f2; color:#dc2626; border:none; border-radius:8px; padding:8px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fas fa-trash"></i> BORRAR COLUMNA</button>
+    </div>
+    <div id="confirmarBorrarColumnaRopa" style="display:none; border-top:1px solid #f1f5f9; padding-top:10px;">
+        <div style="font-size:10px; color:#991b1b; font-weight:700; margin-bottom:8px;">¿Seguro? Se borrarán todos los datos de esta columna para todos los jugadores. No se puede deshacer.</div>
+        <div style="display:flex; gap:6px;">
+            <button onclick="cancelarBorrarColumnaRopa()" style="flex:1; background:#f1f5f9; color:#475569; border:none; border-radius:8px; padding:8px; font-size:10px; font-weight:800; cursor:pointer;">CANCELAR</button>
+            <button onclick="confirmarBorrarColumnaRopa()" style="flex:1; background:#dc2626; color:white; border:none; border-radius:8px; padding:8px; font-size:10px; font-weight:800; cursor:pointer;">SÍ, BORRAR</button>
+        </div>
+    </div>
+</div>
+
+<!-- MENÚ CONTEXTUAL SOBRE UNA CELDA DE LA GRID PRINCIPAL DE ROPA -->
+<div id="menuContextualCeldaRopa" style="display:none; position:fixed; background:white; border:1px solid #e2e8f0; border-radius:10px; box-shadow:0 10px 25px rgba(0,0,0,0.18); z-index:32000; min-width:200px; overflow:hidden;">
+    <div id="opcionReasignarCeldaRopa" onclick="accionMenuContextualCeldaRopa('reasignar')" style="padding:10px 14px; font-size:12px; font-weight:700; color:#1e293b; cursor:pointer; display:flex; align-items:center; gap:8px;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'"><i class="fas fa-user-plus" style="color:#0d9488;"></i> Reasignar a...</div>
+    <div onclick="accionMenuContextualCeldaRopa('borrar')" style="padding:10px 14px; font-size:12px; font-weight:700; color:#dc2626; cursor:pointer; display:flex; align-items:center; gap:8px; border-top:1px solid #f1f5f9;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='white'"><i class="fas fa-trash"></i> Borrar</div>
+</div>
+
+<!-- MENÚ CONTEXTUAL SOBRE UN CHIP DE JUGADOR RESERVADO -->
+<div id="menuContextualChip" style="display:none; position:fixed; background:white; border:1px solid #e2e8f0; border-radius:10px; box-shadow:0 10px 25px rgba(0,0,0,0.18); z-index:32000; min-width:200px; overflow:hidden;">
+    <div onclick="accionMenuContextualChip('reasignar')" style="padding:10px 14px; font-size:12px; font-weight:700; color:#1e293b; cursor:pointer; display:flex; align-items:center; gap:8px;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'"><i class="fas fa-user-plus" style="color:#0d9488;"></i> Reasignar a...</div>
+    <div onclick="accionMenuContextualChip('borrar')" style="padding:10px 14px; font-size:12px; font-weight:700; color:#dc2626; cursor:pointer; display:flex; align-items:center; gap:8px; border-top:1px solid #f1f5f9;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='white'"><i class="fas fa-trash"></i> Borrar (pasa a stock)</div>
+</div>
+
+<!-- POPUP ELEGIR JUGADOR (grid Ropa filtrado a una sola prenda) -->
+<div id="modalElegirJugadorPrenda" class="modal" onclick="if(event.target === this) document.getElementById('modalElegirJugadorPrenda').style.display='none'" style="z-index:31000;">
+    <div class="modal-content" style="width: 96vw; max-width: 620px; border-radius: 20px; padding: 26px; position: relative;">
+        <span onclick="document.getElementById('modalElegirJugadorPrenda').style.display='none'" style="position:absolute; top:16px; right:20px; font-size:22px; color:#94a3b8; cursor:pointer; font-weight:700;">&times;</span>
+        <h3 style="font-size: 15px; font-weight: 900; margin-bottom: 14px; text-transform: uppercase; color: #1e293b;" id="tituloElegirJugadorPrenda">ASIGNAR PRENDA</h3>
+        <div style="display:flex; gap:8px; margin-bottom:14px;">
+            <select id="filtroEquipoElegirJugador" onchange="renderElegirJugadorPrenda()" style="padding:10px 12px; border-radius:10px; border:1px solid #e2e8f0; font-size:12px;">
+                <option value="">Todos los equipos</option>
+                {% for equipo in equipos %}<option value="{{ equipo }}">{{ equipo }}</option>{% endfor %}
+            </select>
+            <input type="text" id="buscadorElegirJugador" placeholder="Buscar jugador..." oninput="renderElegirJugadorPrenda()" style="flex:1; padding:10px 14px; border-radius:10px; border:1px solid #e2e8f0; font-size:12px; box-sizing:border-box;">
+        </div>
+        <div id="elegirJugadorPrendaContenido" style="max-height:55vh; overflow:auto;">
+            <div style="text-align:center; padding:20px; color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>
         </div>
     </div>
 </div>
@@ -801,6 +1049,7 @@ function setVista(modo) {
     const btnImpagos = document.getElementById('btnSacarImpagos');
     const btnExportarRopa = document.getElementById('btnExportarRopa');
     const btnConfigTipoForma = document.getElementById('btnConfigurarTipoForma');
+    const grupoStockPedidos = document.getElementById('grupoStockPedidos');
 
     if (modo === 'ropa') {
         tablas.forEach(t => t.classList.add('table-ropa-active'));
@@ -810,7 +1059,10 @@ function setVista(modo) {
         if(btnImpagos) btnImpagos.style.display = 'none';
         if(btnExportarRopa) btnExportarRopa.style.display = 'flex';
         if(btnConfigTipoForma) btnConfigTipoForma.style.display = 'none';
-        cargarDatosRopa();
+        if(grupoStockPedidos) grupoStockPedidos.style.display = 'flex';
+        document.getElementById('hintClicDerechoRopa').style.display = 'block';
+        document.getElementById('pildoraAsignarPackMasivo').style.display = 'flex';
+        cargarDatosRopa().then(posicionarPildoraPackMasivo);
     } else {
         tablas.forEach(t => t.classList.remove('table-ropa-active'));
         btnsPagos.forEach(b => { if(b) { b.classList.remove('inactive-mode'); b.classList.add('active-mode'); } });
@@ -819,7 +1071,20 @@ function setVista(modo) {
         if(btnImpagos) btnImpagos.style.display = 'flex';
         if(btnExportarRopa) btnExportarRopa.style.display = 'none';
         if(btnConfigTipoForma) btnConfigTipoForma.style.display = 'flex';
+        if(grupoStockPedidos) grupoStockPedidos.style.display = 'none';
+        document.getElementById('hintClicDerechoRopa').style.display = 'none';
+        document.getElementById('pildoraAsignarPackMasivo').style.display = 'none';
     }
+}
+
+function posicionarPildoraPackMasivo() {
+    const th = document.querySelector('.col-pago-ropa');
+    const wrapper = document.querySelector('.tabla-scroll-x');
+    const pildora = document.getElementById('pildoraAsignarPackMasivo');
+    if (!th || !pildora || !wrapper) return;
+    const thRect = th.getBoundingClientRect();
+    const wrapperRect = wrapper.getBoundingClientRect();
+    pildora.style.left = `${thRect.left - wrapperRect.left + wrapper.scrollLeft}px`;
 }
 
 function toggleSeccionRopa() {
@@ -828,7 +1093,24 @@ function toggleSeccionRopa() {
     setVista(isActive ? 'pagos' : 'ropa');
 }
 
+// Devuelve a qué pack pertenece una columna (por pertenencia real en packRopaConfigCache, no por su nombre)
+// El pack grande incluye SIEMPRE las prendas del pequeño + alguna extra. Para no mostrar
+// la misma prenda dos veces, una columna solo se etiqueta "GRANDE" si NO está ya en el pequeño.
+function packDeColumna(col) {
+    if ((packRopaConfigCache.pequeno?.prendas || []).includes(col)) return 'PEQUEÑO';
+    if ((packRopaConfigCache.grande?.prendas || []).includes(col)) return 'GRANDE';
+    return null;
+}
+
+function ordenVisualRopaColumns() {
+    const rango = (pack) => pack === 'PEQUEÑO' ? 0 : pack === 'GRANDE' ? 1 : 2;
+    return ropaColumns
+        .map((col, realIdx) => ({ col, realIdx, pack: packDeColumna(col) }))
+        .sort((a, b) => rango(a.pack) - rango(b.pack));
+}
+
 function renderRopaStructure() {
+    const orden = ordenVisualRopaColumns();
     const anchorJug = document.getElementById('thBtnRopa');
     const anchorStaff = document.getElementById('thBtnRopaStaff');
     if (!anchorJug) return;
@@ -840,17 +1122,29 @@ function renderRopaStructure() {
     
     // Usamos fragmento para mantener el orden correcto
     const fragmentHeaders = document.createDocumentFragment();
-    ropaColumns.forEach((col, idx) => {
+    const contadorNombrePack = {}; // para desambiguar si dos columnas del pack comparten el mismo nombre
+    orden.forEach(({ col, realIdx, pack }) => {
         const th = document.createElement('th');
         th.className = 'col-ropa header-ropa header-ropa-dinamica';
         th.style.padding = '10px 5px';
-        th.innerHTML = `
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-                <span style="font-size: 9px; color: #94a3b8; font-weight: 800; white-space: nowrap;">${col}</span>
-                <i class="fas fa-pencil-alt" style="cursor: pointer; color: #E31E24; font-size: 11px;" onclick="editarNombreColumnaRopa(${idx})"></i>
-            </div>
-        `;
-        th.ondblclick = () => editarNombreColumnaRopa(idx);
+
+        let contenido;
+        if (pack) {
+            th.style.background = '#eceef2';
+            th.style.borderTop = '3px solid #1e293b';
+            contadorNombrePack[col] = (contadorNombrePack[col] || 0) + 1;
+            const etiquetaPrenda = contadorNombrePack[col] > 1 ? `${col} ${contadorNombrePack[col]}` : col;
+            contenido = `
+                <div style="font-size: 7.5px; color: #94a3b8; font-weight: 800; text-transform: uppercase; white-space: nowrap;">PACK ${pack}</div>
+                <div style="font-size: 9px; color: #1e293b; font-weight: 900; white-space: nowrap;">${etiquetaPrenda}</div>
+            `;
+        } else {
+            contenido = `<span style="font-size: 9px; color: #94a3b8; font-weight: 800; white-space: nowrap;">${col}</span>`;
+        }
+        th.innerHTML = `<div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">${contenido}</div>`;
+        th.title = 'Clic derecho para renombrar';
+        th.ondblclick = (e) => editarNombreColumnaRopa(realIdx, e);
+        th.oncontextmenu = (e) => { e.preventDefault(); editarNombreColumnaRopa(realIdx, e); return false; };
         fragmentHeaders.appendChild(th);
     });
 
@@ -868,8 +1162,12 @@ function renderRopaStructure() {
     if (plusBtnStaff) plusBtnStaff.onclick = anadirNuevaColumnaRopa;
     
     const dynHeadersStaff = fragmentHeadersStaff.querySelectorAll('.header-ropa-dinamica');
-    dynHeadersStaff.forEach((th, idx) => {
-        if (idx < ropaColumns.length) th.ondblclick = () => editarNombreColumnaRopa(idx);
+    dynHeadersStaff.forEach((th, visualIdx) => {
+        if (visualIdx < orden.length) {
+            const realIdx = orden[visualIdx].realIdx;
+            th.ondblclick = (e) => editarNombreColumnaRopa(realIdx, e);
+            th.oncontextmenu = (e) => { e.preventDefault(); editarNombreColumnaRopa(realIdx, e); return false; };
+        }
     });
 
     anchorJug.after(fragmentHeaders);
@@ -883,11 +1181,13 @@ function renderRopaStructure() {
         fila.querySelectorAll('.celda-ropa-dinamica').forEach(el => el.remove());
         
         const fragmentCells = document.createDocumentFragment();
-        ropaColumns.forEach((col) => {
+        orden.forEach(({ col }) => {
             const td = document.createElement('td');
             td.className = 'col-ropa celda-ropa celda-ropa-dinamica ropa-vacia pago-cell';
+            if (packDeColumna(col)) td.style.background = '#eceef2';
             td.innerText = '-';
             td.onclick = (e) => abrirGestionRopa(fila, col, td, e);
+            td.oncontextmenu = (e) => { e.preventDefault(); mostrarMenuContextualCeldaRopa(e, fila, col, td); return false; };
             fragmentCells.appendChild(td);
         });
 
@@ -904,11 +1204,13 @@ function renderRopaStructure() {
         if (!btnRopa) return;
         fila.querySelectorAll('.celda-ropa-dinamica').forEach(el => el.remove());
         const fragmentCells = document.createDocumentFragment();
-        ropaColumns.forEach((col) => {
+        orden.forEach(({ col }) => {
             const td = document.createElement('td');
             td.className = 'col-ropa celda-ropa celda-ropa-dinamica ropa-vacia pago-cell';
+            if (packDeColumna(col)) td.style.background = '#eceef2';
             td.innerText = '-';
             td.onclick = (e) => abrirGestionRopa(fila, col, td, e);
+            td.oncontextmenu = (e) => { e.preventDefault(); mostrarMenuContextualCeldaRopa(e, fila, col, td); return false; };
             fragmentCells.appendChild(td);
         });
         const tdPlus = document.createElement('td');
@@ -918,21 +1220,95 @@ function renderRopaStructure() {
     });
 }
 
-function editarNombreColumnaRopa(idx) {
-    const nuevoNombre = prompt("Introduce el nuevo nombre para la columna:", ropaColumns[idx]);
-    if (nuevoNombre && nuevoNombre.trim() !== "") {
-        const nombreFinal = nuevoNombre.trim().toUpperCase();
-        ropaColumns[idx] = nombreFinal;
-        renderRopaStructure();
+let columnaRopaContextual = null;
 
-        // Sincronizar con backend (Columna D es la 4)
-        fetch('/api/ropa/header', { // No es necesario await aquí, la UI ya se actualizó
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ col_idx: idx + 4, nombre: nombreFinal })
+function editarNombreColumnaRopa(idx, evt) {
+    columnaRopaContextual = { realIdx: idx };
+    document.getElementById('inputRenombrarColumnaRopa').value = ropaColumns[idx];
+    document.getElementById('btnBorrarColumnaRopaPaso1').style.display = 'block';
+    document.getElementById('confirmarBorrarColumnaRopa').style.display = 'none';
+
+    const pop = document.getElementById('popoverEditarColumnaRopa');
+    pop.style.display = 'block';
+    const rect = evt && evt.target ? evt.target.closest('th, td')?.getBoundingClientRect() : null;
+    const popWidth = pop.offsetWidth || 260;
+    let left = rect ? rect.left : (window.innerWidth - popWidth) / 2;
+    if (left + popWidth > window.innerWidth - 10) left = window.innerWidth - popWidth - 10;
+    pop.style.left = `${Math.max(10, left)}px`;
+    pop.style.top = `${rect ? rect.bottom + 6 : 100}px`;
+}
+
+function confirmarRenombrarColumnaRopa() {
+    if (!columnaRopaContextual) return;
+    const idx = columnaRopaContextual.realIdx;
+    const nuevoNombre = document.getElementById('inputRenombrarColumnaRopa').value;
+    if (!nuevoNombre || !nuevoNombre.trim()) return;
+    const nombreFinal = nuevoNombre.trim().toUpperCase();
+    ropaColumns[idx] = nombreFinal;
+    renderRopaStructure();
+    document.getElementById('popoverEditarColumnaRopa').style.display = 'none';
+
+    fetch('/api/ropa/header', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ col_idx: idx + 4, nombre: nombreFinal })
+    });
+}
+
+function iniciarBorrarColumnaRopa() {
+    document.getElementById('btnBorrarColumnaRopaPaso1').style.display = 'none';
+    document.getElementById('confirmarBorrarColumnaRopa').style.display = 'block';
+}
+
+function cancelarBorrarColumnaRopa() {
+    document.getElementById('btnBorrarColumnaRopaPaso1').style.display = 'block';
+    document.getElementById('confirmarBorrarColumnaRopa').style.display = 'none';
+}
+
+async function confirmarBorrarColumnaRopa() {
+    if (!columnaRopaContextual) return;
+    const idx = columnaRopaContextual.realIdx;
+    const nombreBorrado = ropaColumns[idx];
+    document.getElementById('popoverEditarColumnaRopa').style.display = 'none';
+
+    showLoader();
+    try {
+        await fetch('/api/ropa/borrar_columna', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ col_idx: idx + 4 })
         });
+
+        // Si esa prenda formaba parte de un pack, la quitamos también de la composición
+        let cambioPack = false;
+        for (const tamano of ['pequeno', 'grande']) {
+            const lista = packRopaConfigCache[tamano]?.prendas || [];
+            if (lista.includes(nombreBorrado)) {
+                packRopaConfigCache[tamano].prendas = lista.filter(p => p !== nombreBorrado);
+                cambioPack = true;
+            }
+        }
+        if (cambioPack) {
+            await fetch('/api/stock_ropa/pack_ropa_config', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(packRopaConfigCache)
+            });
+        }
+
+        await cargarDatosRopa();
+        mostrarPopUpExito('COLUMNA BORRADA');
+    } catch (e) {
+        alert('Error al borrar la columna.');
+    } finally {
+        hideLoader();
     }
 }
+
+document.addEventListener('click', function(evt) {
+    const pop = document.getElementById('popoverEditarColumnaRopa');
+    if (pop && pop.style.display === 'block' && !pop.contains(evt.target)) {
+        pop.style.display = 'none';
+    }
+}, true);
 
 async function anadirNuevaColumnaRopa() {
     showLoader();
@@ -1121,7 +1497,66 @@ function mostrarPopUpExito(mensaje) {
     }, 3000);
 }
 
-function actualizarVisualCeldaRopa(td, talla, estado) {
+let celdaRopaContextualCtx = null;
+
+function mostrarMenuContextualCeldaRopa(evt, fila, prenda, td) {
+    const nombre = (fila.dataset.nombre || '').trim();
+    const equipo = (fila.dataset.equipo || '').trim();
+    const datos = (ropaDataCache[nombre] && ropaDataCache[nombre][prenda]) || {};
+    if (!datos.talla) return; // celda vacía, nada que reasignar/borrar
+
+    celdaRopaContextualCtx = { nombre, equipo, prenda, talla: datos.talla, estado: datos.estado, pedidoId: datos.pedidoId };
+
+    const menu = document.getElementById('menuContextualCeldaRopa');
+    const opcionReasignar = document.getElementById('opcionReasignarCeldaRopa');
+    opcionReasignar.style.display = datos.pedidoId ? 'flex' : 'none';
+    menu.style.display = 'block';
+    const w = menu.offsetWidth || 200;
+    let left = evt.clientX;
+    if (left + w > window.innerWidth - 10) left = window.innerWidth - w - 10;
+    menu.style.left = `${left}px`;
+    menu.style.top = `${evt.clientY}px`;
+}
+
+async function accionMenuContextualCeldaRopa(accion) {
+    document.getElementById('menuContextualCeldaRopa').style.display = 'none';
+    if (!celdaRopaContextualCtx) return;
+    const ctx = celdaRopaContextualCtx;
+
+    if (accion === 'reasignar') {
+        reasignarContexto = { tipo: 'celda', origen: { jugador: ctx.nombre, equipo: ctx.equipo }, prenda: ctx.prenda, talla: ctx.talla, pedidoId: ctx.pedidoId };
+        abrirModalElegirJugadorPrenda(ctx.prenda);
+        return;
+    }
+
+    if (accion === 'borrar') {
+        if (!confirm(`¿Borrar la talla ${ctx.talla} de ${ctx.nombre} en ${ctx.prenda}?`)) return;
+        showLoader();
+        try {
+            const res = await fetch('/api/stock_ropa/borrar_celda', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ jugador: ctx.nombre, equipo: ctx.equipo, prenda: ctx.prenda })
+            });
+            const data = await res.json();
+            if (data.status !== 'success') throw new Error(data.message || 'Error al borrar.');
+            await cargarDatosRopa();
+            mostrarPopUpExito('CELDA BORRADA');
+        } catch (e) {
+            alert(e.message || 'Error al borrar la celda.');
+        } finally {
+            hideLoader();
+        }
+    }
+}
+
+document.addEventListener('click', function(evt) {
+    const menu = document.getElementById('menuContextualCeldaRopa');
+    if (menu && menu.style.display === 'block' && !menu.contains(evt.target)) {
+        menu.style.display = 'none';
+    }
+});
+
+function actualizarVisualCeldaRopa(td, talla, estado, pedidoId, fecha) {
     td.innerText = talla || '-';
     td.className = 'col-ropa celda-ropa celda-ropa-dinamica pago-cell';
     if (!talla) {
@@ -1136,13 +1571,15 @@ function actualizarVisualCeldaRopa(td, talla, estado) {
 
 async function cargarDatosRopa() {
     showLoader();
+    await Promise.all([cargarPackRopaConfig(), cargarJugadoresPackCache()]); // necesario antes de renderRopaStructure() para saber qué columnas agrupar
     const res = await fetch('/api/ropa');
     const result = await res.json();
-    
+
     if (result.headers) {
         // Sincronizamos los nombres de las columnas reales (desde el índice 3 / Col D)
         ropaColumns = result.headers.slice(3);
         renderRopaStructure();
+        await renderColumnasPagoPrendas();
     }
 
     // Reconstruir el cache desde los datos planos de la hoja
@@ -1155,27 +1592,1303 @@ async function cargarDatosRopa() {
                 const prendaName = result.headers[i];
                 const val = row[i];
                 if (val && val.includes('|')) {
-                    const [talla, estado, fecha] = val.split('|');
-                    ropaDataCache[jugador][prendaName] = { talla, estado, fecha };
+                    const [talla, estado, fecha, pedidoId] = val.split('|');
+                    ropaDataCache[jugador][prendaName] = { talla, estado, fecha, pedidoId };
                 }
             }
         });
     }
 
     // Aplicar estilos a cada celda según el cache (JUGADORES y STAFF)
+    const ordenVisual = ordenVisualRopaColumns(); // el DOM se pintó en este orden, no en el de ropaColumns
     const todasFilas = [...document.querySelectorAll('.fila-jugador'), ...document.querySelectorAll('.fila-staff')];
     todasFilas.forEach(fila => {
         const nombre = fila.dataset.nombre;
-        if (!nombre || !ropaDataCache[nombre]) return;
-        
+        if (!nombre) return;
+        const datosJugador = ropaDataCache[nombre] || {};
+        const packJugador = jugadoresPackCache[clavePack(fila.dataset.equipo, nombre)];
+
         fila.querySelectorAll('.celda-ropa-dinamica').forEach((td, idx) => {
-            const prenda = ropaColumns[idx];
-            if (prenda && ropaDataCache[nombre][prenda]) {
-                actualizarVisualCeldaRopa(td, ropaDataCache[nombre][prenda].talla, ropaDataCache[nombre][prenda].estado);
+            const colInfo = ordenVisual[idx];
+            if (!colInfo) return;
+            const prenda = colInfo.col;
+
+            // Si el jugador tiene PACK PEQUEÑO y esta columna es una prenda EXTRA del pack grande, no le aplica
+            if (colInfo.pack === 'GRANDE' && packJugador === 'pequeno') {
+                td.className = 'col-ropa celda-ropa celda-ropa-dinamica pago-cell';
+                td.innerHTML = '<span style="color:#1e293b; font-weight:400; font-size:11px;">✕</span>';
+                return;
             }
+
+            const d = datosJugador[prenda];
+            if (d) actualizarVisualCeldaRopa(td, d.talla, d.estado, d.pedidoId, d.fecha);
+        });
+
+        const badgePack = fila.querySelector('.col-ropa-pack-btn');
+        if (badgePack) {
+            badgePack.innerText = packJugador === 'grande' ? 'PACK GRANDE' : packJugador === 'pequeno' ? 'PACK PEQUEÑO' : 'PACK';
+        }
+    });
+    inicializarCeldasPagoPrendas();
+    if (Array.isArray(presupuestoData) && presupuestoData.length) cargarPagosEnTabla();
+    hideLoader();
+}
+
+// =====================================================================
+// COLUMNAS DE PAGO POR PRENDA (PACK + cada prenda), integradas en el motor de pagos normal
+// =====================================================================
+
+let preciosPrendasCache = {};
+let columnasPagoRopaVisibles = false;
+
+async function cargarPreciosPrendas() {
+    try {
+        const res = await fetch('/api/stock_ropa/precios_prendas');
+        const data = await res.json();
+        preciosPrendasCache = data.precios || {};
+    } catch (e) { preciosPrendasCache = {}; }
+}
+
+async function abrirModalPreciosPrendas() {
+    await Promise.all([cargarPreciosPrendas(), cargarPackRopaConfig()]);
+    document.getElementById('modalPreciosPrendas').style.display = 'flex';
+    const cont = document.getElementById('preciosPrendasContenido');
+
+    const prendasEnPack = new Set([...(packRopaConfigCache.pequeno?.prendas || []), ...(packRopaConfigCache.grande?.prendas || [])]);
+    const prendasSueltas = (ropaColumns || []).filter(p => !prendasEnPack.has(p));
+
+    let html = `
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding-bottom:10px; margin-bottom:10px; border-bottom:2px solid #f1f5f9;">
+            <span style="font-size:12px; font-weight:900; color:#1e293b;">PACK PEQUEÑO <span style="color:#94a3b8; font-weight:700;">(precio del pack completo)</span></span>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <input type="number" min="0" step="0.5" id="precioPrendaPackPequeno" value="${packRopaConfigCache.pequeno?.precio || 0}" style="width:80px; padding:8px; border-radius:8px; border:2px solid #f1f5f9; font-weight:800; text-align:right;">
+                <span style="color:#94a3b8; font-weight:700;">€</span>
+            </div>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding-bottom:10px; margin-bottom:10px; border-bottom:2px solid #f1f5f9;">
+            <span style="font-size:12px; font-weight:900; color:#1e293b;">PACK GRANDE <span style="color:#94a3b8; font-weight:700;">(precio del pack completo)</span></span>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <input type="number" min="0" step="0.5" id="precioPrendaPackGrande" value="${packRopaConfigCache.grande?.precio || 0}" style="width:80px; padding:8px; border-radius:8px; border:2px solid #f1f5f9; font-weight:800; text-align:right;">
+                <span style="color:#94a3b8; font-weight:700;">€</span>
+            </div>
+        </div>
+    `;
+
+    if (!prendasSueltas.length) {
+        html += '<div style="color:#94a3b8; font-size:11px;">No hay prendas sueltas (fuera de un pack) configuradas.</div>';
+    } else {
+        html += prendasSueltas.map(prenda => `
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                <span style="font-size:12px; font-weight:700; color:#1e293b;">${prenda}</span>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <input type="number" min="0" step="0.5" data-prenda="${prenda.replace(/"/g, '&quot;')}" value="${preciosPrendasCache[prenda] || 0}" style="width:80px; padding:8px; border-radius:8px; border:2px solid #f1f5f9; font-weight:800; text-align:right;">
+                    <span style="color:#94a3b8; font-weight:700;">€</span>
+                </div>
+            </div>
+        `).join('');
+    }
+    cont.innerHTML = html;
+}
+
+async function guardarPreciosPrendas() {
+    const inputs = document.querySelectorAll('#preciosPrendasContenido input[data-prenda]');
+    const precios = {};
+    inputs.forEach(inp => { precios[inp.dataset.prenda] = parseFloat(inp.value) || 0; });
+
+    if (!packRopaConfigCache.pequeno) packRopaConfigCache.pequeno = { prendas: [], precio: 0 };
+    if (!packRopaConfigCache.grande) packRopaConfigCache.grande = { prendas: [], precio: 0 };
+    packRopaConfigCache.pequeno.precio = parseFloat(document.getElementById('precioPrendaPackPequeno').value) || 0;
+    packRopaConfigCache.grande.precio = parseFloat(document.getElementById('precioPrendaPackGrande').value) || 0;
+
+    showLoader();
+    try {
+        await Promise.all([
+            fetch('/api/stock_ropa/precios_prendas', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ precios })
+            }),
+            fetch('/api/stock_ropa/pack_ropa_config', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(packRopaConfigCache)
+            })
+        ]);
+        preciosPrendasCache = precios;
+        document.getElementById('modalPreciosPrendas').style.display = 'none';
+        mostrarPopUpExito('PRECIOS GUARDADOS');
+        await renderColumnasPagoPrendas();
+        cargarPagosEnTabla();
+    } catch (e) {
+        alert('Error al guardar los precios.');
+    } finally {
+        hideLoader();
+    }
+}
+
+function toggleColumnasPagoRopa() {
+    columnasPagoRopaVisibles = !columnasPagoRopaVisibles;
+    document.querySelectorAll('.col-pago-prenda').forEach(el => {
+        el.style.display = columnasPagoRopaVisibles ? 'table-cell' : 'none';
+    });
+    const botonChevron = document.getElementById('botonToggleChevronPagoRopa');
+    if (botonChevron) botonChevron.style.background = columnasPagoRopaVisibles ? '#1e293b' : '#f1f5f9';
+    if (botonChevron) botonChevron.style.color = columnasPagoRopaVisibles ? 'white' : '#1e293b';
+    const flecha = document.getElementById('flechaTogglePagoRopa');
+    if (flecha) flecha.style.transform = columnasPagoRopaVisibles ? 'rotate(90deg)' : 'rotate(0deg)';
+}
+
+// Crea (o recrea) la cabecera "PACK" + una columna por cada prenda existente en ROPA, ancladas al final de la tabla
+async function renderColumnasPagoPrendas() {
+    await Promise.all([cargarPreciosPrendas(), cargarPackRopaConfig()]);
+
+    const anchorTh = document.getElementById('thAnchorPagoPrendas');
+    if (!anchorTh) return;
+
+    document.querySelectorAll('.col-pago-prenda').forEach(el => el.remove());
+
+    const columnas = [
+        { concepto: 'PACK_GRANDE_ASIGNADO', label: 'PACK GRANDE' },
+        { concepto: 'PACK_PEQUENO_ASIGNADO', label: 'PACK PEQUEÑO' },
+        ...ropaColumns.map(p => ({ concepto: `ROPA: ${p}`, label: p }))
+    ];
+
+    const fragHeaders = document.createDocumentFragment();
+    columnas.forEach(col => {
+        const th = document.createElement('th');
+        th.className = 'pago-cell col-pago-prenda';
+        th.style.minWidth = '60px';
+        th.style.padding = '10px 5px';
+        th.style.background = '#fef2f2';
+        th.style.borderBottom = '2px solid #fee2e2';
+        th.style.display = columnasPagoRopaVisibles ? 'table-cell' : 'none';
+        th.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; gap:4px;"><span style="font-size:9px; color:#1e293b; font-weight:800; text-transform:uppercase;">${col.label}</span></div>`;
+        fragHeaders.appendChild(th);
+    });
+    anchorTh.after(fragHeaders);
+
+    document.querySelectorAll('.fila-jugador').forEach(fila => {
+        const anchorTd = fila.querySelector('.anchor-pago-prendas-btn');
+        if (!anchorTd) return;
+        const fragCells = document.createDocumentFragment();
+        columnas.forEach(col => {
+            const td = document.createElement('td');
+            td.className = 'pago-cell col-pago-prenda';
+            td.style.display = columnasPagoRopaVisibles ? 'table-cell' : 'none';
+            td.style.background = '#fef9f9';
+            td.dataset.concepto = col.concepto;
+            td.dataset.esperado = '0';
+            td.dataset.importe = '0';
+            td.innerText = '-';
+            td.onclick = (e) => seleccionarPago(e, td, col.concepto);
+            fragCells.appendChild(td);
+        });
+        anchorTd.after(fragCells);
+    });
+}
+
+// Determina si un jugador tiene completo el pack pequeño/grande según las prendas que tenga asignadas
+function calcularPackAsignado(nombre, equipo) {
+    const vista = jugadoresPackCache[clavePack(equipo, nombre)];
+    if (vista === 'grande') return { tipo: 'GRANDE', precio: parseFloat(packRopaConfigCache.grande?.precio) || 0 };
+    if (vista === 'pequeno') return { tipo: 'PEQUEÑO', precio: parseFloat(packRopaConfigCache.pequeno?.precio) || 0 };
+    return null;
+}
+
+// Rellena el "esperado" (precio) y texto base de cada celda dinámica de pago por prenda, antes de aplicar los pagos reales
+function inicializarCeldasPagoPrendas() {
+    document.querySelectorAll('.fila-jugador').forEach(fila => {
+        const nombre = fila.dataset.nombre;
+        const pack = calcularPackAsignado(nombre, fila.dataset.equipo); // null, o {tipo:'GRANDE'|'PEQUEÑO', precio}
+
+        fila.querySelectorAll('.col-pago-prenda').forEach(td => {
+            const concepto = td.dataset.concepto;
+            td.dataset.importe = '0';
+            delete td.dataset.asientoId;
+            td.classList.remove('pago-verde', 'pago-naranja', 'pago-exceso');
+            td.style.pointerEvents = '';
+            td.style.color = '';
+            td.style.fontWeight = '';
+
+            if (concepto === 'PACK_GRANDE_ASIGNADO' || concepto === 'PACK_PEQUENO_ASIGNADO') {
+                const esEstaColumna = concepto === 'PACK_GRANDE_ASIGNADO' ? 'GRANDE' : 'PEQUEÑO';
+                if (!pack) { td.innerText = '-'; td.dataset.esperado = '0'; return; }
+                if (pack.tipo === esEstaColumna) {
+                    td.dataset.esperado = pack.precio;
+                    td.innerText = pack.precio > 0 ? `${Math.round(pack.precio)}€` : '-';
+                } else {
+                    // Tiene el OTRO pack asignado: esta columna no aplica para este jugador
+                    td.dataset.esperado = '0';
+                    td.innerText = 'X';
+                    td.style.color = '#cbd5e1';
+                    td.style.fontWeight = '900';
+                    td.style.pointerEvents = 'none';
+                }
+                return;
+            }
+
+            // Columna de prenda individual
+            const prenda = concepto.replace('ROPA: ', '');
+            const perteneceAUnPack = (packRopaConfigCache.grande?.prendas || []).includes(prenda) || (packRopaConfigCache.pequeno?.prendas || []).includes(prenda);
+            if (perteneceAUnPack) {
+                // Las prendas exclusivas de un pack solo se cobran a través de la columna del pack completo
+                td.innerText = '-';
+                td.dataset.esperado = '0';
+                td.style.pointerEvents = 'none';
+                return;
+            }
+            const datoPrenda = (ropaDataCache[nombre] || {})[prenda];
+            if (!datoPrenda || !datoPrenda.talla) { td.innerText = '-'; td.dataset.esperado = '0'; return; }
+            const precio = parseFloat(preciosPrendasCache[prenda]) || 0;
+            td.dataset.esperado = precio;
+            td.innerText = precio > 0 ? `${Math.round(precio)}€` : '-';
         });
     });
-    hideLoader();
+}
+
+// =====================================================================
+// COMPOSICIÓN DEL PACK ROPA (qué prendas incluye cada pack) + asignación por jugador
+// =====================================================================
+
+let packRopaConfigCache = { pequeno: { prendas: [], precio: 0 }, grande: { prendas: [], precio: 0 } };
+
+async function cargarPackRopaConfig() {
+    try {
+        const res = await fetch('/api/stock_ropa/pack_ropa_config');
+        packRopaConfigCache = await res.json();
+    } catch (e) {
+        packRopaConfigCache = { pequeno: { prendas: [], precio: 0 }, grande: { prendas: [], precio: 0 } };
+    }
+}
+
+async function abrirModalConfigPackRopa() {
+    await cargarPackRopaConfig();
+    document.getElementById('modalConfigPackRopa').style.display = 'flex';
+    document.getElementById('precioPackPequeno').value = packRopaConfigCache.pequeno?.precio || 0;
+    document.getElementById('precioPackGrande').value = packRopaConfigCache.grande?.precio || 0;
+
+    if (!ropaColumns || !ropaColumns.length) {
+        document.getElementById('prendasPackPequeno').innerHTML = '<div style="font-size:11px; color:#94a3b8;">No hay prendas configuradas en ROPA.</div>';
+        document.getElementById('prendasPackGrande').innerHTML = '';
+        return;
+    }
+
+    const seleccionadasPequeno = packRopaConfigCache.pequeno?.prendas || [];
+    const seleccionadasGrande = packRopaConfigCache.grande?.prendas || [];
+
+    document.getElementById('prendasPackPequeno').innerHTML = ropaColumns.map(prenda => `
+        <label style="display:flex; align-items:center; gap:8px; font-size:12px; font-weight:700; color:#1e293b; cursor:pointer;">
+            <input type="checkbox" value="${prenda.replace(/"/g, '&quot;')}" data-prenda-pequeno="${prenda.replace(/"/g, '&quot;')}" onchange="sincronizarPequenoEnGrande(this)" ${seleccionadasPequeno.includes(prenda) ? 'checked' : ''}>
+            ${prenda}
+        </label>
+    `).join('');
+
+    document.getElementById('prendasPackGrande').innerHTML = ropaColumns.map(prenda => {
+        const forzado = seleccionadasPequeno.includes(prenda);
+        const marcado = forzado || seleccionadasGrande.includes(prenda);
+        return `
+        <label style="display:flex; align-items:center; gap:8px; font-size:12px; font-weight:700; color:${forzado ? '#94a3b8' : '#1e293b'}; cursor:${forzado ? 'default' : 'pointer'};">
+            <input type="checkbox" value="${prenda.replace(/"/g, '&quot;')}" data-prenda-grande="${prenda.replace(/"/g, '&quot;')}" ${marcado ? 'checked' : ''} ${forzado ? 'disabled' : ''}>
+            ${prenda}${forzado ? ' <span style="font-size:9px; color:#94a3b8;">(del pack pequeño)</span>' : ''}
+        </label>`;
+    }).join('');
+}
+
+function sincronizarPequenoEnGrande(checkboxPequeno) {
+    const prenda = checkboxPequeno.dataset.prendaPequeno;
+    const checkboxGrande = document.querySelector(`#prendasPackGrande input[data-prenda-grande="${CSS.escape(prenda)}"]`);
+    if (!checkboxGrande) return;
+    if (checkboxPequeno.checked) {
+        checkboxGrande.checked = true;
+        checkboxGrande.disabled = true;
+        checkboxGrande.closest('label').style.color = '#94a3b8';
+    } else {
+        checkboxGrande.disabled = false;
+        checkboxGrande.closest('label').style.color = '#1e293b';
+    }
+}
+
+async function guardarConfigPackRopa() {
+    const leerSeleccion = (contId) => [...document.querySelectorAll(`#${contId} input:checked`)].map(i => i.value);
+    const config = {
+        pequeno: { prendas: leerSeleccion('prendasPackPequeno'), precio: parseFloat(document.getElementById('precioPackPequeno').value) || 0 },
+        grande: { prendas: leerSeleccion('prendasPackGrande'), precio: parseFloat(document.getElementById('precioPackGrande').value) || 0 }
+    };
+    showLoader();
+    try {
+        await fetch('/api/stock_ropa/pack_ropa_config', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(config)
+        });
+        packRopaConfigCache = config;
+        document.getElementById('modalConfigPackRopa').style.display = 'none';
+        mostrarPopUpExito('COMPOSICIÓN GUARDADA');
+    } catch (e) {
+        alert('Error al guardar la composición del pack.');
+    } finally {
+        hideLoader();
+    }
+}
+
+// =====================================================================
+// ASIGNACIÓN MASIVA DE PACK A JUGADORES SELECCIONADOS (CTRL+Clic / CTRL+Arrastrar)
+// =====================================================================
+
+function iniciarAplicarPackMasivo() {
+    const filas = [...document.querySelectorAll('.fila-jugador.selected-row')];
+    if (!filas.length) {
+        alert('Selecciona primero uno o varios jugadores (Ctrl + Clic o Ctrl + Arrastrar sobre el nombre).');
+        return;
+    }
+    const vista = document.getElementById('selectPackMasivo').value;
+    const etiqueta = vista === 'grande' ? 'PACK GRANDE' : 'PACK PEQUEÑO';
+    document.getElementById('txtConfirmarPackMasivo').innerText = `¿Estás seguro de poner/cambiar a ${etiqueta} a los siguientes jugadores?`;
+    document.getElementById('listaJugadoresPackMasivo').innerHTML = filas.map(f => `<div>${f.dataset.nombre} <span style="color:#94a3b8;">(${f.dataset.equipo})</span></div>`).join('');
+    document.getElementById('modalConfirmarPackMasivo').dataset.vista = vista;
+    document.getElementById('modalConfirmarPackMasivo').style.display = 'flex';
+}
+
+async function confirmarAplicarPackMasivo() {
+    const vista = document.getElementById('modalConfirmarPackMasivo').dataset.vista;
+    const filas = [...document.querySelectorAll('.fila-jugador.selected-row')];
+    document.getElementById('modalConfirmarPackMasivo').style.display = 'none';
+    showLoader();
+    try {
+        await cargarJugadoresPackCache();
+        filas.forEach(f => { jugadoresPackCache[clavePack(f.dataset.equipo, f.dataset.nombre)] = vista; });
+        await fetch('/api/stock_ropa/jugadores_pack', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(jugadoresPackCache)
+        });
+        await cargarDatosRopa();
+        deseleccionarFilasJugadores();
+        mostrarPopUpExito(`PACK APLICADO A ${filas.length} JUGADOR${filas.length > 1 ? 'ES' : ''}`);
+    } catch (e) {
+        alert('Error al aplicar el pack masivo.');
+    } finally {
+        hideLoader();
+    }
+}
+
+// Selección por arrastre con CTRL (extiende la selección de filas ya existente con Ctrl+Clic)
+let arrastrandoSeleccionFilas = false;
+document.addEventListener('mousedown', (e) => {
+    if (e.ctrlKey && e.target.closest('.fila-jugador') && (e.target.closest('td')?.cellIndex ?? 99) <= 3) {
+        arrastrandoSeleccionFilas = true;
+    }
+});
+document.addEventListener('mouseup', () => { arrastrandoSeleccionFilas = false; });
+document.addEventListener('mouseover', (e) => {
+    if (!arrastrandoSeleccionFilas) return;
+    const fila = e.target.closest('.fila-jugador');
+    if (fila && !fila.classList.contains('selected-row')) {
+        fila.classList.add('selected-row');
+        actualizarBarraSeleccionJugadores();
+    }
+});
+
+let packRopaJugadorCtx = null;
+const TALLAS_PACK_ROPA = ['4XS', '3XS', '2XS', 'XS', 'S', 'M', 'L', 'XL', '2XL'];
+
+async function abrirPopoverPackRopaJugador(evt, td) {
+    await Promise.all([cargarPackRopaConfig(), cargarJugadoresPackCache()]);
+    const fila = td.closest('tr');
+    const nombre = fila.dataset.nombre, equipo = fila.dataset.equipo;
+    const packYaAsignado = jugadoresPackCache[clavePack(equipo, nombre)] || null;
+    packRopaJugadorCtx = { nombre, equipo, vista: packYaAsignado };
+
+    document.getElementById('tituloPackRopaJugador').innerText = `PACK ROPA: ${nombre}`;
+    renderPopoverPackRopaJugador();
+
+    const pop = document.getElementById('popoverPackRopaJugador');
+    pop.style.display = 'block';
+    const rect = td.getBoundingClientRect();
+    const popWidth = pop.offsetWidth || 380;
+    let left = rect.left;
+    if (left + popWidth > window.innerWidth - 10) left = window.innerWidth - popWidth - 10;
+    pop.style.left = `${Math.max(10, left)}px`;
+    pop.style.top = `${rect.bottom + 8}px`;
+}
+
+function renderPopoverPackRopaJugador() {
+    const cont = document.getElementById('contenidoPackRopaJugador');
+    const { vista } = packRopaJugadorCtx;
+
+    if (!vista) {
+        const pq = packRopaConfigCache.pequeno || { prendas: [], precio: 0 };
+        const gr = packRopaConfigCache.grande || { prendas: [], precio: 0 };
+        cont.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <button onclick="seleccionarVistaPackRopa('pequeno')" ${!pq.prendas.length ? 'disabled' : ''} style="background:#f1f5f9; border:none; border-radius:10px; padding:12px; text-align:left; cursor:pointer; ${!pq.prendas.length ? 'opacity:0.5;' : ''}">
+                    <div style="font-weight:900; font-size:12px; color:#1e293b;">PACK PEQUEÑO — ${pq.precio}€</div>
+                    <div style="font-size:10px; color:#64748b; margin-top:2px;">${pq.prendas.length ? pq.prendas.join(', ') : 'Sin prendas configuradas'}</div>
+                </button>
+                <button onclick="seleccionarVistaPackRopa('grande')" ${!gr.prendas.length ? 'disabled' : ''} style="background:#f1f5f9; border:none; border-radius:10px; padding:12px; text-align:left; cursor:pointer; ${!gr.prendas.length ? 'opacity:0.5;' : ''}">
+                    <div style="font-weight:900; font-size:12px; color:#1e293b;">PACK GRANDE — ${gr.precio}€</div>
+                    <div style="font-size:10px; color:#64748b; margin-top:2px;">${gr.prendas.length ? gr.prendas.join(', ') : 'Sin prendas configuradas'}</div>
+                </button>
+            </div>`;
+        return;
+    }
+
+    const pack = packRopaConfigCache[vista] || { prendas: [] };
+    const { nombre } = packRopaJugadorCtx;
+    const datosJugador = ropaDataCache[nombre] || {};
+
+    let html = `<div style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+        <span onclick="packRopaJugadorCtx.vista=null; renderPopoverPackRopaJugador();" style="font-size:10px; color:#94a3b8; cursor:pointer;"><i class="fas fa-arrow-left"></i> Volver</span>
+        <span style="font-size:9px; font-weight:800; color:#7c3aed; text-transform:uppercase;">PACK ${vista === 'grande' ? 'GRANDE' : 'PEQUEÑO'} ASIGNADO</span>
+    </div>`;
+    if (pack.prendas.length > 1) {
+        html += `<div style="display:flex; gap:6px; margin-bottom:14px; background:#f8fafc; padding:8px; border-radius:10px;">
+            <input type="text" id="inputTallaUnicaPack" placeholder="Talla única (ej: M)" style="flex:1; padding:6px 8px; border-radius:8px; border:2px solid #f1f5f9; font-size:11px; font-weight:800; text-transform:uppercase;">
+            <button onclick="aplicarTallaUnicaPack()" style="background:#1e293b; color:white; border:none; border-radius:8px; padding:0 12px; font-size:10px; font-weight:800; cursor:pointer;">PONER A TODAS</button>
+        </div>`;
+    }
+    pack.prendas.forEach(prenda => {
+        const tallaActual = (datosJugador[prenda] && datosJugador[prenda].talla) || '';
+        html += `<div style="margin-bottom:12px;">
+            <div style="font-size:11px; font-weight:800; color:#1e293b; margin-bottom:6px;">${prenda}</div>
+            <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:4px;">
+                ${TALLAS_PACK_ROPA.map(t => `<button onclick="asignarTallaPackRopa('${prenda.replace(/'/g, "\\'")}', '${t}')" style="padding:6px 0; border:2px solid ${tallaActual === t ? '#1e293b' : '#f1f5f9'}; background:${tallaActual === t ? '#1e293b' : 'white'}; color:${tallaActual === t ? 'white' : 'black'}; border-radius:8px; font-weight:800; font-size:10px; cursor:pointer;">${t}</button>`).join('')}
+            </div>
+        </div>`;
+    });
+    cont.innerHTML = html;
+}
+
+function clavePack(equipo, nombre) {
+    return `${equipo}|||${nombre}`;
+}
+
+let jugadoresPackCache = {};
+
+async function cargarJugadoresPackCache() {
+    try {
+        const res = await fetch('/api/stock_ropa/jugadores_pack');
+        jugadoresPackCache = await res.json();
+    } catch (e) { jugadoresPackCache = {}; }
+}
+
+async function guardarJugadorPack(equipo, nombre, vista) {
+    jugadoresPackCache[clavePack(equipo, nombre)] = vista;
+    await fetch('/api/stock_ropa/jugadores_pack', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(jugadoresPackCache)
+    });
+}
+
+async function seleccionarVistaPackRopa(vista) {
+    packRopaJugadorCtx.vista = vista;
+    const { equipo, nombre } = packRopaJugadorCtx;
+    try {
+        await guardarJugadorPack(equipo, nombre, vista);
+        await cargarDatosRopa();
+        renderPopoverPackRopaJugador();
+    } catch (e) {
+        alert('Error al asignar el pack.');
+    }
+}
+
+async function aplicarTallaUnicaPack() {
+    const talla = (document.getElementById('inputTallaUnicaPack').value || '').trim().toUpperCase();
+    if (!talla) return;
+    const { vista } = packRopaJugadorCtx;
+    const pack = packRopaConfigCache[vista] || { prendas: [] };
+    showLoader();
+    try {
+        for (const prenda of pack.prendas) {
+            await asignarTallaPackRopaSilencioso(prenda, talla);
+        }
+        await cargarDatosRopa();
+        renderPopoverPackRopaJugador();
+        mostrarPopUpExito(`TALLA ${talla} APLICADA A TODO EL PACK`);
+    } catch (e) {
+        alert('Error al aplicar la talla a todo el pack.');
+    } finally {
+        hideLoader();
+    }
+}
+
+async function asignarTallaPackRopaSilencioso(prenda, talla) {
+    const { nombre, equipo } = packRopaJugadorCtx;
+    const colIdx = ropaColumns.indexOf(prenda) + 4;
+    if (colIdx < 4) return;
+    const datosActuales = (ropaDataCache[nombre] && ropaDataCache[nombre][prenda]) || {};
+    const valor = `${talla}|${datosActuales.estado || ''}|${new Date().toLocaleDateString('es-ES')}${datosActuales.pedidoId ? '|' + datosActuales.pedidoId : ''}`;
+    await fetch('/api/ropa/save', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ equipo, jugador: nombre, col_idx: colIdx, valor })
+    });
+}
+
+async function asignarTallaPackRopa(prenda, talla) {
+    showLoader();
+    try {
+        await asignarTallaPackRopaSilencioso(prenda, talla);
+        await cargarDatosRopa();
+        renderPopoverPackRopaJugador();
+        mostrarPopUpExito(`${prenda}: TALLA ${talla} ASIGNADA`);
+    } catch (e) {
+        alert('Error al asignar la talla.');
+    } finally {
+        hideLoader();
+    }
+}
+
+document.addEventListener('click', function(evt) {
+    const pop = document.getElementById('popoverPackRopaJugador');
+    if (pop && pop.style.display === 'block' && !pop.contains(evt.target) && !evt.target.closest('.col-ropa-pack-btn')) {
+        pop.style.display = 'none';
+    }
+});
+
+// =====================================================================
+// STOCK / PEDIDOS DE MATERIAL
+// =====================================================================
+
+let stockRopaCache = null;
+
+async function abrirModalStockRopa() {
+    document.getElementById('modalStockRopa').style.display = 'flex';
+    await cargarYRenderStockRopa();
+}
+
+async function cargarYRenderStockRopa() {
+    const cont = document.getElementById('stockRopaContenido');
+    cont.innerHTML = '<div style="text-align:center; padding:30px; color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+    try {
+        const res = await fetch('/api/stock_ropa/grid');
+        const data = await res.json();
+        if (data.status === 'error') throw new Error(data.message || 'Error desconocido');
+        stockRopaCache = data;
+        renderStockRopaGrid(data, cont);
+    } catch (e) {
+        console.error('Error cargando stock ropa:', e);
+        cont.innerHTML = `<div style="color:#dc3545; text-align:center; padding:20px;">Error al cargar el stock: ${e.message || e}</div>`;
+    }
+}
+
+function renderStockRopaGrid(data, cont) {
+    const { prendas, tallas, grid } = data;
+    if (!prendas || !prendas.length) {
+        cont.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;">No hay prendas configuradas todavía en ROPA. Usa "AÑADIR PRENDA" para crear la primera.</div>';
+        return;
+    }
+    const mapa = {};
+    grid.forEach(g => { mapa[`${g.prenda}|${g.talla}`] = g; });
+
+    let html = '<table style="width:100%; border-collapse:collapse; font-size:13px;">';
+    html += '<thead><tr><th style="padding:10px; text-align:left; color:#94a3b8; font-weight:800; text-transform:uppercase; font-size:10px; border-bottom:2px solid #f1f5f9;">TALLA</th>';
+    prendas.forEach((p, idx) => {
+        html += `<th style="padding:10px; text-align:center; border-bottom:2px solid #f1f5f9; min-width:150px;">
+            <input value="${p}" data-prenda-idx="${idx}" onchange="renombrarPrendaStock(${idx}, this.value)" style="width:100%; text-align:center; border:none; background:transparent; font-weight:900; text-transform:uppercase; font-size:11px; color:#0d9488; padding:4px; border-radius:6px;" onfocus="this.style.background='#f0fdfa'" onblur="this.style.background='transparent'">
+        </th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    tallas.forEach(talla => {
+        html += `<tr><td style="padding:8px; border-bottom:1px solid #f8fafc;">
+            <input value="${talla}" onchange="renombrarTallaStock('${talla}', this.value)" style="width:60px; border:none; background:transparent; font-weight:900; font-size:13px; color:#1e293b; padding:4px; border-radius:6px;" onfocus="this.style.background='#f0fdfa'" onblur="this.style.background='transparent'">
+        </td>`;
+        prendas.forEach(prenda => {
+            const c = mapa[`${prenda}|${talla}`] || { stock: 0, reservadas: 0, pedidos: [] };
+            const pedidosTxt = (c.pedidos || []).map(p => `<div style="color:#6f42c1; font-size:9px; font-weight:800;">(${p.cantidad} pdtes pedido #${p.pedido_id}${p.fecha ? ' ' + p.fecha : ''})</div>`).join('');
+            html += `<td style="padding:8px; text-align:center; border-bottom:1px solid #f8fafc;">
+                <input type="number" min="0" value="${c.stock}" onchange="actualizarStockCelda('${prenda.replace(/'/g, "\\'")}','${talla}', this.value)" style="width:55px; text-align:center; font-size:16px; font-weight:900; color:#1e293b; border:2px solid #f1f5f9; border-radius:8px; padding:4px;">
+                <div style="font-size:9px; color:#94a3b8; font-weight:700; margin-top:3px;">(${c.reservadas} reservadas)</div>
+                ${pedidosTxt}
+            </td>`;
+        });
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    cont.innerHTML = html;
+}
+
+async function renombrarPrendaStock(idx, nuevoNombre) {
+    nuevoNombre = (nuevoNombre || '').trim();
+    if (!nuevoNombre) return;
+    showLoader();
+    try {
+        await fetch('/api/ropa/header', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ col_idx: idx + 4, nombre: nuevoNombre })
+        });
+        await cargarYRenderStockRopa();
+        if (document.getElementById('legendRopa').style.display !== 'none') cargarDatosRopa();
+    } catch (e) { alert('Error al renombrar la prenda.'); } finally { hideLoader(); }
+}
+
+async function añadirPrendaStock() {
+    showLoader();
+    try {
+        await fetch('/api/ropa/nueva_columna', { method: 'POST' });
+        await cargarYRenderStockRopa();
+    } catch (e) { alert('Error al añadir la prenda.'); } finally { hideLoader(); }
+}
+
+async function añadirTallaStock() {
+    const nombre = prompt('Nombre de la nueva talla (ej: 4XL):');
+    if (!nombre) return;
+    showLoader();
+    try {
+        await fetch('/api/stock_ropa/talla/nueva', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ nombre })
+        });
+        await cargarYRenderStockRopa();
+    } catch (e) { alert('Error al añadir la talla.'); } finally { hideLoader(); }
+}
+
+async function renombrarTallaStock(antigua, nueva) {
+    nueva = (nueva || '').trim().toUpperCase();
+    if (!nueva || nueva === antigua) return;
+    showLoader();
+    try {
+        await fetch('/api/stock_ropa/talla/renombrar', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ antigua, nueva })
+        });
+        await cargarYRenderStockRopa();
+    } catch (e) { alert('Error al renombrar la talla.'); } finally { hideLoader(); }
+}
+
+async function actualizarStockCelda(prenda, talla, cantidad) {
+    try {
+        await fetch('/api/stock_ropa/set_stock', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ prenda, talla, cantidad: parseInt(cantidad) || 0 })
+        });
+    } catch (e) { alert('Error al guardar el stock.'); }
+}
+
+let propuestaPedidoCache = [];
+
+async function abrirModalPropuestaPedido() {
+    document.getElementById('modalPropuestaPedido').style.display = 'flex';
+    document.getElementById('txtPedidoNumeroPropuesta').innerText = '';
+    const cont = document.getElementById('propuestaPedidoContenido');
+    cont.innerHTML = '<div style="text-align:center; padding:30px; color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+    try {
+        const [res, resNum] = await Promise.all([
+            fetch('/api/stock_ropa/propuesta'),
+            fetch('/api/stock_ropa/siguiente_pedido_id')
+        ]);
+        const data = await res.json();
+        const dataNum = await resNum.json();
+        if (data.status === 'error') throw new Error(data.message || 'Error desconocido');
+        if (dataNum.status !== 'error') {
+            document.getElementById('txtPedidoNumeroPropuesta').innerText = `PEDIDO Nº ${dataNum.pedido_id} · ${dataNum.fecha}`;
+        }
+        propuestaPedidoCache = data.propuesta || [];
+        renderPropuestaPedido(cont);
+    } catch (e) {
+        console.error('Error cargando propuesta de pedido:', e);
+        cont.innerHTML = `<div style="color:#dc3545; text-align:center; padding:20px;">Error al cargar la propuesta: ${e.message || e}</div>`;
+    }
+}
+
+const ABREVIATURAS_EQUIPO = [
+    { match: 'PREBENJAMIN', abbr: 'PRE' },
+    { match: 'BENJAMIN', abbr: 'BEN' },
+    { match: 'ALEVIN F7', abbr: 'ALE7' },
+    { match: 'ALEVIN F11', abbr: 'ALE11' },
+    { match: 'INFANTIL', abbr: 'INF' },
+    { match: 'CADETE', abbr: 'CDT' },
+    { match: 'JUVENIL', abbr: 'JUV' },
+    { match: 'AFICIONADO', abbr: 'AFI' }
+].sort((a, b) => b.match.length - a.match.length);
+
+function abreviarEquipo(equipo) {
+    if (!equipo) return '';
+    const upper = equipo.toUpperCase();
+    for (const { match, abbr } of ABREVIATURAS_EQUIPO) {
+        if (upper.startsWith(match)) {
+            const resto = equipo.slice(match.length).trim();
+            return resto ? `${abbr} ${resto}` : abbr;
+        }
+    }
+    return equipo;
+}
+
+function renderPropuestaPedido(cont) {
+    if (!propuestaPedidoCache.length) {
+        cont.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;">No hay tallas pendientes de pedir. Todas las prendas asignadas ya están pedidas, llegadas o entregadas.</div>';
+        return;
+    }
+    let html = '<table style="width:100%; border-collapse:collapse; font-size:11px;">';
+    html += '<thead><tr>'
+        + '<th style="padding:8px; text-align:left; color:#94a3b8; font-weight:800; text-transform:uppercase; font-size:9px; border-bottom:2px solid #f1f5f9;">PRENDA</th>'
+        + '<th style="padding:8px; text-align:left; color:#94a3b8; font-weight:800; text-transform:uppercase; font-size:9px; border-bottom:2px solid #f1f5f9;">TALLA</th>'
+        + '<th style="padding:8px; text-align:left; color:#94a3b8; font-weight:800; text-transform:uppercase; font-size:9px; border-bottom:2px solid #f1f5f9;">JUGADORES</th>'
+        + '<th style="padding:8px; text-align:center; color:#94a3b8; font-weight:800; text-transform:uppercase; font-size:9px; border-bottom:2px solid #f1f5f9;">CANTIDAD</th>'
+        + '</tr></thead><tbody>';
+    propuestaPedidoCache.forEach((item, idx) => {
+        const jugadoresTxt = item.jugadores.map(j => `${j.jugador} ${abreviarEquipo(j.equipo)}`).join(', ');
+        html += `<tr>
+            <td style="padding:8px; font-weight:800; color:#1e293b; border-bottom:1px solid #f8fafc;">${item.prenda}</td>
+            <td style="padding:8px; font-weight:900; color:#1e293b; border-bottom:1px solid #f8fafc;">${item.talla}</td>
+            <td style="padding:8px; color:#64748b; border-bottom:1px solid #f8fafc; font-size:10px;">${jugadoresTxt}</td>
+            <td style="padding:8px; text-align:center; border-bottom:1px solid #f8fafc;">
+                <input type="number" min="0" value="${item.cantidad}" data-idx="${idx}" onchange="propuestaPedidoCache[${idx}].cantidad = parseInt(this.value)||0;" style="width:60px; text-align:center; padding:6px; border:2px solid #f1f5f9; border-radius:8px; font-weight:800;">
+            </td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+    cont.innerHTML = html;
+}
+
+async function guardarPropuestaPedido() {
+    const items = propuestaPedidoCache.filter(i => i.cantidad > 0);
+    if (!items.length) { alert('No hay nada que pedir.'); return; }
+    showLoader();
+    try {
+        const res = await fetch('/api/stock_ropa/pedido/crear', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ items })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            document.getElementById('modalPropuestaPedido').style.display = 'none';
+            mostrarPopUpExito(`PEDIDO #${data.pedido_id} CREADO EL ${data.fecha}`);
+            cargarDatosRopa();
+        } else {
+            alert(data.message || 'Error al crear el pedido.');
+        }
+    } catch (e) {
+        alert('Error al crear el pedido.');
+    } finally {
+        hideLoader();
+    }
+}
+
+let pedidoDetalleActivo = null;
+let filtroPrendaPedido = '';
+let pedidosRealizadosAnchorEvt = null;
+
+function abrirPopoverPedidosRealizados(evt) {
+    const pop = document.getElementById('popoverPedidosRealizados');
+    if (evt) {
+        pedidosRealizadosAnchorEvt = evt.currentTarget;
+        const rect = evt.currentTarget.getBoundingClientRect();
+        pop.style.display = 'block';
+        const popWidth = pop.offsetWidth || 340;
+        let left = Math.max(10, rect.left + rect.width / 2 - popWidth / 2);
+        if (left + popWidth > window.innerWidth - 10) left = window.innerWidth - popWidth - 10;
+        pop.style.left = `${left}px`;
+        pop.style.top = `${rect.bottom + 14}px`;
+        const centroBoton = rect.left + rect.width / 2;
+        const flecha = document.getElementById('flechaPedidosRealizados');
+        if (flecha) flecha.style.left = `${Math.min(Math.max(centroBoton - left - 8, 16), popWidth - 32)}px`;
+    } else {
+        pop.style.display = 'block';
+    }
+    document.getElementById('tituloPedidosRealizados').innerText = 'PEDIDOS REALIZADOS';
+    pedidoDetalleActivo = null;
+    cargarListaPedidosRealizados();
+}
+
+async function cargarListaPedidosRealizados() {
+    const cont = document.getElementById('pedidosRealizadosContenido');
+    cont.innerHTML = '<div style="text-align:center; padding:30px; color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+    try {
+        const res = await fetch('/api/stock_ropa/pedidos');
+        const data = await res.json();
+        if (data.status === 'error') throw new Error(data.message || 'Error desconocido');
+        renderListaPedidosRealizados(data.pedidos || [], cont);
+    } catch (e) {
+        console.error('Error cargando pedidos realizados:', e);
+        cont.innerHTML = `<div style="color:#dc3545; text-align:center; padding:20px;">Error al cargar los pedidos: ${e.message || e}</div>`;
+    }
+}
+
+function cerrarPopoverPedidosRealizados() {
+    document.getElementById('popoverPedidosRealizados').style.display = 'none';
+}
+
+document.addEventListener('click', function(evt) {
+    const pop = document.getElementById('popoverPedidosRealizados');
+    if (pop && pop.style.display === 'block' && !pop.contains(evt.target) && evt.target !== pedidosRealizadosAnchorEvt && !pedidosRealizadosAnchorEvt?.contains?.(evt.target)) {
+        pop.style.display = 'none';
+    }
+}, true); // fase de captura: se evalúa ANTES de que un onclick interno reemplace el contenido (si no, el elemento clicado queda desconectado del DOM y el popover se cierra solo)
+
+function renderListaPedidosRealizados(pedidos, cont) {
+    if (!pedidos.length) {
+        cont.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;">Todavía no se ha realizado ningún pedido.</div>';
+        return;
+    }
+    let html = '<div style="display:flex; flex-direction:column; gap:10px;">';
+    pedidos.forEach(p => {
+        const completo = p.estado === 'COMPLETO';
+        const bg = completo ? '#dcfce7' : '#eef2ff';
+        const color = completo ? '#15803d' : '#4338ca';
+        const badge = completo ? 'COMPLETO' : 'ABIERTO';
+        const totalItems = p.items.reduce((s, it) => s + it.cantidad_pedida, 0);
+        html += `<div class="fila-pedido-realizado" onclick="abrirDetallePedidoRealizado('${p.pedido_id}')" style="cursor:pointer; background:${bg}; border-radius:14px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <div style="min-width:0;">
+                <div style="font-weight:900; font-size:12px; color:#1e293b;">PEDIDO #${p.pedido_id}</div>
+                <div style="font-size:9px; color:#64748b;">${p.fecha} · ${totalItems} unidades</div>
+            </div>
+            <span style="flex-shrink:0; background:${color}; color:white; padding:4px 9px; border-radius:8px; font-size:9px; font-weight:900;">${badge}</span>
+        </div>`;
+    });
+    html += '</div>';
+    cont.innerHTML = html;
+}
+
+function cerrarModalDetallePedido() {
+    document.getElementById('modalDetallePedido').style.display = 'none';
+}
+
+async function abrirDetallePedidoRealizado(pedidoId) {
+    cerrarPopoverPedidosRealizados();
+    document.getElementById('modalDetallePedido').style.display = 'flex';
+    document.getElementById('tituloDetallePedido').innerText = `PEDIDO #${pedidoId}`;
+    const cont = document.getElementById('detallePedidoContenido');
+    cont.innerHTML = '<div style="text-align:center; padding:30px; color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+    try {
+        const res = await fetch('/api/stock_ropa/pedidos');
+        const data = await res.json();
+        const pedido = (data.pedidos || []).find(p => String(p.pedido_id) === String(pedidoId));
+        if (!pedido) { cont.innerHTML = 'Pedido no encontrado.'; return; }
+
+        // Cargamos para cada línea quiénes tienen esa prenda/talla reservada (estado PEDIDA) en este pedido
+        const reservadosPorItem = await Promise.all(pedido.items.map(it =>
+            fetch(`/api/stock_ropa/pedido/${pedidoId}/reservados?prenda=${encodeURIComponent(it.prenda)}&talla=${encodeURIComponent(it.talla)}`)
+                .then(r => r.json()).then(d => d.reservados || [])
+        ));
+        pedido.items.forEach((it, idx) => {
+            const yaContadoAntes = it.cantidad_recibida > 0; // valor real ya guardado en una vuelta anterior
+            if (!yaContadoAntes) it.cantidad_recibida = it.cantidad_pedida; // sugerencia por defecto, sin confirmar todavía
+            it.tocado = yaContadoAntes; // el tick solo aparece si ya se confirmó (ahora o en un guardado previo)
+            it.reservados = reservadosPorItem[idx].map(j => ({ ...j, estado: 'verde' }));
+        });
+
+        pedidoDetalleActivo = pedido;
+        filtroPrendaPedido = '';
+        renderDetallePedidoRealizado(pedido, cont);
+    } catch (e) {
+        console.error('Error cargando detalle de pedido:', e);
+        cont.innerHTML = `<div style="color:#dc3545; text-align:center; padding:20px;">Error al cargar el pedido: ${e.message || e}</div>`;
+    }
+}
+
+function renderDetallePedidoRealizado(pedido, cont) {
+    const prendasPedido = [...new Set(pedido.items.map(it => it.prenda))];
+    let html = `<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:12px;">
+        <div style="font-size:10px; color:#94a3b8; flex:1;">Marca cada talla a medida que la cuentes al recibir el pedido. Al guardar se asignará a los jugadores en estado PEDIDA y lo que sobre pasará a stock.</div>
+        <div style="display:flex; gap:8px; flex-shrink:0;">
+            <button class="btn-fin" style="background:#f1f5f9; color:#475569; border-radius:10px; font-size:11px; padding:8px 14px;" onclick="imprimirPedido()"><i class="fas fa-print"></i> IMPRIMIR</button>
+            <button class="btn-fin" style="background:#f1f5f9; color:#475569; border-radius:10px; font-size:11px; padding:8px 14px;" onclick="imprimirPedido()"><i class="fas fa-file-pdf"></i> DESCARGAR PDF</button>
+        </div>
+    </div>`;
+
+    if (prendasPedido.length > 1) {
+        html += '<div style="display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;">';
+        html += `<span onclick="filtrarPedidoPorPrenda('')" style="cursor:pointer; padding:5px 12px; border-radius:8px; font-size:10px; font-weight:800; background:${filtroPrendaPedido === '' ? '#6f42c1' : '#f1f5f9'}; color:${filtroPrendaPedido === '' ? 'white' : '#475569'};">TODAS</span>`;
+        prendasPedido.forEach(p => {
+            html += `<span onclick="filtrarPedidoPorPrenda('${p.replace(/'/g, "\\'")}')" style="cursor:pointer; padding:5px 12px; border-radius:8px; font-size:10px; font-weight:800; background:${filtroPrendaPedido === p ? '#6f42c1' : '#f1f5f9'}; color:${filtroPrendaPedido === p ? 'white' : '#475569'};">${p}</span>`;
+        });
+        html += '</div>';
+    }
+
+    html += '<div id="listaItemsPedidoCont" style="display:flex; flex-direction:column; gap:10px;"></div>';
+    html += `<div style="display:flex; gap:10px; border-top:1px solid #f1f5f9; padding-top:16px; margin-top:16px;">
+        <button class="btn-fin" style="flex:1; background:#f1f5f9; color:#475569; border-radius:12px;" onclick="cerrarModalDetallePedido(); abrirPopoverPedidosRealizados();">VOLVER</button>
+        <button class="btn-fin" style="flex:1; background:#6f42c1; color:white; border-radius:12px;" onclick="guardarRecuentoPedido('${pedido.pedido_id}')">GUARDAR RECUENTO</button>
+    </div>`;
+    cont.innerHTML = html;
+    renderListaItemsPedido();
+}
+
+function filtrarPedidoPorPrenda(prenda) {
+    filtroPrendaPedido = prenda;
+    renderDetallePedidoRealizado(pedidoDetalleActivo, document.getElementById('detallePedidoContenido'));
+}
+
+function renderListaItemsPedido() {
+    const cont = document.getElementById('listaItemsPedidoCont');
+    if (!cont) return;
+    let html = '';
+    pedidoDetalleActivo.items.forEach((it, idx) => {
+        if (filtroPrendaPedido && it.prenda !== filtroPrendaPedido) return;
+        const completo = it.tocado && it.cantidad_recibida >= it.cantidad_pedida;
+        html += `<div id="itemPedido_${idx}" style="background:${completo ? '#dcfce7' : '#f8fafc'}; border-radius:14px; padding:16px 18px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:14px; flex-wrap:wrap;">
+                <div style="min-width:150px;">
+                    <div style="font-weight:800; color:#1e293b; font-size:14px;">${it.prenda} - ${it.talla}</div>
+                    <div style="font-size:11px; color:#64748b; margin-top:2px;">Pedidas: ${it.cantidad_pedida}</div>
+                </div>
+                <div id="chipsReservados_${idx}" style="flex:1; display:flex; gap:8px; flex-wrap:wrap; align-items:center;"></div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <input type="number" min="0" max="${it.cantidad_pedida}" value="${it.cantidad_recibida}" id="cantRecibida_${idx}" onchange="actualizarRecuentoItem(${idx}, this.value)" style="width:64px; text-align:center; padding:8px; border:2px solid #e2e8f0; border-radius:10px; font-weight:800; font-size:14px;">
+                    <i class="fas ${completo ? 'fa-check-circle' : 'fa-circle'}" id="iconoItem_${idx}" onclick="toggleIconoCompletoItem(${idx})" title="Marcar como recibido completo" style="cursor:pointer; color:${completo ? '#15803d' : '#cbd5e1'}; font-size:20px;"></i>
+                </div>
+            </div>
+            <div id="pendientesResolver_${idx}" style="margin-top:10px; display:flex; flex-direction:column; gap:6px;"></div>
+        </div>`;
+    });
+    cont.innerHTML = html;
+    pedidoDetalleActivo.items.forEach((it, idx) => {
+        if (filtroPrendaPedido && it.prenda !== filtroPrendaPedido) return;
+        renderChipsReservados(idx);
+    });
+}
+
+// Reparte los reservados "no resueltos a mano" entre verde (cuentan en cantidad_recibida) y pendiente (siguen reservados, no contados esta vez)
+function sincronizarChipsConCantidad(idx) {
+    const it = pedidoDetalleActivo.items[idx];
+    const elegibles = it.reservados.filter(r => r.estado === 'verde' || r.estado === 'pendiente');
+    elegibles.forEach((r, i) => { r.estado = i < it.cantidad_recibida ? 'verde' : 'pendiente'; });
+}
+
+function renderChipsReservados(idx) {
+    const it = pedidoDetalleActivo.items[idx];
+    const cont = document.getElementById(`chipsReservados_${idx}`);
+    const contPendientes = document.getElementById(`pendientesResolver_${idx}`);
+    if (!cont) return;
+    let html = '';
+    let htmlPendientes = '';
+    it.reservados.forEach((res, ridx) => {
+        const nombreCorto = `${res.jugador} ${abreviarEquipo(res.equipo)}`;
+        if (res.estado === 'verde') {
+            html += `<span onclick="toggleReservadoVerde(${idx}, ${ridx})" oncontextmenu="mostrarMenuContextualChip(event, ${idx}, ${ridx}); return false;" title="Clic: desmarcar · Clic derecho: más opciones" style="cursor:pointer; background:#dcfce7; color:#15803d; border:1px solid #86efac; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:800;">${nombreCorto}</span>`;
+        } else if (res.estado === 'pendiente') {
+            html += `<span onclick="toggleReservadoVerde(${idx}, ${ridx})" oncontextmenu="mostrarMenuContextualChip(event, ${idx}, ${ridx}); return false;" title="Reservado, no contado en este recuento · Clic derecho: más opciones" style="cursor:pointer; background:#f1f5f9; color:#94a3b8; border:1px dashed #cbd5e1; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:800;">${nombreCorto}</span>`;
+        } else if (res.estado === 'stock') {
+            html += `<span style="background:#e2e8f0; color:#475569; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:800; text-decoration:line-through;">${nombreCorto} → STOCK</span>`;
+        } else {
+            // blanco: desmarcado a mano, requiere resolución (sin línea ni rojo, neutro)
+            html += `<span oncontextmenu="mostrarMenuContextualChip(event, ${idx}, ${ridx}); return false;" style="background:#f8fafc; color:#64748b; border:1px solid #e2e8f0; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:800;">${nombreCorto}</span>`;
+            htmlPendientes += `<div style="display:flex; align-items:center; gap:8px; background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:6px 10px;">
+                <span style="font-size:11px; font-weight:800; color:#92400e; flex:1;">Resolver ${nombreCorto}:</span>
+                <button onclick="iniciarReasignarJugador(${idx}, ${ridx})" style="background:#1e293b; color:white; border:none; border-radius:8px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fas fa-user-plus"></i> ASIGNAR A OTRO JUGADOR</button>
+                <button onclick="marcarReservadoAStock(${idx}, ${ridx})" style="background:#f1f5f9; color:#475569; border:none; border-radius:8px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fas fa-box"></i> NO ASIGNAR (A STOCK)</button>
+            </div>`;
+        }
+    });
+    cont.innerHTML = html;
+    if (contPendientes) contPendientes.innerHTML = htmlPendientes;
+}
+
+let menuContextualChipCtx = null;
+
+function mostrarMenuContextualChip(evt, idx, ridx) {
+    evt.preventDefault();
+    menuContextualChipCtx = { idx, ridx };
+    const menu = document.getElementById('menuContextualChip');
+    menu.style.display = 'block';
+    const w = menu.offsetWidth || 200;
+    let left = evt.clientX;
+    if (left + w > window.innerWidth - 10) left = window.innerWidth - w - 10;
+    menu.style.left = `${left}px`;
+    menu.style.top = `${evt.clientY}px`;
+}
+
+function accionMenuContextualChip(accion) {
+    document.getElementById('menuContextualChip').style.display = 'none';
+    if (!menuContextualChipCtx) return;
+    const { idx, ridx } = menuContextualChipCtx;
+    if (accion === 'reasignar') iniciarReasignarJugador(idx, ridx);
+    else if (accion === 'borrar') marcarReservadoAStock(idx, ridx);
+}
+
+document.addEventListener('click', function(evt) {
+    const menu = document.getElementById('menuContextualChip');
+    if (menu && menu.style.display === 'block' && !menu.contains(evt.target)) {
+        menu.style.display = 'none';
+    }
+});
+
+function recalcularNumeroDesdeChips(idx) {
+    const it = pedidoDetalleActivo.items[idx];
+    const verdes = it.reservados.filter(r => r.estado === 'verde').length;
+    it.cantidad_recibida = Math.min(verdes, it.cantidad_pedida);
+    it.tocado = true;
+    const completo = it.cantidad_recibida >= it.cantidad_pedida;
+    const input = document.getElementById(`cantRecibida_${idx}`);
+    const icono = document.getElementById(`iconoItem_${idx}`);
+    const fila = document.getElementById(`itemPedido_${idx}`);
+    if (input) input.value = it.cantidad_recibida;
+    if (icono) { icono.className = `fas ${completo ? 'fa-check-circle' : 'fa-circle'}`; icono.style.color = completo ? '#15803d' : '#cbd5e1'; }
+    if (fila) fila.style.background = completo ? '#dcfce7' : '#f8fafc';
+}
+
+function toggleReservadoVerde(idx, ridx) {
+    const it = pedidoDetalleActivo.items[idx];
+    it.reservados[ridx].estado = 'blanco';
+    recalcularNumeroDesdeChips(idx);
+    renderChipsReservados(idx);
+}
+
+function marcarReservadoAStock(idx, ridx) {
+    const it = pedidoDetalleActivo.items[idx];
+    it.reservados[ridx].estado = 'stock';
+    recalcularNumeroDesdeChips(idx);
+    renderChipsReservados(idx);
+}
+
+function iniciarReasignarJugador(idx, ridx) {
+    const it = pedidoDetalleActivo.items[idx];
+    reasignarContexto = { tipo: 'pedido', idx, ridx };
+    abrirModalElegirJugadorPrenda(it.prenda);
+}
+
+function actualizarRecuentoItem(idx, valor) {
+    const item = pedidoDetalleActivo.items[idx];
+    let cantidad = parseInt(valor) || 0;
+    if (cantidad > item.cantidad_pedida) cantidad = item.cantidad_pedida;
+    if (cantidad < 0) cantidad = 0;
+    item.cantidad_recibida = cantidad;
+    item.tocado = true;
+    sincronizarChipsConCantidad(idx);
+    const completo = cantidad >= item.cantidad_pedida;
+    const fila = document.getElementById(`itemPedido_${idx}`);
+    const icono = document.getElementById(`iconoItem_${idx}`);
+    const input = document.getElementById(`cantRecibida_${idx}`);
+    if (fila) fila.style.background = completo ? '#dcfce7' : '#f8fafc';
+    if (icono) { icono.className = `fas ${completo ? 'fa-check-circle' : 'fa-circle'}`; icono.style.color = completo ? '#15803d' : '#cbd5e1'; }
+    if (input) input.value = cantidad;
+    renderChipsReservados(idx);
+}
+
+function toggleIconoCompletoItem(idx) {
+    const item = pedidoDetalleActivo.items[idx];
+    const nuevaCantidad = item.cantidad_recibida >= item.cantidad_pedida ? 0 : item.cantidad_pedida;
+    actualizarRecuentoItem(idx, nuevaCantidad);
+}
+
+// --- POPUP ELEGIR JUGADOR (vista tipo Pagos Jugadores > Ropa, filtrada a una sola prenda) ---
+let reasignarContexto = null;
+let elegirJugadorPrendaCache = null;
+
+async function abrirModalElegirJugadorPrenda(prenda) {
+    document.getElementById('modalElegirJugadorPrenda').style.display = 'flex';
+    document.getElementById('tituloElegirJugadorPrenda').innerText = `ASIGNAR: ${prenda}`;
+    document.getElementById('buscadorElegirJugador').value = '';
+    document.getElementById('filtroEquipoElegirJugador').value = '';
+    const cont = document.getElementById('elegirJugadorPrendaContenido');
+    cont.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+    try {
+        const res = await fetch('/api/ropa');
+        const data = await res.json();
+        elegirJugadorPrendaCache = { headers: data.headers || [], data: data.data || [], prenda };
+        renderElegirJugadorPrenda();
+    } catch (e) {
+        cont.innerHTML = '<div style="color:#dc3545; text-align:center; padding:20px;">Error al cargar jugadores.</div>';
+    }
+}
+
+function renderElegirJugadorPrenda() {
+    const cont = document.getElementById('elegirJugadorPrendaContenido');
+    if (!elegirJugadorPrendaCache) return;
+    const { headers, data, prenda } = elegirJugadorPrendaCache;
+    const idxPrenda = headers.indexOf(prenda);
+    const filtro = (document.getElementById('buscadorElegirJugador').value || '').toLowerCase().trim();
+    const filtroEquipo = document.getElementById('filtroEquipoElegirJugador').value;
+
+    let html = `<table style="width:100%; border-collapse:collapse; font-size:12px;">
+        <thead><tr>
+            <th style="text-align:left; padding:8px; color:#94a3b8; font-size:10px; text-transform:uppercase; border-bottom:2px solid #f1f5f9;">Equipo</th>
+            <th style="text-align:left; padding:8px; color:#94a3b8; font-size:10px; text-transform:uppercase; border-bottom:2px solid #f1f5f9;">Jugador</th>
+            <th style="text-align:center; padding:8px; color:#94a3b8; font-size:10px; text-transform:uppercase; border-bottom:2px solid #f1f5f9;">${prenda}</th>
+        </tr></thead><tbody>`;
+
+    let huboFilas = false;
+    data.forEach(row => {
+        const equipo = row[1] || '';
+        const jugador = row[2] || '';
+        if (!jugador) return;
+        if (filtroEquipo && equipo !== filtroEquipo) return;
+        if (filtro && !(`${jugador} ${equipo}`.toLowerCase().includes(filtro))) return;
+        huboFilas = true;
+        const valorPrenda = idxPrenda !== -1 ? (row[idxPrenda] || '') : '';
+        const [talla, estado] = valorPrenda.split('|');
+        let claseColor = '';
+        if (estado === 'PEDIDA') claseColor = 'ropa-estado-pedida';
+        else if (estado === 'LLEGADO') claseColor = 'ropa-estado-llegado';
+        else if (estado === 'ENTREGADA') claseColor = 'ropa-estado-entregada';
+        html += `<tr class="fila-elegir-jugador" data-jugador="${encodeURIComponent(jugador)}" data-equipo="${encodeURIComponent(equipo)}" style="cursor:pointer;">
+            <td style="padding:8px; border-bottom:1px solid #f8fafc;">${equipo}</td>
+            <td style="padding:8px; border-bottom:1px solid #f8fafc; font-weight:700;">${jugador}</td>
+            <td style="padding:8px; border-bottom:1px solid #f8fafc; text-align:center;"><span class="${claseColor}" style="padding:3px 10px; border-radius:6px; font-weight:800;">${talla || '-'}</span></td>
+        </tr>`;
+    });
+    if (!huboFilas) html += `<tr><td colspan="3" style="padding:20px; text-align:center; color:#94a3b8;">Sin resultados.</td></tr>`;
+    html += '</tbody></table>';
+    cont.innerHTML = html;
+
+    cont.querySelectorAll('.fila-elegir-jugador').forEach(tr => {
+        tr.addEventListener('click', () => {
+            elegirJugadorParaReasignar(decodeURIComponent(tr.dataset.jugador), decodeURIComponent(tr.dataset.equipo));
+        });
+        tr.addEventListener('mouseover', () => tr.style.background = '#f8fafc');
+        tr.addEventListener('mouseout', () => tr.style.background = 'transparent');
+    });
+}
+
+async function elegirJugadorParaReasignar(jugadorDestino, equipoDestino) {
+    if (!reasignarContexto) return;
+
+    if (reasignarContexto.tipo === 'celda') {
+        const { origen, prenda, talla, pedidoId } = reasignarContexto;
+        if (origen.jugador === jugadorDestino && origen.equipo === equipoDestino) { alert('Elige un jugador distinto al original.'); return; }
+        if (!confirm(`¿Quieres quitar de reservado-pedida a ${origen.jugador} (quedará en blanco) y asignar esta talla a ${jugadorDestino}?`)) return;
+        showLoader();
+        try {
+            const res = await fetch('/api/stock_ropa/reasignar', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ pedido_id: pedidoId, prenda, talla, origen, destino: { jugador: jugadorDestino, equipo: equipoDestino } })
+            });
+            const data = await res.json();
+            if (data.status !== 'success') throw new Error(data.message || 'Error al reasignar.');
+            document.getElementById('modalElegirJugadorPrenda').style.display = 'none';
+            await cargarDatosRopa();
+            mostrarPopUpExito('PRENDA REASIGNADA');
+        } catch (e) {
+            alert(e.message || 'Error al reasignar la prenda.');
+        } finally {
+            hideLoader();
+        }
+        return;
+    }
+
+    const { idx, ridx } = reasignarContexto;
+    const it = pedidoDetalleActivo.items[idx];
+    const origen = it.reservados[ridx];
+
+    if (origen.jugador === jugadorDestino && origen.equipo === equipoDestino) { alert('Elige un jugador distinto al original.'); return; }
+    if (!confirm(`¿Quieres quitar de reservado-pedida a ${origen.jugador} (quedará en blanco) y asignar esta talla a ${jugadorDestino}?`)) return;
+
+    showLoader();
+    try {
+        const res = await fetch('/api/stock_ropa/reasignar', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                pedido_id: pedidoDetalleActivo.pedido_id, prenda: it.prenda, talla: it.talla,
+                origen: { jugador: origen.jugador, equipo: origen.equipo },
+                destino: { jugador: jugadorDestino, equipo: equipoDestino }
+            })
+        });
+        const data = await res.json();
+        if (data.status !== 'success') throw new Error(data.message || 'Error al reasignar.');
+        it.reservados[ridx] = { jugador: jugadorDestino, equipo: equipoDestino, estado: 'verde' };
+        document.getElementById('modalElegirJugadorPrenda').style.display = 'none';
+        recalcularNumeroDesdeChips(idx);
+        renderChipsReservados(idx);
+        mostrarPopUpExito('PRENDA REASIGNADA');
+    } catch (e) {
+        alert(e.message || 'Error al reasignar la prenda.');
+    } finally {
+        hideLoader();
+    }
+}
+
+async function imprimirPedido() {
+    const pedido = pedidoDetalleActivo;
+    if (!pedido) return;
+    showLoader();
+    try {
+        // Recuperamos los jugadores reales de cada línea (incluidos los ya marcados LLEGADO/ENTREGADA)
+        const jugadoresPorItem = await Promise.all(pedido.items.map(it =>
+            fetch(`/api/stock_ropa/pedido/${pedido.pedido_id}/reservados?prenda=${encodeURIComponent(it.prenda)}&talla=${encodeURIComponent(it.talla)}&incluir_llegados=1`)
+                .then(r => r.json()).then(d => d.reservados || [])
+        ));
+
+        const filas = pedido.items.map((it, idx) => {
+            const nombres = jugadoresPorItem[idx].map(j => `${j.jugador} (${abreviarEquipo(j.equipo)})`).join(', ') || '-';
+            return `<tr>
+                <td>${it.prenda}</td>
+                <td style="text-align:center;">${it.talla}</td>
+                <td style="text-align:center;">${it.cantidad_pedida}</td>
+                <td>${nombres}</td>
+            </tr>`;
+        }).join('');
+
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pedido #${pedido.pedido_id}</title>
+        <style>
+            @page { size: A4; margin: 20mm; }
+            body { font-family: Arial, Helvetica, sans-serif; color: #1e293b; }
+            h1 { font-size: 18px; border-bottom: 3px solid #E31E24; padding-bottom: 10px; margin-bottom: 4px; }
+            .sub { font-size: 12px; color: #64748b; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #cbd5e1; padding: 8px 10px; font-size: 12px; text-align: left; }
+            th { background: #f1f5f9; text-transform: uppercase; font-size: 10px; color: #475569; }
+            .footer { margin-top: 30px; font-size: 10px; color: #94a3b8; text-align: center; }
+        </style></head>
+        <body>
+            <h1>CLUB FUENTELARREYNA — PEDIDO #${pedido.pedido_id}</h1>
+            <div class="sub">Fecha: ${pedido.fecha} &nbsp;&nbsp;|&nbsp;&nbsp; Estado: ${pedido.estado}</div>
+            <table>
+                <thead><tr><th>Prenda</th><th>Talla</th><th>Cantidad</th><th>Jugador(es)</th></tr></thead>
+                <tbody>${filas}</tbody>
+            </table>
+            <div class="footer">DOCUMENTO GENERADO AUTOMÁTICAMENTE · INTRANET CLUB FUENTELARREYNA</div>
+        </body></html>`;
+
+        const ventana = window.open('', '_blank');
+        ventana.document.write(html);
+        ventana.document.close();
+        ventana.focus();
+        setTimeout(() => ventana.print(), 350);
+    } catch (e) {
+        alert('Error al generar la ficha del pedido.');
+    } finally {
+        hideLoader();
+    }
+}
+
+async function guardarRecuentoPedido(pedidoId) {
+    if (!pedidoDetalleActivo) return;
+
+    // Solo se guardan las líneas que el usuario ha confirmado explícitamente (tick verde / número editado / chip tocado)
+    const itemsTocados = pedidoDetalleActivo.items.filter(it => it.tocado);
+    if (!itemsTocados.length) {
+        alert('No has confirmado ninguna línea. Marca el tick verde (o ajusta la cantidad) de al menos una talla antes de guardar.');
+        return;
+    }
+
+    // Validación: no debe quedar ningún reservado "en blanco" sin resolver, en las líneas confirmadas
+    for (const it of itemsTocados) {
+        const pendiente = it.reservados.find(r => r.estado === 'blanco');
+        if (pendiente) {
+            alert(`Resuelve primero a ${pendiente.jugador} en ${it.prenda} - ${it.talla}: asígnalo a otro jugador o mándalo a stock.`);
+            return;
+        }
+    }
+
+    showLoader();
+    try {
+        const items = itemsTocados.map(it => ({
+            prenda: it.prenda, talla: it.talla, cantidad_recibida: it.cantidad_recibida,
+            jugadores_llegados: it.reservados.filter(r => r.estado === 'verde').map(r => ({ jugador: r.jugador, equipo: r.equipo })),
+            jugadores_a_stock: it.reservados.filter(r => r.estado === 'stock').map(r => ({ jugador: r.jugador, equipo: r.equipo }))
+        }));
+        const res = await fetch(`/api/stock_ropa/pedido/${pedidoId}/recuento`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ items })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            const lineas = (data.resumen || []).map(r => {
+                let txt = `${r.prenda} ${r.talla}: `;
+                if (r.asignados.length) txt += `asignado a ${r.asignados.join(', ')}`;
+                if (r.sobran_a_stock > 0) txt += `${r.asignados.length ? ' y ' : ''}${r.sobran_a_stock} a stock`;
+                return txt;
+            }).join('\n');
+            if (lineas) alert(`RECUENTO GUARDADO:\n\n${lineas}`);
+            mostrarPopUpExito(data.completo ? `PEDIDO #${pedidoId} COMPLETO` : 'RECUENTO GUARDADO');
+            cargarDatosRopa();
+            cerrarModalDetallePedido();
+            abrirPopoverPedidosRealizados();
+        } else {
+            alert(data.message || 'Error al guardar el recuento.');
+        }
+    } catch (e) {
+        alert('Error al guardar el recuento.');
+    } finally {
+        hideLoader();
+    }
 }
 
 // --- FUNCIÓN DE NAVEGACIÓN CORREGIDA ---
@@ -1216,7 +2929,10 @@ function getLabelConcepto(item, forma, isStaff) {
 
     let itemKey = item;
     if (typeof item === 'string' && item.startsWith('Staff-')) itemKey = item.replace('Staff-', '');
-    
+    if (typeof item === 'string' && item.startsWith('ROPA: ')) return item.replace('ROPA: ', '');
+    if (item === 'PACK_GRANDE_ASIGNADO') return 'Pack Grande';
+    if (item === 'PACK_PEQUENO_ASIGNADO') return 'Pack Pequeño';
+
     return mesesNombres[itemKey] || item;
 }
 
@@ -2295,6 +4011,12 @@ function actualizarBarraPagos() {
     barra.style.display = 'flex';
 }
 
+document.addEventListener('keydown', function(evt) {
+    if (evt.key === 'Escape' && celdasSeleccionadas.length > 0) {
+        cerrarModalsFin();
+    }
+});
+
 function cerrarModalsFin() {
     document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
     celdasSeleccionadas.forEach(c => {
@@ -2351,6 +4073,8 @@ async function confirmarPago(btn) {
     try {
         const fechaHoy = new Date().toLocaleDateString('es-ES');
         let saldoARepartir = totalPagado;
+        let ultimoAsientoPagoCreado = null;
+        const numConceptosSeleccionados = celdasSeleccionadas.length;
 
         for (let i = 0; i < celdasSeleccionadas.length; i++) {
             const cell = celdasSeleccionadas[i];
@@ -2386,10 +4110,17 @@ async function confirmarPago(btn) {
                 descripcion: `${prefixDesc} ${labelConcepto}: ${nombre}`, importe: pagoAsignado,
                 equipo, nombre, tipo_pago: tipo, forma_pago: forma, concepto: item, esperado: esperadoIndividual
             };
-            await fetch('/api/presupuesto', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(asiento) });
+            const resPago = await fetch('/api/presupuesto', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(asiento) });
+            if (resPago.ok) {
+                const dataPago = await resPago.json();
+                if (dataPago.asiento) ultimoAsientoPagoCreado = dataPago.asiento;
+            }
         }
         await cargarPresupuesto();
         cerrarModalsFin();
+        if (numConceptosSeleccionados === 1 && ultimoAsientoPagoCreado) {
+            abrirModalRecibo(ultimoAsientoPagoCreado);
+        }
     } catch (e) {
         console.error(e);
     } finally {
@@ -2538,10 +4269,27 @@ function actualizarJugadoresAsiento() {
     actualizarGridConceptoAsiento();
 }
 
+const LABELS_MAP_CONCEPTOS = { 'Inscripción': 'Inscripción', '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril', '05': 'Mayo', '06': 'Junio', '07': 'Julio', '08': 'Agosto', '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre', 'PACK_ROPA': 'Pack Ropa' };
+
+function construirDivisionDesc(fechaTexto, total, partes) {
+    // partes: [{concepto, importe}]
+    const partesTxt = partes.map(p => `${p.importe}€ en ${LABELS_MAP_CONCEPTOS[p.concepto] || p.concepto}`);
+    return `El dia ${fechaTexto} se pagaron ${total}€ que se dividieron en: ${partesTxt.join(' y ')}`;
+}
+
+async function obtenerSiguienteNumeroAsiento() {
+    const res = await fetch('/api/presupuesto/siguiente_numero');
+    const data = await res.json();
+    return data.numero;
+}
+
+let celdasSeleccionadasAsientoManual = [];
+
 function actualizarGridConceptoAsiento() {
     const equipo = document.getElementById('asientoEquipoAsoc').value;
     const nombre = document.getElementById('asientoJugadorAsoc').value;
     const cont = document.getElementById('gridConceptoAsientoCont');
+    celdasSeleccionadasAsientoManual = [];
     document.getElementById('asientoConceptoAsoc').value = '';
     document.getElementById('conceptoAsientoSeleccionadoTxt').textContent = '';
 
@@ -2582,40 +4330,126 @@ function actualizarGridConceptoAsiento() {
         clon.style.padding = '6px 4px';
         clon.style.fontSize = '9px';
         clon.style.borderRight = '1px solid #e5e7eb';
-        clon.addEventListener('click', () => seleccionarConceptoDesdeGrid(clon));
+        clon.addEventListener('click', (evt) => seleccionarConceptoDesdeGrid(clon, evt));
         fila.appendChild(clon);
     });
 }
 
-function seleccionarConceptoDesdeGrid(celda) {
+function seleccionarConceptoDesdeGrid(celda, evt) {
     const concepto = celda.dataset.concepto || '';
     if (!concepto) return;
-    document.getElementById('asientoConceptoAsoc').value = concepto;
 
-    const cont = document.getElementById('gridConceptoAsientoCont');
-    cont.querySelectorAll('#gridConceptoAsientoCeldas > div > td, #gridConceptoAsientoCeldas > div > *').forEach(c => c.style.outline = '');
-    celda.style.outline = '3px solid #E31E24';
+    if (!evt || !evt.ctrlKey) {
+        celdasSeleccionadasAsientoManual.forEach(c => c.style.outline = '');
+        celdasSeleccionadasAsientoManual = [];
+    }
+    const idx = celdasSeleccionadasAsientoManual.indexOf(celda);
+    if (idx === -1) {
+        celda.style.outline = '3px solid #E31E24';
+        celdasSeleccionadasAsientoManual.push(celda);
+    } else {
+        celda.style.outline = '';
+        celdasSeleccionadasAsientoManual.splice(idx, 1);
+    }
 
-    const labelsMap = { 'Inscripción': 'Inscripción', '01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio','07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre', 'PACK_ROPA':'Pack Ropa' };
-    document.getElementById('conceptoAsientoSeleccionadoTxt').textContent = `Concepto seleccionado: ${labelsMap[concepto] || concepto}`;
+    document.getElementById('asientoConceptoAsoc').value = celdasSeleccionadasAsientoManual.map(c => c.dataset.concepto).join(',');
+    const texto = celdasSeleccionadasAsientoManual.map(c => LABELS_MAP_CONCEPTOS[c.dataset.concepto] || c.dataset.concepto).join(', ');
+    document.getElementById('conceptoAsientoSeleccionadoTxt').textContent = texto
+        ? `Concepto(s) seleccionado(s): ${texto}${celdasSeleccionadasAsientoManual.length > 1 ? ' (Ctrl+clic para seleccionar varios: el primero se lleva el importe entero y el resto se reparte)' : ''}`
+        : '';
+}
+
+function limpiarFormularioAsientoManual() {
+    ['asientoFecha', 'asientoPilar', 'asientoDesc', 'asientoImporte'].forEach(id => document.getElementById(id).value = "");
+    document.getElementById('asientoEquipoAsoc').value = "";
+    document.getElementById('asientoJugadorAsoc').innerHTML = '<option value="">Jugador...</option>';
+    document.getElementById('asientoConceptoAsoc').value = "";
+    document.getElementById('gridConceptoAsientoCont').innerHTML = "";
+    document.getElementById('conceptoAsientoSeleccionadoTxt').textContent = "";
+    celdasSeleccionadasAsientoManual = [];
+    document.getElementById('asientoFacturaFile').value = "";
+    document.getElementById('asientoSinFactura').checked = false;
+    document.getElementById('filaAsientoJugador').style.display = 'none';
+    document.getElementById('filaAsientoFactura').style.display = 'none';
 }
 
 async function guardarAsientoManual(btn) {
     if (isSaving) return;
     const importeVal = parseFloat(document.getElementById('asientoImporte').value);
+    const fechaAsiento = document.getElementById('asientoFecha').value;
+    const departamentoAsiento = document.getElementById('asientoDepto').value;
+    const descripcionAsiento = document.getElementById('asientoDesc').value;
+
+    if (!fechaAsiento || isNaN(importeVal)) return alert("Fecha e Importe son obligatorios");
+
+    if (importeVal > 0 && celdasSeleccionadasAsientoManual.length > 1) {
+        const equipoAsoc = document.getElementById('asientoEquipoAsoc').value;
+        const jugadorAsoc = document.getElementById('asientoJugadorAsoc').value;
+        const filaReal = document.querySelector(`.fila-jugador[data-equipo="${CSS.escape(equipoAsoc)}"][data-nombre="${CSS.escape(jugadorAsoc)}"]`);
+
+        for (const celda of celdasSeleccionadasAsientoManual) {
+            if (celda.classList.contains('pago-verde') || celda.classList.contains('pago-naranja')) {
+                alert(`El concepto "${LABELS_MAP_CONCEPTOS[celda.dataset.concepto] || celda.dataset.concepto}" ya tiene un pago registrado. Edítalo desde PAGO JUGADORES.`);
+                return;
+            }
+        }
+
+        btn.disabled = true;
+        isSaving = true;
+        try {
+            const baseNumero = await obtenerSiguienteNumeroAsiento();
+
+            // Pre-calculamos el reparto completo para poder construir la descripción rica
+            // (igual que en Pago Jugadores) antes de guardar ninguna fila.
+            let saldoARepartir = importeVal;
+            const partes = celdasSeleccionadasAsientoManual.map((celda, i) => {
+                const esperadoSel = parseFloat(celda.dataset.esperado) || 0;
+                const esUltimo = i === celdasSeleccionadasAsientoManual.length - 1;
+                const pagoAsignado = esUltimo ? saldoARepartir : Math.min(saldoARepartir, esperadoSel || saldoARepartir);
+                if (!esUltimo) saldoARepartir -= pagoAsignado;
+                return { concepto: celda.dataset.concepto, esperado: esperadoSel, importe: pagoAsignado };
+            });
+            const divisionDesc = construirDivisionDesc(fechaAsiento, importeVal, partes);
+            let primerAsientoCreado = null;
+
+            for (let i = 0; i < partes.length; i++) {
+                const parte = partes[i];
+                const subAsiento = {
+                    fecha: fechaAsiento, departamento: departamentoAsiento, pilar: 'Cuotas',
+                    descripcion: `Cuota ${LABELS_MAP_CONCEPTOS[parte.concepto] || parte.concepto}: ${jugadorAsoc} (${divisionDesc})`,
+                    importe: parte.importe, equipo: equipoAsoc, nombre: jugadorAsoc,
+                    concepto: parte.concepto, esperado: parte.esperado, tipo_origen: 'MANUAL',
+                    n_asiento: `${baseNumero}_${i + 1}`
+                };
+                const resSub = await fetch('/api/presupuesto', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(subAsiento) });
+                if (resSub.ok && i === 0) {
+                    const dataSub = await resSub.json();
+                    primerAsientoCreado = dataSub.asiento || `${baseNumero}_1`;
+                }
+            }
+
+            await cargarPresupuesto();
+            limpiarFormularioAsientoManual();
+            if (primerAsientoCreado) abrirModalRecibo(primerAsientoCreado);
+        } catch (e) {
+            alert("Error de conexión al repartir el pago.");
+            console.error(e);
+        } finally {
+            btn.disabled = false;
+            isSaving = false;
+        }
+        return;
+    }
+
     const asiento = {
-        fecha: document.getElementById('asientoFecha').value,
-        departamento: document.getElementById('asientoDepto').value,
-        pilar: document.getElementById('asientoPilar').value,
-        descripcion: document.getElementById('asientoDesc').value,
-        importe: document.getElementById('asientoImporte').value,
-        tipo_origen: 'MANUAL'
+        fecha: fechaAsiento, departamento: departamentoAsiento, pilar: document.getElementById('asientoPilar').value,
+        descripcion: descripcionAsiento, importe: document.getElementById('asientoImporte').value, tipo_origen: 'MANUAL'
     };
 
     if (importeVal > 0) {
         const equipoAsoc = document.getElementById('asientoEquipoAsoc').value;
         const jugadorAsoc = document.getElementById('asientoJugadorAsoc').value;
-        const conceptoAsoc = document.getElementById('asientoConceptoAsoc').value;
+        const conceptoAsoc = celdasSeleccionadasAsientoManual[0]?.dataset.concepto || '';
         if (equipoAsoc && jugadorAsoc && conceptoAsoc) {
             const filaReal = document.querySelector(`.fila-jugador[data-equipo="${CSS.escape(equipoAsoc)}"][data-nombre="${CSS.escape(jugadorAsoc)}"]`);
             const celdaReal = filaReal ? Array.from(filaReal.querySelectorAll('td.pago-cell')).find(td => td.dataset.concepto === conceptoAsoc) : null;
@@ -2631,13 +4465,7 @@ async function guardarAsientoManual(btn) {
                 // de sobrante (mismo flujo que en PAGO JUGADORES) sin cambiar de pestaña.
                 seleccionarPago({ stopPropagation: () => {}, ctrlKey: false }, celdaReal, conceptoAsoc);
                 abrirModalCompensacion(importeVal, esperadoReal, btn);
-                ['asientoFecha', 'asientoPilar', 'asientoDesc', 'asientoImporte'].forEach(id => document.getElementById(id).value = "");
-                document.getElementById('asientoEquipoAsoc').value = "";
-                document.getElementById('asientoJugadorAsoc').innerHTML = '<option value="">Jugador...</option>';
-                document.getElementById('asientoConceptoAsoc').value = "";
-                document.getElementById('gridConceptoAsientoCont').innerHTML = "";
-                document.getElementById('conceptoAsientoSeleccionadoTxt').textContent = "";
-                document.getElementById('filaAsientoJugador').style.display = 'none';
+                limpiarFormularioAsientoManual();
                 return;
             }
 
@@ -2657,7 +4485,6 @@ async function guardarAsientoManual(btn) {
         }
     }
 
-    if (!asiento.fecha || !asiento.importe) return alert("Fecha e Importe son obligatorios");
     if (importeVal < 0 && !archivoFactura && !document.getElementById('asientoSinFactura').checked) {
         return alert("Para un gasto, adjunta la factura o marca 'Sin factura'.");
     }
@@ -2681,17 +4508,10 @@ async function guardarAsientoManual(btn) {
                 await fetch('/api/asiento/subir_factura', { method: 'POST', body: fd });
             }
             await cargarPresupuesto();
-            // Limpiar campos
-            ['asientoFecha', 'asientoPilar', 'asientoDesc', 'asientoImporte'].forEach(id => document.getElementById(id).value = "");
-            document.getElementById('asientoEquipoAsoc').value = "";
-            document.getElementById('asientoJugadorAsoc').innerHTML = '<option value="">Jugador...</option>';
-            document.getElementById('asientoConceptoAsoc').value = "";
-            document.getElementById('gridConceptoAsientoCont').innerHTML = "";
-            document.getElementById('conceptoAsientoSeleccionadoTxt').textContent = "";
-            document.getElementById('asientoFacturaFile').value = "";
-            document.getElementById('asientoSinFactura').checked = false;
-            document.getElementById('filaAsientoJugador').style.display = 'none';
-            document.getElementById('filaAsientoFactura').style.display = 'none';
+            limpiarFormularioAsientoManual();
+            if (data.asiento) {
+                abrirModalRecibo(data.asiento);
+            }
         } else {
             alert("Error al guardar en el servidor");
         }
@@ -2706,14 +4526,84 @@ async function guardarAsientoManual(btn) {
 function celdaFacturaHtml(a, importe, real_id) {
     const factura = a.FACTURA || '';
     const nAsiento = a.N_ASIENTO || real_id;
+    const justificante = a.JUSTIFICANTE_ENVIADO || '';
+    const iconoR = `<i class="fas fa-receipt" style="color:${justificante ? '#16a34a' : '#cbd5e1'}; cursor:pointer; margin-left:6px;" title="${justificante ? `Justificante enviado el ${justificante}` : 'Generar / enviar recibo'}" onclick="event.stopPropagation(); abrirModalRecibo('${nAsiento}')"></i>`;
     if (importe >= 0) {
-        if (a.NOMBRE && a.EQUIPO) return `<i class="fas fa-circle-check" style="color:#16a34a;" title="Asignado a ${a.NOMBRE} (${a.EQUIPO})"></i>`;
-        if (a.ASIGNACION === 'NO_ASIGNAR') return '<span style="font-size:9px; color:#999; font-weight:700;">SIN ASIGNAR</span>';
-        return `<i class="fas fa-user" style="color:#b45309; cursor:pointer;" title="Asignar a jugador o marcar sin asignar" onclick="abrirPopoverAsignarJugador(event, '${nAsiento}', ${importe})"></i>`;
+        if (a.NOMBRE && a.EQUIPO) return `<i class="fas fa-circle-check" style="color:#16a34a;" title="Asignado a ${a.NOMBRE} (${a.EQUIPO})"></i>${iconoR}`;
+        if (a.ASIGNACION === 'NO_ASIGNAR') return `<span style="font-size:9px; color:#999; font-weight:700;">SIN ASIGNAR</span>${iconoR}`;
+        return `<i class="fas fa-user" style="color:#b45309; cursor:pointer;" title="Asignar a jugador o marcar sin asignar" onclick="abrirPopoverAsignarJugador(event, '${nAsiento}', ${importe})"></i>${iconoR}`;
     }
-    if (factura === 'SIN_FACTURA') return '<span style="font-size:9px; color:#999; font-weight:700;">SIN FRA.</span>';
-    if (factura) return `<a href="/static/facturas/${encodeURIComponent(factura)}" target="_blank" title="Ver factura"><i class="fas fa-file-pdf" style="color:#16a34a;"></i></a>`;
-    return `<i class="fas fa-triangle-exclamation" style="color:#dc2626; cursor:pointer;" title="Adjuntar factura o marcar sin factura" onclick="abrirPopoverFactura(event, '${nAsiento}')"></i>`;
+    if (factura === 'SIN_FACTURA') return `<span style="font-size:9px; color:#999; font-weight:700;">SIN FRA.</span>${iconoR}`;
+    if (factura) return `<a href="/static/facturas/${encodeURIComponent(factura)}" target="_blank" title="Ver factura"><i class="fas fa-file-pdf" style="color:#16a34a;"></i></a>${iconoR}`;
+    return `<i class="fas fa-triangle-exclamation" style="color:#dc2626; cursor:pointer;" title="Adjuntar factura o marcar sin factura" onclick="abrirPopoverFactura(event, '${nAsiento}')"></i>${iconoR}`;
+}
+
+let reciboAsientoActivo = null;
+let reciboHtmlActivo = '';
+
+async function abrirModalRecibo(nAsiento) {
+    reciboAsientoActivo = nAsiento;
+    document.getElementById('inputEmailRecibo').value = '';
+    document.getElementById('reciboEstadoEnvio').style.display = 'none';
+    document.getElementById('reciboPreviewCont').innerHTML = '<div style="font-size:11px; color:#999;"><i class="fas fa-spinner fa-spin"></i> Cargando recibo...</div>';
+    document.getElementById('modalRecibo').style.display = 'flex';
+    try {
+        const res = await fetch(`/api/recibo/${nAsiento}`);
+        const data = await res.json();
+        if (data.status !== 'success') {
+            document.getElementById('reciboPreviewCont').innerHTML = `<div style="font-size:11px; color:#dc2626;">${data.message || 'No se pudo cargar el recibo.'}</div>`;
+            return;
+        }
+        reciboHtmlActivo = data.html;
+        document.getElementById('reciboPreviewCont').innerHTML = data.html;
+        if (data.asiento.justificante_enviado) {
+            const banner = document.getElementById('reciboEstadoEnvio');
+            banner.style.display = 'block';
+            banner.innerHTML = `<i class="fas fa-circle-check"></i> Justificante ya enviado el ${data.asiento.justificante_enviado}`;
+        }
+    } catch (e) {
+        document.getElementById('reciboPreviewCont').innerHTML = '<div style="font-size:11px; color:#dc2626;">Error de conexión al cargar el recibo.</div>';
+        console.error(e);
+    }
+}
+
+function imprimirRecibo() {
+    const ventana = window.open('', '_blank');
+    ventana.document.write(`
+        <html><head><title>Recibo</title>
+        <style>
+            @page { size: 10.2cm 7.4cm; margin: 0; }
+            body { margin: 0; display: flex; align-items: center; justify-content: center; }
+        </style>
+        </head><body>${reciboHtmlActivo}</body></html>
+    `);
+    ventana.document.close();
+    setTimeout(() => { ventana.focus(); ventana.print(); }, 400);
+}
+
+async function enviarRecibo() {
+    const email = document.getElementById('inputEmailRecibo').value.trim();
+    if (!email) return alert('Escribe un email de destino.');
+    if (!reciboAsientoActivo) return;
+    try {
+        const res = await fetch('/api/recibo/enviar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ n_asiento: reciboAsientoActivo, email })
+        });
+        const data = await res.json();
+        if (res.ok && data.status === 'success') {
+            const banner = document.getElementById('reciboEstadoEnvio');
+            banner.style.display = 'block';
+            banner.innerHTML = `<i class="fas fa-circle-check"></i> Justificante enviado el ${data.fecha_envio}`;
+            await cargarPresupuesto();
+        } else {
+            alert('Error al enviar el recibo: ' + (data.message || ''));
+        }
+    } catch (e) {
+        alert('Error de conexión al enviar el recibo.');
+        console.error(e);
+    }
 }
 
 let facturaPopoverActivo = null;
@@ -2856,12 +4746,12 @@ function toggleDetalleCobrosPendientes() {
 }
 
 let asignarJugadorActivo = { nAsiento: null, importe: 0 };
-let conceptoAsignarSeleccionado = '';
+let celdasSeleccionadasAsignar = [];
 
 function abrirPopoverAsignarJugador(evt, nAsiento, importe) {
     evt.stopPropagation();
     asignarJugadorActivo = { nAsiento, importe };
-    conceptoAsignarSeleccionado = '';
+    celdasSeleccionadasAsignar = [];
     document.getElementById('asignEquipoSel').value = '';
     document.getElementById('asignJugadorSel').innerHTML = '<option value="">Jugador...</option>';
     document.getElementById('gridConceptoAsignarCont').innerHTML = '';
@@ -2886,14 +4776,14 @@ function actualizarJugadoresAsignar() {
     sel.innerHTML = '<option value="">Jugador...</option>' + nombres.map(n => `<option value="${n}">${n}</option>`).join('');
     document.getElementById('gridConceptoAsignarCont').innerHTML = '';
     document.getElementById('conceptoAsignarSeleccionadoTxt').textContent = '';
-    conceptoAsignarSeleccionado = '';
+    celdasSeleccionadasAsignar = [];
 }
 
 function actualizarGridConceptoAsignar() {
     const equipo = document.getElementById('asignEquipoSel').value;
     const nombre = document.getElementById('asignJugadorSel').value;
     const cont = document.getElementById('gridConceptoAsignarCont');
-    conceptoAsignarSeleccionado = '';
+    celdasSeleccionadasAsignar = [];
     document.getElementById('conceptoAsignarSeleccionadoTxt').textContent = '';
     if (!equipo || !nombre) { cont.innerHTML = ''; return; }
 
@@ -2931,89 +4821,170 @@ function actualizarGridConceptoAsignar() {
         clon.style.padding = '6px 4px';
         clon.style.fontSize = '9px';
         clon.style.borderRight = '1px solid #e5e7eb';
-        clon.addEventListener('click', () => seleccionarConceptoAsignar(clon));
+        clon.addEventListener('click', (evt) => seleccionarConceptoAsignar(clon, evt));
         filaDiv.appendChild(clon);
     });
 }
 
-function seleccionarConceptoAsignar(celda) {
+function seleccionarConceptoAsignar(celda, evt) {
     const concepto = celda.dataset.concepto || '';
     if (!concepto) return;
-    conceptoAsignarSeleccionado = concepto;
-    const cont = document.getElementById('gridConceptoAsignarCont');
-    cont.querySelectorAll('#gridConceptoAsignarCeldas > div > *').forEach(c => c.style.outline = '');
-    celda.style.outline = '3px solid #E31E24';
-    const labelsMap = { 'Inscripción': 'Inscripción', '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril', '05': 'Mayo', '06': 'Junio', '07': 'Julio', '08': 'Agosto', '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre', 'PACK_ROPA': 'Pack Ropa' };
-    document.getElementById('conceptoAsignarSeleccionadoTxt').textContent = `Concepto seleccionado: ${labelsMap[concepto] || concepto}`;
+
+    if (!evt || !evt.ctrlKey) {
+        celdasSeleccionadasAsignar.forEach(c => c.style.outline = '');
+        celdasSeleccionadasAsignar = [];
+    }
+    const idx = celdasSeleccionadasAsignar.indexOf(celda);
+    if (idx === -1) {
+        celda.style.outline = '3px solid #E31E24';
+        celdasSeleccionadasAsignar.push(celda);
+    } else {
+        celda.style.outline = '';
+        celdasSeleccionadasAsignar.splice(idx, 1);
+    }
+
+    const texto = celdasSeleccionadasAsignar.map(c => LABELS_MAP_CONCEPTOS[c.dataset.concepto] || c.dataset.concepto).join(', ');
+    document.getElementById('conceptoAsignarSeleccionadoTxt').textContent = texto
+        ? `Concepto(s) seleccionado(s): ${texto}${celdasSeleccionadasAsignar.length > 1 ? ' (el primero se lleva el importe entero y el resto se reparte)' : ''}`
+        : '';
 }
 
 async function confirmarAsignarJugador() {
     const equipo = document.getElementById('asignEquipoSel').value;
     const nombre = document.getElementById('asignJugadorSel').value;
-    const concepto = conceptoAsignarSeleccionado;
     const estado = document.getElementById('popAsignarEstado');
-    if (!equipo || !nombre || !concepto) {
+    if (!equipo || !nombre || celdasSeleccionadasAsignar.length === 0) {
         estado.style.color = '#dc2626';
         estado.textContent = 'Elige equipo, jugador y concepto.';
         return;
     }
 
     const filaReal = document.querySelector(`.fila-jugador[data-equipo="${CSS.escape(equipo)}"][data-nombre="${CSS.escape(nombre)}"]`);
-    const celdaReal = filaReal ? Array.from(filaReal.querySelectorAll('td.pago-cell')).find(td => td.dataset.concepto === concepto) : null;
-    const esperadoReal = celdaReal ? (parseFloat(celdaReal.dataset.esperado) || 0) : 0;
     const importe = asignarJugadorActivo.importe;
 
-    if (celdaReal && (celdaReal.classList.contains('pago-verde') || celdaReal.classList.contains('pago-naranja'))) {
-        estado.style.color = '#dc2626';
-        estado.textContent = 'Ese concepto ya tiene un pago. Edítalo desde PAGO JUGADORES.';
+    for (const celda of celdasSeleccionadasAsignar) {
+        if (celda.classList.contains('pago-verde') || celda.classList.contains('pago-naranja')) {
+            estado.style.color = '#dc2626';
+            estado.textContent = `El concepto "${LABELS_MAP_CONCEPTOS[celda.dataset.concepto] || celda.dataset.concepto}" ya tiene un pago. Edítalo desde PAGO JUGADORES.`;
+            return;
+        }
+    }
+
+    if (celdasSeleccionadasAsignar.length === 1) {
+        const concepto = celdasSeleccionadasAsignar[0].dataset.concepto;
+        const celdaReal = filaReal ? Array.from(filaReal.querySelectorAll('td.pago-cell')).find(td => td.dataset.concepto === concepto) : null;
+        const esperadoReal = celdaReal ? (parseFloat(celdaReal.dataset.esperado) || 0) : 0;
+
+        if (esperadoReal > 0 && importe > esperadoReal) {
+            // El importe ya estaba contabilizado en este asiento sin asignar. Para repartir el sobrante
+            // sin duplicar el ingreso, primero quitamos este asiento "genérico" y luego abrimos el mismo
+            // reparto de sobrante de PAGO JUGADORES, que creará las líneas correctas por concepto.
+            estado.style.color = '#64748b';
+            estado.textContent = 'Preparando reparto...';
+            try {
+                await fetch('/api/operacion_asiento', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ accion: 'borrar', id: asignarJugadorActivo.nAsiento, tipo_origen: 'MANUAL' })
+                });
+            } catch (e) { /* seguimos igualmente */ }
+
+            document.getElementById('popoverAsignarJugador').style.display = 'none';
+            await cargarPresupuesto();
+
+            const filaReal2 = document.querySelector(`.fila-jugador[data-equipo="${CSS.escape(equipo)}"][data-nombre="${CSS.escape(nombre)}"]`);
+            const celdaReal2 = filaReal2 ? Array.from(filaReal2.querySelectorAll('td.pago-cell')).find(td => td.dataset.concepto === concepto) : null;
+            if (celdaReal2) {
+                seleccionarPago({ stopPropagation: () => {}, ctrlKey: false }, celdaReal2, concepto);
+                abrirModalCompensacion(importe, esperadoReal, { disabled: false });
+            }
+            return;
+        }
+
+        estado.style.color = '#64748b';
+        estado.textContent = 'Guardando...';
+        try {
+            const res = await fetch('/api/asiento/asignar_jugador', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ n_asiento: asignarJugadorActivo.nAsiento, accion: 'asignar', equipo, nombre, concepto })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                document.getElementById('popoverAsignarJugador').style.display = 'none';
+                await cargarPresupuesto();
+                if (data.n_asiento) abrirModalRecibo(data.n_asiento);
+            } else {
+                estado.style.color = '#dc2626';
+                estado.textContent = data.message || 'Error al asignar.';
+            }
+        } catch (e) {
+            estado.style.color = '#dc2626';
+            estado.textContent = 'Error de conexión.';
+        }
         return;
     }
 
-    if (esperadoReal > 0 && importe > esperadoReal) {
-        // El importe ya estaba contabilizado en este asiento sin asignar. Para repartir el sobrante
-        // sin duplicar el ingreso, primero quitamos este asiento "genérico" y luego abrimos el mismo
-        // reparto de sobrante de PAGO JUGADORES, que creará las líneas correctas por concepto.
-        estado.style.color = '#64748b';
-        estado.textContent = 'Preparando reparto...';
-        try {
-            await fetch('/api/operacion_asiento', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ accion: 'borrar', id: asignarJugadorActivo.nAsiento, tipo_origen: 'MANUAL' })
-            });
-        } catch (e) { /* seguimos igualmente */ }
+    // MULTI-SELECCIÓN: el primero se lleva el importe entero (hasta su esperado), el resto se reparte.
+    estado.style.color = '#64748b';
+    estado.textContent = 'Repartiendo y guardando...';
+    try {
+        const baseNumero = await obtenerSiguienteNumeroAsiento();
+        const fechaHoy = new Date().toLocaleDateString('es-ES');
+
+        // Pre-calculamos el reparto completo para poder construir la descripción rica antes de guardar.
+        let saldoARepartir = importe;
+        const partes = celdasSeleccionadasAsignar.map((celda, i) => {
+            const esperadoSel = parseFloat(celda.dataset.esperado) || 0;
+            const esUltimo = i === celdasSeleccionadasAsignar.length - 1;
+            const pagoAsignado = esUltimo ? saldoARepartir : Math.min(saldoARepartir, esperadoSel || saldoARepartir);
+            if (!esUltimo) saldoARepartir -= pagoAsignado;
+            return { concepto: celda.dataset.concepto, esperado: esperadoSel, importe: pagoAsignado };
+        });
+        const divisionDesc = construirDivisionDesc(fechaHoy, importe, partes);
+        let primerAsientoCreado = null;
+
+        for (let i = 0; i < partes.length; i++) {
+            const parte = partes[i];
+            const nuevoNumero = `${baseNumero}_${i + 1}`;
+            const descripcionParte = `Cuota ${LABELS_MAP_CONCEPTOS[parte.concepto] || parte.concepto}: ${nombre} (${divisionDesc})`;
+
+            if (i === 0) {
+                // La primera porción reutiliza el asiento ya existente (sin asignar), reduciendo su importe.
+                const res = await fetch('/api/asiento/asignar_jugador', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        n_asiento: asignarJugadorActivo.nAsiento, accion: 'asignar', equipo, nombre,
+                        concepto: parte.concepto, importe: parte.importe, nuevo_n_asiento: nuevoNumero,
+                        descripcion: descripcionParte
+                    })
+                });
+                const data = await res.json();
+                if (data.status !== 'success') throw new Error(data.message || 'Error al asignar el primer concepto.');
+                primerAsientoCreado = data.n_asiento || nuevoNumero;
+            } else {
+                // Las siguientes porciones se crean como asientos nuevos independientes.
+                await fetch('/api/presupuesto', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fecha: fechaHoy, departamento: 'Administración', pilar: 'Cuotas',
+                        descripcion: descripcionParte,
+                        importe: parte.importe, equipo, nombre, concepto: parte.concepto, esperado: parte.esperado,
+                        tipo_origen: 'MANUAL', n_asiento: nuevoNumero
+                    })
+                });
+            }
+        }
 
         document.getElementById('popoverAsignarJugador').style.display = 'none';
         await cargarPresupuesto();
-
-        const filaReal2 = document.querySelector(`.fila-jugador[data-equipo="${CSS.escape(equipo)}"][data-nombre="${CSS.escape(nombre)}"]`);
-        const celdaReal2 = filaReal2 ? Array.from(filaReal2.querySelectorAll('td.pago-cell')).find(td => td.dataset.concepto === concepto) : null;
-        if (celdaReal2) {
-            seleccionarPago({ stopPropagation: () => {}, ctrlKey: false }, celdaReal2, concepto);
-            abrirModalCompensacion(importe, esperadoReal, { disabled: false });
-        }
-        return;
-    }
-
-    estado.style.color = '#64748b';
-    estado.textContent = 'Guardando...';
-    try {
-        const res = await fetch('/api/asiento/asignar_jugador', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ n_asiento: asignarJugadorActivo.nAsiento, accion: 'asignar', equipo, nombre, concepto })
-        });
-        const data = await res.json();
-        if (data.status === 'success') {
-            document.getElementById('popoverAsignarJugador').style.display = 'none';
-            await cargarPresupuesto();
-        } else {
-            estado.style.color = '#dc2626';
-            estado.textContent = data.message || 'Error al asignar.';
-        }
+        if (primerAsientoCreado) abrirModalRecibo(primerAsientoCreado);
     } catch (e) {
         estado.style.color = '#dc2626';
-        estado.textContent = 'Error de conexión.';
+        estado.textContent = e.message || 'Error de conexión al repartir.';
+        console.error(e);
     }
 }
 
@@ -3071,6 +5042,7 @@ function cargarPagosEnTabla() {
     // Primero reseteamos las filas de Staff para que no queden importes fantasma al borrar
     document.querySelectorAll('.fila-staff').forEach(fila => {
         fila.querySelectorAll('.pago-cell').forEach(cell => {
+            if (cell.classList.contains('celda-ropa-dinamica')) return;
             const esExtra = cell.classList.contains('pago-extra-bg');
             cell.className = esExtra ? 'pago-cell col-financiera pago-extra-bg' : 'pago-cell col-financiera';
             cell.innerText = '-';
@@ -3091,10 +5063,18 @@ function cargarPagosEnTabla() {
         const celdas = fila.querySelectorAll('.pago-cell');
 
         // ── RESET completo de todas las celdas ──
+        // OJO: las celdas de gestión de tallas (celda-ropa-dinamica) también llevan la clase
+        // "pago-cell" para heredar estilos, pero NO son conceptos de pago: hay que dejarlas intactas.
         celdas.forEach((cell, idx) => {
-            cell.style.display = '';
+            if (cell.classList.contains('celda-ropa-dinamica')) return;
+            const esPagoPrenda = cell.classList.contains('col-pago-prenda');
+            cell.style.display = esPagoPrenda ? (columnasPagoRopaVisibles ? 'table-cell' : 'none') : '';
             cell.colSpan = 1;
-            cell.className = idx === 13 ? 'pago-cell col-pago-ropa pago-extra-bg' : 'pago-cell col-financiera';
+            if (esPagoPrenda) {
+                cell.className = 'pago-cell col-pago-prenda';
+            } else {
+                cell.className = idx === 13 ? 'pago-cell col-pago-ropa pago-extra-bg' : 'pago-cell col-financiera';
+            }
             cell.innerText = '-';
             delete cell.dataset.asientoId;
             delete cell.dataset.splitDescriptions;
@@ -3179,6 +5159,8 @@ function cargarPagosEnTabla() {
         }
     });
 
+    inicializarCeldasPagoPrendas();
+
     // 2. Mapear historial de pagos
     presupuestoData.forEach(asiento => {
         if (asiento.TIPO_ORIGEN === 'JUGADOR' || asiento.TIPO_ORIGEN === 'STAFF') {
@@ -3203,10 +5185,13 @@ function cargarPagosEnTabla() {
                     } else {
                         if (item === 'Inscripción') cell = celdas[0];
                         else if (item === 'PACK_ROPA') cell = celdas[13];
+                        else if (item === 'PACK_GRANDE_ASIGNADO' || item === 'PACK_PEQUENO_ASIGNADO' || item.startsWith('ROPA: ')) {
+                            cell = [...celdas].find(c => c.dataset.concepto === item) || null;
+                        }
                         else {
                             const m = parseInt(item);
                             if (isNaN(m)) return;
-                            
+
                             // Mapear el mes al primer mes de su grupo si existe
                             let targetM = m;
                             const tipo = (fila.querySelector('.span-tipo-pago')?.innerText || '').trim().toUpperCase();
@@ -3386,8 +5371,9 @@ function renderizarTablaPresupuesto(datos) {
                 <td>${a.DEPARTAMENTO || '-'}</td>
                 <td>${a.PILAR || '-'}</td>
                 <td>${a.DESCRIPCION || '-'}${statusBadge}</td>
-                <td style="color: ${importe >= 0 ? '#28a745' : '#dc3545'}; font-weight:bold; text-align: right;">
-                    ${importe.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
+                <td style="color: ${importe >= 0 ? '#28a745' : '#dc3545'}; font-weight:bold; text-align: right; line-height: 1.3;">
+                    <div>${importe.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€</div>
+                    ${a.IMPORTE_TOTAL_GRUPO != null ? `<div style="color:#94a3b8; font-weight:700; font-size:10px;">(${parseFloat(a.IMPORTE_TOTAL_GRUPO).toLocaleString('es-ES', { minimumFractionDigits: 2 })}€)</div>` : ''}
                 </td>
                 <td style="text-align: center;">${celdaFacturaHtml(a, importe, real_id)}</td>
                 <td style="text-align: center;">
@@ -4019,6 +6005,7 @@ function exportarRopaExcel() {
 window.onload = async function() {
     await cargarConfiguraciones();
     await cargarPresupuesto();
+    await cargarDatosRopa(); // necesario para que existan las columnas de pago por prenda aunque no se visite la pestaña ROPA
     actualizarSelectsFormasPago();
     
     const lastTab = localStorage.getItem('activeFinTab');
@@ -5925,13 +7912,17 @@ async function guardarPagoConCompensacion(btnOriginal, totalPagado, totalEsperad
         });
         
         const divisionDesc = `El dia ${fechaHoy} se pagaron ${totalPagado}€ que se dividieron en: ${parts.join(' y ')}`;
-        
+        const baseNumero = await obtenerSiguienteNumeroAsiento();
+        let indiceGrupo = 0;
+        let primerAsientoCreado = null;
+
         // 1. Guardar los pagos principales seleccionados (cada uno se paga al 100% de su esperado)
         for (let i = 0; i < celdasSeleccionadas.length; i++) {
             const cell = celdasSeleccionadas[i];
             const item = cell.dataset.tempItem || cell.dataset.concepto;
             const esperadoIndividual = parseFloat(cell.dataset.esperado) || 0;
-            
+            indiceGrupo++;
+
             const asiento = {
                 fecha: fechaHoy,
                 departamento: "Administración",
@@ -5943,20 +7934,26 @@ async function guardarPagoConCompensacion(btnOriginal, totalPagado, totalEsperad
                 tipo_pago: tipo,
                 forma_pago: forma,
                 concepto: item,
-                esperado: esperadoIndividual
+                esperado: esperadoIndividual,
+                n_asiento: `${baseNumero}_${indiceGrupo}`
             };
-            
-            await fetch('/api/presupuesto', {
+
+            const resAsi = await fetch('/api/presupuesto', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(asiento)
             });
+            if (resAsi.ok && !primerAsientoCreado) {
+                const dataAsi = await resAsi.json();
+                primerAsientoCreado = dataAsi.asiento || `${baseNumero}_${indiceGrupo}`;
+            }
         }
-        
+
         // 2. Guardar cada pago de compensación (sobrantes)
         for (let alloc of allocations) {
             const esperadoCompensacion = obtenerEsperadoConcepto(fila, alloc.concepto);
-            
+            indiceGrupo++;
+
             const asientoCompensacion = {
                 fecha: fechaHoy,
                 departamento: "Administración",
@@ -5968,19 +7965,25 @@ async function guardarPagoConCompensacion(btnOriginal, totalPagado, totalEsperad
                 tipo_pago: tipo,
                 forma_pago: forma,
                 concepto: alloc.concepto,
-                esperado: esperadoCompensacion
+                esperado: esperadoCompensacion,
+                n_asiento: `${baseNumero}_${indiceGrupo}`
             };
-            
-            await fetch('/api/presupuesto', {
+
+            const resComp = await fetch('/api/presupuesto', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(asientoCompensacion)
             });
+            if (resComp.ok && !primerAsientoCreado) {
+                const dataComp = await resComp.json();
+                primerAsientoCreado = dataComp.asiento || `${baseNumero}_${indiceGrupo}`;
+            }
         }
-        
+
         await cargarPresupuesto();
         cerrarModalCompensacion();
         cerrarModalsFin();
+        if (primerAsientoCreado) abrirModalRecibo(primerAsientoCreado);
     } catch (e) {
         console.error(e);
         alert("Error al registrar el pago con compensación: " + e.message);

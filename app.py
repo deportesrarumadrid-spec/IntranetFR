@@ -1938,6 +1938,220 @@ def api_alquiler_delete():
         print(f"Error eliminando alquiler: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+# --- CONFIGURACIÓN DE EMAIL PARA RECIBOS ---
+def _get_config_sheet():
+    spreadsheet = client.open(NOMBRE_EXCEL)
+    todas_hojas = {s.title.upper().strip(): s for s in spreadsheet.worksheets()}
+    if "CONFIGURACION" in todas_hojas:
+        return todas_hojas["CONFIGURACION"]
+    return spreadsheet.add_worksheet(title="CONFIGURACION", rows="100", cols="2")
+
+def _leer_config_email_recibos():
+    sheet = _get_config_sheet()
+    all_v = sheet.get_all_values()
+    for i, row in enumerate(all_v):
+        if len(row) > 0 and row[0].strip() == 'EMAIL_RECIBOS':
+            try:
+                return sheet, i + 1, json.loads(row[1])
+            except (json.JSONDecodeError, IndexError):
+                return sheet, i + 1, {}
+    return sheet, None, {}
+
+@app.route('/api/config_email_recibos', methods=['GET', 'POST'])
+def api_config_email_recibos():
+    if not session.get('usuario'): return jsonify({"status": "error", "message": "No session"}), 401
+    if session.get('usuario', '').lower() != 'admin':
+        return jsonify({"status": "error", "message": "No autorizado"}), 403
+    try:
+        if request.method == 'GET':
+            _, _, valor = _leer_config_email_recibos()
+            return jsonify({"email": valor.get('email', ''), "configurado": bool(valor.get('email') and valor.get('app_password'))})
+
+        data = request.json or {}
+        email = str(data.get('email', '')).strip()
+        app_password = str(data.get('app_password', '')).strip().replace(' ', '')
+        sheet, idx_fila, _ = _leer_config_email_recibos()
+        valor_json = json.dumps({"email": email, "app_password": app_password})
+        if idx_fila is None:
+            sheet.append_row(['EMAIL_RECIBOS', valor_json])
+        else:
+            sheet.update_cell(idx_fila, 2, valor_json)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error en api_config_email_recibos: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# --- RECIBOS DE PAGO (PDF/HTML imprimible + envío por email) ---
+def _enviar_email_recibo(destinatario, asunto, cuerpo_html):
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
+    _, _, config = _leer_config_email_recibos()
+    remitente = config.get('email', '')
+    app_password = config.get('app_password', '')
+    if not remitente or not app_password:
+        raise ValueError("El email del club no está configurado. Ve a Usuarios y Contraseñas para configurarlo.")
+
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = asunto
+    msg['From'] = remitente
+    msg['To'] = destinatario
+    msg.attach(MIMEText(cuerpo_html, 'html'))
+
+    with smtplib.SMTP('smtp.gmail.com', 587) as server:
+        server.starttls()
+        server.login(remitente, app_password)
+        server.sendmail(remitente, destinatario, msg.as_string())
+
+def _generar_html_recibo(asiento):
+    importe_total = asiento.get('importe', 0)
+    es_gasto = importe_total < 0
+    titulo = "RECIBO DE PAGO" if not es_gasto else "JUSTIFICANTE DE GASTO"
+    color_importe = '#dc2626' if es_gasto else '#15803d'
+
+    conceptos = asiento.get('conceptos') or [{
+        'concepto': asiento.get('concepto') or asiento.get('descripcion', '-'),
+        'importe': importe_total
+    }]
+    filas_conceptos = ''.join(
+        f'<tr>'
+        f'<td style="padding:1.5px 0; font-size:8px; color:#1e293b;">{c["concepto"]}</td>'
+        f'<td style="padding:1.5px 0; font-size:8px; text-align:right; font-weight:700; color:#1e293b;">{abs(c["importe"]):.2f}€</td>'
+        f'</tr>'
+        for c in conceptos
+    )
+
+    return f"""
+    <div style="width: 9.6cm; height: 7cm; border-radius: 12px; overflow: hidden; font-family: 'Segoe UI', Arial, sans-serif;
+                box-shadow: 0 3px 10px rgba(0,0,0,0.12); border: 1px solid #e2e8f0; box-sizing: border-box;
+                display: flex; flex-direction: column; background: white;">
+        <div style="background: linear-gradient(135deg, #E31E24, #9f1218); color: white; padding: 8px 12px;
+                    display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <div style="font-weight: 900; font-size: 11px; letter-spacing: 0.4px;">CLUB FUENTELARREYNA</div>
+                <div style="font-size: 7.5px; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.6px; margin-top: 1px;">{titulo}</div>
+            </div>
+            <img src="/static/ESCUDO SIN FONDO.png" style="height: 30px; width: auto; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25));">
+        </div>
+        <div style="flex: 1; padding: 8px 12px; font-size: 8.5px; color: #1e293b; overflow: hidden;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr><td style="padding: 1.5px 0; font-weight: 700; color: #94a3b8; width: 32%; text-transform: uppercase; font-size: 7.5px;">Nº Asiento</td><td style="padding: 1.5px 0; font-weight: 700;">#{asiento.get('n_asiento', '-')}</td></tr>
+                <tr><td style="padding: 1.5px 0; font-weight: 700; color: #94a3b8; text-transform: uppercase; font-size: 7.5px;">Fecha</td><td style="padding: 1.5px 0;">{asiento.get('fecha', '-')}</td></tr>
+                <tr><td style="padding: 1.5px 0; font-weight: 700; color: #94a3b8; text-transform: uppercase; font-size: 7.5px;">Nombre</td><td style="padding: 1.5px 0;">{asiento.get('nombre', '-')}</td></tr>
+                <tr><td style="padding: 1.5px 0; font-weight: 700; color: #94a3b8; text-transform: uppercase; font-size: 7.5px;">Equipo</td><td style="padding: 1.5px 0;">{asiento.get('equipo', '-')}</td></tr>
+            </table>
+            <div style="margin-top: 5px; border-top: 1px dashed #e2e8f0; padding-top: 4px;">
+                <table style="width: 100%; border-collapse: collapse;">{filas_conceptos}</table>
+            </div>
+            <div style="margin-top: 6px; text-align: right; border-top: 1px dashed #e2e8f0; padding-top: 5px;">
+                <span style="font-size: 7px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.4px; margin-right: 6px;">Importe total</span>
+                <span style="font-size: 16px; font-weight: 900; color: {color_importe};">{abs(importe_total):.2f}€</span>
+            </div>
+        </div>
+        <div style="border-top: 1px solid #f1f5f9; padding: 5px 12px; font-size: 6px; color: #cbd5e1; text-align: center; letter-spacing: 0.2px;">
+            DOCUMENTO GENERADO AUTOMÁTICAMENTE · INTRANET CLUB FUENTELARREYNA
+        </div>
+    </div>
+    """
+
+def _obtener_asiento_por_n(n_asiento):
+    """Devuelve el asiento solicitado. Si forma parte de un pago repartido (Nº ASIENTO
+    con sufijo "_N"), agrega TODAS las filas del mismo grupo (misma base) en una sola
+    entrada: lista de conceptos + importe total, en vez de solo la fila individual."""
+    from financiero import normalizar_cabeceras, get_friendly_concepto
+    sheet_fin = client.open(NOMBRE_EXCEL).worksheet("FINANCIERO")
+    all_v = sheet_fin.get_all_values()
+    headers_norm = normalizar_cabeceras(all_v[0])
+    idx_asi = -1
+    for variant in ['N_ASIENTO', 'Nº_ASIENTO', 'ASIENTO']:
+        if variant in headers_norm:
+            idx_asi = headers_norm.index(variant); break
+    if idx_asi == -1:
+        return None, None, None
+
+    base_buscado = str(n_asiento).strip().replace('#', '').split('_')[0]
+
+    filas_grupo = []
+    for i, row in enumerate(all_v):
+        if i == 0: continue
+        if len(row) <= idx_asi: continue
+        raw_n = str(row[idx_asi]).strip().replace('#', '')
+        if raw_n.split('_')[0] != base_buscado:
+            continue
+        item = {}
+        for j, h in enumerate(headers_norm):
+            if j < len(row):
+                item[h] = row[j]
+        try:
+            importe_val = float(str(item.get('IMPORTE', '0')).replace(',', '.').replace('€', '').strip() or 0)
+        except ValueError:
+            importe_val = 0
+        filas_grupo.append({'item': item, 'fila': i + 1, 'raw_n': raw_n, 'importe': importe_val})
+
+    if not filas_grupo:
+        return sheet_fin, headers_norm, None
+
+    primero = filas_grupo[0]['item']
+    total_importe = sum(f['importe'] for f in filas_grupo)
+    conceptos = [{
+        'concepto': get_friendly_concepto(f['item'].get('CONCEPTO', '')) or f['item'].get('CONCEPTO', ''),
+        'importe': f['importe']
+    } for f in filas_grupo]
+
+    return sheet_fin, headers_norm, {
+        'n_asiento': base_buscado, 'fecha': primero.get('FECHA', ''),
+        'nombre': primero.get('NOMBRE', ''), 'equipo': primero.get('EQUIPO', ''),
+        'concepto': primero.get('CONCEPTO', ''), 'descripcion': primero.get('DESCRIPCION', ''),
+        'conceptos': conceptos, 'importe': total_importe,
+        'filas': [f['fila'] for f in filas_grupo],
+        'justificante_enviado': primero.get('JUSTIFICANTE_ENVIADO', '')
+    }
+
+@app.route('/api/recibo/<n_asiento>')
+def api_recibo_obtener(n_asiento):
+    if not session.get('usuario'): return jsonify({"status": "error", "message": "No session"}), 401
+    try:
+        _, _, asiento = _obtener_asiento_por_n(n_asiento)
+        if not asiento:
+            return jsonify({"status": "error", "message": "Asiento no encontrado"}), 404
+        return jsonify({"status": "success", "asiento": asiento, "html": _generar_html_recibo(asiento)})
+    except Exception as e:
+        print(f"Error en api_recibo_obtener: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/recibo/enviar', methods=['POST'])
+def api_recibo_enviar():
+    if not session.get('usuario'): return jsonify({"status": "error", "message": "No session"}), 401
+    data = request.json or {}
+    n_asiento = str(data.get('n_asiento', '')).strip()
+    email_destino = str(data.get('email', '')).strip()
+    if not n_asiento or not email_destino:
+        return jsonify({"status": "error", "message": "Falta el asiento o el email"}), 400
+    try:
+        sheet_fin, headers_norm, asiento = _obtener_asiento_por_n(n_asiento)
+        if not asiento:
+            return jsonify({"status": "error", "message": "Asiento no encontrado"}), 404
+
+        html_recibo = _generar_html_recibo(asiento)
+        _enviar_email_recibo(email_destino, f"Recibo Club Fuentelarreyna - Asiento #{n_asiento}", html_recibo)
+
+        fecha_envio = datetime.now().strftime('%d/%m/%Y')
+        if 'JUSTIFICANTE_ENVIADO' not in headers_norm:
+            sheet_fin.update_cell(1, len(headers_norm) + 1, "JUSTIFICANTE_ENVIADO")
+            headers_norm.append('JUSTIFICANTE_ENVIADO')
+        idx_just = headers_norm.index('JUSTIFICANTE_ENVIADO')
+        for fila_num in asiento.get('filas', [asiento.get('fila')]):
+            if fila_num:
+                sheet_fin.update_cell(fila_num, idx_just + 1, fecha_envio)
+
+        return jsonify({"status": "success", "fecha_envio": fecha_envio})
+    except ValueError as ve:
+        return jsonify({"status": "error", "message": str(ve)}), 400
+    except Exception as e:
+        print(f"Error en api_recibo_enviar: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 # --- PUSH DE AVISO + COMENTARIO (INFORMES) ---
 @app.route('/api/informes/enviar_push_equipacion', methods=['POST'])
 def api_enviar_push_equipacion():
@@ -1990,6 +2204,7 @@ from jugadores_datos import jugadores_datos_bp
 from perfiles import perfiles_bp
 from jugadores_detalles import jugadores_detalles_bp # Importar el nuevo blueprint
 from ropa import ropa_bp
+from stock_ropa import stock_ropa_bp
 from mi_equipo import mi_equipo_bp
 from formulario_partido import formulario_partido_bp # Importar el nuevo blueprint
 from inscripcion import inscripcion_bp # Importar el blueprint de inscripción
@@ -2000,6 +2215,7 @@ app.register_blueprint(deportivo_bp)
 app.register_blueprint(jugadores_datos_bp)
 app.register_blueprint(perfiles_bp)
 app.register_blueprint(ropa_bp)
+app.register_blueprint(stock_ropa_bp)
 app.register_blueprint(jugadores_detalles_bp) # Registrar el nuevo blueprint
 app.register_blueprint(mi_equipo_bp)
 app.register_blueprint(formulario_partido_bp)

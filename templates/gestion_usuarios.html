@@ -114,6 +114,68 @@
     </div>
 </div>
 
+<div class="card-coord" style="margin-top: 25px;">
+    <h3 style="margin: 0 0 20px 0; font-weight: 900; color: #333; text-transform: uppercase;">
+        <i class="fas fa-envelope" style="color: #E31E24; margin-right: 10px;"></i> Configuración de Email para Recibos
+    </h3>
+    <p style="font-size: 11px; color: #999; margin-bottom: 20px; max-width: 600px;">
+        Esta cuenta de Gmail se usará para enviar los recibos/justificantes de pago por correo. Necesita una <strong>contraseña de aplicación</strong> (no la contraseña normal de la cuenta) — se genera en
+        <a href="https://myaccount.google.com/apppasswords" target="_blank">myaccount.google.com</a> &gt; Seguridad &gt; Verificación en 2 pasos &gt; Contraseñas de aplicaciones.
+    </p>
+    <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 15px; align-items: end; max-width: 700px;">
+        <div>
+            <label style="font-size: 10px; font-weight: 900; color: #999; display: block; margin-bottom: 8px; text-transform: uppercase;">Email del club</label>
+            <input type="email" id="inputEmailRecibos" class="input-coord" placeholder="club@gmail.com" style="font-weight: 700;">
+        </div>
+        <div>
+            <label style="font-size: 10px; font-weight: 900; color: #999; display: block; margin-bottom: 8px; text-transform: uppercase;">Contraseña de aplicación</label>
+            <input type="password" id="inputAppPasswordRecibos" class="input-coord" placeholder="xxxx xxxx xxxx xxxx" style="font-weight: 700;">
+        </div>
+        <button onclick="guardarConfigEmailRecibos()" style="padding: 12px 24px; background: #E31E24; color: white; border: none; border-radius: 8px; font-weight: 900; cursor: pointer; font-size: 11px; text-transform: uppercase; height: 42px;">
+            <i class="fas fa-save"></i> Guardar
+        </button>
+    </div>
+    <div id="estadoConfigEmailRecibos" style="margin-top: 12px; font-size: 11px; font-weight: 800;"></div>
+</div>
+
+<script>
+async function cargarConfigEmailRecibos() {
+    try {
+        const res = await fetch('/api/config_email_recibos');
+        const data = await res.json();
+        document.getElementById('inputEmailRecibos').value = data.email || '';
+        const estado = document.getElementById('estadoConfigEmailRecibos');
+        estado.style.color = data.configurado ? '#16a34a' : '#dc2626';
+        estado.innerHTML = data.configurado
+            ? '<i class="fas fa-circle-check"></i> Configurado correctamente. El envío de recibos por email está activo.'
+            : '<i class="fas fa-triangle-exclamation"></i> Sin configurar todavía. El envío de recibos por email no funcionará hasta que guardes estos datos.';
+    } catch (e) { console.error('Error cargando config de email', e); }
+}
+
+async function guardarConfigEmailRecibos() {
+    const email = document.getElementById('inputEmailRecibos').value.trim();
+    const app_password = document.getElementById('inputAppPasswordRecibos').value.trim();
+    if (!email || !app_password) return alert('Rellena el email y la contraseña de aplicación.');
+    try {
+        const res = await fetch('/api/config_email_recibos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, app_password })
+        });
+        if (res.ok) {
+            document.getElementById('inputAppPasswordRecibos').value = '';
+            await cargarConfigEmailRecibos();
+            alert('Configuración guardada correctamente.');
+        } else alert('Error al guardar la configuración.');
+    } catch (e) {
+        alert('Error de conexión al guardar.');
+        console.error(e);
+    }
+}
+
+cargarConfigEmailRecibos();
+</script>
+
 <script>
 function toggleFormularioNuevo() {
     const f = document.getElementById('formNuevoUsuario');
