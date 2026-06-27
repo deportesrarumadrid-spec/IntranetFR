@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import base64
 from datetime import datetime, timedelta
@@ -471,14 +472,21 @@ def save_all():
         return jsonify({"status": "error"}), 500
     return jsonify({"status": "success"})
 
+def sanitizar_equipo_archivo(equipo):
+    """Normaliza el nombre de un equipo para usarlo de forma segura en un nombre de archivo."""
+    s = re.sub(r'[^A-Za-z0-9]+', '_', (equipo or '').strip().upper())
+    return s.strip('_') or 'SINEQUIPO'
+
 @app.route('/upload_foto', methods=['POST'])
 def upload_foto():
     data = request.json
     usuario = data.get('usuario')
+    equipo = data.get('equipo')
     dia = data.get('dia')
+    clave = sanitizar_equipo_archivo(equipo) if equipo else usuario
     try:
         img_data = base64.b64decode(data.get('image').split(",")[1])
-        filename = f"entreno_{usuario}_{dia}.jpg"
+        filename = f"entreno_{clave}_{dia}.jpg"
         with open(os.path.join(UPLOAD_FOLDER, filename), "wb") as f:
             f.write(img_data)
         return jsonify({"status": "success"})
@@ -2210,6 +2218,7 @@ from formulario_partido import formulario_partido_bp # Importar el nuevo bluepri
 from inscripcion import inscripcion_bp # Importar el blueprint de inscripción
 from asistente_ia import asistente_bp # Importar el blueprint del asistente IA
 from horarios import horarios_bp # Importar el blueprint de horarios (RFFM)
+from videoanalisis import videoanalisis_bp
 app.register_blueprint(financiero_bp)
 app.register_blueprint(deportivo_bp)
 app.register_blueprint(jugadores_datos_bp)
@@ -2222,6 +2231,7 @@ app.register_blueprint(formulario_partido_bp)
 app.register_blueprint(inscripcion_bp) # Registrar el blueprint de inscripción
 app.register_blueprint(asistente_bp) # Registrar el blueprint del asistente IA
 app.register_blueprint(horarios_bp) # Registrar el blueprint de horarios (RFFM)
+app.register_blueprint(videoanalisis_bp)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001, use_reloader=True)

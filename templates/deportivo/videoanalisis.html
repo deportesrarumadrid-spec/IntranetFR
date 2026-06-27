@@ -1,0 +1,228 @@
+{% extends 'dashboard.html' %}
+
+{% block content %}
+<style>
+    .va-wrapper { font-family: 'Montserrat', sans-serif; display: flex; flex-direction: column; gap: 20px; padding-bottom: 40px; }
+    .va-card { background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); padding: 22px; border: 1px solid #f1f5f9; }
+    .va-card h2 { font-size: 16px; font-weight: 900; color: #1e293b; text-transform: uppercase; margin: 0 0 14px; display: flex; align-items: center; gap: 10px; }
+    .va-card h2 i { color: #E31E24; }
+
+    .va-calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .va-calendar-header button { background: #f1f5f9; border: none; border-radius: 8px; width: 32px; height: 32px; cursor: pointer; color: #475569; font-size: 13px; }
+    .va-calendar-header span { font-weight: 800; font-size: 13px; color: #1e293b; text-transform: uppercase; }
+    .va-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .va-cal-dow { text-align: center; font-size: 9px; font-weight: 800; color: #94a3b8; padding: 4px 0; }
+    .va-cal-day { text-align: center; padding: 8px 0; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; color: #1e293b; }
+    .va-cal-day:hover { background: #f1f5f9; }
+    .va-cal-day.va-finde { color: #E31E24; }
+    .va-cal-day.va-empty { visibility: hidden; }
+    .va-cal-day.va-selected { background: #1e293b !important; color: white !important; }
+    .va-cal-day.va-hoy { border: 2px solid #E31E24; }
+
+    .va-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .va-table th { background: #f8f9fa; padding: 10px; text-align: center; border-bottom: 2px solid #eee; color: #64748b; font-weight: 800; font-size: 10px; text-transform: uppercase; }
+    .va-table td { padding: 8px; border-bottom: 1px solid #f1f5f9; text-align: center; vertical-align: middle; }
+    .va-table .va-equipo-col { text-align: left; font-weight: 800; color: #1e293b; min-width: 130px; }
+    .va-celda-editable { cursor: pointer; border-radius: 8px; padding: 8px; min-height: 20px; background: #f8fafc; font-size: 11px; color: #475569; max-width: 220px; word-break: break-word; }
+    .va-celda-editable:hover { background: #eef2f7; }
+    .va-celda-editable.va-vacia { color: #cbd5e1; font-style: italic; }
+    .va-celda-entrenador { font-size: 11px; color: #475569; max-width: 240px; word-break: break-word; text-align: left; }
+    .va-celda-entrenador.va-vacia { color: #cbd5e1; font-style: italic; text-align: center; }
+</style>
+
+<div class="va-wrapper">
+    <div class="va-card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h2 style="margin:0;"><i class="fas fa-video"></i> D. VIDEOANÁLISIS</h2>
+        <button class="btn-fin" style="background:#1e293b; color:white; border-radius:10px; padding:10px 16px; display:flex; align-items:center; gap:8px;" onclick="copiarEnlaceEntrenadores()">
+            <i class="fas fa-link"></i> COPIAR ENLACE PARA ENTRENADORES
+        </button>
+    </div>
+
+    <div class="va-card" style="max-width:360px;">
+        <h2><i class="fas fa-calendar-alt"></i> ELEGIR FIN DE SEMANA</h2>
+        <div class="va-calendar-header">
+            <button onclick="vaCambiarMes(-1)"><i class="fas fa-chevron-left"></i></button>
+            <span id="vaMesAnio"></span>
+            <button onclick="vaCambiarMes(1)"><i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div class="va-cal-grid" id="vaCalGridDow">
+            <div class="va-cal-dow">L</div><div class="va-cal-dow">M</div><div class="va-cal-dow">X</div>
+            <div class="va-cal-dow">J</div><div class="va-cal-dow">V</div><div class="va-cal-dow">S</div><div class="va-cal-dow">D</div>
+        </div>
+        <div class="va-cal-grid" id="vaCalGridDias"></div>
+    </div>
+
+    <div class="va-card" id="vaTablaCard" style="display:none;">
+        <h2><i class="fas fa-table"></i> <span id="vaTituloFecha"></span></h2>
+        <div style="overflow-x:auto;">
+            <table class="va-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2" style="vertical-align:middle;">EQUIPO</th>
+                        <th colspan="2">VIDEOANALISTA</th>
+                        <th rowspan="2" style="vertical-align:middle;">ENTRENADOR<br><span style="font-size:8px; color:#94a3b8; text-transform:none;">(análisis táctico postpartido)</span></th>
+                    </tr>
+                    <tr>
+                        <th>Momento con balón</th>
+                        <th>Momento sin balón</th>
+                    </tr>
+                </thead>
+                <tbody id="vaTbody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- BOCADILLO EDITAR CELDA -->
+<div id="vaPopoverEditar" style="display:none; position:fixed; background:white; border:1px solid #e2e8f0; border-radius:14px; box-shadow:0 18px 40px rgba(0,0,0,0.18); z-index:30000; width:320px; padding:16px;">
+    <div id="vaPopoverTitulo" style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase; margin-bottom:8px;"></div>
+    <textarea id="vaPopoverTextarea" rows="5" style="width:100%; box-sizing:border-box; padding:10px; border-radius:10px; border:2px solid #f1f5f9; font-size:12px; font-family:inherit; resize:vertical;"></textarea>
+    <div style="display:flex; gap:8px; margin-top:10px;">
+        <button onclick="document.getElementById('vaPopoverEditar').style.display='none'" style="flex:1; background:#f1f5f9; color:#475569; border:none; border-radius:8px; padding:9px; font-weight:800; font-size:11px; cursor:pointer;">CANCELAR</button>
+        <button onclick="vaGuardarCelda()" style="flex:1; background:#1e293b; color:white; border:none; border-radius:8px; padding:9px; font-weight:800; font-size:11px; cursor:pointer;">GUARDAR</button>
+    </div>
+</div>
+
+<script>
+const VA_EQUIPOS_F11 = {{ equipos_f11|tojson }};
+let vaMesActual = new Date();
+let vaFechaSeleccionada = null;
+let vaDatosFecha = {};
+let vaCeldaContexto = null;
+
+function vaCambiarMes(delta) {
+    vaMesActual.setMonth(vaMesActual.getMonth() + delta);
+    vaRenderCalendario();
+}
+
+function vaRenderCalendario() {
+    const meses = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+    document.getElementById('vaMesAnio').innerText = `${meses[vaMesActual.getMonth()]} ${vaMesActual.getFullYear()}`;
+
+    const primerDia = new Date(vaMesActual.getFullYear(), vaMesActual.getMonth(), 1);
+    const ultimoDia = new Date(vaMesActual.getFullYear(), vaMesActual.getMonth() + 1, 0);
+    let diaSemanaInicio = primerDia.getDay();
+    diaSemanaInicio = diaSemanaInicio === 0 ? 6 : diaSemanaInicio - 1; // Lunes=0
+
+    const hoy = new Date();
+    const hoyStr = hoy.toISOString().slice(0, 10);
+
+    let html = '';
+    for (let i = 0; i < diaSemanaInicio; i++) html += '<div class="va-cal-day va-empty"></div>';
+    for (let d = 1; d <= ultimoDia.getDate(); d++) {
+        const fecha = new Date(vaMesActual.getFullYear(), vaMesActual.getMonth(), d);
+        const fechaStr = fecha.toISOString().slice(0, 10);
+        const diaSemana = fecha.getDay();
+        const esFinde = diaSemana === 0 || diaSemana === 6;
+        const clases = ['va-cal-day'];
+        if (esFinde) clases.push('va-finde');
+        if (fechaStr === hoyStr) clases.push('va-hoy');
+        if (fechaStr === vaFechaSeleccionada) clases.push('va-selected');
+        html += `<div class="${clases.join(' ')}" onclick="vaSeleccionarFecha('${fechaStr}')">${d}</div>`;
+    }
+    document.getElementById('vaCalGridDias').innerHTML = html;
+}
+
+async function vaSeleccionarFecha(fechaStr) {
+    vaFechaSeleccionada = fechaStr;
+    vaRenderCalendario();
+    document.getElementById('vaTablaCard').style.display = 'block';
+    const [y, m, d] = fechaStr.split('-');
+    document.getElementById('vaTituloFecha').innerText = `FIN DE SEMANA DEL ${d}/${m}/${y}`;
+
+    try {
+        const res = await fetch(`/api/videoanalisis?fecha=${fechaStr}`);
+        const data = await res.json();
+        vaDatosFecha = (data.datos || {});
+    } catch (e) {
+        vaDatosFecha = {};
+    }
+    vaRenderTabla();
+}
+
+function vaRenderTabla() {
+    const tbody = document.getElementById('vaTbody');
+    if (!VA_EQUIPOS_F11.length) {
+        tbody.innerHTML = '<tr><td colspan="4" style="color:#94a3b8; padding:20px;">No hay equipos F11 configurados.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = VA_EQUIPOS_F11.map(equipo => {
+        const item = vaDatosFecha[equipo] || {};
+        const celda = (campo) => {
+            const valor = item[campo] || '';
+            const vacia = !valor;
+            return `<div class="va-celda-editable ${vacia ? 'va-vacia' : ''}" onclick="vaAbrirEditor(event, '${equipo.replace(/'/g, "\\'")}', '${campo}')">${vacia ? 'Clic para escribir...' : valor.replace(/</g, '&lt;')}</div>`;
+        };
+        const analisisEntrenador = item['ANALISIS_ENTRENADOR'] || '';
+        return `<tr>
+            <td class="va-equipo-col">${equipo}</td>
+            <td>${celda('MOMENTO_CON_BALON')}</td>
+            <td>${celda('MOMENTO_SIN_BALON')}</td>
+            <td class="va-celda-entrenador ${analisisEntrenador ? '' : 'va-vacia'}">${analisisEntrenador ? analisisEntrenador.replace(/</g, '&lt;') : 'Pendiente del entrenador'}</td>
+        </tr>`;
+    }).join('');
+}
+
+function vaAbrirEditor(evt, equipo, campo) {
+    vaCeldaContexto = { equipo, campo };
+    const etiquetas = { MOMENTO_CON_BALON: 'Momento con balón', MOMENTO_SIN_BALON: 'Momento sin balón' };
+    document.getElementById('vaPopoverTitulo').innerText = `${equipo} — ${etiquetas[campo] || campo}`;
+    document.getElementById('vaPopoverTextarea').value = (vaDatosFecha[equipo] && vaDatosFecha[equipo][campo]) || '';
+
+    const pop = document.getElementById('vaPopoverEditar');
+    pop.style.display = 'block';
+    const rect = evt.currentTarget.getBoundingClientRect();
+    const popWidth = pop.offsetWidth || 320;
+    let left = rect.left;
+    if (left + popWidth > window.innerWidth - 10) left = window.innerWidth - popWidth - 10;
+    pop.style.left = `${Math.max(10, left)}px`;
+    pop.style.top = `${rect.bottom + 8}px`;
+    document.getElementById('vaPopoverTextarea').focus();
+}
+
+async function vaGuardarCelda() {
+    if (!vaCeldaContexto || !vaFechaSeleccionada) return;
+    const { equipo, campo } = vaCeldaContexto;
+    const valor = document.getElementById('vaPopoverTextarea').value;
+    showLoader();
+    try {
+        await fetch('/api/videoanalisis', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ fecha: vaFechaSeleccionada, equipo, campo, valor })
+        });
+        if (!vaDatosFecha[equipo]) vaDatosFecha[equipo] = {};
+        vaDatosFecha[equipo][campo] = valor;
+        document.getElementById('vaPopoverEditar').style.display = 'none';
+        vaRenderTabla();
+    } catch (e) {
+        alert('Error al guardar.');
+    } finally {
+        hideLoader();
+    }
+}
+
+document.addEventListener('click', function(evt) {
+    const pop = document.getElementById('vaPopoverEditar');
+    if (pop && pop.style.display === 'block' && !pop.contains(evt.target) && !evt.target.closest('.va-celda-editable')) {
+        pop.style.display = 'none';
+    }
+});
+
+function copiarEnlaceEntrenadores() {
+    const url = `${window.location.origin}/analisis-postpartido`;
+    navigator.clipboard.writeText(url).then(() => {
+        mostrarPopUpExito ? mostrarPopUpExito('ENLACE COPIADO') : alert('Enlace copiado: ' + url);
+    }).catch(() => alert('Enlace: ' + url));
+}
+
+function mostrarPopUpExito(mensaje) {
+    const popup = document.createElement('div');
+    popup.style = "position: fixed; top: 20px; right: 20px; background: #198754; color: white; padding: 15px 25px; border-radius: 12px; font-weight: 900; font-size: 12px; z-index: 9999; box-shadow: 0 10px 20px rgba(0,0,0,0.2);";
+    popup.innerHTML = `<i class="fas fa-check-circle"></i> ${mensaje}`;
+    document.body.appendChild(popup);
+    setTimeout(() => popup.remove(), 3000);
+}
+
+vaRenderCalendario();
+</script>
+{% endblock %}

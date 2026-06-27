@@ -1135,7 +1135,7 @@ function renderRopaStructure() {
             contadorNombrePack[col] = (contadorNombrePack[col] || 0) + 1;
             const etiquetaPrenda = contadorNombrePack[col] > 1 ? `${col} ${contadorNombrePack[col]}` : col;
             contenido = `
-                <div style="font-size: 7.5px; color: #94a3b8; font-weight: 800; text-transform: uppercase; white-space: nowrap;">PACK ${pack}</div>
+                <div style="font-size: 7.5px; color: ${pack === 'GRANDE' ? '#1e293b' : '#94a3b8'}; font-weight: 800; text-transform: uppercase; white-space: nowrap;">PACK ${pack}</div>
                 <div style="font-size: 9px; color: #1e293b; font-weight: 900; white-space: nowrap;">${etiquetaPrenda}</div>
             `;
         } else {

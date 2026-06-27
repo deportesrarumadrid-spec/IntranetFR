@@ -247,6 +247,20 @@
             <div class="card-title" style="margin-bottom: 15px;"><i class="fas fa-bell-concierge"></i> CONVOCATORIAS</div>
             <div id="containerConvocatoriasMiEquipo"></div>
         </div>
+
+        <!-- Bloque 7: Videoanálisis (Full width) -->
+        <div class="card-modern" style="grid-column: 1 / -1;">
+            <div class="card-title" style="margin-bottom: 15px;"><i class="fas fa-video"></i> VIDEOANÁLISIS</div>
+            <div id="containerVideoanalisisMiEquipo" style="display:flex; flex-direction:column; gap:12px;"></div>
+        </div>
+
+        <!-- Bloque 8: Metodología (Full width) -->
+        {% if categoria_metodologia %}
+        <div class="card-modern" style="grid-column: 1 / -1; padding:0; overflow:hidden;">
+            <div class="card-title" style="margin: 15px 15px 0;"><i class="fas fa-chalkboard-teacher"></i> METODOLOGÍA ({{ categoria_metodologia }})</div>
+            <div id="containerMetodologiaMiEquipo"></div>
+        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -590,8 +604,103 @@
         }
     }
 
+    async function cargarVideoanalisisMiEquipo() {
+        const cont = document.getElementById('containerVideoanalisisMiEquipo');
+        if (!cont) return;
+        cont.innerHTML = '<div style="color:#94a3b8; font-size:12px;">Cargando...</div>';
+        try {
+            const res = await fetch('/api/videoanalisis/mi_equipo');
+            const data = await res.json();
+            const filas = data.datos || [];
+            if (!filas.length) {
+                cont.innerHTML = '<div style="color:#94a3b8; font-size:12px;">Todavía no hay videoanálisis registrado para este equipo.</div>';
+                return;
+            }
+            cont.innerHTML = filas.map(f => {
+                const [y, m, d] = (f.FECHA || '').split('-');
+                const fechaTxt = (y && m && d) ? `${d}/${m}/${y}` : f.FECHA;
+                const bloque = (titulo, valor) => `
+                    <div style="background:#f8fafc; border-radius:10px; padding:10px 14px;">
+                        <div style="font-size:9px; font-weight:800; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">${titulo}</div>
+                        <div style="font-size:12px; color:${valor ? '#1e293b' : '#cbd5e1'};">${valor || 'Sin datos todavía'}</div>
+                    </div>`;
+                return `
+                <div style="border:1px solid #f1f5f9; border-radius:14px; padding:14px;">
+                    <div style="font-weight:900; font-size:13px; color:#1e293b; margin-bottom:10px;"><i class="fas fa-calendar-day" style="color:#E31E24;"></i> Fin de semana del ${fechaTxt}</div>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px;">
+                        ${bloque('Momento con balón', f.MOMENTO_CON_BALON)}
+                        ${bloque('Momento sin balón', f.MOMENTO_SIN_BALON)}
+                        ${bloque('Análisis del entrenador', f.ANALISIS_ENTRENADOR)}
+                    </div>
+                </div>`;
+            }).join('');
+        } catch (e) {
+            cont.innerHTML = '<div style="color:#dc3545; font-size:12px;">Error al cargar el videoanálisis.</div>';
+        }
+    }
+
+    const MESES_METODOLOGIA_RO = ['SEP', 'OCT', 'NOV', 'DIC', 'ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN'];
+    const MACROCICLOS_METODOLOGIA_RO = [
+        { nombre: 'MACROCICLO I', meses: ['SEP', 'OCT', 'NOV', 'DIC'] },
+        { nombre: 'MACROCICLO II', meses: ['ENE', 'FEB', 'MAR'] },
+        { nombre: 'MACROCICLO III', meses: ['ABR', 'MAY'] }
+    ];
+
+    async function cargarMetodologiaMiEquipo() {
+        const cont = document.getElementById('containerMetodologiaMiEquipo');
+        if (!cont) return;
+        const categoria = '{{ categoria_metodologia or "" }}';
+        if (!categoria) return;
+        cont.innerHTML = '<div style="color:#94a3b8; font-size:12px; padding:15px;">Cargando...</div>';
+        try {
+            const res = await fetch(`/api/metodologia?categoria=${encodeURIComponent(categoria)}`);
+            const data = await res.json();
+            renderMetodologiaMiEquipoSoloLectura(data);
+        } catch (e) {
+            cont.innerHTML = '<div style="color:#dc3545; font-size:12px; padding:15px;">Error al cargar la metodología.</div>';
+        }
+    }
+
+    function renderFilaMetodologiaRO(fila, etiqueta, esPrimera, totalFilas) {
+        let html = '<tr>';
+        if (esPrimera) html += `<td style="background:#f1f5f9; font-weight:900; color:#333; writing-mode:vertical-rl; text-orientation:mixed; letter-spacing:3px; padding:6px 2px; border:1px solid #ddd;" rowspan="${totalFilas}">${etiqueta}</td>`;
+        MESES_METODOLOGIA_RO.forEach(mes => {
+            html += `<td style="border:1px solid #ddd; padding:6px; text-align:center; font-size:11px; font-weight:700; color:#1e293b;">${(fila[mes] || '').replace(/</g, '&lt;')}</td>`;
+        });
+        html += '</tr>';
+        return html;
+    }
+
+    function renderMetodologiaMiEquipoSoloLectura(data) {
+        const cont = document.getElementById('containerMetodologiaMiEquipo');
+        const tecnico = (data.tecnico && data.tecnico.length) ? data.tecnico : [{}];
+        const tactico = (data.tactico && data.tactico.length) ? data.tactico : [{}];
+
+        let cabecera = '<tr><th rowspan="2" style="width:30px; border:1px solid #ddd;"></th>';
+        MACROCICLOS_METODOLOGIA_RO.forEach(mc => { cabecera += `<th colspan="${mc.meses.length}" style="border:1px solid #ddd; background:#f8f9fa; font-weight:900;">${mc.nombre}</th>`; });
+        cabecera += '<th style="width:40px; border:1px solid #ddd;"></th></tr><tr>';
+        MACROCICLOS_METODOLOGIA_RO.forEach(mc => { mc.meses.forEach(mes => { cabecera += `<th style="border:1px solid #ddd; background:#f8f9fa; color:#E31E24; font-size:13px;">${mes}</th>`; }); });
+        cabecera += '<th style="border:1px solid #ddd; background:#f8f9fa; color:#E31E24; font-size:10px;">JUN</th></tr>';
+
+        let filasHtml = tecnico.map((f, i) => renderFilaMetodologiaRO(f, 'TÉCNICO', i === 0, tecnico.length)).join('');
+        filasHtml += `<tr><td colspan="${MESES_METODOLOGIA_RO.length + 2}" style="border:none; height:8px;"></td></tr>`;
+        filasHtml += tactico.map((f, i) => renderFilaMetodologiaRO(f, 'TÁCTICO', i === 0, tactico.length)).join('');
+
+        cont.innerHTML = `
+            <div style="background:#E31E24; color:white; font-family:'Archivo Black',sans-serif; font-size:24px; text-align:center; padding:14px; text-transform:uppercase;">${data.banner || data.categoria || ''}</div>
+            <div style="overflow-x:auto; padding:10px;">
+                <table style="width:100%; border-collapse:collapse; font-size:11px;">
+                    <thead>${cabecera}</thead>
+                    <tbody>${filasHtml}</tbody>
+                </table>
+            </div>
+        `;
+    }
+
     window.addEventListener('load', function() {
         cargarStats();
+        cargarVideoanalisisMiEquipo();
+        cargarMetodologiaMiEquipo();
     });
 </script>
 {% endblock %}

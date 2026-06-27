@@ -26,6 +26,47 @@ def limpiar_texto_robusto(t):
     s = "".join(c for c in unicodedata.normalize('NFD', str(t)) if unicodedata.category(c) != 'Mn')
     return s.strip().upper()
 
+def sanitizar_equipo_archivo(equipo):
+    """Normaliza el nombre de un equipo para usarlo de forma segura en un nombre de archivo
+    (debe coincidir exactamente con la misma función en app.py)."""
+    s = re.sub(r'[^A-Za-z0-9]+', '_', (equipo or '').strip().upper())
+    return s.strip('_') or 'SINEQUIPO'
+
+CATEGORIAS_METODOLOGIA = ['ALEVIN F7', 'ALEVIN F11', 'PREBENJAMIN', 'BENJAMIN', 'INFANTIL', 'CHUPETIN']
+MES_ABREVIATURA_METODOLOGIA = {
+    '01': 'ENE', '02': 'FEB', '03': 'MAR', '04': 'ABR', '05': 'MAY', '06': 'JUN',
+    '09': 'SEP', '10': 'OCT', '11': 'NOV', '12': 'DIC'
+}
+
+def obtener_tactico_tecnico_metodologia(client, NOMBRE_EXCEL, equipo, mes_actual):
+    """Deriva las cadenas de objetivos TÁCTICO/TÉCNICO del mes a partir de la Metodología
+    por Equipo (Coordinación > Metodología), según la categoría del equipo. Devuelve
+    (tactico_str, tecnico_str), vacíos si no hay metodología para esa categoría/mes."""
+    tactico_str, tecnico_str = "", ""
+    try:
+        nombre_eq_norm = limpiar_texto_robusto(equipo).replace('-', '').replace(' ', '')
+        categoria_eq = None
+        for cat in sorted(CATEGORIAS_METODOLOGIA, key=len, reverse=True):
+            if cat.replace(' ', '') in nombre_eq_norm:
+                categoria_eq = cat
+                break
+        mes_abrev = MES_ABREVIATURA_METODOLOGIA.get(mes_actual.split('-')[1])
+        if categoria_eq and mes_abrev:
+            sheet_met = client.open(NOMBRE_EXCEL).worksheet("METODOLOGIA_CATEGORIA")
+            all_met = sheet_met.get_all_values()
+            for row in all_met[1:]:
+                if len(row) > 0 and row[0].strip().upper() == categoria_eq:
+                    tecnico_rows = json.loads(row[2]) if len(row) > 2 and row[2] else []
+                    tactico_rows = json.loads(row[3]) if len(row) > 3 and row[3] else []
+                    tec_items = [r.get(mes_abrev, '').strip() for r in tecnico_rows if r.get(mes_abrev, '').strip()]
+                    tac_items = [r.get(mes_abrev, '').strip() for r in tactico_rows if r.get(mes_abrev, '').strip()]
+                    if tec_items: tecnico_str = ", ".join(tec_items)
+                    if tac_items: tactico_str = ", ".join(tac_items)
+                    break
+    except Exception as e:
+        print(f"Error vinculando metodología con los objetivos del mes: {e}")
+    return tactico_str, tecnico_str
+
 @deportivo_bp.route('/deportivo')
 def deportivo():
     # Importamos las rutas de carpetas desde la app principal
@@ -109,6 +150,12 @@ def deportivo():
                             objetivos["completados"].append(f"{int(d)}-{o.strip()}")
     except Exception as e:
         print(f"Error cargando objetivos desde Sheets para vista: {e}")
+
+    # 3b. La planificación TÁCTICO/TÉCNICO del mes se nutre de la Metodología por Equipo
+    # (Coordinación > Metodología), para que el calendario cuadre siempre con lo planificado allí.
+    tactico_met, tecnico_met = obtener_tactico_tecnico_metodologia(client, NOMBRE_EXCEL, equipo_activo, mes_actual)
+    if tecnico_met: objetivos["tecnico"] = tecnico_met
+    if tactico_met: objetivos["tactico"] = tactico_met
 
     # 5. Obtener ejercicios semanales para el equipo activo
     ejercicios_semanales = {}
@@ -199,9 +246,10 @@ def deportivo():
             'ejercicios': ejes_fijos
         })
 
-    # 3. Fotos subidas
+    # 3. Fotos subidas (vinculadas al equipo, no al usuario que las sube)
+    clave_equipo_fotos = sanitizar_equipo_archivo(equipo_activo)
     if os.path.exists(UPLOAD_FOLDER):
-        archivos_reales = [f for f in os.listdir(UPLOAD_FOLDER) if f.startswith(f"entreno_{usuario}_")]
+        archivos_reales = [f for f in os.listdir(UPLOAD_FOLDER) if f.startswith(f"entreno_{clave_equipo_fotos}_")]
     else:
         archivos_reales = []
     fotos_subidas = [f.split('_')[-1].split('.')[0] for f in archivos_reales]
@@ -370,6 +418,61 @@ def api_tecnificaciones():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@deportivo_bp.route('/api/metodologia', methods=['GET', 'POST'])
+def api_metodologia():
+    import json
+    client = current_app.gs_client
+    NOMBRE_EXCEL = current_app.gs_name
+    sheet_name = "METODOLOGIA_CATEGORIA"
+    try:
+        try:
+            sheet = client.open(NOMBRE_EXCEL).worksheet(sheet_name)
+        except Exception:
+            sheet = client.open(NOMBRE_EXCEL).add_worksheet(title=sheet_name, rows=200, cols=4)
+            sheet.append_row(["CATEGORIA", "BANNER", "TECNICO_JSON", "TACTICO_JSON"])
+
+        if request.method == 'GET':
+            categoria = (request.args.get('categoria') or '').strip().upper()
+            if not categoria:
+                return jsonify({"status": "error", "message": "Falta la categoría."}), 400
+            all_v = sheet.get_all_values()
+            for row in all_v[1:]:
+                if len(row) > 0 and row[0].strip().upper() == categoria:
+                    try:
+                        tecnico = json.loads(row[2]) if len(row) > 2 and row[2] else []
+                    except (json.JSONDecodeError, IndexError):
+                        tecnico = []
+                    try:
+                        tactico = json.loads(row[3]) if len(row) > 3 and row[3] else []
+                    except (json.JSONDecodeError, IndexError):
+                        tactico = []
+                    return jsonify({
+                        "categoria": categoria,
+                        "banner": row[1] if len(row) > 1 and row[1] else categoria,
+                        "tecnico": tecnico,
+                        "tactico": tactico
+                    })
+            return jsonify({"categoria": categoria, "banner": categoria, "tecnico": [{}], "tactico": [{}]})
+
+        datos = request.json or {}
+        categoria = (datos.get('categoria') or '').strip().upper()
+        if not categoria:
+            return jsonify({"status": "error", "message": "Falta la categoría."}), 400
+        banner = datos.get('banner') or categoria
+        tecnico_json = json.dumps(datos.get('tecnico') or [])
+        tactico_json = json.dumps(datos.get('tactico') or [])
+
+        all_v = sheet.get_all_values()
+        for i, row in enumerate(all_v[1:], start=2):
+            if len(row) > 0 and row[0].strip().upper() == categoria:
+                sheet.update(f'A{i}:D{i}', [[categoria, banner, tecnico_json, tactico_json]], value_input_option='USER_ENTERED')
+                return jsonify({"status": "success"})
+        sheet.append_row([categoria, banner, tecnico_json, tactico_json])
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error api_metodologia: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @deportivo_bp.route('/direccion_deportiva')
 def direccion_deportiva():
     client = current_app.gs_client
@@ -485,6 +588,63 @@ def api_objetivos_mensuales():
             sheet.append_row([mes_final, equipo, "", tactico_str, tecnico_str])
 
     return jsonify({"status": "success"})
+
+@deportivo_bp.route('/api/revision_objetivos')
+def api_revision_objetivos():
+    """Para el popup de REVISIÓN OBJETIVOS en Dirección Deportiva: devuelve, para un
+    equipo y mes dados, los objetivos TÁCTICO/TÉCNICO (desde Metodología) día a día
+    junto con qué días ya están marcados como completados."""
+    client = current_app.gs_client
+    NOMBRE_EXCEL = current_app.gs_name
+
+    equipo = (request.args.get('equipo') or '').strip()
+    mes_actual = (request.args.get('mes') or '').strip()
+    if not equipo or not mes_actual:
+        return jsonify({"status": "error", "message": "Falta equipo o mes."}), 400
+
+    try:
+        anio, mes = map(int, mes_actual.split('-'))
+        ultimo_dia = calendar.monthrange(anio, mes)[1]
+    except Exception:
+        return jsonify({"status": "error", "message": "Mes inválido."}), 400
+
+    tactico_str, tecnico_str = obtener_tactico_tecnico_metodologia(client, NOMBRE_EXCEL, equipo, mes_actual)
+
+    completados = []
+    try:
+        sheet_obj = client.open(NOMBRE_EXCEL).worksheet("OBJ TACTEC")
+        all_objs = sheet_obj.get_all_values()
+        target_y, target_m = mes_actual.split('-')
+        for row in all_objs[1:]:
+            if len(row) < 3: continue
+            fecha_row = row[0].strip()
+            if '/' not in fecha_row: continue
+            d, m, y = [p.zfill(2) if p.isdigit() else p for p in fecha_row.split('/')]
+            if m == target_m and y == target_y and row[1].strip().upper() == equipo.upper():
+                if row[2].strip():
+                    for o in row[2].split(','):
+                        if o.strip():
+                            completados.append(f"{int(d)}-{o.strip()}")
+    except Exception as e:
+        print(f"Error cargando completados para revisión de objetivos: {e}")
+
+    fotos_subidas = []
+    try:
+        UPLOAD_FOLDER = current_app.config.get('UPLOAD_FOLDER', os.path.join(os.getcwd(), 'static', 'uploads'))
+        if os.path.exists(UPLOAD_FOLDER):
+            clave_equipo = sanitizar_equipo_archivo(equipo)
+            prefijo = f"entreno_{clave_equipo}_"
+            fotos_subidas = [f[len(prefijo):].split('.')[0] for f in os.listdir(UPLOAD_FOLDER) if f.startswith(prefijo)]
+    except Exception as e:
+        print(f"Error listando fotos para revisión de objetivos: {e}")
+
+    return jsonify({
+        "tactico": tactico_str,
+        "tecnico": tecnico_str,
+        "completados": completados,
+        "dias": ultimo_dia,
+        "fotos_subidas": fotos_subidas
+    })
 
 @deportivo_bp.route('/api/ejercicios_semanales', methods=['GET', 'POST'])
 def api_ejercicios_semanales():

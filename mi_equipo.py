@@ -34,17 +34,34 @@ def _parse_fecha_flexible(f_str):
     except: pass
     return None
 
+CATEGORIAS_METODOLOGIA = ['ALEVIN F7', 'ALEVIN F11', 'PREBENJAMIN', 'BENJAMIN', 'INFANTIL', 'CHUPETIN']
+
+
+def categoria_metodologia_de_equipo(nombre_equipo):
+    """Mapea el nombre real de un equipo (ej. 'BENJAMIN A') a una de las categorías
+    fijas de Metodología (ej. 'BENJAMIN'). Comprueba primero las más largas/específicas
+    para no confundir 'ALEVIN F7' con un simple 'ALEVIN'."""
+    nombre = (nombre_equipo or '').strip().upper().replace('-', '')
+    nombre_sin_espacios = nombre.replace(' ', '')
+    for categoria in sorted(CATEGORIAS_METODOLOGIA, key=len, reverse=True):
+        if categoria.replace(' ', '') in nombre_sin_espacios:
+            return categoria
+    return None
+
+
 @mi_equipo_bp.route('/mi-equipo')
 def mi_equipo():
     usuario = session.get('usuario')
     if not usuario:
         return redirect('/')
-    
+
     equipo = session.get('equipo_defecto')
     if not equipo:
         return redirect(url_for('seleccionar_equipo'))
-        
-    return render_template('mi_equipo.html', usuario=usuario, equipo=equipo, equipo_defecto=equipo)
+
+    categoria_metodologia = categoria_metodologia_de_equipo(equipo)
+
+    return render_template('mi_equipo.html', usuario=usuario, equipo=equipo, equipo_defecto=equipo, categoria_metodologia=categoria_metodologia)
 
 def _limpiar_h(h):
     """Normaliza cabeceras para búsquedas robustas de columnas."""

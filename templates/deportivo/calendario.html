@@ -21,8 +21,8 @@
 .save-btn:hover { background: #f9f9f9; transform: scale(1.05); color: var(--green); }
 
         /* Calendario */
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr) 1.5fr; gap: 10px; }
-        .day { background: white; border: 1px solid #ddd; border-radius: 10px; padding: 12px; min-height: 160px; display: flex; flex-direction: column; position: relative; }
+        .grid { display: grid; grid-template-columns: repeat(5, 1.3fr) 0.55fr; gap: 8px; }
+        .day { background: white; border: 1px solid #ddd; border-radius: 10px; padding: 8px; min-height: 140px; display: flex; flex-direction: column; position: relative; }
         .day.today { border: 2px solid var(--red); }
         .hoy-label { 
     position: absolute; 
@@ -37,18 +37,19 @@
     font-weight: bold; 
     z-index: 20; 
 }
-        .day-num { font-size: 18px; font-weight: 800; margin-bottom: 5px; }
-        
-        .cat-label { font-size: 10px; font-weight: 800; color: #333; margin-top: 5px; text-transform: uppercase; }
-        .item-list { font-size: 12px; color: #666; cursor: pointer; min-height: 15px; }
+        .day-num { font-size: 15px; font-weight: 800; margin-bottom: 2px; }
+
+        .cat-label { font-size: 8.5px; font-weight: 800; color: #333; margin-top: 3px; margin-bottom: 1px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .item-list { font-size: 8.5px; line-height: 1.15; color: #666; cursor: default; min-height: 15px; column-count: 2; column-gap: 6px; hyphens: auto; overflow-wrap: break-word; }
+        .item-list div { padding: 0; }
         .item-list div.checked { color: var(--green); font-weight: bold; }
 
-        .btn-foto { background: var(--red); color: white; border: none; width: 100%; padding: 10px; border-radius: 6px; font-size: 11px; font-weight: 800; cursor: pointer; margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .btn-foto { background: var(--red); color: white; border: none; width: 100%; padding: 6px; border-radius: 6px; font-size: 10px; font-weight: 800; cursor: pointer; margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 5px; }
 
-        .weekend { background: #eee; border: 1px dashed #ccc; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; position: relative; }
+        .weekend { background: #eee; border: 1px dashed #ccc; border-radius: 10px; padding: 8px 6px; display: flex; flex-direction: column; position: relative; }
         .weekend.today { border: 2px solid var(--red); background: #fff5f5; }
-        .we-names { display: flex; justify-content: space-between; font-size: 11px; color: #999; font-weight: bold; }
-        .btn-form { background: #ffcccc; color: var(--red); border: none; padding: 15px; border-radius: 10px; font-size: 11px; font-weight: bold; cursor: pointer; margin-top: auto; text-align: center; text-decoration: none; }
+        .we-names { display: flex; flex-direction: column; gap: 2px; font-size: 9px; color: #999; font-weight: bold; }
+        .btn-form { background: #ffcccc; color: var(--red); border: none; padding: 8px 4px; border-radius: 8px; font-size: 9px; font-weight: bold; cursor: pointer; margin-top: auto; text-align: center; text-decoration: none; }
 
         /* Footer Contadores */
         .footer-stats { margin-top: auto; padding-top: 20px; border-top: 1px solid #ddd; }
@@ -58,7 +59,7 @@
         .dot.active { background: var(--green); }
 
         /* Modal Selección Foto */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10005; justify-content: center; align-items: center; }
         .modal-content { background: white; padding: 25px; border-radius: 15px; text-align: center; width: 300px; }
         .modal-btn { display: block; width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
         /* Estilo para botón con foto subida */
@@ -917,7 +918,7 @@
                     dayDiv.querySelector(selector).innerHTML = arr.map(v => {
                         const idUnico = diaNum + "-" + v; // Ejemplo: "4-CENTRO"
                         const isChecked = itemsCompletados.includes(idUnico) ? 'checked' : '';
-                        return `<div class="${isChecked}" onclick="toggleCheck(this, '${diaNum}')">${v}</div>`;
+                        return `<div class="${isChecked}">${v}</div>`;
                     }).join('');
                 };
 
@@ -1596,11 +1597,14 @@
             if(v.srcObject) v.srcObject.getTracks().forEach(t => t.stop());
             return false;
         }
+function sanitizarEquipoArchivo(equipo) {
+    return (equipo || '').trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'SINEQUIPO';
+}
+
 function viewPhoto(dia) {
     currentDay = dia;
-    // Usamos la variable 'usuario' que ya está definida globalmente en el script
-    const userId = usuario;
-    document.getElementById('imgPreview').src = `/static/uploads/entreno_${userId}_${dia}.jpg?t=` + new Date().getTime();
+    const claveEquipo = sanitizarEquipoArchivo('{{ equipo_defecto }}');
+    document.getElementById('imgPreview').src = `/static/uploads/entreno_${claveEquipo}_${dia}.jpg?t=` + new Date().getTime();
     document.getElementById('viewPhotoModal').style.display = 'flex';
 }
 
@@ -1633,7 +1637,7 @@ function viewPhoto(dia) {
             fetch('/upload_foto', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ usuario: usuario, dia: currentDay, image: base64 })
+                body: JSON.stringify({ usuario: usuario, equipo: '{{ equipo_defecto }}', dia: currentDay, image: base64 })
             }).then(() => {
                 alert("Archivo subido!");
                 location.reload();

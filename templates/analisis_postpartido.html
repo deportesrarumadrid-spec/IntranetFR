@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Análisis Táctico Postpartido - ADN FUENTE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --red: #E31E24; --bg: #f4f7f6; --dark: #1e293b; --border: #e2e8f0; }
+        body { font-family: 'Montserrat', sans-serif; background-color: var(--bg); margin: 0; padding: 0; color: var(--dark); padding-bottom: 50px; }
+
+        .header { background: var(--red); color: white; text-align: center; padding: 25px 15px; font-family: 'Archivo Black', sans-serif; box-shadow: 0 4px 15px rgba(227,30,36,0.3); }
+        .header h1 { margin: 0; font-size: 22px; line-height: 1.1; letter-spacing: -1px; text-transform: uppercase; }
+        .header .subtitle { font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 11px; margin-top: 10px; opacity: 0.9; }
+
+        .form-container { max-width: 600px; margin: -10px auto 20px auto; padding: 0 15px; position: relative; z-index: 10; }
+        .card { background: white; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.05); }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group:last-child { margin-bottom: 0; }
+        label { display: block; font-weight: 800; font-size: 13px; margin-bottom: 8px; color: #475569; }
+        .req { color: var(--red); margin-left: 3px; }
+
+        input[type="date"], select, textarea { width: 100%; padding: 14px 16px; border: 2px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 15px; font-weight: 600; color: var(--dark); background: #f8fafc; transition: all 0.3s; box-sizing: border-box; }
+        input[type="date"]:focus, select:focus, textarea:focus { border-color: var(--red); outline: none; background: white; box-shadow: 0 0 0 4px rgba(227,30,36,0.1); }
+        textarea { resize: vertical; min-height: 160px; }
+
+        .btn-submit { width: 100%; background: linear-gradient(135deg, var(--red) 0%, #b31d2c 100%); color: white; border: none; padding: 18px; border-radius: 12px; font-family: 'Archivo Black', sans-serif; font-size: 16px; cursor: pointer; transition: all 0.3s; box-shadow: 0 6px 20px rgba(227,30,36,0.3); display: flex; justify-content: center; align-items: center; gap: 10px; text-transform: uppercase; margin-top: 10px; }
+        .btn-submit:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; }
+
+        .success-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; box-sizing: border-box; }
+        .success-overlay i { font-size: 70px; color: #10b981; margin-bottom: 20px; }
+        .success-overlay h2 { font-family: 'Archivo Black', sans-serif; color: var(--dark); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Análisis Táctico Postpartido</h1>
+        <div class="subtitle">CLUB FUENTELARREYNA &middot; D. VIDEOANÁLISIS</div>
+    </div>
+
+    <div class="form-container">
+        <div class="card">
+            <div class="form-group">
+                <label>Equipo<span class="req">*</span></label>
+                <select id="equipo">
+                    <option value="">Selecciona tu equipo...</option>
+                    {% for equipo in equipos %}
+                    <option value="{{ equipo }}">{{ equipo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Fin de semana del partido<span class="req">*</span></label>
+                <input type="date" id="fecha">
+            </div>
+            <div class="form-group">
+                <label>Análisis táctico postpartido<span class="req">*</span></label>
+                <textarea id="analisis" placeholder="Escribe aquí tu análisis táctico del partido..."></textarea>
+            </div>
+        </div>
+
+        <button class="btn-submit" id="btnEnviar" onclick="enviarAnalisis()">
+            <i class="fas fa-paper-plane"></i> ENVIAR ANÁLISIS
+        </button>
+    </div>
+
+    <div class="success-overlay" id="successOverlay">
+        <i class="fas fa-check-circle"></i>
+        <h2>¡ANÁLISIS ENVIADO!</h2>
+        <p>Gracias, ya está disponible en D. Videoanálisis.</p>
+    </div>
+
+    <script>
+        async function enviarAnalisis() {
+            const equipo = document.getElementById('equipo').value;
+            const fecha = document.getElementById('fecha').value;
+            const analisis = document.getElementById('analisis').value.trim();
+
+            if (!equipo || !fecha || !analisis) {
+                alert('Rellena equipo, fecha y el análisis antes de enviar.');
+                return;
+            }
+
+            const btn = document.getElementById('btnEnviar');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ENVIANDO...';
+
+            try {
+                const res = await fetch('/analisis-postpartido', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ equipo, fecha, analisis })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    document.getElementById('successOverlay').style.display = 'flex';
+                } else {
+                    alert(data.message || 'Error al enviar el análisis.');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> ENVIAR ANÁLISIS';
+                }
+            } catch (e) {
+                alert('Error de conexión. Inténtalo de nuevo.');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> ENVIAR ANÁLISIS';
+            }
+        }
+    </script>
+</body>
+</html>
