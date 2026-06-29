@@ -2219,6 +2219,7 @@ from inscripcion import inscripcion_bp # Importar el blueprint de inscripción
 from asistente_ia import asistente_bp # Importar el blueprint del asistente IA
 from horarios import horarios_bp # Importar el blueprint de horarios (RFFM)
 from videoanalisis import videoanalisis_bp
+from gps import gps_bp
 app.register_blueprint(financiero_bp)
 app.register_blueprint(deportivo_bp)
 app.register_blueprint(jugadores_datos_bp)
@@ -2232,6 +2233,7 @@ app.register_blueprint(inscripcion_bp) # Registrar el blueprint de inscripción
 app.register_blueprint(asistente_bp) # Registrar el blueprint del asistente IA
 app.register_blueprint(horarios_bp) # Registrar el blueprint de horarios (RFFM)
 app.register_blueprint(videoanalisis_bp)
+app.register_blueprint(gps_bp)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001, use_reloader=True)

@@ -362,6 +362,7 @@
         {% if session.get('permisos', {}).get('ENTRENAMIENTOS') == 'SI' or session.get('permisos', {}).get('D.DEPORTIVA') == 'SI' or usuario|lower == 'admin' %}
         <a href="/clasificaciones" class="menu-item {{ 'active' if request.path == '/clasificaciones' }}" onclick="showLoader()">CLASIFICACIONES Y RESULTADOS</a>
         <a href="/videoanalisis" class="menu-item {{ 'active' if request.path == '/videoanalisis' }}" onclick="showLoader()">D.VIDEOANALISIS</a>
+        <a href="/gps" class="menu-item {{ 'active' if request.path == '/gps' }}" onclick="showLoader()">GPS</a>
         {% endif %}
     </div>
 
@@ -543,6 +544,7 @@
             { label: 'D. Deportiva - Usuarios y Contraseñas', ruta: '/direccion_deportiva', tab: 'tab-usuarios', keywords: 'claves accesos permisos' },
             { label: 'Clasificaciones y Resultados', ruta: '/clasificaciones', keywords: 'liga tabla puntos partidos resultados' },
             { label: 'D.Videoanálisis', ruta: '/videoanalisis', keywords: 'video analisis tactico postpartido videoanalista entrenador' },
+            { label: 'GPS', ruta: '/gps', keywords: 'gps sonra statsports informe rendimiento fisico tracking' },
         ];
 
         function toggleBuscadorIntranet(evt) {

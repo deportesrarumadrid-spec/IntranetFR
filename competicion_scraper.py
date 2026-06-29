@@ -388,7 +388,8 @@ def sync_rffm(username, password):
                     "posicion": posicion,
                     "ultimo_partido": None,
                     "clasificacion": [],
-                    "calendario": []
+                    "calendario": [],
+                    "calendario_grupo": []
                 })
                 continue
                 
@@ -642,6 +643,8 @@ def sync_rffm(username, password):
 
             # 6. Scraper del CALENDARIO COMPLETO
             calendario_completo = []
+            calendario_grupo = []  # TODOS los partidos del grupo (no solo los de Fuentelarreyna), para poder
+                                    # reconstruir clasificaciones históricas y el historial de cualquier rival
             link_cal = None
             for a in soup_jornada.find_all('a'):
                 href = a.get('href', '')
@@ -678,6 +681,7 @@ def sync_rffm(username, password):
 
                     # Buscar todos los bloques de jornada y sus partidos
                     seen_matches = set()
+                    seen_matches_grupo = set()
                     for t in soup_cal.find_all('table'):
                         th_el = t.find('th')
                         if th_el:
@@ -702,7 +706,28 @@ def sync_rffm(username, password):
                                     if len(cells) >= 5:
                                         local_raw = cells[0].text.strip()
                                         visit_raw = cells[4].text.strip()
-                                        
+
+                                        # Guardamos TODOS los partidos del grupo (no solo los nuestros), para poder
+                                        # reconstruir la clasificación de cualquier jornada y el historial de cualquier rival
+                                        local_g = " ".join(local_raw.split())
+                                        visit_g = " ".join(visit_raw.split())
+                                        if local_g and visit_g:
+                                            score_l_g = cells[1].text.strip()
+                                            score_v_g = cells[3].text.strip()
+                                            resultado_g = ""
+                                            if score_l_g.isdigit() and score_v_g.isdigit():
+                                                resultado_g = f"{int(score_l_g)} - {int(score_v_g)}"
+                                            clave_grupo = (jornada_actual, local_g, visit_g)
+                                            if clave_grupo not in seen_matches_grupo:
+                                                seen_matches_grupo.add(clave_grupo)
+                                                calendario_grupo.append({
+                                                    "jornada": jornada_actual,
+                                                    "fecha": fecha,
+                                                    "local": local_g,
+                                                    "visitante": visit_g,
+                                                    "resultado": resultado_g
+                                                })
+
                                         if "FUENTELARREYNA" in local_raw.upper() or "FUENTELARREYNA" in visit_raw.upper():
                                             es_local = "FUENTELARREYNA" in local_raw.upper()
                                             rival = visit_raw if es_local else local_raw
@@ -780,7 +805,8 @@ def sync_rffm(username, password):
                 "posicion": posicion,
                 "ultimo_partido": ultimo_partido,
                 "clasificacion": clasif_data,
-                "calendario": calendario_completo
+                "calendario": calendario_completo,
+                "calendario_grupo": calendario_grupo
             })
             
         # 6. Guardar en caché local
@@ -1670,3 +1696,191 @@ def guardar_convocatoria_anotacion(clave, datos):
     with open(CONVOCATORIA_ANOTACIONES_FILE, 'w', encoding='utf-8') as f:
         json.dump(anotaciones, f, ensure_ascii=False, indent=2)
     return actual
+
+
+# --- OBJ SEMANALES: objetivo automático por partido, clasificación reconstruida jornada a jornada,
+# e historial de cualquier rival. Todo a partir de "calendario_grupo" (ya cacheado), sin scraping adicional ---
+
+def _numero_jornada(jornada_str):
+    """'Jornada 23' -> 23. Si no se puede extraer, devuelve un número alto para no romper el orden."""
+    m = re.search(r'(\d+)', jornada_str or '')
+    return int(m.group(1)) if m else 999
+
+
+def calcular_clasificacion_en_jornada(calendario_grupo, hasta_jornada):
+    """Reconstruye la clasificación del grupo (puntos, jugados, G/E/P, GF, GC, posición) usando
+    solo los partidos con número de jornada <= hasta_jornada. Devuelve {nombre_equipo: {datos}}."""
+    tabla = {}
+
+    def _equipo(nombre):
+        if nombre not in tabla:
+            tabla[nombre] = {"equipo": nombre, "puntos": 0, "jugados": 0, "ganados": 0,
+                              "empatados": 0, "perdidos": 0, "goles_favor": 0, "goles_contra": 0}
+        return tabla[nombre]
+
+    for partido in calendario_grupo:
+        if _numero_jornada(partido.get('jornada')) > hasta_jornada:
+            continue
+        resultado = (partido.get('resultado') or '').strip()
+        m = re.search(r'(\d+)\s*-\s*(\d+)', resultado)
+        if not m:
+            continue
+        g_local, g_visit = int(m.group(1)), int(m.group(2))
+        local, visit = partido.get('local'), partido.get('visitante')
+        if not local or not visit:
+            continue
+
+        eq_local = _equipo(local)
+        eq_visit = _equipo(visit)
+        eq_local['jugados'] += 1
+        eq_visit['jugados'] += 1
+        eq_local['goles_favor'] += g_local
+        eq_local['goles_contra'] += g_visit
+        eq_visit['goles_favor'] += g_visit
+        eq_visit['goles_contra'] += g_local
+
+        if g_local > g_visit:
+            eq_local['ganados'] += 1
+            eq_local['puntos'] += 3
+            eq_visit['perdidos'] += 1
+        elif g_local < g_visit:
+            eq_visit['ganados'] += 1
+            eq_visit['puntos'] += 3
+            eq_local['perdidos'] += 1
+        else:
+            eq_local['empatados'] += 1
+            eq_local['puntos'] += 1
+            eq_visit['empatados'] += 1
+            eq_visit['puntos'] += 1
+
+    # Orden habitual: puntos desc, diferencia de goles desc, goles a favor desc
+    ordenados = sorted(tabla.values(), key=lambda e: (-e['puntos'], -(e['goles_favor'] - e['goles_contra']), -e['goles_favor']))
+    for i, eq in enumerate(ordenados, start=1):
+        eq['posicion'] = i
+
+    return {eq['equipo']: eq for eq in ordenados}
+
+
+def ultimos_resultados_equipo(calendario_grupo, equipo, hasta_jornada, n=2):
+    """Últimos n resultados de 'equipo' (jornadas anteriores a hasta_jornada) y contra quién fueron."""
+    partidos_equipo = []
+    for partido in calendario_grupo:
+        num = _numero_jornada(partido.get('jornada'))
+        if num >= hasta_jornada:
+            continue
+        local, visit = partido.get('local'), partido.get('visitante')
+        if local != equipo and visit != equipo:
+            continue
+        resultado = (partido.get('resultado') or '').strip()
+        m = re.search(r'(\d+)\s*-\s*(\d+)', resultado)
+        if not m:
+            continue
+        g_local, g_visit = int(m.group(1)), int(m.group(2))
+        es_local = (local == equipo)
+        rival = visit if es_local else local
+        g_favor = g_local if es_local else g_visit
+        g_contra = g_visit if es_local else g_local
+        estado = 'G' if g_favor > g_contra else ('E' if g_favor == g_contra else 'P')
+        partidos_equipo.append({"jornada_num": num, "rival": rival, "resultado": f"{g_favor} - {g_contra}", "estado": estado})
+
+    partidos_equipo.sort(key=lambda p: p['jornada_num'], reverse=True)
+    return partidos_equipo[:n]
+
+
+def calcular_objetivo(pos_nuestra, pts_nuestro, pos_rival, pts_rival):
+    """GANAR / GANAR/EMPATAR / EMPATAR / COMPETIR según diferencia de posición y puntos.
+    pos_dif > 0 = estamos mejor posicionados (numéricamente más arriba en la tabla)."""
+    if pos_nuestra is None or pos_rival is None or pts_nuestro is None or pts_rival is None:
+        return None
+    pos_dif = pos_rival - pos_nuestra
+    pts_dif = pts_nuestro - pts_rival
+
+    if pos_dif >= 3 and pts_dif >= 5:
+        return "GANAR"
+    if pos_dif < 0 or pts_dif < 0:
+        return "COMPETIR"
+    if abs(pos_dif) <= 1 and abs(pts_dif) <= 3:
+        return "EMPATAR"
+    return "GANAR/EMPATAR"
+
+
+def _cumple_objetivo(objetivo, estado_real):
+    """estado_real: 'G' (ganamos) / 'E' (empate) / 'P' (perdimos). Devuelve True/False/None (sin jugar aún)."""
+    if not objetivo or not estado_real:
+        return None
+    if objetivo == "GANAR":
+        return estado_real == 'G'
+    if objetivo in ("GANAR/EMPATAR", "EMPATAR"):
+        return estado_real in ('G', 'E')
+    if objetivo == "COMPETIR":
+        return True  # no hay forma de "fallar" este objetivo, cualquier resultado vale
+    return None
+
+
+def construir_obj_semanales():
+    """Recorre el caché de RFFM y devuelve, por cada partido de cada equipo del club: rival,
+    clasificación de ambos (previa al partido), objetivo calculado, resultado de ida si lo hay,
+    si se cumplió el objetivo, y los últimos resultados del rival (con nombre del rival al que se enfrentó)."""
+    cache = load_cached_data()
+    resultado_final = []
+
+    for equipo_data in cache.get('equipos', []):
+        categoria = equipo_data.get('categoria', '')
+        letra = equipo_data.get('letra', '')
+        nombre_grupo = equipo_data.get('nombre', '')
+        calendario = equipo_data.get('calendario', [])
+        calendario_grupo = equipo_data.get('calendario_grupo', [])
+
+        # Nombre exacto de Fuentelarreyna tal y como aparece en calendario_grupo
+        nombre_nuestro = None
+        for p in calendario_grupo:
+            if "FUENTELARREYNA" in (p.get('local') or '').upper():
+                nombre_nuestro = p['local']
+                break
+            if "FUENTELARREYNA" in (p.get('visitante') or '').upper():
+                nombre_nuestro = p['visitante']
+                break
+
+        for partido in calendario:
+            jornada_num = _numero_jornada(partido.get('jornada'))
+            rival = partido.get('rival', '')
+            rival_norm = rival.replace('"', '').strip().upper()
+
+            clasif_previa = calcular_clasificacion_en_jornada(calendario_grupo, jornada_num - 1) if calendario_grupo else {}
+            datos_nuestro = clasif_previa.get(nombre_nuestro) if nombre_nuestro else None
+            datos_rival = None
+            for nombre_eq, datos_eq in clasif_previa.items():
+                if nombre_eq.replace('"', '').strip().upper() == rival_norm:
+                    datos_rival = datos_eq
+                    break
+
+            objetivo = None
+            if datos_nuestro and datos_rival:
+                objetivo = calcular_objetivo(
+                    datos_nuestro.get('posicion'), datos_nuestro.get('puntos'),
+                    datos_rival.get('posicion'), datos_rival.get('puntos')
+                )
+
+            cumplido = _cumple_objetivo(objetivo, partido.get('estado'))
+            ultimos_rival = ultimos_resultados_equipo(calendario_grupo, rival, jornada_num, n=2) if calendario_grupo else []
+
+            resultado_final.append({
+                "categoria": categoria,
+                "letra": letra,
+                "grupo": nombre_grupo,
+                "jornada": partido.get('jornada'),
+                "jornada_num": jornada_num,
+                "fecha": partido.get('fecha'),
+                "es_local": partido.get('es_local'),
+                "rival": rival,
+                "rival_shield": partido.get('rival_shield', ''),
+                "resultado": partido.get('resultado', ''),
+                "estado": partido.get('estado', ''),
+                "objetivo": objetivo,
+                "cumplido": cumplido,
+                "datos_nuestro": datos_nuestro,
+                "datos_rival": datos_rival,
+                "ultimos_rival": ultimos_rival,
+            })
+
+    return resultado_final

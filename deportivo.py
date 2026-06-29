@@ -1,6 +1,5 @@
 import os
 import json
-import base64
 import calendar
 import unicodedata
 import re
@@ -1844,6 +1843,95 @@ def clasificaciones():
                            equipos=equipos,
                            data_rffm=data_rffm)
 
+@deportivo_bp.route('/clasificaciones/pdf')
+def clasificaciones_pdf():
+    usuario = session.get('usuario')
+    if not usuario:
+        return redirect('/')
+
+    from competicion_scraper import load_cached_data
+
+    cache = load_cached_data()
+    equipos_pdf = []
+
+    def _norm(s):
+        return (s or '').replace('"', '').replace("'", '').strip().upper()
+
+    for eq in cache.get('equipos', []):
+        calendario = eq.get('calendario', [])
+        calendario_grupo = eq.get('calendario_grupo', [])
+        clasificacion = eq.get('clasificacion', [])
+
+        # Último partido jugado (último con estado no vacío)
+        ultimo = None
+        for p in reversed(calendario):
+            if p.get('estado'):
+                ultimo = p
+                break
+
+        # Próximo partido (primer sin resultado)
+        proximo = None
+        for p in calendario:
+            if not p.get('estado') and not p.get('resultado'):
+                proximo = p
+                break
+
+        rival_proximo = proximo.get('rival', '') if proximo else ''
+        rival_norm = _norm(rival_proximo)
+
+        # Identificar nuestra fila y la del próximo rival en clasificación
+        idx_nuestro = None
+        idx_rival = None
+        for i, fila in enumerate(clasificacion):
+            nombre = _norm(fila.get('equipo', ''))
+            if 'FUENTELARREYNA' in nombre:
+                idx_nuestro = i
+            if rival_norm and nombre == rival_norm:
+                idx_rival = i
+
+        # Partidos del grupo en la última jornada jugada
+        jornada_label = ultimo.get('jornada', '') if ultimo else ''
+        partidos_jornada = [p for p in calendario_grupo if p.get('jornada') == jornada_label] if jornada_label else []
+
+        # Si no hay datos de grupo, al menos mostrar el nuestro
+        if not partidos_jornada and ultimo:
+            loc = 'CLUB FUENTELARREYNA' if ultimo.get('es_local') else (ultimo.get('rival', ''))
+            vis = ultimo.get('rival', '') if ultimo.get('es_local') else 'CLUB FUENTELARREYNA'
+            r = ultimo.get('resultado', '')
+            if r:
+                partes = r.split(' - ')
+                if len(partes) == 2:
+                    partidos_jornada = [{
+                        'local': loc, 'visitante': vis,
+                        'resultado': r, 'jornada': jornada_label, 'fecha': ultimo.get('fecha', ''),
+                        '_sintetico': True
+                    }]
+
+        equipos_pdf.append({
+            'nombre': eq.get('nombre', ''),
+            'categoria': eq.get('categoria', ''),
+            'letra': eq.get('letra', ''),
+            'clasificacion': clasificacion,
+            'idx_nuestro': idx_nuestro,
+            'idx_rival': idx_rival,
+            'rival_proximo': rival_proximo,
+            'ultimo': ultimo,
+            'proximo': proximo,
+            'jornada_label': jornada_label,
+            'partidos_jornada': partidos_jornada,
+        })
+
+    # Ordenar por categoría y letra para que salgan agrupados
+    orden_cat = {'AFICIONADO': 0, 'JUVENIL': 1, 'CADETE': 2, 'INFANTIL': 3,
+                 'ALEVIN': 4, 'ALEVIN F7': 5, 'BENJAMIN': 6, 'PREBENJAMIN': 7}
+    equipos_pdf.sort(key=lambda e: (orden_cat.get(e['categoria'], 99), e['letra']))
+
+    return render_template('deportivo/clasificaciones_pdf.html',
+                           usuario=usuario,
+                           equipos=equipos_pdf,
+                           last_updated=cache.get('last_updated', ''))
+
+
 @deportivo_bp.route('/api/sincronizar_rffm', methods=['POST'])
 def api_sincronizar_rffm():
     usuario = session.get('usuario')
@@ -1968,6 +2056,80 @@ def api_checklist_equipacion_guardar():
     from competicion_scraper import guardar_checklist_equipacion
     actual = guardar_checklist_equipacion(match_key, campos)
     return jsonify({"status": "success", "data": actual})
+
+
+def _get_or_crear_sheet_horarios_temporada():
+    client = current_app.gs_client
+    NOMBRE_EXCEL = current_app.gs_name
+    try:
+        return client.open(NOMBRE_EXCEL).worksheet("HORARIOS_TEMPORADA")
+    except Exception:
+        sheet = client.open(NOMBRE_EXCEL).add_worksheet(title="HORARIOS_TEMPORADA", rows="1000", cols="5")
+        sheet.append_row(["GRUPO", "HORARIO", "COLUMNA", "TEXTO", "COLOR"])
+        return sheet
+
+
+@deportivo_bp.route('/api/horarios_temporada', methods=['GET'])
+def api_horarios_temporada_get():
+    sheet = _get_or_crear_sheet_horarios_temporada()
+    all_v = sheet.get_all_values()
+    datos = {}
+    for row in all_v[1:]:
+        if len(row) < 3 or not row[0].strip():
+            continue
+        grupo, horario, columna = row[0].strip(), row[1].strip(), row[2].strip()
+        texto = row[3].strip() if len(row) > 3 else ''
+        color = row[4].strip() if len(row) > 4 else ''
+        datos.setdefault(grupo, {}).setdefault(horario, {})[columna] = {"texto": texto, "color": color}
+    return jsonify({"status": "success", "datos": datos})
+
+
+@deportivo_bp.route('/api/horarios_temporada', methods=['POST'])
+def api_horarios_temporada_guardar():
+    if not session.get('usuario'):
+        return jsonify({"status": "error", "message": "No autenticado"}), 401
+
+    data = request.json or {}
+    grupo = (data.get('grupo') or '').strip()
+    horario = (data.get('horario') or '').strip()
+    columna = (data.get('columna') or '').strip()
+    texto = data.get('texto')
+    color = data.get('color')
+    if not grupo or not horario or not columna:
+        return jsonify({"status": "error", "message": "Faltan datos (grupo, horario o columna)."}), 400
+
+    sheet = _get_or_crear_sheet_horarios_temporada()
+    all_v = sheet.get_all_values()
+    fila_idx = -1
+    for i, row in enumerate(all_v[1:], start=2):
+        if len(row) > 2 and row[0].strip() == grupo and row[1].strip() == horario and row[2].strip() == columna:
+            fila_idx = i
+            break
+
+    if fila_idx != -1:
+        fila_actual = all_v[fila_idx - 1]
+        texto_final = texto if texto is not None else (fila_actual[3].strip() if len(fila_actual) > 3 else '')
+        color_final = color if color is not None else (fila_actual[4].strip() if len(fila_actual) > 4 else '')
+        sheet.update(f'A{fila_idx}:E{fila_idx}', [[grupo, horario, columna, texto_final, color_final]], value_input_option='USER_ENTERED')
+    else:
+        sheet.append_row([grupo, horario, columna, texto or '', color or ''])
+
+    return jsonify({"status": "success"})
+
+
+# --- OBJ SEMANALES ---
+
+@deportivo_bp.route('/api/obj_semanales/resumen')
+def api_obj_semanales_resumen():
+    usuario = session.get('usuario')
+    if not usuario:
+        return jsonify({"status": "error"}), 401
+    from competicion_scraper import construir_obj_semanales
+    try:
+        datos = construir_obj_semanales()
+        return jsonify({"status": "ok", "partidos": datos})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @deportivo_bp.route('/api/shield_proxy')

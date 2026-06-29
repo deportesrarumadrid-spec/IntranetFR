@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Clasificaciones — Descarga</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 9.5px; background: #f0f2f5; color: #1e293b; }
+
+    .toolbar {
+        position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+        background: #1e293b; color: white; padding: 10px 20px;
+        display: flex; align-items: center; gap: 14px;
+    }
+    .toolbar h2 { font-size: 13px; font-weight: 900; flex: 1; }
+    .toolbar span { font-size: 10px; color: #94a3b8; }
+    .btn-imprimir {
+        background: #E31E24; color: white; border: none; border-radius: 8px;
+        padding: 8px 20px; font-weight: 800; font-size: 11px; cursor: pointer;
+    }
+    .btn-imprimir:hover { background: #c01820; }
+
+    .paginas-grid {
+        margin-top: 58px;
+        padding: 16px;
+        display: flex; flex-wrap: wrap; gap: 20px; justify-content: flex-start;
+    }
+
+    .pagina-equipo {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        width: 520px;
+        padding: 14px 16px;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    /* Cabecera de competición */
+    .comp-header {
+        display: flex; justify-content: space-between; align-items: flex-start;
+        margin-bottom: 10px;
+    }
+    .comp-titulo {
+        font-size: 11px; font-weight: 900; padding: 4px 10px; border: 1.5px solid #333;
+        border-radius: 4px; display: inline-block;
+    }
+    .comp-titulo .cat-label { font-weight: 900; }
+    .comp-temporada { font-size: 9.5px; color: #666; align-self: center; }
+
+    /* Jornada label */
+    .jornada-label {
+        font-size: 9.5px; font-weight: 700; color: #444; text-align: center;
+        margin-bottom: 7px;
+    }
+
+    /* Tabla de resultados de la jornada */
+    .tabla-resultados {
+        width: 100%; border-collapse: collapse; margin-bottom: 10px;
+    }
+    .tabla-resultados tr td {
+        padding: 2px 4px; font-size: 8.5px; border-bottom: 1px solid #f1f5f9;
+    }
+    .tabla-resultados .td-local { text-align: right; width: 38%; }
+    .tabla-resultados .td-score { text-align: center; width: 12%; font-weight: 900; font-size: 9px; white-space: nowrap; padding: 2px 6px; }
+    .tabla-resultados .td-visit { text-align: left; width: 38%; }
+    .tabla-resultados .td-extra { text-align: center; width: 12%; color: #999; font-size: 8px; }
+
+    .fila-nuestro { background: #d4edda !important; }
+    .fila-rival   { background: #fff3cd !important; }
+
+    /* Clasificación */
+    .tabla-clasif { width: 100%; border-collapse: collapse; }
+    .tabla-clasif th {
+        font-size: 7.5px; font-weight: 900; text-transform: uppercase; color: #666;
+        background: #f8fafc; border-bottom: 2px solid #e2e8f0;
+        padding: 3px 4px; text-align: center;
+    }
+    .tabla-clasif th.th-equipo { text-align: left; }
+    .tabla-clasif td { padding: 2.5px 4px; border-bottom: 1px solid #f1f5f9; font-size: 8.5px; }
+    .tabla-clasif td.td-pos { text-align: center; font-weight: 900; color: #64748b; }
+    .tabla-clasif td.td-equipo { text-align: left; font-weight: 700; max-width: 160px; }
+    .tabla-clasif td.td-num { text-align: center; color: #475569; }
+    .tabla-clasif td.td-pts { text-align: center; font-weight: 900; color: #E31E24; }
+
+    .ultimos-box { display: flex; gap: 2px; justify-content: center; }
+    .ult-g { width: 11px; height: 11px; border-radius: 2px; background: #16a34a; color: white; font-size: 7px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
+    .ult-e { width: 11px; height: 11px; border-radius: 2px; background: #f59e0b; color: white; font-size: 7px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
+    .ult-p { width: 11px; height: 11px; border-radius: 2px; background: #dc2626; color: white; font-size: 7px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
+    .ult-vacio { width: 11px; height: 11px; border-radius: 2px; background: #e2e8f0; font-size: 7px; display: flex; align-items: center; justify-content: center; }
+
+    /* Aviso sin datos */
+    .sin-datos { text-align: center; color: #94a3b8; font-size: 9px; padding: 16px 0; }
+
+    /* Colores por categoría */
+    .cat-AFICIONADO  .comp-titulo { border-color: #2563eb; color: #2563eb; }
+    .cat-JUVENIL     .comp-titulo { border-color: #7c3aed; color: #7c3aed; }
+    .cat-CADETE      .comp-titulo { border-color: #0891b2; color: #0891b2; }
+    .cat-INFANTIL    .comp-titulo { border-color: #059669; color: #059669; }
+    .cat-ALEVIN      .comp-titulo { border-color: #d97706; color: #d97706; }
+    .cat-ALEVINF7    .comp-titulo { border-color: #d97706; color: #d97706; }
+    .cat-ALEVINFEM7  .comp-titulo { border-color: #db2777; color: #db2777; }
+    .cat-BENJAMIN    .comp-titulo { border-color: #16a34a; color: #16a34a; }
+    .cat-PREBENJAMIN .comp-titulo { border-color: #9333ea; color: #9333ea; }
+
+    /* Próximo rival info */
+    .proximo-info {
+        font-size: 8.5px; color: #64748b; margin-top: 7px;
+        padding: 5px 8px; background: #fffbeb; border-left: 3px solid #f59e0b; border-radius: 0 4px 4px 0;
+    }
+    .proximo-info strong { color: #92400e; }
+
+    @media print {
+        .toolbar { display: none; }
+        body { background: white; }
+        .paginas-grid { margin-top: 0; padding: 0; gap: 0; }
+        .pagina-equipo {
+            box-shadow: none; border-radius: 0;
+            width: 100%; page-break-after: always; break-after: page;
+            border-bottom: 2px solid #e2e8f0;
+        }
+    }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+    <h2><i>⚽</i> Clasificaciones — Última jornada jugada</h2>
+    <span>Datos: {{ last_updated or 'sin sincronizar' }}</span>
+    <button class="btn-imprimir" onclick="window.print()">🖨 Imprimir / Descargar PDF</button>
+    <button class="btn-imprimir" style="background:#475569;" onclick="history.back()">← Volver</button>
+</div>
+
+<div class="paginas-grid">
+{% for eq in equipos %}
+{% if eq.clasificacion %}
+{% set cat_css = eq.categoria | replace(' ','') %}
+<div class="pagina-equipo cat-{{ cat_css }}">
+
+    <!-- Cabecera -->
+    <div class="comp-header">
+        <div class="comp-titulo">
+            <span class="cat-label">{{ eq.categoria }}</span>{% if eq.letra %} {{ eq.letra }}{% endif %}
+            {% if eq.nombre %}
+                {%- set partes = eq.nombre.split(' - ') %}
+                {% if partes|length > 1 %} — {{ partes[0] }}{% endif %}
+            {% endif %}
+        </div>
+        <span class="comp-temporada">Temporada 2025-2026</span>
+    </div>
+
+    <!-- Jornada label -->
+    {% if eq.jornada_label %}
+    <div class="jornada-label">
+        {{ eq.jornada_label }}{% if eq.ultimo and eq.ultimo.fecha %} ({{ eq.ultimo.fecha }}){% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Resultados de la jornada -->
+    {% if eq.partidos_jornada %}
+    <table class="tabla-resultados">
+        {% for p in eq.partidos_jornada %}
+        {% set es_nuestro = 'FUENTELARREYNA' in (p.local or '')|upper or 'FUENTELARREYNA' in (p.visitante or '')|upper %}
+        {% set es_rival_p = eq.rival_proximo and (
+            (p.local or '')|upper == eq.rival_proximo|upper or
+            (p.visitante or '')|upper == eq.rival_proximo|upper
+        ) %}
+        <tr {% if es_nuestro %}class="fila-nuestro"{% elif es_rival_p %}class="fila-rival"{% endif %}>
+            <td class="td-local">{{ p.local or '' }}</td>
+            <td class="td-score">{{ p.resultado or '- -' }}</td>
+            <td class="td-visit">{{ p.visitante or '' }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+
+    <!-- Tabla de clasificación -->
+    <table class="tabla-clasif">
+        <thead>
+            <tr>
+                <th style="width:20px"></th>
+                <th class="th-equipo">Equipos</th>
+                <th>Puntos</th>
+                <th>J</th>
+                <th>G</th>
+                <th>E</th>
+                <th>P</th>
+                <th>F</th>
+                <th>C</th>
+                <th>Últimos</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for fila in eq.clasificacion %}
+        {% set i = loop.index0 %}
+        {% set es_nuestro_c = (i == eq.idx_nuestro) %}
+        {% set es_rival_c   = (i == eq.idx_rival) %}
+        <tr {% if es_nuestro_c %}class="fila-nuestro"{% elif es_rival_c %}class="fila-rival"{% endif %}>
+            <td class="td-pos">{{ fila.pos }}</td>
+            <td class="td-equipo">{{ fila.equipo }}</td>
+            <td class="td-pts">{{ fila.puntos }}</td>
+            <td class="td-num">{{ fila.jugados }}</td>
+            <td class="td-num">{{ fila.ganados }}</td>
+            <td class="td-num">{{ fila.empatados }}</td>
+            <td class="td-num">{{ fila.perdidos }}</td>
+            <td class="td-num">{{ fila.goles_favor }}</td>
+            <td class="td-num">{{ fila.goles_contra }}</td>
+            <td>
+                <div class="ultimos-box">
+                {% for u in (fila.ultimos or [])[-5:] %}
+                    {% if u == 'G' %}<span class="ult-g">G</span>
+                    {% elif u == 'E' %}<span class="ult-e">E</span>
+                    {% elif u == 'P' %}<span class="ult-p">P</span>
+                    {% else %}<span class="ult-vacio"></span>{% endif %}
+                {% endfor %}
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Próximo partido info -->
+    {% if eq.proximo %}
+    <div class="proximo-info">
+        <strong>Próximo rival:</strong>
+        {{ eq.proximo.rival }} — {{ eq.proximo.jornada }}{% if eq.proximo.fecha %}, {{ eq.proximo.fecha }}{% endif %}
+        {% if eq.proximo.es_local is defined %}({% if eq.proximo.es_local %}en casa{% else %}fuera{% endif %}){% endif %}
+    </div>
+    {% endif %}
+
+</div>
+{% endif %}
+{% endfor %}
+</div>
+
+</body>
+</html>

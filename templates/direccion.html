@@ -211,6 +211,10 @@
     .table-coord th { text-align: left; padding: 12px; background: #f8f9fa; color: #666; font-weight: 900; border-bottom: 2px solid #eee; }
     .table-coord td { padding: 10px; border-bottom: 1px solid #eee; }
 
+    .hortemp-table th, .hortemp-table td { padding: 2px 6px !important; font-size: 9.5px !important; line-height: 1.2; user-select: none; text-align: center !important; }
+    .hortemp-table td.hortemp-selected { outline: 2px solid #2563eb; outline-offset: -2px; background-color: rgba(37,99,235,0.12) !important; }
+    .hortemp-barra-seleccion { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px; background: #1e293b; color: white; padding: 8px 14px; border-radius: 8px; font-size: 11px; font-weight: 800; margin-bottom: 10px; }
+
     .input-coord { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; font-size: 12px; }
     .check-coord { width: 18px; height: 18px; cursor: pointer; }
 
@@ -540,6 +544,8 @@
         <div class="tab-item" onclick="switchTab(event, 'tab-usuarios')">USUARIOS Y CONTRASEÑAS</div>
         {% endif %}
         <div class="tab-item" onclick="switchTab(event, 'tab-push')">PUSH</div>
+        <div class="tab-item" onclick="switchTab(event, 'tab-horarios-temp')">HORARIOS TEMP.</div>
+        <div class="tab-item" onclick="switchTab(event, 'tab-obj-semanales')">OBJ SEMANALES</div>
     </div>
 
     <!-- SUBPESTAÑA: COORDINACIÓN -->
@@ -899,6 +905,28 @@
     </div>
 
     <div id="tab-otros" class="tab-content">
+
+        <!-- DESCARGAR CLASIFICACIONES -->
+        <div class="card-coord" style="padding: 18px 22px; margin-bottom: 16px;">
+            <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                <div>
+                    <h3 style="margin:0 0 3px 0; font-size:13px; font-weight:900; color:#1e293b;">
+                        <i class="fas fa-table-list" style="color:#E31E24; margin-right:7px;"></i>
+                        DESCARGAR CLASIFICACIONES
+                    </h3>
+                    <p style="margin:0; font-size:10px; color:#64748b;">
+                        Genera un PDF con la clasificación de cada equipo en la última jornada jugada,
+                        marcando nuestra posición en <span style="background:#d4edda;padding:1px 5px;border-radius:3px;font-weight:700;">verde</span>
+                        y el próximo rival en <span style="background:#fff3cd;padding:1px 5px;border-radius:3px;font-weight:700;">amarillo</span>.
+                    </p>
+                </div>
+                <a href="/clasificaciones/pdf" target="_blank"
+                   style="margin-left:auto; background:#E31E24; color:white; border:none; border-radius:9px; padding:10px 22px; font-weight:900; font-size:12px; text-decoration:none; white-space:nowrap; display:inline-flex; align-items:center; gap:7px;">
+                    <i class="fas fa-file-pdf"></i> VER / IMPRIMIR
+                </a>
+            </div>
+        </div>
+
         <div class="card-coord" style="padding: 22px;">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
                 <h3 style="margin: 0; font-size: 14px; font-weight: 900; color: #1e293b;"><img src="/static/shield_local_icon.png" style="height:14px; margin-right: 6px; vertical-align:-2px;"> EQUIPACIONES COINCIDENCIAS - USO SEGUNDA EQUIPACIÓN</h3>
@@ -955,6 +983,95 @@
                 <i class="fas fa-paper-plane"></i> ENVIAR PUSH
             </button>
             <div id="pushTabEstado" style="font-size: 11px; margin-top: 10px; text-align: center; font-weight: 700;"></div>
+        </div>
+    </div>
+
+    <div id="tab-horarios-temp" class="tab-content">
+        <div class="card-coord" style="padding: 22px;">
+            <h3 style="margin:0 0 6px 0; font-size:14px; font-weight:900; color:#1e293b;"><i class="fas fa-calendar-week" style="color:#E31E24; margin-right:6px;"></i> Horarios de Temporada</h3>
+            <p style="font-size:11px; color:#999; margin:0 0 16px;">Haz clic en cualquier celda (incluidos los títulos y las cabeceras) para editar su texto y su color de fondo. Mantén pulsado <b>Ctrl</b> y haz clic para seleccionar varias celdas a la vez.</p>
+            <div id="horTempBarraSeleccion" class="hortemp-barra-seleccion" style="display:none;">
+                <span id="horTempBarraTexto"></span>
+                <button class="btn-fin" style="background:#E31E24; color:white; padding:6px 12px; font-size:10px;" onclick="horTempAbrirEditorMultiple()">PINTAR/EDITAR SELECCIÓN</button>
+                <button class="btn-fin" style="background:rgba(255,255,255,0.15); color:white; padding:6px 12px; font-size:10px;" onclick="horTempLimpiarSeleccion()">CANCELAR</button>
+            </div>
+            <div id="horTempGrupos"></div>
+        </div>
+    </div>
+
+    <!-- TAB OBJ SEMANALES -->
+    <div id="tab-obj-semanales" class="tab-content">
+        <div class="card-coord" style="padding:18px 22px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+                <h3 style="margin:0; font-size:14px; font-weight:900; color:#1e293b;">
+                    <i class="fas fa-bullseye" style="color:#E31E24; margin-right:7px;"></i> Objetivos Semanales
+                </h3>
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                    <button class="btn-fin obs-subtab-btn" style="background:#E31E24;color:white;" onclick="obsActivarSubTab('finde',this)">PARTIDOS DEL FIN DE SEMANA</button>
+                    <button class="btn-fin obs-subtab-btn" onclick="obsActivarSubTab('temporada',this)">SEGUIMIENTO TEMPORADA</button>
+                    <button class="btn-fin obs-subtab-btn" onclick="obsActivarSubTab('idavuelta',this)">IDA Y VUELTA</button>
+                </div>
+            </div>
+            <div id="obsLoading" style="text-align:center;padding:30px;color:#94a3b8;display:none;"><i class="fas fa-spinner fa-spin"></i> Cargando datos RFFM...</div>
+            <div id="obsError" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px;color:#dc2626;font-size:11px;font-weight:700;margin-bottom:12px;"></div>
+
+            <!-- PARTIDOS DEL FIN DE SEMANA -->
+            <div id="obs-sub-finde" class="obs-subvista" style="display:none;">
+                <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:16px;">
+                    <div>
+                        <div style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;margin-bottom:8px;">Selecciona un fin de semana</div>
+                        <div style="background:#f8fafc;border-radius:10px;padding:10px;min-width:224px;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                                <button onclick="obsCambiarMes(-1)" style="background:none;border:none;cursor:pointer;font-size:16px;color:#64748b;padding:2px 8px;">‹</button>
+                                <span id="obsMesLabel" style="font-size:11px;font-weight:900;color:#1e293b;"></span>
+                                <button onclick="obsCambiarMes(1)" style="background:none;border:none;cursor:pointer;font-size:16px;color:#64748b;padding:2px 8px;">›</button>
+                            </div>
+                            <div id="obsCalGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-size:9px;text-align:center;"></div>
+                        </div>
+                    </div>
+                    <div id="obsFindeLabel" style="font-size:11px;font-weight:800;color:#64748b;align-self:center;padding:10px 14px;background:#f1f5f9;border-radius:8px;">Selecciona un fin de semana en el calendario</div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div>
+                        <div style="font-size:9.5px;font-weight:900;color:#475569;text-transform:uppercase;margin-bottom:6px;padding-bottom:5px;border-bottom:2px solid #e2e8f0;">
+                            <i class="fas fa-clipboard-list" style="color:#2563eb;margin-right:5px;"></i> PLANIFICACIÓN — OBJETIVOS
+                        </div>
+                        <div id="obsTablaLeft"></div>
+                    </div>
+                    <div>
+                        <div style="font-size:9.5px;font-weight:900;color:#475569;text-transform:uppercase;margin-bottom:6px;padding-bottom:5px;border-bottom:2px solid #e2e8f0;">
+                            <i class="fas fa-check-double" style="color:#16a34a;margin-right:5px;"></i> RESULTADOS — CUMPLIMIENTO
+                        </div>
+                        <div id="obsTablaRight"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEGUIMIENTO TEMPORADA -->
+            <div id="obs-sub-temporada" class="obs-subvista" style="display:none;">
+                <div id="obsTemporadaGrid"></div>
+            </div>
+
+            <!-- IDA Y VUELTA -->
+            <div id="obs-sub-idavuelta" class="obs-subvista" style="display:none;">
+                <div id="obsIdaVueltaGrid" style="display:flex;flex-wrap:wrap;gap:14px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOCADILLO EDITAR CELDA HORARIOS TEMPORADA -->
+    <div id="horTempPopover" style="display:none; position:fixed; background:white; border:1px solid #e2e8f0; border-radius:14px; box-shadow:0 18px 40px rgba(0,0,0,0.18); z-index:30000; width:260px; padding:16px;">
+        <div id="horTempPopoverTitulo" style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase; margin-bottom:8px;"></div>
+        <textarea id="horTempPopoverTexto" rows="2" style="width:100%; box-sizing:border-box; padding:9px; border-radius:8px; border:2px solid #f1f5f9; font-size:12px; font-family:inherit; resize:vertical; margin-bottom:10px;"></textarea>
+        <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:6px;">Color de fondo</label>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+            <input type="color" id="horTempPopoverColor" value="#ffffff" style="width:36px; height:30px; border:1px solid #ddd; border-radius:6px; cursor:pointer; padding:2px;">
+            <button class="btn-fin" style="background:#f1f5f9; color:#475569; padding:7px 10px; font-size:10px;" onclick="document.getElementById('horTempPopoverColor').value='#ffffff'">SIN COLOR</button>
+        </div>
+        <div id="horTempPaletaColores" style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;"></div>
+        <div style="display:flex; gap:8px;">
+            <button class="btn-fin" style="flex:1; background:#f1f5f9; color:#475569; justify-content:center;" onclick="document.getElementById('horTempPopover').style.display='none'">CANCELAR</button>
+            <button class="btn-fin" style="flex:1; background:#1e293b; color:white; justify-content:center;" onclick="horTempGuardarCelda()">GUARDAR</button>
         </div>
     </div>
 
@@ -2530,6 +2647,12 @@
                 } else {
                     cargarInformeColoresExistente().then(prepararTabPush);
                 }
+            }
+            if (tabId === 'tab-horarios-temp') {
+                horTempCargar();
+            }
+            if (tabId === 'tab-obj-semanales') {
+                objSemanalesCargar();
             }
         } catch (err) { console.error("Error switchTab:", err); }
     }
@@ -5100,5 +5223,516 @@
             mostrarToastAutoguardado("Error de conexión", true);
         }
     }
+
+    // --- LÓGICA HORARIOS TEMPORADA ---
+    const HORTEMP_COLUMNAS = ['F7-1', 'F7-2', 'F11-CAMPO 1 1', 'F-11-CAMPO 1 2', 'F11-CAMPO 2 1', 'F11-CAMPO 2 2'];
+    const HORTEMP_GRUPOS = [
+        { id: 'lunes_miercoles', tituloDefecto: 'LUNES Y MIÉRCOLES (Temporada 2025-26)', subtituloDefecto: 'DEBUTANTES MINICAMPO' },
+        { id: 'martes_jueves', tituloDefecto: 'MARTES Y JUEVES (Temporada 2025-26)', subtituloDefecto: '' },
+    ];
+    let horTempDatos = {};
+    let horTempContexto = null;
+    let horTempSeleccion = new Set();
+
+    function horTempClave(grupo, horario, columna) {
+        return `${grupo}|||${horario}|||${columna}`;
+    }
+
+    function horTempClickCelda(evt, grupo, horario, columna, etiqueta) {
+        const clave = horTempClave(grupo, horario, columna);
+        if (evt.ctrlKey || evt.metaKey) {
+            if (horTempSeleccion.has(clave)) horTempSeleccion.delete(clave);
+            else horTempSeleccion.add(clave);
+        } else {
+            // Clic normal (sin Ctrl): selecciona solo esta celda. Para EDITAR, botón derecho.
+            horTempSeleccion = horTempSeleccion.has(clave) && horTempSeleccion.size === 1 ? new Set() : new Set([clave]);
+        }
+        horTempRenderTodo();
+        horTempActualizarBarraSeleccion();
+    }
+
+    function horTempLimpiarSeleccion() {
+        horTempSeleccion.clear();
+        horTempRenderTodo();
+        horTempActualizarBarraSeleccion();
+    }
+
+    function horTempActualizarBarraSeleccion() {
+        const barra = document.getElementById('horTempBarraSeleccion');
+        const n = horTempSeleccion.size;
+        if (n >= 2) {
+            barra.style.display = 'flex';
+            document.getElementById('horTempBarraTexto').innerText = `${n} celdas seleccionadas`;
+        } else {
+            barra.style.display = 'none';
+        }
+    }
+
+    function horTempAbrirEditorMultiple() {
+        horTempContexto = { multiple: true, celdas: [...horTempSeleccion] };
+        document.getElementById('horTempPopoverTitulo').innerText = `${horTempSeleccion.size} celdas seleccionadas`;
+        document.getElementById('horTempPopoverTexto').value = '';
+        document.getElementById('horTempPopoverTexto').placeholder = 'Déjalo en blanco para no cambiar el texto de las celdas';
+        document.getElementById('horTempPopoverColor').value = '#ffffff';
+        horTempRenderPaleta();
+
+        const pop = document.getElementById('horTempPopover');
+        pop.style.display = 'block';
+        pop.style.left = '50%';
+        pop.style.top = '50%';
+        pop.style.transform = 'translate(-50%, -50%)';
+    }
+
+    function horTempGenerarHorarios() {
+        const horarios = [];
+        let h = 17, m = 0;
+        const fmt = (hh, mm) => `${String(hh).padStart(2, '0')}.${String(mm).padStart(2, '0')}`;
+        while (h < 23) {
+            let h2 = h, m2 = m + 15;
+            if (m2 >= 60) { h2 += 1; m2 -= 60; }
+            horarios.push(`${fmt(h, m)} a ${fmt(h2, m2)}`);
+            h = h2; m = m2;
+        }
+        return horarios;
+    }
+    const HORTEMP_HORARIOS = horTempGenerarHorarios();
+
+    function horTempCelda(grupo, horario, columna) {
+        const datos = (horTempDatos[grupo] && horTempDatos[grupo][horario] && horTempDatos[grupo][horario][columna]) || {};
+        return { texto: datos.texto || '', color: datos.color || '' };
+    }
+
+    async function horTempCargar() {
+        try {
+            const res = await fetch('/api/horarios_temporada');
+            const data = await res.json();
+            horTempDatos = (data.status === 'success' ? data.datos : {}) || {};
+        } catch (e) {
+            horTempDatos = {};
+        }
+        horTempRenderTodo();
+    }
+
+    function horTempRenderTodo() {
+        const cont = document.getElementById('horTempGrupos');
+        if (!cont) return;
+        cont.innerHTML = HORTEMP_GRUPOS.map(g => horTempRenderGrupo(g)).join('');
+    }
+
+    function horTempRenderGrupo(g) {
+        const titulo = horTempCelda(g.id, '_titulo_', '_titulo_');
+        const subtitulo = horTempCelda(g.id, '_subtitulo_', '_subtitulo_');
+        const tituloTexto = titulo.texto || g.tituloDefecto;
+        const subtituloTexto = subtitulo.texto !== '' ? subtitulo.texto : g.subtituloDefecto;
+
+        const HORTEMP_SEPARADOR_TRAS = [1, 3]; // separador grueso tras F7-2 y tras F-11-CAMPO 1 2 (agrupa F7 / F11-Campo1 / F11-Campo2)
+        const bordeGrupo = (idx) => HORTEMP_SEPARADOR_TRAS.includes(idx) ? 'border-right:1px solid #cbd5e1;' : '';
+
+        const filaCabecera = `<tr>
+            <th oncontextmenu="return horTempAbrirEditor(event, '${g.id}', '_horario_', '_horario_', 'HORARIO')" style="cursor:pointer;">HORARIO</th>
+            ${HORTEMP_COLUMNAS.map((c, idx) => {
+                const cab = horTempCelda(g.id, '_cabecera_', c);
+                const texto = cab.texto || c;
+                return `<th oncontextmenu="return horTempAbrirEditor(event, '${g.id}', '_cabecera_', '${c.replace(/'/g, "\\'")}', '${c.replace(/'/g, "\\'")}')" style="cursor:pointer; ${bordeGrupo(idx)} ${cab.color ? `background:${cab.color};` : ''}">${texto}</th>`;
+            }).join('')}
+        </tr>`;
+
+        const filas = HORTEMP_HORARIOS.map(h => `
+            <tr>
+                <td style="font-weight:800; background:#f8fafc; white-space:nowrap;">${h}</td>
+                ${HORTEMP_COLUMNAS.map((c, idx) => {
+                    const celda = horTempCelda(g.id, h, c);
+                    const claveSel = horTempClave(g.id, h, c);
+                    const seleccionada = horTempSeleccion.has(claveSel) ? 'hortemp-selected' : '';
+                    return `<td class="${seleccionada}" onclick="horTempClickCelda(event, '${g.id}', '${h}', '${c.replace(/'/g, "\\'")}', '${h} · ${c.replace(/'/g, "\\'")}')" oncontextmenu="return horTempAbrirEditor(event, '${g.id}', '${h}', '${c.replace(/'/g, "\\'")}', '${h} · ${c.replace(/'/g, "\\'")}')" style="cursor:pointer; min-width:60px; ${bordeGrupo(idx)} ${celda.color ? `background:${celda.color};` : ''}">${(celda.texto || '').replace(/</g, '&lt;')}</td>`;
+                }).join('')}
+            </tr>`).join('');
+
+        return `
+            <div style="margin-bottom:24px; overflow-x:auto;">
+                <div contenteditable="true" onblur="horTempGuardarTextoSimple('${g.id}', '_titulo_', this.innerText)" style="font-size:14px; font-weight:900; color:#1e3a8a; cursor:text; margin-bottom:2px;">${tituloTexto}</div>
+                ${subtituloTexto !== '' || g.id === 'lunes_miercoles' ? `<div contenteditable="true" onblur="horTempGuardarTextoSimple('${g.id}', '_subtitulo_', this.innerText)" style="font-size:10px; font-style:italic; color:#475569; cursor:text; margin-bottom:6px;">${subtituloTexto}</div>` : ''}
+                <table class="table-coord hortemp-table" style="border-collapse:collapse; width:100%;">
+                    <thead style="background:#1e3a8a; color:white;">${filaCabecera}</thead>
+                    <tbody>${filas}</tbody>
+                </table>
+            </div>`;
+    }
+
+    async function horTempGuardarTextoSimple(grupo, horario, texto) {
+        try {
+            await fetch('/api/horarios_temporada', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ grupo, horario, columna: '_titulo_', texto })
+            });
+            horTempDatos[grupo] = horTempDatos[grupo] || {};
+            horTempDatos[grupo][horario] = horTempDatos[grupo][horario] || {};
+            horTempDatos[grupo][horario]['_titulo_'] = { texto, color: '' };
+        } catch (e) {}
+    }
+
+    const HORTEMP_PALETA = ['#fde047', '#86efac', '#93c5fd', '#fca5a5', '#d8b4fe', '#fdba74', '#a5f3fc', '#e5e7eb'];
+
+    function horTempRenderPaleta() {
+        const cont = document.getElementById('horTempPaletaColores');
+        cont.innerHTML = HORTEMP_PALETA.map(c => `<div onclick="document.getElementById('horTempPopoverColor').value='${c}'" style="width:22px; height:22px; border-radius:50%; background:${c}; cursor:pointer; border:2px solid white; box-shadow:0 0 0 1px #ddd;"></div>`).join('');
+    }
+
+    function horTempAbrirEditor(evt, grupo, horario, columna, etiqueta) {
+        evt.preventDefault();
+        // Si hay una selección múltiple activa (2 o más celdas) y la celda sobre la que se hace
+        // clic derecho forma parte de ella, editamos toda la selección en vez de solo esta celda.
+        if (horTempSeleccion.size >= 2 && horTempSeleccion.has(horTempClave(grupo, horario, columna))) {
+            horTempAbrirEditorMultiple();
+            return false;
+        }
+        horTempContexto = { grupo, horario, columna };
+        const actual = horTempCelda(grupo, horario, columna);
+        document.getElementById('horTempPopoverTitulo').innerText = etiqueta;
+        const inputTexto = document.getElementById('horTempPopoverTexto');
+        inputTexto.value = actual.texto;
+        inputTexto.placeholder = '';
+        document.getElementById('horTempPopoverColor').value = actual.color || '#ffffff';
+        horTempRenderPaleta();
+
+        const pop = document.getElementById('horTempPopover');
+        pop.style.transform = 'none';
+        pop.style.display = 'block';
+        const rect = evt.currentTarget.getBoundingClientRect();
+        const popWidth = pop.offsetWidth || 260;
+        let left = rect.left;
+        if (left + popWidth > window.innerWidth - 10) left = window.innerWidth - popWidth - 10;
+        pop.style.left = `${Math.max(10, left)}px`;
+        pop.style.top = `${rect.bottom + 8}px`;
+        inputTexto.focus();
+        return false;
+    }
+
+    async function horTempGuardarCelda() {
+        if (!horTempContexto) return;
+        const color1 = document.getElementById('horTempPopoverColor').value;
+        const color = color1.toLowerCase() === '#ffffff' ? '' : color1;
+        const texto = document.getElementById('horTempPopoverTexto').value;
+
+        if (horTempContexto.multiple) {
+            try {
+                for (const clave of horTempContexto.celdas) {
+                    const [grupo, horario, columna] = clave.split('|||');
+                    const actual = horTempCelda(grupo, horario, columna);
+                    const textoFinal = texto !== '' ? texto : actual.texto;
+                    await fetch('/api/horarios_temporada', {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ grupo, horario, columna, texto: textoFinal, color })
+                    });
+                    horTempDatos[grupo] = horTempDatos[grupo] || {};
+                    horTempDatos[grupo][horario] = horTempDatos[grupo][horario] || {};
+                    horTempDatos[grupo][horario][columna] = { texto: textoFinal, color };
+                }
+                horTempSeleccion.clear();
+                horTempActualizarBarraSeleccion();
+                document.getElementById('horTempPopover').style.display = 'none';
+                horTempRenderTodo();
+            } catch (e) {
+                alert('Error al guardar la selección.');
+            }
+            return;
+        }
+
+        const { grupo, horario, columna } = horTempContexto;
+        try {
+            await fetch('/api/horarios_temporada', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ grupo, horario, columna, texto, color })
+            });
+            horTempDatos[grupo] = horTempDatos[grupo] || {};
+            horTempDatos[grupo][horario] = horTempDatos[grupo][horario] || {};
+            horTempDatos[grupo][horario][columna] = { texto, color };
+            document.getElementById('horTempPopover').style.display = 'none';
+            horTempRenderTodo();
+        } catch (e) {
+            alert('Error al guardar.');
+        }
+    }
+
+    document.addEventListener('click', function(evt) {
+        const pop = document.getElementById('horTempPopover');
+        if (pop && pop.style.display === 'block' && !pop.contains(evt.target) && !evt.target.closest('#tab-horarios-temp')) {
+            pop.style.display = 'none';
+        }
+    }, true);
+
+    // --- OBJ SEMANALES ---
+    var obsData = null;
+    var obsCalAnio = new Date().getFullYear();
+    var obsCalMes = new Date().getMonth();
+    var obsFindeActivo = null;
+    var obsSubActiva = 'finde';
+
+    function obsActivarSubTab(sub, btn) {
+        obsSubActiva = sub;
+        document.querySelectorAll('.obs-subtab-btn').forEach(function(b) {
+            b.style.background = ''; b.style.color = '';
+        });
+        if (btn) { btn.style.background = '#E31E24'; btn.style.color = 'white'; }
+        document.querySelectorAll('.obs-subvista').forEach(function(v) { v.style.display = 'none'; });
+        var el = document.getElementById('obs-sub-' + sub);
+        if (el) el.style.display = '';
+        if (sub === 'finde') obsRenderFinde();
+        else if (sub === 'temporada') obsRenderTemporada();
+        else if (sub === 'idavuelta') obsRenderIdaVuelta();
+    }
+
+    async function objSemanalesCargar() {
+        if (obsData) {
+            document.getElementById('obsLoading').style.display = 'none';
+            obsActivarSubTab(obsSubActiva, document.querySelector('.obs-subtab-btn'));
+            return;
+        }
+        document.getElementById('obsLoading').style.display = 'block';
+        document.getElementById('obsError').style.display = 'none';
+        document.querySelectorAll('.obs-subvista').forEach(function(v) { v.style.display = 'none'; });
+        try {
+            const r = await fetch('/api/obj_semanales/resumen');
+            const d = await r.json();
+            if (d.status !== 'ok') throw new Error(d.message || 'Error del servidor');
+            obsData = d.partidos;
+            document.getElementById('obsLoading').style.display = 'none';
+            obsCalAnio = new Date().getFullYear();
+            obsCalMes = new Date().getMonth();
+            obsRenderCalendario();
+            obsActivarSubTab('finde', document.querySelector('.obs-subtab-btn'));
+        } catch (err) {
+            document.getElementById('obsLoading').style.display = 'none';
+            var errEl = document.getElementById('obsError');
+            errEl.style.display = 'block';
+            errEl.textContent = 'Error cargando datos: ' + err.message;
+        }
+    }
+
+    function obsFechaPartido(p) {
+        var partes = (p.fecha || '').split('-');
+        if (partes.length !== 3) return null;
+        return new Date(parseInt(partes[2]), parseInt(partes[1]) - 1, parseInt(partes[0]));
+    }
+
+    function obsRenderCalendario() {
+        var meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+        document.getElementById('obsMesLabel').textContent = meses[obsCalMes] + ' ' + obsCalAnio;
+        var diasConPartidos = new Set();
+        (obsData || []).forEach(function(p) {
+            var fd = obsFechaPartido(p);
+            if (fd && fd.getFullYear() === obsCalAnio && fd.getMonth() === obsCalMes) {
+                diasConPartidos.add(fd.getDate());
+            }
+        });
+        var dias = ['L','M','X','J','V','S','D'];
+        var html = dias.map(function(d) { return '<div style="font-weight:700;color:#94a3b8;padding:3px 0;">'+d+'</div>'; }).join('');
+        var primerDia = new Date(obsCalAnio, obsCalMes, 1).getDay();
+        primerDia = primerDia === 0 ? 6 : primerDia - 1;
+        for (var i = 0; i < primerDia; i++) html += '<div></div>';
+        var diasMes = new Date(obsCalAnio, obsCalMes + 1, 0).getDate();
+        for (var dia = 1; dia <= diasMes; dia++) {
+            var fecha = new Date(obsCalAnio, obsCalMes, dia);
+            var dow = fecha.getDay();
+            var esSabado = dow === 6, esDomingo = dow === 0;
+            var esFinde = esSabado || esDomingo;
+            var tienePartidos = diasConPartidos.has(dia);
+            var findeRef = esSabado ? fecha : (esDomingo ? new Date(obsCalAnio, obsCalMes, dia-1) : null);
+            var findeKey = findeRef ? (findeRef.getFullYear()+'-'+String(findeRef.getMonth()+1).padStart(2,'0')+'-'+String(findeRef.getDate()).padStart(2,'0')) : null;
+            var activo = obsFindeActivo && findeKey && obsFindeActivo === findeKey;
+            var bg = activo ? 'background:#E31E24;color:white;font-weight:700;' : (esFinde ? 'background:#f8fafc;' : '');
+            var cursor = (esFinde && findeKey) ? 'cursor:pointer;' : '';
+            var dotColor = activo ? 'white' : '#E31E24';
+            var dotHtml = tienePartidos ? '<span style="display:block;width:4px;height:4px;border-radius:50%;background:'+dotColor+';margin:1px auto 0;"></span>' : '<span style="display:block;height:5px;"></span>';
+            var click = (esFinde && findeKey) ? 'onclick="obsSeleccionarFinde(\''+findeKey+'\')"' : '';
+            html += '<div style="padding:4px 2px;border-radius:4px;'+bg+cursor+'" '+click+'>'+dia+dotHtml+'</div>';
+        }
+        document.getElementById('obsCalGrid').innerHTML = html;
+    }
+
+    function obsCambiarMes(delta) {
+        obsCalMes += delta;
+        if (obsCalMes < 0) { obsCalMes = 11; obsCalAnio--; }
+        if (obsCalMes > 11) { obsCalMes = 0; obsCalAnio++; }
+        obsRenderCalendario();
+    }
+
+    function obsSeleccionarFinde(sabadoKey) {
+        obsFindeActivo = sabadoKey;
+        obsRenderCalendario();
+        obsRenderFinde();
+    }
+
+    function obsColorObjetivo(obj) {
+        return {'GANAR':'#16a34a','GANAR/EMPATAR':'#2563eb','EMPATAR':'#d97706','COMPETIR':'#dc2626'}[obj] || '#94a3b8';
+    }
+
+    function obsRenderFinde() {
+        if (!obsData) return;
+        var leftEl = document.getElementById('obsTablaLeft');
+        var rightEl = document.getElementById('obsTablaRight');
+        if (!leftEl || !rightEl) return;
+        var partidos = obsData;
+        if (obsFindeActivo) {
+            var sab = new Date(obsFindeActivo + 'T00:00:00');
+            var dom = new Date(obsFindeActivo + 'T00:00:00'); dom.setDate(dom.getDate() + 1);
+            partidos = obsData.filter(function(p) {
+                var fd = obsFechaPartido(p);
+                if (!fd) return false;
+                return fd.getTime() === sab.getTime() || fd.getTime() === dom.getTime();
+            });
+        }
+        var msg = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:11px;">' + (obsFindeActivo ? 'No hay partidos este fin de semana.' : 'Selecciona un fin de semana en el calendario.') + '</div>';
+        if (partidos.length === 0) { leftEl.innerHTML = msg; rightEl.innerHTML = msg; return; }
+        var labelEl = document.getElementById('obsFindeLabel');
+        if (labelEl) labelEl.textContent = 'Fin de semana del ' + (obsFindeActivo || '').split('-').reverse().join('/') + ' — ' + partidos.length + ' partido(s)';
+        leftEl.innerHTML = obsRenderTablaFinde(partidos, false);
+        rightEl.innerHTML = obsRenderTablaFinde(partidos, true);
+    }
+
+    function obsRenderTablaFinde(partidos, modoResultados) {
+        var thS = 'padding:4px 6px;font-size:8px;font-weight:900;text-transform:uppercase;color:#64748b;background:#f8fafc;border-bottom:2px solid #e2e8f0;white-space:nowrap;';
+        var tdS = 'padding:4px 6px;font-size:9px;border-bottom:1px solid #f1f5f9;vertical-align:top;';
+        var html = '<table style="width:100%;border-collapse:collapse;font-family:inherit;"><thead><tr>';
+        html += '<th style="'+thS+'">Equipo</th><th style="'+thS+'">Jorn.</th><th style="'+thS+'">Campo</th><th style="'+thS+'">Rival</th>';
+        if (!modoResultados) {
+            html += '<th style="'+thS+'">Datos rival</th><th style="'+thS+'">Objetivo</th>';
+        } else {
+            html += '<th style="'+thS+'">Resultado</th><th style="'+thS+'">Obj.</th><th style="'+thS+'text-align:center;">✓/✗</th>';
+        }
+        html += '</tr></thead><tbody>';
+        var estadoColor = {'G':'#16a34a','E':'#d97706','P':'#dc2626'};
+        partidos.forEach(function(p) {
+            var equipo = (p.categoria + ' ' + p.letra).trim();
+            var campo = p.es_local ? 'Casa' : 'Fuera';
+            var objetivo = p.objetivo;
+            var objChip = objetivo
+                ? '<span style="display:inline-block;padding:2px 7px;border-radius:99px;background:'+obsColorObjetivo(objetivo)+';color:white;font-size:8px;font-weight:900;white-space:nowrap;">'+objetivo+'</span>'
+                : '<span style="color:#94a3b8;font-size:9px;">–</span>';
+            var estado = p.estado || '';
+            var bgRes = estadoColor[estado] || '#94a3b8';
+            var resSpan = estado
+                ? '<span style="display:inline-block;padding:2px 7px;border-radius:6px;background:'+bgRes+';color:white;font-size:9px;font-weight:900;">'+(p.resultado||'')+'</span>'
+                : '<span style="color:#94a3b8;font-size:9px;">Sin jugar</span>';
+            var cumHtml = '<span style="color:#94a3b8;">–</span>';
+            if (p.cumplido === true) cumHtml = '<span style="font-size:16px;color:#16a34a;line-height:1;">✓</span>';
+            else if (p.cumplido === false) cumHtml = '<span style="font-size:16px;color:#dc2626;line-height:1;">✗</span>';
+            var datosRival = '<span style="color:#94a3b8;font-size:9px;">–</span>';
+            if (p.datos_nuestro && p.datos_rival) {
+                var dn = p.datos_nuestro, dr = p.datos_rival;
+                var ultHtml = (p.ultimos_rival || []).map(function(u) {
+                    return '<span style="display:block;font-size:7.5px;color:#64748b;">'+u.estado+' '+u.resultado+' vs '+u.rival+'</span>';
+                }).join('');
+                datosRival = '<div style="font-size:8px;line-height:1.6;"><b>'+dn.posicion+'° vs '+dr.posicion+'°</b><br>'+dn.puntos+' pts vs '+dr.puntos+' pts<br>GF/GC: '+dn.goles_favor+'/'+dn.goles_contra+' vs '+dr.goles_favor+'/'+dr.goles_contra+(ultHtml?'<div style="margin-top:2px;">'+ultHtml+'</div>':'')+'</div>';
+            }
+            html += '<tr><td style="'+tdS+'font-weight:700;">'+equipo+'</td><td style="'+tdS+'color:#64748b;">'+p.jornada+'</td><td style="'+tdS+'color:#64748b;">'+campo+'</td><td style="'+tdS+'">'+p.rival+'</td>';
+            if (!modoResultados) {
+                html += '<td style="'+tdS+'">'+datosRival+'</td><td style="'+tdS+'">'+objChip+'</td>';
+            } else {
+                html += '<td style="'+tdS+'text-align:center;">'+resSpan+'</td><td style="'+tdS+'text-align:center;">'+objChip+'</td><td style="'+tdS+'text-align:center;">'+cumHtml+'</td>';
+            }
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        return html;
+    }
+
+    function obsRenderTemporada() {
+        if (!obsData) return;
+        var el = document.getElementById('obsTemporadaGrid');
+        if (!el) return;
+        var equipoMap = {};
+        var maxJornada = 0;
+        obsData.forEach(function(p) {
+            var clave = p.categoria + ' ' + p.letra;
+            if (!equipoMap[clave]) equipoMap[clave] = { clave: clave, categoria: p.categoria, letra: p.letra, jornadas: {} };
+            var jn = p.jornada_num;
+            if (jn < 999) { equipoMap[clave].jornadas[jn] = p; if (jn > maxJornada) maxJornada = jn; }
+        });
+        if (maxJornada === 0) { el.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;">Sin datos de jornadas.</div>'; return; }
+        var ordenCat = {'AFICIONADO':0,'JUVENIL':1,'CADETE':2,'INFANTIL':3,'ALEVIN':4,'ALEVIN F7':5,'BENJAMIN':6,'PREBENJAMIN':7};
+        var equipos = Object.values(equipoMap).sort(function(a,b) {
+            var ca = ordenCat[a.categoria] !== undefined ? ordenCat[a.categoria] : 99;
+            var cb = ordenCat[b.categoria] !== undefined ? ordenCat[b.categoria] : 99;
+            return ca !== cb ? ca - cb : a.letra.localeCompare(b.letra);
+        });
+        var html = '<div style="overflow-x:auto;"><table style="border-collapse:collapse;font-size:8px;font-family:inherit;"><thead><tr>';
+        html += '<th style="padding:4px 8px;background:#1e293b;color:white;text-align:left;white-space:nowrap;min-width:90px;position:sticky;left:0;z-index:2;">Equipo</th>';
+        for (var j = 1; j <= maxJornada; j++) html += '<th style="padding:4px 3px;background:#1e293b;color:white;font-size:7px;text-align:center;min-width:22px;">J.'+j+'</th>';
+        html += '</tr></thead><tbody>';
+        equipos.forEach(function(eq) {
+            html += '<tr><td style="padding:4px 8px;font-weight:800;color:#1e293b;white-space:nowrap;background:#f8fafc;position:sticky;left:0;z-index:1;border-right:2px solid #e2e8f0;">'+eq.categoria+' '+eq.letra+'</td>';
+            for (var j = 1; j <= maxJornada; j++) {
+                var p = eq.jornadas[j];
+                var bg = '#f1f5f9', title = 'J.'+j;
+                if (p) {
+                    title = (p.jornada||'J.'+j)+' vs '+p.rival+' — '+(p.resultado||'sin jugar');
+                    if (p.estado) {
+                        bg = p.cumplido === true ? '#16a34a' : (p.cumplido === false ? '#dc2626' : '#94a3b8');
+                    } else { bg = '#e2e8f0'; }
+                }
+                html += '<td title="'+title.replace(/"/g,'&quot;')+'" style="padding:3px;text-align:center;"><div style="width:16px;height:16px;border-radius:3px;background:'+bg+';margin:auto;"></div></td>';
+            }
+            html += '</tr>';
+        });
+        html += '</tbody></table></div>';
+        html += '<div style="margin-top:10px;display:flex;gap:14px;font-size:9px;color:#64748b;"><span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#16a34a;vertical-align:-2px;margin-right:4px;"></span>Objetivo cumplido</span><span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#dc2626;vertical-align:-2px;margin-right:4px;"></span>No cumplido</span><span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#e2e8f0;vertical-align:-2px;margin-right:4px;"></span>Sin jugar / sin objetivo</span></div>';
+        el.innerHTML = html;
+    }
+
+    function obsRenderIdaVuelta() {
+        if (!obsData) return;
+        var el = document.getElementById('obsIdaVueltaGrid');
+        if (!el) return;
+        var grupoMap = {};
+        obsData.forEach(function(p) {
+            var key = p.categoria + '|' + p.letra;
+            if (!grupoMap[key]) grupoMap[key] = { categoria: p.categoria, letra: p.letra, partidos: [] };
+            grupoMap[key].partidos.push(p);
+        });
+        var ordenCat = {'AFICIONADO':0,'JUVENIL':1,'CADETE':2,'INFANTIL':3,'ALEVIN':4,'ALEVIN F7':5,'BENJAMIN':6,'PREBENJAMIN':7};
+        var grupos = Object.values(grupoMap).sort(function(a,b) {
+            var ca = ordenCat[a.categoria] !== undefined ? ordenCat[a.categoria] : 99;
+            var cb = ordenCat[b.categoria] !== undefined ? ordenCat[b.categoria] : 99;
+            return ca !== cb ? ca - cb : a.letra.localeCompare(b.letra);
+        });
+        var estadoOrd = {'G':3,'E':2,'P':1,'':0};
+        var html = '';
+        grupos.forEach(function(gr) {
+            var rivalesMap = {};
+            gr.partidos.slice().sort(function(a,b){return a.jornada_num-b.jornada_num;}).forEach(function(p) {
+                var r = p.rival || '';
+                if (!rivalesMap[r]) rivalesMap[r] = [];
+                rivalesMap[r].push(p);
+            });
+            var thS = 'padding:3px 6px;font-size:8px;font-weight:900;text-transform:uppercase;color:#fff;background:#1e293b;text-align:center;';
+            var tdS = 'padding:3px 6px;font-size:8.5px;border-bottom:1px solid #f1f5f9;text-align:center;';
+            html += '<div style="background:white;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);padding:10px 12px;min-width:240px;max-width:300px;">';
+            html += '<div style="font-size:10px;font-weight:900;color:#E31E24;margin-bottom:8px;border-bottom:2px solid #E31E24;padding-bottom:4px;">'+gr.categoria+' '+gr.letra+'</div>';
+            html += '<table style="width:100%;border-collapse:collapse;font-family:inherit;"><thead><tr>';
+            html += '<th style="'+thS+'text-align:left;min-width:100px;">Rival</th><th style="'+thS+'">IDA</th><th style="'+thS+'">VUELTA</th></tr></thead><tbody>';
+            Object.entries(rivalesMap).forEach(function(entry) {
+                var rival = entry[0], ps = entry[1];
+                var ida = ps[0] || null, vuelta = ps[1] || null;
+                var colorVuelta = '#94a3b8';
+                if (ida && vuelta && ida.estado && vuelta.estado) {
+                    var vi = estadoOrd[ida.estado] || 0, vv = estadoOrd[vuelta.estado] || 0;
+                    colorVuelta = vv > vi ? '#16a34a' : (vv === vi ? '#f59e0b' : '#dc2626');
+                }
+                var fmtR = function(p) {
+                    if (!p || !p.resultado) return '<span style="color:#94a3b8;">–</span>';
+                    var bg = {'G':'#16a34a','E':'#f59e0b','P':'#dc2626'}[p.estado] || '#94a3b8';
+                    return '<span style="display:inline-block;padding:1px 6px;border-radius:4px;background:'+bg+';color:white;font-weight:900;font-size:8px;">'+p.resultado+'</span>';
+                };
+                var vuelHtml = (vuelta && vuelta.resultado)
+                    ? '<span style="display:inline-block;padding:1px 6px;border-radius:4px;background:'+colorVuelta+';color:white;font-weight:900;font-size:8px;">'+vuelta.resultado+'</span>'
+                    : '<span style="color:#94a3b8;">–</span>';
+                html += '<tr><td style="'+tdS+'text-align:left;font-weight:600;">'+rival+'</td><td style="'+tdS+'">'+fmtR(ida)+'</td><td style="'+tdS+'">'+vuelHtml+'</td></tr>';
+            });
+            html += '</tbody></table></div>';
+        });
+        el.innerHTML = html || '<div style="text-align:center;padding:30px;color:#94a3b8;">Sin datos.</div>';
+    }
+
 </script>
 {% endblock %}
