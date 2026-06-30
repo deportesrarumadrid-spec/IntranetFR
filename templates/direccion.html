@@ -907,20 +907,67 @@
     <div id="tab-otros" class="tab-content">
 
         <!-- DESCARGAR CLASIFICACIONES -->
-        <div class="card-coord" style="padding: 18px 22px; margin-bottom: 16px;">
-            <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
-                <div>
-                    <h3 style="margin:0 0 3px 0; font-size:13px; font-weight:900; color:#1e293b;">
+        <div class="card-coord" style="padding:0; margin-bottom: 16px; overflow:hidden;">
+            <!-- Imagen / preview visual -->
+            <div style="background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%); padding:18px 22px; display:flex; align-items:center; gap:18px;">
+                <!-- Mini tabla decorativa como preview -->
+                <div style="background:rgba(255,255,255,0.06); border-radius:8px; padding:8px 10px; min-width:130px;">
+                    <div style="font-size:7px; font-weight:900; color:#94a3b8; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.5px;">Vista previa</div>
+                    <div style="display:flex; flex-direction:column; gap:2px;">
+                        <div style="display:flex; gap:4px; align-items:center;">
+                            <span style="font-size:8px; color:#94a3b8;">1</span>
+                            <span style="flex:1; height:6px; background:#475569; border-radius:2px;"></span>
+                            <span style="font-size:8px; font-weight:900; color:#E31E24;">80</span>
+                        </div>
+                        <div style="display:flex; gap:4px; align-items:center; background:#d4edda; border-radius:2px; padding:1px 2px;">
+                            <span style="font-size:8px; color:#166534;">2</span>
+                            <span style="flex:1; height:6px; background:#16a34a; border-radius:2px; opacity:0.6;"></span>
+                            <span style="font-size:8px; font-weight:900; color:#166534;">74</span>
+                        </div>
+                        <div style="display:flex; gap:4px; align-items:center;">
+                            <span style="font-size:8px; color:#94a3b8;">3</span>
+                            <span style="flex:1; height:6px; background:#475569; border-radius:2px;"></span>
+                            <span style="font-size:8px; font-weight:900; color:#E31E24;">69</span>
+                        </div>
+                        <div style="display:flex; gap:4px; align-items:center; background:#fff3cd; border-radius:2px; padding:1px 2px;">
+                            <span style="font-size:8px; color:#92400e;">4</span>
+                            <span style="flex:1; height:6px; background:#f59e0b; border-radius:2px; opacity:0.6;"></span>
+                            <span style="font-size:8px; font-weight:900; color:#92400e;">63</span>
+                        </div>
+                        <div style="display:flex; gap:4px; align-items:center;">
+                            <span style="font-size:8px; color:#94a3b8;">5</span>
+                            <span style="flex:1; height:6px; background:#475569; border-radius:2px;"></span>
+                            <span style="font-size:8px; font-weight:900; color:#E31E24;">58</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="flex:1;">
+                    <h3 style="margin:0 0 4px 0; font-size:14px; font-weight:900; color:white;">
                         <i class="fas fa-table-list" style="color:#E31E24; margin-right:7px;"></i>
                         DESCARGAR CLASIFICACIONES
                     </h3>
-                    <p style="margin:0; font-size:10px; color:#64748b;">
-                        Genera un PDF con la clasificación de cada equipo en la última jornada jugada,
-                        marcando nuestra posición en <span style="background:#d4edda;padding:1px 5px;border-radius:3px;font-weight:700;">verde</span>
-                        y el próximo rival en <span style="background:#fff3cd;padding:1px 5px;border-radius:3px;font-weight:700;">amarillo</span>.
+                    <p style="margin:0; font-size:10px; color:#94a3b8;">
+                        Clasificación de cada equipo con nuestra posición en
+                        <span style="background:#d4edda;color:#166534;padding:1px 5px;border-radius:3px;font-weight:700;">verde</span>
+                        y el rival del finde en
+                        <span style="background:#fff3cd;color:#92400e;padding:1px 5px;border-radius:3px;font-weight:700;">amarillo</span>.
+                        Formato A4 horizontal, 2 por página.
                     </p>
                 </div>
-                <a href="/clasificaciones/pdf" target="_blank"
+            </div>
+            <!-- Selector de finde + botón -->
+            <div style="padding:14px 22px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:white; border-top:1px solid #f1f5f9;">
+                <div style="display:flex; align-items:center; gap:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:6px 12px;">
+                    <i class="fas fa-calendar-week" style="color:#64748b; font-size:11px;"></i>
+                    <label style="font-size:10px; color:#64748b; font-weight:700; white-space:nowrap;">Fin de semana:</label>
+                    <input type="date" id="clasifPdfFecha" onchange="clasifPdfActualizarLink()"
+                           style="border:none; background:transparent; font-size:11px; font-weight:700; color:#1e293b; cursor:pointer; outline:none;">
+                </div>
+                <button onclick="clasifPdfActualizarLink(); document.getElementById('btnVerClasifPdf').click();"
+                        style="background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; border-radius:8px; padding:8px 14px; font-size:10px; font-weight:700; cursor:pointer; white-space:nowrap;">
+                    <i class="fas fa-times" style="font-size:9px;"></i> Sin filtro
+                </button>
+                <a id="btnVerClasifPdf" href="/clasificaciones/pdf" target="_blank"
                    style="margin-left:auto; background:#E31E24; color:white; border:none; border-radius:9px; padding:10px 22px; font-weight:900; font-size:12px; text-decoration:none; white-space:nowrap; display:inline-flex; align-items:center; gap:7px;">
                     <i class="fas fa-file-pdf"></i> VER / IMPRIMIR
                 </a>
@@ -1030,17 +1077,27 @@
                         </div>
                     </div>
                     <div id="obsFindeLabel" style="font-size:11px;font-weight:800;color:#64748b;align-self:center;padding:10px 14px;background:#f1f5f9;border-radius:8px;">Selecciona un fin de semana en el calendario</div>
+                    <div id="obsGlobalStats" style="align-self:flex-start;padding:10px 14px;background:#f0fdf4;border-radius:8px;font-size:10.5px;color:#166534;font-weight:800;min-width:230px;flex:1 1 520px;"></div>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                     <div>
-                        <div style="font-size:9.5px;font-weight:900;color:#475569;text-transform:uppercase;margin-bottom:6px;padding-bottom:5px;border-bottom:2px solid #e2e8f0;">
-                            <i class="fas fa-clipboard-list" style="color:#2563eb;margin-right:5px;"></i> PLANIFICACIÓN — OBJETIVOS
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding-bottom:5px;border-bottom:2px solid #e2e8f0;">
+                            <div style="font-size:11px;font-weight:900;color:#475569;text-transform:uppercase;">
+                                <i class="fas fa-clipboard-list" style="color:#2563eb;margin-right:5px;"></i> PLANIFICACIÓN — OBJETIVOS
+                            </div>
+                            <button class="btn-fin" style="background:#f1f5f9;color:#475569;padding:5px 10px;font-size:9px;" onclick="descargarObjImagen('obsTablaLeft','planificacion_objetivos')"><i class="fas fa-download"></i> IMAGEN</button>
                         </div>
                         <div id="obsTablaLeft"></div>
                     </div>
                     <div>
-                        <div style="font-size:9.5px;font-weight:900;color:#475569;text-transform:uppercase;margin-bottom:6px;padding-bottom:5px;border-bottom:2px solid #e2e8f0;">
-                            <i class="fas fa-check-double" style="color:#16a34a;margin-right:5px;"></i> RESULTADOS — CUMPLIMIENTO
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding-bottom:5px;border-bottom:2px solid #e2e8f0;">
+                            <div style="font-size:11px;font-weight:900;color:#475569;text-transform:uppercase;">
+                                <i class="fas fa-check-double" style="color:#16a34a;margin-right:5px;"></i> RESULTADOS — CUMPLIMIENTO
+                            </div>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <span id="obsCumplimientoStats" style="font-size:10px;font-weight:800;color:#475569;white-space:nowrap;"></span>
+                                <button class="btn-fin" style="background:#f1f5f9;color:#475569;padding:5px 10px;font-size:9px;" onclick="descargarObjImagen('obsTablaRight','resultados_cumplimiento')"><i class="fas fa-download"></i> IMAGEN</button>
+                            </div>
                         </div>
                         <div id="obsTablaRight"></div>
                     </div>
@@ -4420,6 +4477,21 @@
         } finally { hideLoader(); }
     }
 
+    window.descargarObjImagen = async function(contenedorId, nombreArchivo) {
+        showLoader();
+        try {
+            const cont = document.getElementById(contenedorId);
+            const canvas = await html2canvas(cont, { backgroundColor: '#ffffff', scale: 2 });
+            const link = document.createElement('a');
+            link.download = `${nombreArchivo}_${formatoFechaISO(new Date())}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } catch (e) {
+            alert('Error al generar la imagen.');
+            console.error(e);
+        } finally { hideLoader(); }
+    }
+
     async function initHorarios() {
         if (!horariosViernesActivo) horariosViernesActivo = viernesDeReferencia();
         renderNavSemanaHorarios();
@@ -5500,6 +5572,7 @@
             obsCalAnio = new Date().getFullYear();
             obsCalMes = new Date().getMonth();
             obsRenderCalendario();
+            obsRenderStatsGlobal();
             obsActivarSubTab('finde', document.querySelector('.obs-subtab-btn'));
         } catch (err) {
             document.getElementById('obsLoading').style.display = 'none';
@@ -5534,10 +5607,14 @@
         for (var dia = 1; dia <= diasMes; dia++) {
             var fecha = new Date(obsCalAnio, obsCalMes, dia);
             var dow = fecha.getDay();
-            var esSabado = dow === 6, esDomingo = dow === 0;
-            var esFinde = esSabado || esDomingo;
+            var esViernes = dow === 5, esSabado = dow === 6, esDomingo = dow === 0;
+            var esFinde = esViernes || esSabado || esDomingo;
             var tienePartidos = diasConPartidos.has(dia);
-            var findeRef = esSabado ? fecha : (esDomingo ? new Date(obsCalAnio, obsCalMes, dia-1) : null);
+            // findeRef siempre apunta al sábado del fin de semana
+            var findeRef = esSabado ? fecha
+                         : esDomingo ? new Date(obsCalAnio, obsCalMes, dia-1)
+                         : esViernes ? new Date(obsCalAnio, obsCalMes, dia+1)
+                         : null;
             var findeKey = findeRef ? (findeRef.getFullYear()+'-'+String(findeRef.getMonth()+1).padStart(2,'0')+'-'+String(findeRef.getDate()).padStart(2,'0')) : null;
             var activo = obsFindeActivo && findeKey && obsFindeActivo === findeKey;
             var bg = activo ? 'background:#E31E24;color:white;font-weight:700;' : (esFinde ? 'background:#f8fafc;' : '');
@@ -5548,6 +5625,114 @@
             html += '<div style="padding:4px 2px;border-radius:4px;'+bg+cursor+'" '+click+'>'+dia+dotHtml+'</div>';
         }
         document.getElementById('obsCalGrid').innerHTML = html;
+    }
+
+    function obsCalcularStats(lista) {
+        var verde = 0, rojo = 0;
+        (lista || []).forEach(function(p) {
+            if (p.cumplido === true) verde++;
+            else if (p.cumplido === false) rojo++;
+        });
+        var total = verde + rojo;
+        return { verde: verde, rojo: rojo, pct: total > 0 ? Math.round((verde / total) * 100) : 0 };
+    }
+
+    function obsStatsPorFinde() {
+        var grupos = {};
+        (obsData || []).forEach(function(p) {
+            var fd = obsFechaPartido(p);
+            if (!fd) return;
+            var dow = fd.getDay(); // 0=domingo ... 6=sabado
+            var sab = new Date(fd);
+            if (dow === 0) sab.setDate(sab.getDate() - 1);
+            else if (dow === 5) sab.setDate(sab.getDate() + 1);
+            else if (dow !== 6) return; // entre semana, no forma parte de un finde
+            var key = sab.getFullYear()+'-'+String(sab.getMonth()+1).padStart(2,'0')+'-'+String(sab.getDate()).padStart(2,'0');
+            (grupos[key] = grupos[key] || []).push(p);
+        });
+        return Object.keys(grupos).sort().map(function(key) {
+            var st = obsCalcularStats(grupos[key]);
+            return { label: key.split('-').reverse().join('/'), verde: st.verde, rojo: st.rojo, pct: st.pct };
+        }).filter(function(f) { return (f.verde + f.rojo) > 0; });
+    }
+
+    function obsRenderStatsGlobal() {
+        var gEl = document.getElementById('obsGlobalStats');
+        if (!gEl) return;
+        var findes = obsStatsPorFinde();
+        if (findes.length === 0) { gEl.innerHTML = 'Sin datos de cumplimiento todavía'; return; }
+
+        var meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        var mesesMap = {}, mesesOrden = [];
+        var totalVerde = 0, totalRojo = 0, sumaPct = 0;
+
+        // Agrupar partidos por fin de semana y luego por mes
+        (function() {
+            var grupos = {};
+            (obsData || []).forEach(function(p) {
+                var fd = obsFechaPartido(p);
+                if (!fd) return;
+                var dow = fd.getDay();
+                var sab = new Date(fd);
+                if (dow === 0) sab.setDate(sab.getDate() - 1);
+                else if (dow === 5) sab.setDate(sab.getDate() + 1);
+                else if (dow !== 6) return;
+                var key = sab.getFullYear()+'-'+String(sab.getMonth()+1).padStart(2,'0')+'-'+String(sab.getDate()).padStart(2,'0');
+                var mesKey = sab.getFullYear()+'-'+String(sab.getMonth()+1).padStart(2,'0');
+                var mesLabel = meses[sab.getMonth()] + ' ' + sab.getFullYear();
+                (grupos[key] = grupos[key] || { mesKey: mesKey, mesLabel: mesLabel, partidos: [] }).partidos.push(p);
+            });
+            Object.keys(grupos).sort().forEach(function(key) {
+                var g = grupos[key];
+                var st = obsCalcularStats(g.partidos);
+                if ((st.verde + st.rojo) === 0) return;
+                var mk = g.mesKey;
+                if (!mesesMap[mk]) { mesesMap[mk] = { label: g.mesLabel, items: [], verde: 0, rojo: 0, sumaPct: 0 }; mesesOrden.push(mk); }
+                mesesMap[mk].items.push({ label: key.split('-').reverse().join('/'), verde: st.verde, rojo: st.rojo, pct: st.pct });
+                mesesMap[mk].verde += st.verde; mesesMap[mk].rojo += st.rojo; mesesMap[mk].sumaPct += st.pct;
+                totalVerde += st.verde; totalRojo += st.rojo; sumaPct += st.pct;
+            });
+        })();
+
+        var totalFindes = 0;
+        var mesesHtml = mesesOrden.map(function(mk) {
+            var m = mesesMap[mk];
+            totalFindes += m.items.length;
+            var mPct = m.items.length > 0 ? Math.round(m.sumaPct / m.items.length) : 0;
+            var mColor = mPct >= 70 ? '#16a34a' : (mPct >= 40 ? '#d97706' : '#dc2626');
+            var filas = m.items.map(function(f) {
+                var color = f.pct >= 70 ? '#16a34a' : (f.pct >= 40 ? '#d97706' : '#dc2626');
+                return '<div style="display:flex;justify-content:space-between;gap:8px;padding:1px 6px;font-weight:400;white-space:nowrap;">'
+                    + '<span>'+f.label+'</span>'
+                    + '<span style="font-weight:800;color:'+color+';">'+f.pct+'% <span style="color:#16a34a;">✓'+f.verde+'</span> <span style="color:#dc2626;">✗'+f.rojo+'</span></span>'
+                    + '</div>';
+            }).join('');
+            return '<div style="break-inside:avoid;margin-bottom:8px;">'
+                + '<div style="display:flex;justify-content:space-between;align-items:center;background:#dcfce7;padding:3px 6px;border-radius:4px;margin-bottom:2px;">'
+                + '<span style="font-weight:900;font-size:10px;color:#14532d;">'+m.label+'</span>'
+                + '<span style="font-weight:900;font-size:10px;color:'+mColor+';">'+mPct+'% <span style="color:#16a34a;">✓'+m.verde+'</span> <span style="color:#dc2626;">✗'+m.rojo+'</span></span>'
+                + '</div>'
+                + filas
+                + '</div>';
+        }).join('');
+
+        var totalPct = (totalVerde + totalRojo) > 0 ? Math.round((totalVerde / (totalVerde + totalRojo)) * 100) : 0;
+        var mediaPct = totalFindes > 0 ? Math.round(sumaPct / totalFindes) : 0;
+
+        gEl.innerHTML =
+            '<div style="display:flex;align-items:center;gap:6px;">'
+            + '<i class="fas fa-circle-check" style="color:#16a34a;"></i>'
+            + '<span>Cumplimiento por fin de semana ('+totalFindes+')</span>'
+            + '</div>'
+            + '<div style="margin-top:6px;column-count:3;column-gap:18px;border-top:1px solid #bbf7d0;padding-top:6px;">'
+            + mesesHtml
+            + '</div>'
+            + '<div style="display:flex;justify-content:space-between;gap:14px;padding-top:6px;margin-top:6px;border-top:2px solid #16a34a;font-weight:900;">'
+            + '<span>Acumulado total</span><span>'+totalPct+'%  <span style="color:#16a34a;">✓'+totalVerde+'</span> <span style="color:#dc2626;">✗'+totalRojo+'</span></span>'
+            + '</div>'
+            + '<div style="display:flex;justify-content:space-between;gap:14px;padding-top:2px;font-weight:900;">'
+            + '<span>Media de findes</span><span>'+mediaPct+'%</span>'
+            + '</div>';
     }
 
     function obsCambiarMes(delta) {
@@ -5563,71 +5748,139 @@
         obsRenderFinde();
     }
 
-    function obsColorObjetivo(obj) {
-        return {'GANAR':'#16a34a','GANAR/EMPATAR':'#2563eb','EMPATAR':'#d97706','COMPETIR':'#dc2626'}[obj] || '#94a3b8';
-    }
-
     function obsRenderFinde() {
         if (!obsData) return;
         var leftEl = document.getElementById('obsTablaLeft');
         var rightEl = document.getElementById('obsTablaRight');
         if (!leftEl || !rightEl) return;
-        var partidos = obsData;
-        if (obsFindeActivo) {
-            var sab = new Date(obsFindeActivo + 'T00:00:00');
-            var dom = new Date(obsFindeActivo + 'T00:00:00'); dom.setDate(dom.getDate() + 1);
-            partidos = obsData.filter(function(p) {
-                var fd = obsFechaPartido(p);
-                if (!fd) return false;
-                return fd.getTime() === sab.getTime() || fd.getTime() === dom.getTime();
-            });
+
+        var statsEl = document.getElementById('obsCumplimientoStats');
+
+        // Sin fin de semana seleccionado: mostrar placeholder
+        if (!obsFindeActivo) {
+            var placeholder = '<div style="text-align:center;padding:40px 20px;color:#94a3b8;font-size:11px;"><i class="fas fa-calendar-week" style="font-size:28px;margin-bottom:10px;display:block;"></i>Selecciona un fin de semana en el calendario para ver los partidos</div>';
+            leftEl.innerHTML = placeholder;
+            rightEl.innerHTML = placeholder;
+            if (statsEl) statsEl.innerHTML = '';
+            return;
         }
-        var msg = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:11px;">' + (obsFindeActivo ? 'No hay partidos este fin de semana.' : 'Selecciona un fin de semana en el calendario.') + '</div>';
-        if (partidos.length === 0) { leftEl.innerHTML = msg; rightEl.innerHTML = msg; return; }
+
+        var vie = new Date(obsFindeActivo + 'T00:00:00'); vie.setDate(vie.getDate() - 1); // viernes
+        var sab = new Date(obsFindeActivo + 'T00:00:00');
+        var dom = new Date(obsFindeActivo + 'T00:00:00'); dom.setDate(dom.getDate() + 1);
+        // Deduplicar: un mismo equipo puede aparecer en múltiples grupos (ej. Benjamín A en F11 y F7)
+        // Filtrar por fin de semana Y deduplicar por (categoria+letra+formato+rival)
+        var vistos = new Set();
+        var partidos = obsData.filter(function(p) {
+            var fd = obsFechaPartido(p);
+            if (!fd) return false;
+            if (fd.getTime() !== vie.getTime() && fd.getTime() !== sab.getTime() && fd.getTime() !== dom.getTime()) return false;
+            var clave = p.categoria + '|' + p.letra + '|' + (p.formato || '') + '|' + p.rival + '|' + p.jornada;
+            if (vistos.has(clave)) return false;
+            vistos.add(clave);
+            return true;
+        });
+
+        var msg = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:11px;">No hay partidos este fin de semana.</div>';
+        if (partidos.length === 0) { leftEl.innerHTML = msg; rightEl.innerHTML = msg; if (statsEl) statsEl.innerHTML = ''; return; }
+
         var labelEl = document.getElementById('obsFindeLabel');
-        if (labelEl) labelEl.textContent = 'Fin de semana del ' + (obsFindeActivo || '').split('-').reverse().join('/') + ' — ' + partidos.length + ' partido(s)';
+        if (labelEl) labelEl.textContent = 'Fin de semana del ' + obsFindeActivo.split('-').reverse().join('/') + ' — ' + partidos.length + ' partido(s)';
+
+        var st = obsCalcularStats(partidos);
+        var statsTexto = (st.verde + st.rojo) > 0
+            ? '<i class="fas fa-circle-check" style="color:#16a34a;"></i> '+st.pct+'% Cumplidos &nbsp;&nbsp; <span style="color:#16a34a;">✓ '+st.verde+' cumplidos</span> &nbsp;&nbsp; <span style="color:#dc2626;">✗ '+st.rojo+' no cumplidos</span>'
+            : '';
+        var statsBanner = statsTexto
+            ? '<div style="padding:5px 8px;margin-bottom:8px;background:#f8fafc;border-radius:6px;font-size:10px;font-weight:800;color:#1e293b;">'+statsTexto+'</div>'
+            : '';
+
         leftEl.innerHTML = obsRenderTablaFinde(partidos, false);
-        rightEl.innerHTML = obsRenderTablaFinde(partidos, true);
+        rightEl.innerHTML = statsBanner + obsRenderTablaFinde(partidos, true);
+
+        if (statsEl) statsEl.innerHTML = statsTexto;
     }
 
     function obsRenderTablaFinde(partidos, modoResultados) {
-        var thS = 'padding:4px 6px;font-size:8px;font-weight:900;text-transform:uppercase;color:#64748b;background:#f8fafc;border-bottom:2px solid #e2e8f0;white-space:nowrap;';
-        var tdS = 'padding:4px 6px;font-size:9px;border-bottom:1px solid #f1f5f9;vertical-align:top;';
-        var html = '<table style="width:100%;border-collapse:collapse;font-family:inherit;"><thead><tr>';
-        html += '<th style="'+thS+'">Equipo</th><th style="'+thS+'">Jorn.</th><th style="'+thS+'">Campo</th><th style="'+thS+'">Rival</th>';
+        var thS = 'padding:6px 8px;font-size:9.5px;font-weight:900;text-transform:uppercase;color:#64748b;background:#f8fafc;border-bottom:2px solid #e2e8f0;white-space:nowrap;';
+        var tdS = 'padding:6px 8px;font-size:10.5px;border-bottom:1px solid #f1f5f9;vertical-align:top;';
+        var estadoColor = {'G':'#16a34a','E':'#d97706','P':'#dc2626'};
+
+        // ¿Hay algún partido con ida jugada? Si sí, mostrar columna IDA
+        var hayIda = partidos.some(function(p) { return p.ida_resultado; });
+
+        // ¿Hay múltiples grupos con mismo (categoria+letra+formato)? Si sí, mostrar grupo_short
+        var claveCnt = {};
+        partidos.forEach(function(p) {
+            var k = p.categoria + '|' + p.letra + '|' + (p.formato||'');
+            claveCnt[k] = (claveCnt[k]||0) + 1;
+        });
+
+        var widthRival = modoResultados ? '20%' : '14%';
+        var widthIda = modoResultados ? '5%' : '7%';
+        var html = '<table style="width:100%;border-collapse:collapse;font-family:inherit;table-layout:fixed;"><thead><tr>';
+        html += '<th style="'+thS+'width:13%;">Equipo</th><th style="'+thS+'width:9%;">Jorn.</th><th style="'+thS+'width:6%;">Campo</th><th style="'+thS+'width:'+widthRival+';">Rival</th>';
+        if (hayIda) html += '<th style="'+thS+'text-align:center;width:'+widthIda+';">IDA</th>';
         if (!modoResultados) {
-            html += '<th style="'+thS+'">Datos rival</th><th style="'+thS+'">Objetivo</th>';
+            html += '<th style="'+thS+'width:9%;">Objetivo</th><th style="'+thS+'width:auto;">Datos rival</th>';
         } else {
-            html += '<th style="'+thS+'">Resultado</th><th style="'+thS+'">Obj.</th><th style="'+thS+'text-align:center;">✓/✗</th>';
+            html += '<th style="'+thS+'width:auto;">Resultado</th><th style="'+thS+'width:9%;">Obj.</th><th style="'+thS+'text-align:center;width:5%;">✓/✗</th>';
         }
         html += '</tr></thead><tbody>';
-        var estadoColor = {'G':'#16a34a','E':'#d97706','P':'#dc2626'};
+
         partidos.forEach(function(p) {
-            var equipo = (p.categoria + ' ' + p.letra).trim();
+            // Label del equipo: añadir grupo_short solo si hay colisión de nombre
+            var kEq = p.categoria + '|' + p.letra + '|' + (p.formato||'');
+            var grpLabel = (claveCnt[kEq] > 1 && p.grupo_short) ? ' <small style="color:#94a3b8;">['+p.grupo_short+']</small>' : '';
+            var equipo = (p.categoria + ' ' + p.letra).trim()
+                + (p.formato ? ' <small style="color:#94a3b8;">('+p.formato+')</small>' : '')
+                + grpLabel;
+
             var campo = p.es_local ? 'Casa' : 'Fuera';
             var objetivo = p.objetivo;
             var objChip = objetivo
-                ? '<span style="display:inline-block;padding:2px 7px;border-radius:99px;background:'+obsColorObjetivo(objetivo)+';color:white;font-size:8px;font-weight:900;white-space:nowrap;">'+objetivo+'</span>'
-                : '<span style="color:#94a3b8;font-size:9px;">–</span>';
+                ? '<span style="color:#1e293b;font-size:10.5px;font-weight:800;white-space:nowrap;">'+objetivo+'</span>'
+                : '<span style="color:#94a3b8;font-size:10px;">–</span>';
             var estado = p.estado || '';
             var bgRes = estadoColor[estado] || '#94a3b8';
             var resSpan = estado
-                ? '<span style="display:inline-block;padding:2px 7px;border-radius:6px;background:'+bgRes+';color:white;font-size:9px;font-weight:900;">'+(p.resultado||'')+'</span>'
-                : '<span style="color:#94a3b8;font-size:9px;">Sin jugar</span>';
-            var cumHtml = '<span style="color:#94a3b8;">–</span>';
-            if (p.cumplido === true) cumHtml = '<span style="font-size:16px;color:#16a34a;line-height:1;">✓</span>';
-            else if (p.cumplido === false) cumHtml = '<span style="font-size:16px;color:#dc2626;line-height:1;">✗</span>';
-            var datosRival = '<span style="color:#94a3b8;font-size:9px;">–</span>';
+                ? '<span style="display:inline-block;padding:3px 8px;border-radius:4px;background:'+bgRes+';color:white;font-size:10.5px;font-weight:900;">'+estado+' '+(p.resultado||'')+'</span>'
+                : '<span style="color:#94a3b8;font-size:10px;">Sin jugar</span>';
+            var cumHtml = '<span style="color:#cbd5e1;font-size:14px;">–</span>';
+            if (p.cumplido === true) cumHtml = '<i class="fas fa-circle-check" style="font-size:14px;color:#16a34a;"></i>';
+            else if (p.cumplido === false) cumHtml = '<i class="fas fa-circle-xmark" style="font-size:14px;color:#dc2626;"></i>';
+
+            // Columna IDA
+            var idaHtml = '';
+            if (hayIda) {
+                if (p.ida_resultado) {
+                    var bgIda = estadoColor[p.ida_estado] || '#94a3b8';
+                    var letraIda = p.ida_estado || '';
+                    idaHtml = '<td style="'+tdS+'text-align:center;"><span style="display:inline-block;padding:3px 8px;border-radius:4px;background:'+bgIda+';color:white;font-size:10.5px;font-weight:900;">'+letraIda+' '+p.ida_resultado+'</span></td>';
+                } else {
+                    idaHtml = '<td style="'+tdS+'text-align:center;"><span style="color:#e2e8f0;font-size:10px;">–</span></td>';
+                }
+            }
+
+            var datosRival = '<span style="color:#94a3b8;font-size:10px;">–</span>';
             if (p.datos_nuestro && p.datos_rival) {
                 var dn = p.datos_nuestro, dr = p.datos_rival;
                 var ultHtml = (p.ultimos_rival || []).map(function(u) {
-                    return '<span style="display:block;font-size:7.5px;color:#64748b;">'+u.estado+' '+u.resultado+' vs '+u.rival+'</span>';
+                    return '<span style="display:inline-block;margin-right:5px;font-size:8.5px;color:#334155;white-space:nowrap;">('+u.estado+' '+u.resultado+' vs '+u.rival+')</span>';
                 }).join('');
-                datosRival = '<div style="font-size:8px;line-height:1.6;"><b>'+dn.posicion+'° vs '+dr.posicion+'°</b><br>'+dn.puntos+' pts vs '+dr.puntos+' pts<br>GF/GC: '+dn.goles_favor+'/'+dn.goles_contra+' vs '+dr.goles_favor+'/'+dr.goles_contra+(ultHtml?'<div style="margin-top:2px;">'+ultHtml+'</div>':'')+'</div>';
+                var celdaS = 'padding:2px 6px;font-size:9.5px;white-space:nowrap;';
+                datosRival = '<table style="border-collapse:collapse;font-size:9.5px;width:100%;">'
+                    + '<tr><td style="'+celdaS+'color:#94a3b8;font-weight:700;width:18px;">FR</td><td style="'+celdaS+'font-weight:700;">'+dn.posicion+'°</td><td style="'+celdaS+'font-weight:700;color:#E31E24;">'+dn.puntos+'pts</td><td style="'+celdaS+'color:#64748b;">Goles Favor: '+dn.goles_favor+', Goles Contra: '+dn.goles_contra+'</td></tr>'
+                    + '<tr><td style="'+celdaS+'color:#94a3b8;font-weight:700;">Rival</td><td style="'+celdaS+'font-weight:700;">'+dr.posicion+'°</td><td style="'+celdaS+'font-weight:700;color:#E31E24;">'+dr.puntos+'pts</td><td style="'+celdaS+'color:#64748b;">Goles Favor: '+dr.goles_favor+', Goles Contra: '+dr.goles_contra+'</td></tr>'
+                    + '</table>'
+                    + (ultHtml ? '<div style="margin-top:2px;">'+ultHtml+'</div>' : '');
             }
-            html += '<tr><td style="'+tdS+'font-weight:700;">'+equipo+'</td><td style="'+tdS+'color:#64748b;">'+p.jornada+'</td><td style="'+tdS+'color:#64748b;">'+campo+'</td><td style="'+tdS+'">'+p.rival+'</td>';
+
+            var jornadaLabel = obsFormatJornada(p.jornada, p.fecha);
+            html += '<tr><td style="'+tdS+'font-weight:700;">'+equipo+'</td><td style="'+tdS+'color:#64748b;white-space:nowrap;font-weight:700;">'+jornadaLabel+'</td><td style="'+tdS+'color:#64748b;">'+campo+'</td><td style="'+tdS+'">'+p.rival+'</td>';
+            html += idaHtml;
             if (!modoResultados) {
-                html += '<td style="'+tdS+'">'+datosRival+'</td><td style="'+tdS+'">'+objChip+'</td>';
+                html += '<td style="'+tdS+'">'+objChip+'</td><td style="'+tdS+'">'+datosRival+'</td>';
             } else {
                 html += '<td style="'+tdS+'text-align:center;">'+resSpan+'</td><td style="'+tdS+'text-align:center;">'+objChip+'</td><td style="'+tdS+'text-align:center;">'+cumHtml+'</td>';
             }
@@ -5641,10 +5894,22 @@
         if (!obsData) return;
         var el = document.getElementById('obsTemporadaGrid');
         if (!el) return;
+        // Detectar qué combinaciones (categoria+letra) tienen múltiples grupos
+        var cntGrupos = {};
+        obsData.forEach(function(p) {
+            var k = p.categoria + ' ' + p.letra;
+            if (!cntGrupos[k]) cntGrupos[k] = new Set();
+            if (p.grupo_short) cntGrupos[k].add(p.grupo_short);
+        });
+
         var equipoMap = {};
         var maxJornada = 0;
         obsData.forEach(function(p) {
-            var clave = p.categoria + ' ' + p.letra;
+            var baseKey = p.categoria + ' ' + p.letra;
+            // Añadir grupo_short al key si hay varios grupos para misma categoria+letra
+            var clave = (cntGrupos[baseKey] && cntGrupos[baseKey].size > 1 && p.grupo_short)
+                ? baseKey + ' [' + p.grupo_short + ']'
+                : baseKey;
             if (!equipoMap[clave]) equipoMap[clave] = { clave: clave, categoria: p.categoria, letra: p.letra, jornadas: {} };
             var jn = p.jornada_num;
             if (jn < 999) { equipoMap[clave].jornadas[jn] = p; if (jn > maxJornada) maxJornada = jn; }
@@ -5656,12 +5921,16 @@
             var cb = ordenCat[b.categoria] !== undefined ? ordenCat[b.categoria] : 99;
             return ca !== cb ? ca - cb : a.letra.localeCompare(b.letra);
         });
-        var html = '<div style="overflow-x:auto;"><table style="border-collapse:collapse;font-size:8px;font-family:inherit;"><thead><tr>';
-        html += '<th style="padding:4px 8px;background:#1e293b;color:white;text-align:left;white-space:nowrap;min-width:90px;position:sticky;left:0;z-index:2;">Equipo</th>';
-        for (var j = 1; j <= maxJornada; j++) html += '<th style="padding:4px 3px;background:#1e293b;color:white;font-size:7px;text-align:center;min-width:22px;">J.'+j+'</th>';
+        var html = '<div style="overflow-x:auto;"><table style="border-collapse:separate;border-spacing:0 4px;font-size:10px;font-family:inherit;"><thead><tr>';
+        html += '<th style="padding:6px 12px;background:#1e293b;color:white;text-align:left;white-space:nowrap;min-width:130px;position:sticky;left:0;z-index:2;border-radius:6px 0 0 6px;">Equipo</th>';
+        for (var j = 1; j <= maxJornada; j++) html += '<th style="padding:6px 4px;background:#1e293b;color:#94a3b8;font-size:8px;text-align:center;min-width:28px;">J.'+j+'</th>';
+        html += '<th style="padding:6px 8px;background:#1e293b;color:#fff;font-size:8.5px;text-align:center;min-width:50px;">% Cump.</th>';
+        html += '<th style="padding:6px 8px;background:#1e293b;color:#fff;font-size:8.5px;text-align:center;min-width:60px;border-radius:0 6px 6px 0;">Detalle</th>';
         html += '</tr></thead><tbody>';
         equipos.forEach(function(eq) {
-            html += '<tr><td style="padding:4px 8px;font-weight:800;color:#1e293b;white-space:nowrap;background:#f8fafc;position:sticky;left:0;z-index:1;border-right:2px solid #e2e8f0;">'+eq.categoria+' '+eq.letra+'</td>';
+            html += '<tr style="height:36px;">';
+            html += '<td style="padding:6px 12px;font-weight:900;font-size:10px;color:#1e293b;white-space:nowrap;background:#f8fafc;position:sticky;left:0;z-index:1;border-right:2px solid #e2e8f0;border-radius:6px 0 0 6px;">'+eq.clave+'</td>';
+            var verde = 0, rojo = 0;
             for (var j = 1; j <= maxJornada; j++) {
                 var p = eq.jornadas[j];
                 var bg = '#f1f5f9', title = 'J.'+j;
@@ -5669,14 +5938,21 @@
                     title = (p.jornada||'J.'+j)+' vs '+p.rival+' — '+(p.resultado||'sin jugar');
                     if (p.estado) {
                         bg = p.cumplido === true ? '#16a34a' : (p.cumplido === false ? '#dc2626' : '#94a3b8');
+                        if (p.cumplido === true) verde++;
+                        else if (p.cumplido === false) rojo++;
                     } else { bg = '#e2e8f0'; }
                 }
-                html += '<td title="'+title.replace(/"/g,'&quot;')+'" style="padding:3px;text-align:center;"><div style="width:16px;height:16px;border-radius:3px;background:'+bg+';margin:auto;"></div></td>';
+                html += '<td title="'+title.replace(/"/g,'&quot;')+'" style="padding:4px 3px;text-align:center;"><div style="width:20px;height:20px;border-radius:4px;background:'+bg+';margin:auto;"></div></td>';
             }
+            var totalEq = verde + rojo;
+            var pctEq = totalEq > 0 ? Math.round((verde / totalEq) * 100) : 0;
+            var colorEq = pctEq >= 70 ? '#16a34a' : (pctEq >= 40 ? '#d97706' : '#dc2626');
+            html += '<td style="padding:4px 6px;text-align:center;font-weight:900;color:'+(totalEq>0?colorEq:'#cbd5e1')+';background:#f8fafc;">'+(totalEq>0?pctEq+'%':'–')+'</td>';
+            html += '<td style="padding:4px 6px;text-align:center;font-size:9px;white-space:nowrap;background:#f8fafc;border-radius:0 6px 6px 0;"><span style="color:#16a34a;font-weight:800;">✓'+verde+'</span> <span style="color:#dc2626;font-weight:800;">✗'+rojo+'</span></td>';
             html += '</tr>';
         });
         html += '</tbody></table></div>';
-        html += '<div style="margin-top:10px;display:flex;gap:14px;font-size:9px;color:#64748b;"><span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#16a34a;vertical-align:-2px;margin-right:4px;"></span>Objetivo cumplido</span><span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#dc2626;vertical-align:-2px;margin-right:4px;"></span>No cumplido</span><span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#e2e8f0;vertical-align:-2px;margin-right:4px;"></span>Sin jugar / sin objetivo</span></div>';
+        html += '<div style="margin-top:14px;display:flex;gap:18px;font-size:10px;color:#64748b;"><span><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#16a34a;vertical-align:-2px;margin-right:5px;"></span>Objetivo cumplido</span><span><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#dc2626;vertical-align:-2px;margin-right:5px;"></span>No cumplido</span><span><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#e2e8f0;vertical-align:-2px;margin-right:5px;"></span>Sin jugar / sin objetivo</span></div>';
         el.innerHTML = html;
     }
 
@@ -5705,12 +5981,12 @@
                 if (!rivalesMap[r]) rivalesMap[r] = [];
                 rivalesMap[r].push(p);
             });
-            var thS = 'padding:3px 6px;font-size:8px;font-weight:900;text-transform:uppercase;color:#fff;background:#1e293b;text-align:center;';
-            var tdS = 'padding:3px 6px;font-size:8.5px;border-bottom:1px solid #f1f5f9;text-align:center;';
-            html += '<div style="background:white;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);padding:10px 12px;min-width:240px;max-width:300px;">';
-            html += '<div style="font-size:10px;font-weight:900;color:#E31E24;margin-bottom:8px;border-bottom:2px solid #E31E24;padding-bottom:4px;">'+gr.categoria+' '+gr.letra+'</div>';
+            var thS = 'padding:8px 12px;font-size:10px;font-weight:900;text-transform:uppercase;color:#fff;background:#1e293b;text-align:center;';
+            var tdS = 'padding:10px 12px;font-size:11px;border-bottom:1px solid #f1f5f9;text-align:center;';
+            html += '<div style="background:white;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.12);padding:14px 18px;min-width:320px;max-width:440px;">';
+            html += '<div style="font-size:13px;font-weight:900;color:#E31E24;margin-bottom:12px;border-bottom:2px solid #E31E24;padding-bottom:6px;">'+gr.categoria+' '+gr.letra+'</div>';
             html += '<table style="width:100%;border-collapse:collapse;font-family:inherit;"><thead><tr>';
-            html += '<th style="'+thS+'text-align:left;min-width:100px;">Rival</th><th style="'+thS+'">IDA</th><th style="'+thS+'">VUELTA</th></tr></thead><tbody>';
+            html += '<th style="'+thS+'text-align:left;min-width:150px;">RIVAL</th><th style="'+thS+'min-width:90px;">IDA</th><th style="'+thS+'min-width:90px;">VUELTA</th></tr></thead><tbody>';
             Object.entries(rivalesMap).forEach(function(entry) {
                 var rival = entry[0], ps = entry[1];
                 var ida = ps[0] || null, vuelta = ps[1] || null;
@@ -5719,19 +5995,52 @@
                     var vi = estadoOrd[ida.estado] || 0, vv = estadoOrd[vuelta.estado] || 0;
                     colorVuelta = vv > vi ? '#16a34a' : (vv === vi ? '#f59e0b' : '#dc2626');
                 }
-                var fmtR = function(p) {
-                    if (!p || !p.resultado) return '<span style="color:#94a3b8;">–</span>';
-                    var bg = {'G':'#16a34a','E':'#f59e0b','P':'#dc2626'}[p.estado] || '#94a3b8';
-                    return '<span style="display:inline-block;padding:1px 6px;border-radius:4px;background:'+bg+';color:white;font-weight:900;font-size:8px;">'+p.resultado+'</span>';
-                };
-                var vuelHtml = (vuelta && vuelta.resultado)
-                    ? '<span style="display:inline-block;padding:1px 6px;border-radius:4px;background:'+colorVuelta+';color:white;font-weight:900;font-size:8px;">'+vuelta.resultado+'</span>'
-                    : '<span style="color:#94a3b8;">–</span>';
-                html += '<tr><td style="'+tdS+'text-align:left;font-weight:600;">'+rival+'</td><td style="'+tdS+'">'+fmtR(ida)+'</td><td style="'+tdS+'">'+vuelHtml+'</td></tr>';
+                // IDA: sin color de fondo, solo texto con letra G/E/P + resultado
+                var idaHtml = '<span style="color:#94a3b8;font-size:10px;">–</span>';
+                if (ida && ida.resultado) {
+                    var letraIda = ida.estado || '';
+                    var colorLetraIda = {'G':'#16a34a','E':'#d97706','P':'#dc2626'}[letraIda] || '#64748b';
+                    idaHtml = '<span style="font-weight:900;color:'+colorLetraIda+';font-size:10px;">'+letraIda+'</span> <span style="font-weight:700;font-size:10px;color:#1e293b;">'+ida.resultado+'</span>';
+                }
+                // VUELTA: con color de fondo según mejora/igual/empeora, letra G/E/P + resultado
+                var vuelHtml = '<span style="color:#94a3b8;font-size:10px;">–</span>';
+                if (vuelta && vuelta.resultado) {
+                    var letraVuelta = vuelta.estado || '';
+                    vuelHtml = '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;background:'+colorVuelta+';color:white;font-weight:900;font-size:10px;">'+letraVuelta+' '+vuelta.resultado+'</span>';
+                }
+                html += '<tr><td style="'+tdS+'text-align:left;font-weight:600;font-size:10px;">'+rival+'</td><td style="'+tdS+'">'+idaHtml+'</td><td style="'+tdS+'">'+vuelHtml+'</td></tr>';
             });
             html += '</tbody></table></div>';
         });
         el.innerHTML = html || '<div style="text-align:center;padding:30px;color:#94a3b8;">Sin datos.</div>';
+    }
+
+    // Clasificaciones PDF — selector de finde en INFORMES
+    function clasifPdfActualizarLink() {
+        var fecha = document.getElementById('clasifPdfFecha') ? document.getElementById('clasifPdfFecha').value : '';
+        var btn = document.getElementById('btnVerClasifPdf');
+        if (btn) btn.href = fecha ? '/clasificaciones/pdf?fecha=' + fecha : '/clasificaciones/pdf';
+    }
+    // Botón "Sin filtro"
+    document.addEventListener('DOMContentLoaded', function() {
+        var qf = document.querySelector('[onclick*="clasifPdfActualizarLink"]');
+        if (qf) qf.onclick = function() {
+            var fi = document.getElementById('clasifPdfFecha');
+            if (fi) fi.value = '';
+            clasifPdfActualizarLink();
+        };
+    });
+
+    // Formatear jornada: "Jornada 28" + "05-06-2026" → "J.28 SAB 05/06"
+    function obsFormatJornada(jornada, fecha) {
+        var num = (jornada || '').replace(/[^\d]/g, '') || '';
+        if (!fecha) return (num ? 'J.' + num : jornada || '');
+        var partes = fecha.split('-'); // DD-MM-YYYY
+        if (partes.length !== 3) return 'J.' + num;
+        var d = new Date(partes[2] + '-' + partes[1] + '-' + partes[0] + 'T00:00:00');
+        var dias = ['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
+        var dia = dias[d.getDay()] || '';
+        return 'J.' + num + ' ' + dia + ' ' + partes[0] + '/' + partes[1];
     }
 
 </script>

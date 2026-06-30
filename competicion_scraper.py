@@ -4,9 +4,10 @@ import calendar
 import requests
 import re
 import io
+import threading
 import pdfplumber
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import urljoin
 
 # Archivo de cache
@@ -19,6 +20,95 @@ KIT_REPORT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stat
 
 CONVOCATORIAS_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'convocatorias_cache.json')
 CONVOCATORIAS_REPORT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'convocatorias_report.json')
+
+# --- Auto-sincronización en segundo plano ---
+# Credenciales guardadas fuera de /static (no servidas públicamente) y fuera de git.
+RFFM_CREDENTIALS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'rffm_credentials.json')
+AUTO_SYNC_MIN_INTERVAL_MINUTES = 60
+
+_auto_sync_state = {'running': False, 'error': None, 'started_at': None, 'finished_at': None}
+_auto_sync_lock = threading.Lock()
+
+
+def guardar_credenciales_rffm(usuario, password):
+    """Guarda las credenciales RFFM en disco (fuera de /static y fuera de git) para poder
+    re-sincronizar automáticamente en segundo plano sin pedirlas cada vez."""
+    os.makedirs(os.path.dirname(RFFM_CREDENTIALS_FILE), exist_ok=True)
+    with open(RFFM_CREDENTIALS_FILE, 'w', encoding='utf-8') as f:
+        json.dump({'usuario': usuario, 'password': password}, f)
+
+
+def cargar_credenciales_rffm():
+    if not os.path.exists(RFFM_CREDENTIALS_FILE):
+        return None, None
+    try:
+        with open(RFFM_CREDENTIALS_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return data.get('usuario'), data.get('password')
+    except Exception:
+        return None, None
+
+
+def auto_sync_status():
+    estado = dict(_auto_sync_state)
+    cache = load_cached_data()
+    estado['last_updated'] = cache.get('last_updated', '')
+    estado['tiene_credenciales'] = bool(cargar_credenciales_rffm()[0])
+    return estado
+
+
+def _datos_desactualizados():
+    cache = load_cached_data()
+    last_updated = (cache.get('last_updated') or '')[:19]  # quita sufijos tipo "(Mapeo Completo...)"
+    if not last_updated:
+        return True
+    try:
+        dt = datetime.strptime(last_updated, '%d/%m/%Y %H:%M:%S')
+    except Exception:
+        return True
+    return (datetime.now() - dt) >= timedelta(minutes=AUTO_SYNC_MIN_INTERVAL_MINUTES)
+
+
+AUTO_SYNC_RETRY_AFTER_FAILURE_MINUTES = 10
+
+
+def intentar_autosync_background():
+    """Lanza sync_rffm() en un hilo aparte si los datos llevan más de AUTO_SYNC_MIN_INTERVAL_MINUTES
+    sin actualizarse y no hay ya una sincronización en curso. No bloquea la petición HTTP que lo llama.
+    Si el último intento falló, espera AUTO_SYNC_RETRY_AFTER_FAILURE_MINUTES antes de reintentar, para
+    no entrar en bucle de reintentos (p.ej. credenciales incorrectas)."""
+    with _auto_sync_lock:
+        if _auto_sync_state['running']:
+            return False
+        if _auto_sync_state['error'] and _auto_sync_state['finished_at']:
+            try:
+                last_try = datetime.strptime(_auto_sync_state['finished_at'], '%d/%m/%Y %H:%M:%S')
+                if (datetime.now() - last_try) < timedelta(minutes=AUTO_SYNC_RETRY_AFTER_FAILURE_MINUTES):
+                    return False
+            except Exception:
+                pass
+        if not _datos_desactualizados():
+            return False
+        usuario, password = cargar_credenciales_rffm()
+        if not usuario or not password:
+            return False
+        _auto_sync_state['running'] = True
+        _auto_sync_state['error'] = None
+        _auto_sync_state['started_at'] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+    def _job():
+        try:
+            success, message = sync_rffm(usuario, password)
+            if not success:
+                _auto_sync_state['error'] = message
+        except Exception as e:
+            _auto_sync_state['error'] = str(e)
+        finally:
+            _auto_sync_state['running'] = False
+            _auto_sync_state['finished_at'] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+    threading.Thread(target=_job, daemon=True).start()
+    return True
 
 def get_session():
     session = requests.Session()
@@ -809,7 +899,19 @@ def sync_rffm(username, password):
                 "calendario_grupo": calendario_grupo
             })
             
-        # 6. Guardar en caché local
+        # 6. Deduplicar filas exactamente repetidas (la portada de la RFFM a veces
+        # lista el mismo equipo/grupo más de una vez) antes de guardar en caché.
+        equipos_unicos = []
+        vistos = set()
+        for eq in equipos_data:
+            clave = (eq.get("categoria"), eq.get("letra"), eq.get("nombre"))
+            if clave in vistos:
+                continue
+            vistos.add(clave)
+            equipos_unicos.append(eq)
+        equipos_data = equipos_unicos
+
+        # 7. Guardar en caché local
         cache_data = {
             "status": "success",
             "last_updated": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
@@ -1817,42 +1919,129 @@ def _cumple_objetivo(objetivo, estado_real):
     return None
 
 
+def _clasif_fila_a_dict(fila):
+    """Convierte una fila de clasificacion (strings del caché RFFM) al mismo formato que
+    calcular_clasificacion_en_jornada(), para poder usarla como fallback."""
+    def _i(v):
+        try: return int(str(v).strip())
+        except: return 0
+    return {
+        'equipo': fila.get('equipo', ''),
+        'posicion': _i(fila.get('pos', 0)),
+        'puntos': _i(fila.get('puntos', 0)),
+        'jugados': _i(fila.get('jugados', 0)),
+        'ganados': _i(fila.get('ganados', 0)),
+        'empatados': _i(fila.get('empatados', 0)),
+        'perdidos': _i(fila.get('perdidos', 0)),
+        'goles_favor': _i(fila.get('goles_favor', 0)),
+        'goles_contra': _i(fila.get('goles_contra', 0)),
+        '_approx': True,  # indica que son datos de fin de temporada, no reconstruidos por jornada
+    }
+
+
+def _rival_coincide(rival_norm, nombre_eq_norm):
+    """Comparación flexible de nombres de equipos: primero exacto (sin comillas), luego por inclusión."""
+    if not rival_norm or not nombre_eq_norm:
+        return False
+    if rival_norm == nombre_eq_norm:
+        return True
+    # Inclusión bidireccional para variantes con/sin sufijo entre comillas
+    if rival_norm in nombre_eq_norm or nombre_eq_norm in rival_norm:
+        return True
+    return False
+
+
+def _formato_grupo(nombre_grupo):
+    """Extrae una etiqueta corta de formato del nombre del grupo (F7, F11, FEM)."""
+    ng = (nombre_grupo or '').upper()
+    if 'F-7' in ng or ' F7' in ng:
+        return 'F7'
+    if 'F-11' in ng or ' F11' in ng:
+        return 'F11'
+    if 'FEMENIN' in ng or 'FEM' in ng:
+        return 'FEM'
+    return ''
+
+
+def _grupo_short(nombre_grupo):
+    """Extrae un identificador corto del grupo: 'Gr.22', 'Gr.4', etc."""
+    import re as _re
+    m = _re.search(r'Grupo\s*(\d+)', nombre_grupo or '', _re.IGNORECASE)
+    return f'Gr.{m.group(1)}' if m else ''
+
+
 def construir_obj_semanales():
     """Recorre el caché de RFFM y devuelve, por cada partido de cada equipo del club: rival,
-    clasificación de ambos (previa al partido), objetivo calculado, resultado de ida si lo hay,
-    si se cumplió el objetivo, y los últimos resultados del rival (con nombre del rival al que se enfrentó)."""
+    clasificación de ambos (previa al partido o de fin de temporada como fallback), objetivo calculado,
+    resultado si ya se jugó, cumplimiento del objetivo, y los últimos resultados del rival.
+    Deduplica grupos con nombre idéntico (bug del scraper) y añade ida_resultado si existe."""
     cache = load_cached_data()
     resultado_final = []
+
+    # Deduplicar: saltar entries con nombre_grupo ya procesado
+    nombres_vistos = set()
 
     for equipo_data in cache.get('equipos', []):
         categoria = equipo_data.get('categoria', '')
         letra = equipo_data.get('letra', '')
         nombre_grupo = equipo_data.get('nombre', '')
+        formato = _formato_grupo(nombre_grupo)
+        grp_short = _grupo_short(nombre_grupo)
         calendario = equipo_data.get('calendario', [])
         calendario_grupo = equipo_data.get('calendario_grupo', [])
+        clasif_temporada = equipo_data.get('clasificacion', [])
+
+        # Saltar duplicados exactos (mismo nombre de competición)
+        if nombre_grupo in nombres_vistos:
+            continue
+        nombres_vistos.add(nombre_grupo)
 
         # Nombre exacto de Fuentelarreyna tal y como aparece en calendario_grupo
         nombre_nuestro = None
         for p in calendario_grupo:
             if "FUENTELARREYNA" in (p.get('local') or '').upper():
-                nombre_nuestro = p['local']
-                break
+                nombre_nuestro = p['local']; break
             if "FUENTELARREYNA" in (p.get('visitante') or '').upper():
-                nombre_nuestro = p['visitante']
-                break
+                nombre_nuestro = p['visitante']; break
 
-        for partido in calendario:
+        # Construir mapa rival → partido más temprano (IDA) con resultado
+        # Para cada rival, el primer partido jugado contra él es la IDA
+        partidos_ordenados = sorted(calendario, key=lambda p: _numero_jornada(p.get('jornada')))
+        ida_por_rival = {}
+        for pt in partidos_ordenados:
+            if not pt.get('resultado'):
+                continue
+            r = pt.get('rival', '').replace('"', '').replace("'", '').strip().upper()
+            if r not in ida_por_rival:
+                ida_por_rival[r] = pt
+
+        for partido in partidos_ordenados:
             jornada_num = _numero_jornada(partido.get('jornada'))
             rival = partido.get('rival', '')
-            rival_norm = rival.replace('"', '').strip().upper()
+            rival_norm = rival.replace('"', '').replace("'", '').strip().upper()
 
+            # IDA: buscar si existe un partido anterior contra el mismo rival CON resultado
+            ida_partido = ida_por_rival.get(rival_norm)
+            # Solo contar como IDA si es un partido DISTINTO (jornada menor)
+            if ida_partido and _numero_jornada(ida_partido.get('jornada')) >= jornada_num:
+                ida_partido = None
+
+            # Clasificación previa (histórica) si hay calendario_grupo, fallback si no
             clasif_previa = calcular_clasificacion_en_jornada(calendario_grupo, jornada_num - 1) if calendario_grupo else {}
             datos_nuestro = clasif_previa.get(nombre_nuestro) if nombre_nuestro else None
             datos_rival = None
             for nombre_eq, datos_eq in clasif_previa.items():
-                if nombre_eq.replace('"', '').strip().upper() == rival_norm:
-                    datos_rival = datos_eq
-                    break
+                if _rival_coincide(rival_norm, nombre_eq.replace('"', '').replace("'", '').strip().upper()):
+                    datos_rival = datos_eq; break
+
+            # Fallback: usar la clasificación final de temporada cuando no hay calendario_grupo
+            if datos_nuestro is None or datos_rival is None:
+                for fila in clasif_temporada:
+                    nombre_eq_norm = fila.get('equipo', '').replace('"', '').replace("'", '').strip().upper()
+                    if 'FUENTELARREYNA' in nombre_eq_norm and datos_nuestro is None:
+                        datos_nuestro = _clasif_fila_a_dict(fila)
+                    if datos_rival is None and _rival_coincide(rival_norm, nombre_eq_norm):
+                        datos_rival = _clasif_fila_a_dict(fila)
 
             objetivo = None
             if datos_nuestro and datos_rival:
@@ -1867,7 +2056,9 @@ def construir_obj_semanales():
             resultado_final.append({
                 "categoria": categoria,
                 "letra": letra,
+                "formato": formato,
                 "grupo": nombre_grupo,
+                "grupo_short": grp_short,
                 "jornada": partido.get('jornada'),
                 "jornada_num": jornada_num,
                 "fecha": partido.get('fecha'),
@@ -1881,6 +2072,10 @@ def construir_obj_semanales():
                 "datos_nuestro": datos_nuestro,
                 "datos_rival": datos_rival,
                 "ultimos_rival": ultimos_rival,
+                "datos_approx": bool(datos_nuestro and datos_nuestro.get('_approx')),
+                "ida_resultado": ida_partido.get('resultado', '') if ida_partido else None,
+                "ida_estado": ida_partido.get('estado', '') if ida_partido else None,
+                "ida_jornada": ida_partido.get('jornada', '') if ida_partido else None,
             })
 
     return resultado_final

@@ -1802,6 +1802,59 @@ def api_alquileres_data():
         print(f"Error en api_alquileres_data: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/api/discrepancias_jugadores')
+def api_discrepancias_jugadores():
+    if not session.get('usuario'): return jsonify({"status": "error", "message": "No session"}), 401
+    if session.get('usuario', '').lower() != 'admin':
+        return jsonify({"status": "error", "message": "No autorizado"}), 403
+    from jugadores_correlacion import intentar_recalcular_discrepancias_background, discrepancias_status
+    intentar_recalcular_discrepancias_background(client, NOMBRE_EXCEL)
+    estado = discrepancias_status()
+    return jsonify({
+        "running": estado.get('running', False),
+        "error": estado.get('error'),
+        "finished_at": estado.get('finished_at'),
+        "avisos": estado.get('resultado', [])
+    })
+
+@app.route('/api/discrepancias_jugadores/confirmar', methods=['POST'])
+def api_discrepancias_jugadores_confirmar():
+    if not session.get('usuario'): return jsonify({"status": "error", "message": "No session"}), 401
+    if session.get('usuario', '').lower() != 'admin':
+        return jsonify({"status": "error", "message": "No autorizado"}), 403
+    data = request.json or {}
+    equipo = data.get('equipo', '').strip()
+    listado = data.get('listado', '').strip()
+    nombre = data.get('nombre', '').strip()
+    if not equipo or not listado or not nombre:
+        return jsonify({"status": "error", "message": "Faltan datos"}), 400
+    try:
+        from jugadores_correlacion import aplicar_confirmar
+        aplicar_confirmar(client, NOMBRE_EXCEL, equipo, listado, nombre)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error en api_discrepancias_jugadores_confirmar: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/discrepancias_jugadores/declinar', methods=['POST'])
+def api_discrepancias_jugadores_declinar():
+    if not session.get('usuario'): return jsonify({"status": "error", "message": "No session"}), 401
+    if session.get('usuario', '').lower() != 'admin':
+        return jsonify({"status": "error", "message": "No autorizado"}), 403
+    data = request.json or {}
+    equipo = data.get('equipo', '').strip()
+    listado = data.get('listado', '').strip()
+    nombre = data.get('nombre', '').strip()
+    if not equipo or not listado or not nombre:
+        return jsonify({"status": "error", "message": "Faltan datos"}), 400
+    try:
+        from jugadores_correlacion import aplicar_declinar
+        aplicar_declinar(equipo, listado, nombre)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error en api_discrepancias_jugadores_declinar: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route('/api/alquileres_proximos')
 def api_alquileres_proximos():
     if not session.get('usuario'): return jsonify({"status": "error", "message": "No session"}), 401

@@ -743,6 +743,13 @@
 </style>
 
 <div class="clasif-wrapper">
+    <!-- Barra de progreso de auto-sincronización en segundo plano -->
+    <div id="autoSyncBar" style="display:none;align-items:center;gap:8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:7px 12px;margin-bottom:10px;font-size:11px;color:#1d4ed8;font-weight:700;">
+        <div style="width:13px;height:13px;border:2px solid #bfdbfe;border-top-color:#2563eb;border-radius:50%;animation:autoSyncSpin 0.8s linear infinite;"></div>
+        Sincronizando RFFM en segundo plano… los datos se actualizarán automáticamente al terminar.
+    </div>
+    <style>@keyframes autoSyncSpin { to { transform: rotate(360deg); } }</style>
+
     <!-- Barra de Estado de Sincronización -->
     <div class="sync-status-bar">
         <div class="status-info">
@@ -816,6 +823,11 @@
                 <label for="inputClave">Contraseña RFFM</label>
                 <input type="password" id="inputClave" placeholder="Ingresa la contraseña" value="INTRANET RFFM1.">
             </div>
+
+            <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#475569;font-weight:600;margin-top:4px;">
+                <input type="checkbox" id="inputRecordar" checked>
+                Recordar credenciales para sincronizar automáticamente cada hora
+            </label>
         </div>
         <div class="modal-sync-footer">
             <button class="btn-cancelar" onclick="closeSyncModal()">Cancelar</button>
@@ -1275,10 +1287,12 @@
         
         showModalError("");
 
+        const recordar = document.getElementById("inputRecordar") ? document.getElementById("inputRecordar").checked : false;
+
         fetch('/api/sincronizar_rffm', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ usuario_rffm: user, password_rffm: pass })
+            body: JSON.stringify({ usuario_rffm: user, password_rffm: pass, recordar: recordar })
         })
         .then(res => {
             if (!res.ok) {
@@ -1301,6 +1315,35 @@
             btn.disabled = false;
         });
     }
+
+    // --- Polling del auto-sync en segundo plano ---
+    var autoSyncEraVisible = false;
+    function pollAutoSyncStatus() {
+        fetch('/api/sincronizar_rffm/status')
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                var bar = document.getElementById('autoSyncBar');
+                if (!bar) return;
+                if (data.running) {
+                    bar.style.display = 'flex';
+                    autoSyncEraVisible = true;
+                } else {
+                    bar.style.display = 'none';
+                    if (autoSyncEraVisible) {
+                        autoSyncEraVisible = false;
+                        if (data.error) {
+                            console.error('Auto-sync RFFM falló:', data.error);
+                        } else {
+                            window.location.reload();
+                        }
+                        return;
+                    }
+                }
+            })
+            .catch(function() {});
+    }
+    pollAutoSyncStatus();
+    setInterval(pollAutoSyncStatus, 4000);
 
     function showModalError(msg) {
         const errorBanner = document.getElementById("modalError");

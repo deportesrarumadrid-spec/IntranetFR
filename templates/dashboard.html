@@ -385,6 +385,17 @@
         </div>
         <div id="listaAlquileresSidebar" style="font-size: 0.62rem;">Cargando...</div>
     </div>
+
+    <div id="panelDiscrepanciasJugadores" style="margin: 8px 20px 15px 20px; padding: 8px 10px; background: rgba(255,255,255,0.08); border-radius: 8px;">
+        <div onclick="toggleDiscrepanciasSidebar()" style="display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: rgba(255,255,255,0.8); cursor: pointer; user-select: none;">
+            <span><i class="fas fa-user-check" style="color: white; font-size: 0.66rem; margin-right: 4px;"></i> Listados jugadores pendientes revisar</span>
+            <span style="display:flex; align-items:center; gap:5px;">
+                <span id="badgeDiscrepanciasSidebar" style="display: none; background: white; color: #E31E24; border-radius: 999px; font-size: 0.58rem; padding: 1px 6px; font-weight: 900;"></span>
+                <i id="iconoDiscrepanciasSidebar" class="fas fa-chevron-down" style="font-size: 0.58rem; color: rgba(255,255,255,0.7); transition: transform 0.15s;"></i>
+            </span>
+        </div>
+        <div id="listaDiscrepanciasSidebar" style="display: none; font-size: 0.62rem; margin-top: 5px;">Cargando...</div>
+    </div>
     {% endif %}
 </div>
 
@@ -396,6 +407,17 @@
             <span onclick="document.getElementById('modalDetalleAlquiler').style.display='none'" style="cursor:pointer; color:#999; font-size:20px; line-height:1;">&times;</span>
         </div>
         <div id="detalleAlquilerBody" style="font-size:12px; color:#333;"></div>
+    </div>
+</div>
+
+<!-- MODAL DETALLE DISCREPANCIA JUGADOR (SIDEBAR) -->
+<div id="modalDetalleDiscrepancia" class="modal-backdrop" style="display:none; position:fixed; z-index:30000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:16px; padding:24px; width:380px; max-height:80vh; overflow-y:auto; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <h3 style="margin:0; font-size:14px; font-weight:900; color:#1e293b; text-transform:uppercase;"><i class="fas fa-user-check" style="color:#E31E24;"></i> Discrepancia</h3>
+            <span onclick="document.getElementById('modalDetalleDiscrepancia').style.display='none'" style="cursor:pointer; color:#999; font-size:20px; line-height:1;">&times;</span>
+        </div>
+        <div id="detalleDiscrepanciaBody" style="font-size:12px; color:#333;"></div>
     </div>
 </div>
 
@@ -770,6 +792,103 @@
         }
 
         cargarAlquileresSidebar();
+
+        // === DISCREPANCIAS LISTADOS JUGADORES (widget sidebar, solo ADMIN) ===
+        let discrepanciasJugadoresCache = [];
+        let discrepanciaSidebarDetalleActivoIdx = null;
+        let discrepanciasSidebarAbierto = false;
+
+        function toggleDiscrepanciasSidebar() {
+            discrepanciasSidebarAbierto = !discrepanciasSidebarAbierto;
+            const cont = document.getElementById('listaDiscrepanciasSidebar');
+            const icono = document.getElementById('iconoDiscrepanciasSidebar');
+            if (cont) cont.style.display = discrepanciasSidebarAbierto ? 'block' : 'none';
+            if (icono) icono.style.transform = discrepanciasSidebarAbierto ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+
+        async function cargarDiscrepanciasSidebar() {
+            const cont = document.getElementById('listaDiscrepanciasSidebar');
+            if (!cont) return;
+            try {
+                const res = await fetch('/api/discrepancias_jugadores');
+                const data = await res.json();
+                const badge = document.getElementById('badgeDiscrepanciasSidebar');
+                const avisos = Array.isArray(data.avisos) ? data.avisos : [];
+                discrepanciasJugadoresCache = avisos;
+                if (avisos.length === 0) {
+                    badge.style.display = 'none';
+                    cont.innerHTML = `<div style="padding:2px 4px; color:rgba(255,255,255,0.55);">${data.running ? 'Comprobando…' : 'Todo cuadra'}</div>`;
+                    return;
+                }
+                badge.textContent = avisos.length;
+                badge.style.display = 'inline-block';
+                cont.innerHTML = avisos.map((a, idx) => {
+                    return `<div class="alquiler-sidebar-row" onclick="abrirDetalleDiscrepanciaSidebar(${idx})">
+                        <span>${a.nombre || ''}</span>
+                        <span>${a.equipo || ''} · ${a.listado_label || ''}</span>
+                    </div>`;
+                }).join('');
+            } catch (e) { console.error('Error cargando discrepancias jugadores sidebar', e); }
+        }
+
+        function abrirDetalleDiscrepanciaSidebar(idx) {
+            const a = discrepanciasJugadoresCache[idx];
+            if (!a) return;
+            discrepanciaSidebarDetalleActivoIdx = idx;
+            const botones = a.accion_confirmar
+                ? `<button onclick="confirmarDiscrepanciaSidebar()" style="background:#16a34a; color:white; border:none; border-radius:8px; padding:0 16px; height:40px; font-weight:900; font-size:10px; cursor:pointer; white-space:nowrap; flex:1;">CONFIRMAR (añadir)</button>
+                   <button onclick="declinarDiscrepanciaSidebar()" style="background:#64748b; color:white; border:none; border-radius:8px; padding:0 16px; height:40px; font-weight:900; font-size:10px; cursor:pointer; white-space:nowrap; flex:1;">DECLINAR</button>`
+                : `<button onclick="declinarDiscrepanciaSidebar()" style="background:#64748b; color:white; border:none; border-radius:8px; padding:0 16px; height:40px; font-weight:900; font-size:10px; cursor:pointer; white-space:nowrap; flex:1;">DECLINAR (silenciar)</button>`;
+            document.getElementById('detalleDiscrepanciaBody').innerHTML = `
+                <div style="line-height:1.9;">
+                    <div><strong>Jugador:</strong> ${a.nombre || '-'}</div>
+                    <div><strong>Equipo:</strong> ${a.equipo || '-'}</div>
+                    <div><strong>Falta en:</strong> ${a.listado_label || '-'}</div>
+                    ${a.informativo ? '<div style="margin-top:6px; font-size:11px; color:#92400e; background:#fffbeb; border-left:2px solid #f59e0b; padding:6px 8px; border-radius:0 6px 6px 0;">Aviso informativo: puede ser normal (p.ej. jugador sin ficha federativa todavía). No se puede añadir automáticamente, solo declinar.</div>' : ''}
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; margin-top:16px; flex-wrap:wrap;">
+                    ${botones}
+                </div>
+            `;
+            document.getElementById('modalDetalleDiscrepancia').style.display = 'flex';
+        }
+
+        async function confirmarDiscrepanciaSidebar() {
+            const a = discrepanciasJugadoresCache[discrepanciaSidebarDetalleActivoIdx];
+            if (!a) return;
+            try {
+                const res = await fetch('/api/discrepancias_jugadores/confirmar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ equipo: a.equipo, listado: a.listado, nombre: a.nombre })
+                });
+                if (res.ok) {
+                    document.getElementById('modalDetalleDiscrepancia').style.display = 'none';
+                    await cargarDiscrepanciasSidebar();
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    alert("No se pudo confirmar: " + (err.message || 'error desconocido'));
+                }
+            } catch (e) { console.error('Error confirmando discrepancia', e); }
+        }
+
+        async function declinarDiscrepanciaSidebar() {
+            const a = discrepanciasJugadoresCache[discrepanciaSidebarDetalleActivoIdx];
+            if (!a) return;
+            try {
+                const res = await fetch('/api/discrepancias_jugadores/declinar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ equipo: a.equipo, listado: a.listado, nombre: a.nombre })
+                });
+                if (res.ok) {
+                    document.getElementById('modalDetalleDiscrepancia').style.display = 'none';
+                    await cargarDiscrepanciasSidebar();
+                } else { alert("No se pudo declinar."); }
+            } catch (e) { console.error('Error declinando discrepancia', e); }
+        }
+
+        cargarDiscrepanciasSidebar();
 
         // === CONVOCATORIAS (compartido entre Asistencias, Mi Equipo y D.Deportiva-Coordinación) ===
         let convocatoriasCacheGlobal = null;

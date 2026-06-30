@@ -1814,10 +1814,11 @@ def clasificaciones():
     if perms.get('ENTRENAMIENTOS') != 'SI' and perms.get('D.DEPORTIVA') != 'SI' and usuario.lower() != 'admin':
         return "Acceso denegado", 403
 
-    from competicion_scraper import load_cached_data
-    
+    from competicion_scraper import load_cached_data, intentar_autosync_background
+
+    intentar_autosync_background()
     data_rffm = load_cached_data()
-    
+
     client = current_app.gs_client
     NOMBRE_EXCEL = current_app.gs_name
     
@@ -1849,68 +1850,109 @@ def clasificaciones_pdf():
     if not usuario:
         return redirect('/')
 
-    from competicion_scraper import load_cached_data
+    from competicion_scraper import load_cached_data, _rival_coincide, intentar_autosync_background
+    from datetime import datetime, timedelta
 
+    intentar_autosync_background()
     cache = load_cached_data()
     equipos_pdf = []
 
     def _norm(s):
         return (s or '').replace('"', '').replace("'", '').strip().upper()
 
+    # Filtro por fin de semana (?fecha=YYYY-MM-DD)
+    fecha_param = request.args.get('fecha', '').strip()
+    finde_fechas = set()
+    finde_label = ''
+    if fecha_param:
+        try:
+            d = datetime.strptime(fecha_param, '%Y-%m-%d')
+            dow = d.weekday()
+            sab = d - timedelta(days=max(0, dow - 5)) if dow >= 5 else d + timedelta(days=5 - dow)
+            dom = sab + timedelta(days=1)
+            for dd in (sab, dom):
+                finde_fechas.add(dd.strftime('%d-%m-%Y'))
+            finde_label = sab.strftime('%d/%m/%Y') + ' – ' + dom.strftime('%d/%m/%Y')
+        except Exception:
+            fecha_param = ''
+
     for eq in cache.get('equipos', []):
         calendario = eq.get('calendario', [])
         calendario_grupo = eq.get('calendario_grupo', [])
         clasificacion = eq.get('clasificacion', [])
 
-        # Último partido jugado (último con estado no vacío)
-        ultimo = None
-        for p in reversed(calendario):
-            if p.get('estado'):
-                ultimo = p
-                break
+        # Si hay filtro: solo incluir equipos con partido ese finde
+        partido_finde = None
+        if finde_fechas:
+            for p in calendario:
+                if p.get('fecha') in finde_fechas:
+                    partido_finde = p
+                    break
+            if not partido_finde:
+                continue
 
-        # Próximo partido (primer sin resultado)
+        # Último partido jugado
+        ultimo = None
+        if partido_finde and partido_finde.get('estado'):
+            ultimo = partido_finde
+        if not ultimo:
+            for p in reversed(calendario):
+                if p.get('estado'):
+                    ultimo = p
+                    break
+
+        # Rival a destacar en amarillo: el de la PRÓXIMA jornada (la siguiente a la que se muestra),
+        # no el de la jornada mostrada (ese ya se ve resaltado en verde como nuestro partido).
+        ref_jornada = (partido_finde or {}).get('jornada', '')
         proximo = None
-        for p in calendario:
-            if not p.get('estado') and not p.get('resultado'):
-                proximo = p
-                break
+        if ref_jornada:
+            idx_ref = next((i for i, p in enumerate(calendario) if p.get('jornada') == ref_jornada), None)
+            if idx_ref is not None and idx_ref + 1 < len(calendario):
+                proximo = calendario[idx_ref + 1]
+        if not proximo:
+            for p in calendario:
+                if not p.get('estado') and not p.get('resultado'):
+                    proximo = p
+                    break
 
         rival_proximo = proximo.get('rival', '') if proximo else ''
         rival_norm = _norm(rival_proximo)
 
-        # Identificar nuestra fila y la del próximo rival en clasificación
+        # Nuestra fila y la del rival en clasificación
         idx_nuestro = None
         idx_rival = None
         for i, fila in enumerate(clasificacion):
             nombre = _norm(fila.get('equipo', ''))
             if 'FUENTELARREYNA' in nombre:
                 idx_nuestro = i
-            if rival_norm and nombre == rival_norm:
+            if rival_norm and _rival_coincide(rival_norm, nombre) and idx_rival is None:
                 idx_rival = i
 
-        # Partidos del grupo en la última jornada jugada
-        jornada_label = ultimo.get('jornada', '') if ultimo else ''
-        partidos_jornada = [p for p in calendario_grupo if p.get('jornada') == jornada_label] if jornada_label else []
+        # Jornada a mostrar
+        ref = partido_finde or ultimo
+        jornada_label = ref.get('jornada', '') if ref else ''
+        fecha_label = ref.get('fecha', '') if ref else ''
 
-        # Si no hay datos de grupo, al menos mostrar el nuestro
-        if not partidos_jornada and ultimo:
-            loc = 'CLUB FUENTELARREYNA' if ultimo.get('es_local') else (ultimo.get('rival', ''))
-            vis = ultimo.get('rival', '') if ultimo.get('es_local') else 'CLUB FUENTELARREYNA'
-            r = ultimo.get('resultado', '')
+        # Partidos del grupo en esa jornada
+        sin_datos_grupo = not calendario_grupo
+        partidos_jornada = []
+        if calendario_grupo and jornada_label:
+            partidos_jornada = [p for p in calendario_grupo if p.get('jornada') == jornada_label]
+
+        # Fallback: si no hay calendario_grupo, mostrar solo el nuestro
+        if not partidos_jornada and ref:
+            loc = ref.get('rival', '') if not ref.get('es_local') else 'CLUB FUENTELARREYNA'
+            vis = ref.get('rival', '') if ref.get('es_local') else 'CLUB FUENTELARREYNA'
+            r = ref.get('resultado', '')
             if r:
-                partes = r.split(' - ')
-                if len(partes) == 2:
-                    partidos_jornada = [{
-                        'local': loc, 'visitante': vis,
-                        'resultado': r, 'jornada': jornada_label, 'fecha': ultimo.get('fecha', ''),
-                        '_sintetico': True
-                    }]
+                partidos_jornada = [{'local': loc, 'visitante': vis, 'resultado': r,
+                                     'jornada': jornada_label, 'fecha': fecha_label}]
 
         equipos_pdf.append({
             'nombre': eq.get('nombre', ''),
             'categoria': eq.get('categoria', ''),
             'letra': eq.get('letra', ''),
+            'sin_datos_grupo': sin_datos_grupo,
             'clasificacion': clasificacion,
             'idx_nuestro': idx_nuestro,
             'idx_rival': idx_rival,
@@ -1918,10 +1960,10 @@ def clasificaciones_pdf():
             'ultimo': ultimo,
             'proximo': proximo,
             'jornada_label': jornada_label,
+            'fecha_label': fecha_label,
             'partidos_jornada': partidos_jornada,
         })
 
-    # Ordenar por categoría y letra para que salgan agrupados
     orden_cat = {'AFICIONADO': 0, 'JUVENIL': 1, 'CADETE': 2, 'INFANTIL': 3,
                  'ALEVIN': 4, 'ALEVIN F7': 5, 'BENJAMIN': 6, 'PREBENJAMIN': 7}
     equipos_pdf.sort(key=lambda e: (orden_cat.get(e['categoria'], 99), e['letra']))
@@ -1929,7 +1971,9 @@ def clasificaciones_pdf():
     return render_template('deportivo/clasificaciones_pdf.html',
                            usuario=usuario,
                            equipos=equipos_pdf,
-                           last_updated=cache.get('last_updated', ''))
+                           last_updated=cache.get('last_updated', ''),
+                           fecha_param=fecha_param,
+                           finde_label=finde_label)
 
 
 @deportivo_bp.route('/api/sincronizar_rffm', methods=['POST'])
@@ -1941,17 +1985,30 @@ def api_sincronizar_rffm():
     data = request.json or {}
     username_rffm = data.get('usuario_rffm', '').strip()
     password_rffm = data.get('password_rffm', '').strip()
-    
+    recordar = bool(data.get('recordar', False))
+
     if not username_rffm or not password_rffm:
         return jsonify({"status": "error", "message": "Faltan credenciales"}), 400
-        
-    from competicion_scraper import sync_rffm
-    
+
+    from competicion_scraper import sync_rffm, guardar_credenciales_rffm
+
     success, message = sync_rffm(username_rffm, password_rffm)
     if success:
+        if recordar:
+            guardar_credenciales_rffm(username_rffm, password_rffm)
         return jsonify({"status": "success", "message": message})
     else:
         return jsonify({"status": "error", "message": message}), 400
+
+
+@deportivo_bp.route('/api/sincronizar_rffm/status', methods=['GET'])
+def api_sincronizar_rffm_status():
+    usuario = session.get('usuario')
+    if not usuario:
+        return jsonify({"status": "error", "message": "No session"}), 401
+
+    from competicion_scraper import auto_sync_status
+    return jsonify(auto_sync_status())
 
 
 @deportivo_bp.route('/api/informes/colores_rivales', methods=['GET'])

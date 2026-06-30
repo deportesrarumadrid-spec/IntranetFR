@@ -5,130 +5,139 @@
 <title>Clasificaciones — Descarga</title>
 <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; font-size: 9.5px; background: #f0f2f5; color: #1e293b; }
+    body { font-family: Arial, sans-serif; font-size: 9px; background: #f0f2f5; color: #1e293b;
+           -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
     .toolbar {
         position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
-        background: #1e293b; color: white; padding: 10px 20px;
-        display: flex; align-items: center; gap: 14px;
+        background: #1e293b; color: white; padding: 8px 16px;
+        display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
     }
-    .toolbar h2 { font-size: 13px; font-weight: 900; flex: 1; }
-    .toolbar span { font-size: 10px; color: #94a3b8; }
+    .toolbar h2 { font-size: 12px; font-weight: 900; }
+    .toolbar span { font-size: 9px; color: #94a3b8; }
     .btn-imprimir {
-        background: #E31E24; color: white; border: none; border-radius: 8px;
-        padding: 8px 20px; font-weight: 800; font-size: 11px; cursor: pointer;
+        background: #E31E24; color: white; border: none; border-radius: 7px;
+        padding: 7px 16px; font-weight: 800; font-size: 10px; cursor: pointer; white-space: nowrap;
     }
     .btn-imprimir:hover { background: #c01820; }
+    .btn-sec { background: #475569; }
+    .btn-sec:hover { background: #334155; }
 
+    /* Selector de finde */
+    .finde-bar {
+        display: flex; align-items: center; gap: 8px; background: #0f172a;
+        padding: 5px 10px; border-radius: 7px;
+    }
+    .finde-bar label { font-size: 9px; color: #94a3b8; white-space: nowrap; }
+    .finde-bar input[type=date] {
+        padding: 4px 7px; border-radius: 5px; border: none; font-size: 10px;
+        background: #1e3a5f; color: white;
+    }
+    .finde-bar .badge {
+        background: #E31E24; color: white; font-size: 9px; font-weight: 800;
+        padding: 3px 8px; border-radius: 99px;
+    }
+
+    /* Grid de 2 columnas */
     .paginas-grid {
-        margin-top: 58px;
-        padding: 16px;
-        display: flex; flex-wrap: wrap; gap: 20px; justify-content: flex-start;
+        margin-top: 54px;
+        padding: 12px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
     }
 
     .pagina-equipo {
         background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-        width: 520px;
-        padding: 14px 16px;
+        border-radius: 6px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.10);
+        padding: 12px 14px;
         page-break-inside: avoid;
         break-inside: avoid;
     }
 
     /* Cabecera de competición */
-    .comp-header {
-        display: flex; justify-content: space-between; align-items: flex-start;
-        margin-bottom: 10px;
-    }
+    .comp-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
     .comp-titulo {
-        font-size: 11px; font-weight: 900; padding: 4px 10px; border: 1.5px solid #333;
-        border-radius: 4px; display: inline-block;
+        font-size: 10px; font-weight: 900; padding: 3px 9px;
+        border: 1.5px solid #E31E24; border-radius: 4px; display: inline-block;
+        background: #E31E24; color: #fff;
     }
-    .comp-titulo .cat-label { font-weight: 900; }
-    .comp-temporada { font-size: 9.5px; color: #666; align-self: center; }
+    .comp-temporada { font-size: 8.5px; color: #666; align-self: center; }
 
-    /* Jornada label */
-    .jornada-label {
-        font-size: 9.5px; font-weight: 700; color: #444; text-align: center;
-        margin-bottom: 7px;
-    }
+    .jornada-label { font-size: 9px; font-weight: 700; color: #444; text-align: center; margin-bottom: 6px; }
 
-    /* Tabla de resultados de la jornada */
-    .tabla-resultados {
-        width: 100%; border-collapse: collapse; margin-bottom: 10px;
-    }
-    .tabla-resultados tr td {
-        padding: 2px 4px; font-size: 8.5px; border-bottom: 1px solid #f1f5f9;
-    }
-    .tabla-resultados .td-local { text-align: right; width: 38%; }
-    .tabla-resultados .td-score { text-align: center; width: 12%; font-weight: 900; font-size: 9px; white-space: nowrap; padding: 2px 6px; }
-    .tabla-resultados .td-visit { text-align: left; width: 38%; }
-    .tabla-resultados .td-extra { text-align: center; width: 12%; color: #999; font-size: 8px; }
-
-    .fila-nuestro { background: #d4edda !important; }
-    .fila-rival   { background: #fff3cd !important; }
+    /* Resultados */
+    .tabla-resultados { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    .tabla-resultados td { padding: 2px 3px; font-size: 8px; border-bottom: 1px solid #f1f5f9; }
+    .tabla-resultados .td-local { text-align: right; width: 40%; }
+    .tabla-resultados .td-score { text-align: center; width: 12%; font-weight: 900; font-size: 8.5px; padding: 2px 4px; white-space: nowrap; }
+    .tabla-resultados .td-visit { text-align: left; width: 48%; }
 
     /* Clasificación */
     .tabla-clasif { width: 100%; border-collapse: collapse; }
     .tabla-clasif th {
-        font-size: 7.5px; font-weight: 900; text-transform: uppercase; color: #666;
+        font-size: 7px; font-weight: 900; text-transform: uppercase; color: #64748b;
         background: #f8fafc; border-bottom: 2px solid #e2e8f0;
-        padding: 3px 4px; text-align: center;
+        padding: 2px 3px; text-align: center;
     }
     .tabla-clasif th.th-equipo { text-align: left; }
-    .tabla-clasif td { padding: 2.5px 4px; border-bottom: 1px solid #f1f5f9; font-size: 8.5px; }
+    .tabla-clasif td { padding: 2px 3px; border-bottom: 1px solid #f1f5f9; font-size: 8px; }
     .tabla-clasif td.td-pos { text-align: center; font-weight: 900; color: #64748b; }
-    .tabla-clasif td.td-equipo { text-align: left; font-weight: 700; max-width: 160px; }
+    .tabla-clasif td.td-equipo { text-align: left; font-weight: 700; }
     .tabla-clasif td.td-num { text-align: center; color: #475569; }
     .tabla-clasif td.td-pts { text-align: center; font-weight: 900; color: #E31E24; }
 
-    .ultimos-box { display: flex; gap: 2px; justify-content: center; }
-    .ult-g { width: 11px; height: 11px; border-radius: 2px; background: #16a34a; color: white; font-size: 7px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
-    .ult-e { width: 11px; height: 11px; border-radius: 2px; background: #f59e0b; color: white; font-size: 7px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
-    .ult-p { width: 11px; height: 11px; border-radius: 2px; background: #dc2626; color: white; font-size: 7px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
-    .ult-vacio { width: 11px; height: 11px; border-radius: 2px; background: #e2e8f0; font-size: 7px; display: flex; align-items: center; justify-content: center; }
+    /* Highlights */
+    .fila-nuestro { background: #d4edda !important; }
+    .fila-rival   { background: #fff3cd !important; }
 
-    /* Aviso sin datos */
-    .sin-datos { text-align: center; color: #94a3b8; font-size: 9px; padding: 16px 0; }
+    /* Última columna: resultados recientes */
+    .ultimos-box { display: flex; gap: 1px; justify-content: center; }
+    .ult { width: 10px; height: 10px; border-radius: 2px; color: white; font-size: 6.5px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
+    .ult-G { background: #16a34a; }
+    .ult-E { background: #f59e0b; }
+    .ult-P { background: #dc2626; }
+    .ult-vacio { background: #e2e8f0; }
 
-    /* Colores por categoría */
-    .cat-AFICIONADO  .comp-titulo { border-color: #2563eb; color: #2563eb; }
-    .cat-JUVENIL     .comp-titulo { border-color: #7c3aed; color: #7c3aed; }
-    .cat-CADETE      .comp-titulo { border-color: #0891b2; color: #0891b2; }
-    .cat-INFANTIL    .comp-titulo { border-color: #059669; color: #059669; }
-    .cat-ALEVIN      .comp-titulo { border-color: #d97706; color: #d97706; }
-    .cat-ALEVINF7    .comp-titulo { border-color: #d97706; color: #d97706; }
-    .cat-ALEVINFEM7  .comp-titulo { border-color: #db2777; color: #db2777; }
-    .cat-BENJAMIN    .comp-titulo { border-color: #16a34a; color: #16a34a; }
-    .cat-PREBENJAMIN .comp-titulo { border-color: #9333ea; color: #9333ea; }
-
-    /* Próximo rival info */
-    .proximo-info {
-        font-size: 8.5px; color: #64748b; margin-top: 7px;
-        padding: 5px 8px; background: #fffbeb; border-left: 3px solid #f59e0b; border-radius: 0 4px 4px 0;
-    }
-    .proximo-info strong { color: #92400e; }
+    /* Leyenda */
+    .leyenda { display: flex; gap: 16px; font-size: 8.5px; color: #64748b; margin-top: 6px; }
+    .leyenda-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 3px; }
 
     @media print {
+        @page { size: A4 landscape; margin: 8mm; }
         .toolbar { display: none; }
-        body { background: white; }
-        .paginas-grid { margin-top: 0; padding: 0; gap: 0; }
-        .pagina-equipo {
-            box-shadow: none; border-radius: 0;
-            width: 100%; page-break-after: always; break-after: page;
-            border-bottom: 2px solid #e2e8f0;
-        }
+        body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .paginas-grid { margin-top: 0; padding: 0; gap: 10px; }
+        .pagina-equipo { box-shadow: none; border-radius: 0; border: 1px solid #e2e8f0; }
+        .fila-nuestro { background: #d4edda !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .fila-rival   { background: #fff3cd !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .comp-titulo  { background: #E31E24 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .ult-G { background: #16a34a !important; }
+        .ult-E { background: #f59e0b !important; }
+        .ult-P { background: #dc2626 !important; }
     }
 </style>
 </head>
 <body>
 
 <div class="toolbar">
-    <h2><i>⚽</i> Clasificaciones — Última jornada jugada</h2>
+    <h2>⚽ Clasificaciones</h2>
+    <div class="finde-bar">
+        <label>Filtrar por fin de semana:</label>
+        <input type="date" id="fechaInput" value="{{ fecha_param }}" onchange="aplicarFiltro()">
+        {% if finde_label %}<span class="badge">{{ finde_label }}</span>{% endif %}
+        {% if fecha_param %}<button class="btn-imprimir btn-sec" onclick="window.location='/clasificaciones/pdf'">✕ Quitar filtro</button>{% endif %}
+    </div>
     <span>Datos: {{ last_updated or 'sin sincronizar' }}</span>
-    <button class="btn-imprimir" onclick="window.print()">🖨 Imprimir / Descargar PDF</button>
-    <button class="btn-imprimir" style="background:#475569;" onclick="history.back()">← Volver</button>
+    <span id="autoSyncBadge" style="display:none;align-items:center;gap:6px;background:#1d4ed8;color:white;padding:3px 9px;border-radius:99px;font-size:9px;font-weight:800;white-space:nowrap;">
+        <span style="width:9px;height:9px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;display:inline-block;animation:autoSyncSpin 0.8s linear infinite;"></span>
+        Sincronizando RFFM…
+    </span>
+    <style>@keyframes autoSyncSpin { to { transform: rotate(360deg); } }</style>
+    <span style="margin-left:auto;">{{ equipos|length }} equipo(s)</span>
+    <button class="btn-imprimir btn-sec" onclick="history.back()">← Volver</button>
+    <button class="btn-imprimir" onclick="window.print()">🖨 Imprimir / PDF</button>
 </div>
 
 <div class="paginas-grid">
@@ -137,34 +146,43 @@
 {% set cat_css = eq.categoria | replace(' ','') %}
 <div class="pagina-equipo cat-{{ cat_css }}">
 
+    <!-- Federación -->
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+        <img src="{{ url_for('static', filename='LOGO RFFM.png') }}" alt="RFFM" style="width:24px;height:24px;object-fit:contain;">
+        <span style="font-size:8.5px;font-weight:800;color:#1e293b;">Real Federación de Fútbol de Madrid</span>
+    </div>
+
     <!-- Cabecera -->
     <div class="comp-header">
         <div class="comp-titulo">
-            <span class="cat-label">{{ eq.categoria }}</span>{% if eq.letra %} {{ eq.letra }}{% endif %}
-            {% if eq.nombre %}
+            {{ eq.categoria }}{% if eq.letra %} {{ eq.letra }}{% endif %}
+            {%- if eq.nombre %}
                 {%- set partes = eq.nombre.split(' - ') %}
-                {% if partes|length > 1 %} — {{ partes[0] }}{% endif %}
-            {% endif %}
+                {%- if partes|length > 1 %} — {{ partes[0] }}{%- endif %}
+            {%- endif %}
         </div>
         <span class="comp-temporada">Temporada 2025-2026</span>
     </div>
 
-    <!-- Jornada label -->
+    <!-- Jornada -->
     {% if eq.jornada_label %}
     <div class="jornada-label">
-        {{ eq.jornada_label }}{% if eq.ultimo and eq.ultimo.fecha %} ({{ eq.ultimo.fecha }}){% endif %}
+        {{ eq.jornada_label }}{% if eq.fecha_label %} ({{ eq.fecha_label }}){% endif %}
     </div>
     {% endif %}
 
     <!-- Resultados de la jornada -->
+    {% if eq.sin_datos_grupo and eq.partidos_jornada|length <= 1 %}
+    <div style="font-size:7.5px;color:#92400e;background:#fffbeb;border-left:2px solid #f59e0b;padding:3px 6px;border-radius:0 3px 3px 0;margin-bottom:5px;">
+        Solo se muestra nuestro partido. Re-sincroniza la RFFM para ver todos los partidos del grupo.
+    </div>
+    {% endif %}
     {% if eq.partidos_jornada %}
     <table class="tabla-resultados">
         {% for p in eq.partidos_jornada %}
         {% set es_nuestro = 'FUENTELARREYNA' in (p.local or '')|upper or 'FUENTELARREYNA' in (p.visitante or '')|upper %}
-        {% set es_rival_p = eq.rival_proximo and (
-            (p.local or '')|upper == eq.rival_proximo|upper or
-            (p.visitante or '')|upper == eq.rival_proximo|upper
-        ) %}
+        {% set riv_up = eq.rival_proximo | upper if eq.rival_proximo else '' %}
+        {% set es_rival_p = riv_up and ((p.local or '')|upper == riv_up or (p.visitante or '')|upper == riv_up or riv_up in (p.local or '')|upper or riv_up in (p.visitante or '')|upper) %}
         <tr {% if es_nuestro %}class="fila-nuestro"{% elif es_rival_p %}class="fila-rival"{% endif %}>
             <td class="td-local">{{ p.local or '' }}</td>
             <td class="td-score">{{ p.resultado or '- -' }}</td>
@@ -178,16 +196,16 @@
     <table class="tabla-clasif">
         <thead>
             <tr>
-                <th style="width:20px"></th>
+                <th style="width:16px"></th>
                 <th class="th-equipo">Equipos</th>
-                <th>Puntos</th>
+                <th>Pts</th>
                 <th>J</th>
                 <th>G</th>
                 <th>E</th>
                 <th>P</th>
                 <th>F</th>
                 <th>C</th>
-                <th>Últimos</th>
+                <th>Últ.</th>
             </tr>
         </thead>
         <tbody>
@@ -208,10 +226,8 @@
             <td>
                 <div class="ultimos-box">
                 {% for u in (fila.ultimos or [])[-5:] %}
-                    {% if u == 'G' %}<span class="ult-g">G</span>
-                    {% elif u == 'E' %}<span class="ult-e">E</span>
-                    {% elif u == 'P' %}<span class="ult-p">P</span>
-                    {% else %}<span class="ult-vacio"></span>{% endif %}
+                    {% if u in ('G','E','P') %}<span class="ult ult-{{ u }}">{{ u }}</span>
+                    {% else %}<span class="ult ult-vacio"></span>{% endif %}
                 {% endfor %}
                 </div>
             </td>
@@ -220,19 +236,56 @@
         </tbody>
     </table>
 
-    <!-- Próximo partido info -->
-    {% if eq.proximo %}
-    <div class="proximo-info">
-        <strong>Próximo rival:</strong>
-        {{ eq.proximo.rival }} — {{ eq.proximo.jornada }}{% if eq.proximo.fecha %}, {{ eq.proximo.fecha }}{% endif %}
-        {% if eq.proximo.es_local is defined %}({% if eq.proximo.es_local %}en casa{% else %}fuera{% endif %}){% endif %}
-    </div>
-    {% endif %}
-
 </div>
 {% endif %}
 {% endfor %}
+
+{% if not equipos %}
+<div style="grid-column:1/-1; text-align:center; padding:60px; color:#94a3b8; font-size:13px;">
+    {% if fecha_param %}
+    No hay equipos con partido en el fin de semana seleccionado.
+    {% else %}
+    No hay datos de clasificación disponibles. Sincroniza la RFFM primero.
+    {% endif %}
+</div>
+{% endif %}
 </div>
 
+<script>
+function aplicarFiltro() {
+    var fecha = document.getElementById('fechaInput').value;
+    if (fecha) window.location = '/clasificaciones/pdf?fecha=' + fecha;
+    else window.location = '/clasificaciones/pdf';
+}
+
+// Auto-sync en segundo plano: si hay una sincronización en curso, mostrar aviso y
+// recargar la página automáticamente cuando termine para traer los datos frescos.
+var autoSyncEraVisible = false;
+function pollAutoSyncStatus() {
+    fetch('/api/sincronizar_rffm/status')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            var badge = document.getElementById('autoSyncBadge');
+            if (!badge) return;
+            if (data.running) {
+                badge.style.display = 'inline-flex';
+                autoSyncEraVisible = true;
+            } else {
+                badge.style.display = 'none';
+                if (autoSyncEraVisible) {
+                    autoSyncEraVisible = false;
+                    if (data.error) {
+                        console.error('Auto-sync RFFM falló:', data.error);
+                    } else {
+                        window.location.reload();
+                    }
+                }
+            }
+        })
+        .catch(function() {});
+}
+pollAutoSyncStatus();
+setInterval(pollAutoSyncStatus, 4000);
+</script>
 </body>
 </html>
