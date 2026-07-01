@@ -1889,19 +1889,66 @@ def ultimos_resultados_equipo(calendario_grupo, equipo, hasta_jornada, n=2):
     return partidos_equipo[:n]
 
 
+CRITERIOS_OBJETIVO_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'criterios_objetivo.json')
+
+CRITERIOS_OBJETIVO_DEFAULT = {
+    "ganar_pos_dif_min": 3,
+    "ganar_pts_dif_min": 5,
+    "empatar_pos_dif_max": 1,
+    "empatar_pts_dif_max": 3,
+}
+
+CRITERIOS_OBJETIVO_DESCRIPCIONES = {
+    "ganar_pos_dif_min": "Diferencia mínima de posiciones en la tabla a nuestro favor para que el objetivo sea GANAR",
+    "ganar_pts_dif_min": "Diferencia mínima de puntos a nuestro favor para que el objetivo sea GANAR",
+    "empatar_pos_dif_max": "Diferencia máxima de posiciones (en cualquier sentido) para considerar el partido igualado (EMPATAR)",
+    "empatar_pts_dif_max": "Diferencia máxima de puntos (en cualquier sentido) para considerar el partido igualado (EMPATAR)",
+}
+
+
+def load_criterios_objetivo():
+    """Lee los umbrales que determinan el objetivo automático de cada partido. Si no hay
+    fichero o falta alguna clave, se completa con los valores por defecto."""
+    criterios = dict(CRITERIOS_OBJETIVO_DEFAULT)
+    if os.path.exists(CRITERIOS_OBJETIVO_FILE):
+        try:
+            with open(CRITERIOS_OBJETIVO_FILE, 'r', encoding='utf-8') as f:
+                guardado = json.load(f)
+            for k in CRITERIOS_OBJETIVO_DEFAULT:
+                if k in guardado:
+                    criterios[k] = int(guardado[k])
+        except Exception:
+            pass
+    return criterios
+
+
+def guardar_criterios_objetivo(nuevos):
+    """Valida y persiste los nuevos umbrales. Devuelve el conjunto final guardado."""
+    criterios = load_criterios_objetivo()
+    for k in CRITERIOS_OBJETIVO_DEFAULT:
+        if k in nuevos:
+            criterios[k] = int(nuevos[k])
+    os.makedirs(os.path.dirname(CRITERIOS_OBJETIVO_FILE), exist_ok=True)
+    with open(CRITERIOS_OBJETIVO_FILE, 'w', encoding='utf-8') as f:
+        json.dump(criterios, f, ensure_ascii=False, indent=2)
+    return criterios
+
+
 def calcular_objetivo(pos_nuestra, pts_nuestro, pos_rival, pts_rival):
     """GANAR / GANAR/EMPATAR / EMPATAR / COMPETIR según diferencia de posición y puntos.
-    pos_dif > 0 = estamos mejor posicionados (numéricamente más arriba en la tabla)."""
+    pos_dif > 0 = estamos mejor posicionados (numéricamente más arriba en la tabla).
+    Los umbrales son configurables (ver load_criterios_objetivo)."""
     if pos_nuestra is None or pos_rival is None or pts_nuestro is None or pts_rival is None:
         return None
     pos_dif = pos_rival - pos_nuestra
     pts_dif = pts_nuestro - pts_rival
+    c = load_criterios_objetivo()
 
-    if pos_dif >= 3 and pts_dif >= 5:
+    if pos_dif >= c["ganar_pos_dif_min"] and pts_dif >= c["ganar_pts_dif_min"]:
         return "GANAR"
     if pos_dif < 0 or pts_dif < 0:
         return "COMPETIR"
-    if abs(pos_dif) <= 1 and abs(pts_dif) <= 3:
+    if abs(pos_dif) <= c["empatar_pos_dif_max"] and abs(pts_dif) <= c["empatar_pts_dif_max"]:
         return "EMPATAR"
     return "GANAR/EMPATAR"
 

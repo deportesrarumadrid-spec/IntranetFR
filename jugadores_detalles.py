@@ -60,7 +60,7 @@ def api_jugadores_detalles():
                 if nombre:
                     jugadores_detalles[nombre.upper()] = {
                         "nombre": nombre,
-                        "posicion": "", "pierna": "", "fortalezas": "", "debilidades": "",
+                        "posicion": "", "posicion_sec": "", "pierna": "", "fortalezas": "", "debilidades": "",
                         "comentarios": [],
                         "stats": { "fisicas": {}, "tecnicas": {}, "tacticas": {}, "psicologicas": {} }
                     }
@@ -137,7 +137,7 @@ def api_jugadores_detalles():
                     nombre_me = row[idx_nom_me].strip().upper()
                     if nombre_me in jugadores_detalles:
                         # Actualizar campos básicos
-                        for campo, col_name in [("posicion", "POSICION"), ("pierna", "PIERNA"), ("fortalezas", "FORTALEZAS"), ("debilidades", "DEBILIDADES")]:
+                        for campo, col_name in [("posicion", "POSICION"), ("posicion_sec", "POSICION_SEC"), ("pierna", "PIERNA"), ("fortalezas", "FORTALEZAS"), ("debilidades", "DEBILIDADES")]:
                             idx = next((i for i, h in enumerate(h_miequipo) if h == _limpiar_h(col_name)), -1)
                             if idx != -1 and len(row) > idx:
                                 jugadores_detalles[nombre_me][campo] = row[idx].strip()

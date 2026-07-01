@@ -3,7 +3,6 @@ import re
 import json
 import base64
 from datetime import datetime, timedelta
-import calendar
 import unicodedata
 import gspread
 import time
@@ -1854,6 +1853,263 @@ def api_discrepancias_jugadores_declinar():
     except Exception as e:
         print(f"Error en api_discrepancias_jugadores_declinar: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/ausencias/alertas')
+def api_ausencias_alertas():
+    if not session.get('usuario'): return jsonify({"status": "error", "message": "No session"}), 401
+    from ausencias_monitor import intentar_recalcular_ausencias_background, ausencias_status
+    intentar_recalcular_ausencias_background(client, NOMBRE_EXCEL)
+    estado = ausencias_status()
+    return jsonify({
+        "running": estado.get('running', False),
+        "error": estado.get('error'),
+        "finished_at": estado.get('finished_at').strftime('%d/%m/%Y %H:%M') if estado.get('finished_at') else None,
+        "alertas": estado.get('resultado', []),
+    })
+
+
+@app.route('/api/ausencias/motivo', methods=['POST'])
+def api_ausencias_motivo():
+    if not session.get('usuario'): return jsonify({"status": "error", "message": "No session"}), 401
+    data = request.json or {}
+    tipo = data.get('tipo', '').strip()
+    equipo = data.get('equipo', '').strip()
+    nombre = data.get('nombre', '').strip()
+    fechas = data.get('fechas', [])
+    motivo = data.get('motivo', '').strip()
+    if not tipo or not equipo or not nombre or not fechas or not motivo:
+        return jsonify({"status": "error", "message": "Faltan datos"}), 400
+    try:
+        from ausencias_monitor import guardar_motivo, intentar_recalcular_ausencias_background, _state, _lock
+        resultado = guardar_motivo(tipo, equipo, nombre, fechas, motivo, session['usuario'])
+        # Forzar recálculo en background
+        with _lock:
+            _state['finished_at'] = None
+        intentar_recalcular_ausencias_background(client, NOMBRE_EXCEL)
+        return jsonify({"status": "ok", "guardado": resultado})
+    except Exception as e:
+        print(f"Error en api_ausencias_motivo: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+EQUIPOS_CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'equipos_config.json')
+
+@app.route('/api/equipos_lista')
+def api_equipos_lista():
+    """Devuelve todos los equipos presentes en JUGADORES, MI EQUIPO y ASISTENCIAS."""
+    if not session.get('usuario'): return jsonify({"status": "error"}), 401
+    try:
+        wb = client.open(NOMBRE_EXCEL)
+        col_keys = ["EQUIPO", "EQUIPOS", "CATEGORIA", "GRUPO"]
+        equipos = set()
+        for sheet_name in ["JUGADORES", "MI EQUIPO", "ASISTENCIAS"]:
+            try:
+                all_v = wb.worksheet(sheet_name).get_all_values()
+                if not all_v:
+                    continue
+                headers = [normalizar_cabecera_universal(h) for h in all_v[0]]
+                idx_eq = next((headers.index(kw) for kw in col_keys if kw in headers), -1)
+                if idx_eq == -1:
+                    continue
+                for r in all_v[1:]:
+                    val = str(r[idx_eq]).strip() if len(r) > idx_eq else ''
+                    if val:
+                        equipos.add(val)
+            except Exception:
+                pass
+        return jsonify({"equipos": sorted(equipos)})
+    except Exception as e:
+        return jsonify({"equipos": [], "error": str(e)})
+
+
+@app.route('/api/equipos_config', methods=['GET', 'POST'])
+def api_equipos_config():
+    if not session.get('usuario'): return jsonify({"status": "error"}), 401
+    if session.get('usuario', '').lower() != 'admin': return jsonify({"status": "error", "message": "No autorizado"}), 403
+    if request.method == 'POST':
+        data = request.json or {}
+        os.makedirs(os.path.dirname(EQUIPOS_CONFIG_FILE), exist_ok=True)
+        with open(EQUIPOS_CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return jsonify({"status": "ok"})
+    try:
+        with open(EQUIPOS_CONFIG_FILE, 'r', encoding='utf-8') as f:
+            return jsonify(json.load(f))
+    except Exception:
+        return jsonify({"temporada": "", "equipos": []})
+
+
+@app.route('/api/ausencias/motivo_dia', methods=['POST'])
+def api_ausencias_motivo_dia():
+    if not session.get('usuario'): return jsonify({"status": "error", "message": "No session"}), 401
+    data = request.json or {}
+    tipo = data.get('tipo', '').strip()
+    equipo = data.get('equipo', '').strip()
+    nombre = data.get('nombre', '').strip()
+    dias = data.get('dias', [])
+    if not tipo or not equipo or not nombre or not dias:
+        return jsonify({"status": "error", "message": "Faltan datos"}), 400
+    try:
+        from ausencias_monitor import guardar_motivo_dia, intentar_recalcular_ausencias_background, _state, _lock
+        for d in dias:
+            fecha = d.get('fecha', '').strip()
+            motivo = d.get('motivo', '').strip()
+            if fecha and motivo:
+                guardar_motivo_dia(tipo, equipo, nombre, fecha, motivo, session['usuario'])
+        with _lock:
+            _state['finished_at'] = None
+        intentar_recalcular_ausencias_background(client, NOMBRE_EXCEL)
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        print(f"Error en api_ausencias_motivo_dia: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+FORMACIONES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'formaciones_indiv.json')
+FORMACIONES_CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'formaciones_config.json')
+
+@app.route('/api/formaciones_config', methods=['GET', 'POST'])
+def api_formaciones_config():
+    if not session.get('usuario'): return jsonify({"status": "error"}), 401
+    if request.method == 'POST':
+        data = request.json or {}
+        os.makedirs(os.path.dirname(FORMACIONES_CONFIG_FILE), exist_ok=True)
+        with open(FORMACIONES_CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return jsonify({"status": "ok"})
+    try:
+        with open(FORMACIONES_CONFIG_FILE, 'r', encoding='utf-8') as f:
+            return jsonify(json.load(f))
+    except Exception:
+        return jsonify({})
+
+@app.route('/api/formaciones_indiv', methods=['GET', 'POST'])
+def api_formaciones_indiv():
+    if not session.get('usuario'): return jsonify({"status": "error"}), 401
+    if request.method == 'POST':
+        data = request.json or {}
+        os.makedirs(os.path.dirname(FORMACIONES_FILE), exist_ok=True)
+        with open(FORMACIONES_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return jsonify({"status": "ok"})
+    try:
+        with open(FORMACIONES_FILE, 'r', encoding='utf-8') as f:
+            return jsonify(json.load(f))
+    except Exception:
+        return jsonify({})
+
+
+@app.route('/api/formaciones_indiv/jugadores_posicion')
+def api_formaciones_jugadores_posicion():
+    """Devuelve jugadores de un equipo agrupados por posición usando nombres oficiales de JUGADORES."""
+    if not session.get('usuario'): return jsonify({"status": "error"}), 401
+    equipo = request.args.get('equipo', '').strip()
+    if not equipo: return jsonify({"status": "error", "message": "Falta equipo"}), 400
+    try:
+        # 1. Obtener nombres oficiales de la hoja JUGADORES
+        jugadores_oficiales = []
+        try:
+            sheet_jug = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
+            all_v = sheet_jug.get_all_values()
+            if all_v:
+                headers = [normalizar_cabecera_universal(h) for h in all_v[0]]
+                idx_nom = next((headers.index(k) for k in ["NOMBRE"] if k in headers), -1)
+                idx_eq  = next((headers.index(k) for k in ["EQUIPO","CATEGORIA","GRUPO","EQUIPOS","EQUIPOACTIVO"] if k in headers), -1)
+                idx_baja = next((headers.index(k) for k in ["BAJA_DESDE","BAJA"] if k in headers), -1)
+                if idx_nom != -1 and idx_eq != -1:
+                    for row in all_v[1:]:
+                        eq_val = row[idx_eq].strip() if len(row) > idx_eq else ''
+                        if normalizar_cabecera_universal(eq_val) != normalizar_cabecera_universal(equipo):
+                            continue
+                        if idx_baja != -1 and len(row) > idx_baja and row[idx_baja].strip():
+                            continue  # jugador de baja
+                        nom = row[idx_nom].strip() if len(row) > idx_nom else ''
+                        if nom:
+                            jugadores_oficiales.append(nom)
+        except Exception as e:
+            print(f"[formaciones] Error leyendo JUGADORES: {e}")
+
+        # 2. Obtener posiciones desde MI EQUIPO sheet — cargamos TODOS los jugadores
+        #    y dejamos que el cruce con jugadores_oficiales filtre por equipo.
+        def _norm(s): return ''.join(s.upper().split())
+        pos_lookup = {}        # norm_name -> posicion
+        pos_lookup_orig = {}   # norm_name -> nombre original
+        me_equipo_names = set() # norm_names that belong to this equipo in MI EQUIPO
+        try:
+            sheet_me = client.open(NOMBRE_EXCEL).worksheet("MI EQUIPO")
+            all_me = sheet_me.get_all_values()
+            if all_me:
+                h_me = [normalizar_cabecera_universal(h) for h in all_me[0]]
+                idx_nom_me = next((h_me.index(k) for k in ["NOMBRE"] if k in h_me), -1)
+                idx_eq_me  = next((h_me.index(k) for k in ["EQUIPO","CATEGORIA","GRUPO","EQUIPOS"] if k in h_me), -1)
+                idx_pos_me = next((h_me.index(k) for k in ["POSICION"] if k in h_me), -1)
+                if idx_nom_me != -1 and idx_pos_me != -1:
+                    for row in all_me[1:]:
+                        nom_r = row[idx_nom_me].strip() if len(row) > idx_nom_me else ''
+                        pos_r = row[idx_pos_me].strip() if len(row) > idx_pos_me else ''
+                        eq_r  = row[idx_eq_me].strip() if idx_eq_me != -1 and len(row) > idx_eq_me else ''
+                        if nom_r:
+                            nk = _norm(nom_r)
+                            pos_lookup[nk] = pos_r
+                            pos_lookup_orig[nk] = nom_r
+                            if _norm(eq_r) == _norm(equipo):
+                                me_equipo_names.add(nk)
+                    print(f"[formaciones] MI EQUIPO: {len(pos_lookup)} jugadores, {len(me_equipo_names)} en equipo '{equipo}'")
+        except Exception as e:
+            print(f"[formaciones] Error leyendo MI EQUIPO para posiciones: {e}")
+
+        print(f"[formaciones] equipo={equipo!r}, jugadores_oficiales={len(jugadores_oficiales)}, pos_lookup={len(pos_lookup)}")
+
+        # Fallback: GPS_POSICIONES si MI EQUIPO no tiene posiciones
+        if not any(pos_lookup.values()):
+            try:
+                from gps import obtener_info_jugadores_equipo
+                gps_info = obtener_info_jugadores_equipo(equipo)
+                for k, v in gps_info.items():
+                    pos_lookup.setdefault(_norm(k), v.get('posicion', ''))
+                    pos_lookup_orig.setdefault(_norm(k), k)
+            except Exception:
+                pass
+
+        # 3. Calcular contadores desde formaciones_indiv.json
+        contadores = {}
+        try:
+            with open(FORMACIONES_FILE, 'r', encoding='utf-8') as f:
+                fdata = json.load(f)
+            for mes_data in fdata.values():
+                for semana_data in mes_data.values():
+                    for dia_slots in semana_data.values():
+                        for slot in (dia_slots if isinstance(dia_slots, list) else []):
+                            if slot.get('equipo', '').upper() != equipo.upper():
+                                continue
+                            jugs = slot.get('jugadores') or ([slot['jugador']] if slot.get('jugador') else [])
+                            for jug in jugs:
+                                if jug:
+                                    contadores[jug] = contadores.get(jug, 0) + 1
+        except Exception:
+            pass
+
+        # 4. Agrupar por posición usando nombres oficiales de JUGADORES
+        result = {}
+        for nombre in jugadores_oficiales:
+            pos = pos_lookup.get(_norm(nombre), '') or 'Sin posición'
+            result.setdefault(pos, []).append({"nombre": nombre, "count": contadores.get(nombre, 0)})
+
+        # Fallback: si JUGADORES no dio resultados, usar directamente MI EQUIPO
+        if not result:
+            # Filtrar por equipo si tenemos esa info; si no, mostrar todos
+            candidates = me_equipo_names if me_equipo_names else set(pos_lookup.keys())
+            for nk in candidates:
+                nombre_orig = pos_lookup_orig.get(nk, nk)
+                pos = pos_lookup.get(nk, '') or 'Sin posición'
+                result.setdefault(pos, []).append({"nombre": nombre_orig, "count": contadores.get(nombre_orig, 0)})
+
+        for pos in result:
+            result[pos].sort(key=lambda x: x['count'])
+        return jsonify({"status": "ok", "posiciones": result})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 @app.route('/api/alquileres_proximos')
 def api_alquileres_proximos():

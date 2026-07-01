@@ -1,0 +1,61 @@
+{
+  "temporada": "",
+  "equipos": [
+    {
+      "nombre": "BENJAMIN A",
+      "entrenadores": [
+        "",
+        "",
+        ""
+      ],
+      "dias": [
+        "Lunes",
+        "Miércoles"
+      ],
+      "horario": "17:00-18:30",
+      "tipo": "F11"
+    },
+    {
+      "nombre": "BENJAMIN B",
+      "entrenadores": [
+        "",
+        "",
+        ""
+      ],
+      "dias": [
+        "Lunes",
+        "Miércoles"
+      ],
+      "horario": "17:00-18:30",
+      "tipo": "F11"
+    },
+    {
+      "nombre": "PREBENJAMIN A",
+      "entrenadores": [
+        "",
+        "",
+        ""
+      ],
+      "dias": [
+        "Lunes",
+        "Miércoles"
+      ],
+      "horario": "17:00-18:30",
+      "tipo": "F7"
+    },
+    {
+      "nombre": "PREBENJAMIN B",
+      "entrenadores": [
+        "",
+        "",
+        ""
+      ],
+      "dias": [
+        "Lunes",
+        "Miércoles"
+      ],
+      "horario": "17:00-18:30",
+      "tipo": "F7"
+    }
+  ]
+}

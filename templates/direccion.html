@@ -540,9 +540,6 @@
         <div class="tab-item active" onclick="switchTab(event, 'tab-coordinacion')">COORDINACIÓN</div>
         <div class="tab-item" onclick="switchTab(event, 'tab-d-deportiva')">D. DEPORTIVA</div>
         <div class="tab-item" onclick="switchTab(event, 'tab-otros')">INFORMES</div>
-        {% if usuario|lower == 'admin' %}
-        <div class="tab-item" onclick="switchTab(event, 'tab-usuarios')">USUARIOS Y CONTRASEÑAS</div>
-        {% endif %}
         <div class="tab-item" onclick="switchTab(event, 'tab-push')">PUSH</div>
         <div class="tab-item" onclick="switchTab(event, 'tab-horarios-temp')">HORARIOS TEMP.</div>
         <div class="tab-item" onclick="switchTab(event, 'tab-obj-semanales')">OBJ SEMANALES</div>
@@ -550,25 +547,36 @@
 
     <!-- SUBPESTAÑA: COORDINACIÓN -->
     <div id="tab-coordinacion" class="tab-content active">
-        <div style="margin-bottom: 25px; display: flex; gap: 20px; align-items: center;">
-            <div style="flex: 1; max-width: 300px;">
-                <label style="font-size: 10px; font-weight: 900; color: #444; display: block; margin-bottom: 5px;">SELECCIONAR EQUIPO</label>
-                <select id="selectEquipoCoord" onchange="actualizarVistaCoordinacion()" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-weight: 700;">
-                    <option value="">Seleccionar...</option>
-                    {% for eq in equipos %}
-                    <option value="{{ eq }}">{{ eq }}</option>
-                    {% endfor %}
-                </select>
+        <!-- selectEquipoCoord oculto: usado por METODOLOGÍA y JS legacy -->
+        <select id="selectEquipoCoord" onchange="actualizarVistaCoordinacion()" style="display:none;">
+            <option value="">Seleccionar...</option>
+            {% for eq in equipos %}
+            <option value="{{ eq }}">{{ eq }}</option>
+            {% endfor %}
+        </select>
+        <div style="margin-bottom: 25px; display: flex; gap: 14px; align-items: center; flex-wrap:wrap;">
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <button class="btn-fin coord-subtab-btn" style="background:#E31E24;color:white;padding:0 14px;font-size:10px;height:36px;border-radius:8px;letter-spacing:.3px;" onclick="coordActivarSubTab('metodologia',this)">COOR. METODOLOGÍA</button>
+                <button class="btn-fin coord-subtab-btn" style="padding:0 14px;font-size:10px;height:36px;border-radius:8px;background:#f1f5f9;color:#475569;letter-spacing:.3px;" onclick="coordActivarSubTab('individual',this)">COOR. DESARROLLO INDV</button>
             </div>
             <div style="flex: 1; max-width: 250px; display: none;" id="containerBusquedaJug">
                 <label style="font-size: 10px; font-weight: 900; color: #999; display: block; margin-bottom: 5px;">FILTRAR JUGADOR</label>
                 <div style="position: relative;">
-                    <input type="text" id="busquedaJugadorCoord" oninput="filtrarJugadoresCoord()" placeholder="Buscar..." style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-weight: 700; outline: none;">
+                    <input type="text" id="busquedaJugadorCoord" oninput="filtrarJugadoresCoord()" placeholder="Buscar..." style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #e2e8f0; font-weight: 700; outline: none; height:36px; box-sizing:border-box;">
                 </div>
             </div>
-            <h2 id="tituloEquipoCoord" style="margin: 0; font-size: 24px; font-weight: 900; color: #E31E24; text-transform: uppercase; display: none;"></h2>
+            <h2 id="tituloEquipoCoord" style="margin: 0; font-size: 22px; font-weight: 900; color: #E31E24; text-transform: uppercase; display: none;"></h2>
         </div>
 
+        <div id="coord-sub-individual" class="coord-subvista" style="display:none;">
+        <!-- Selector de equipo propio del subtab DESARROLLO INDV -->
+        <div style="margin-bottom:18px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <label style="font-size:10px; font-weight:900; color:#444; white-space:nowrap;">SELECCIONAR EQUIPO</label>
+            <select id="selectEquipoIndiv" onchange="const ti=document.getElementById('tituloEquipoIndiv'); if(ti) ti.textContent=this.value||'';" style="padding:8px 12px; border-radius:8px; border:1px solid #e2e8f0; background:#f8fafc; font-weight:700; font-size:12px; height:36px; min-width:180px;">
+                <option value="">Seleccionar...</option>
+            </select>
+            <h2 id="tituloEquipoIndiv" style="margin:0; font-size:18px; font-weight:900; color:#E31E24; text-transform:uppercase;"></h2>
+        </div>
         <div class="coordinacion-layout">
             <!-- Calendario Pequeño -->
             <div class="card-coord">
@@ -619,8 +627,68 @@
             </div>
         </div>
 
+        <!-- ===== FORMACIONES POR POSICIONES ===== -->
+        <div style="margin-top:25px; background:white; border-radius:16px; padding:20px; border:1px solid #f1f5f9; box-shadow:0 4px 15px rgba(0,0,0,0.04);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+                <h3 style="font-weight:900; text-transform:uppercase; color:#1e293b; margin:0; font-size:14px;">
+                    <i class="fas fa-layer-group" style="color:#E31E24;"></i> FORMACIONES POR POSICIONES
+                    <span id="fpBadgeTotal" style="display:none; background:#E31E24; color:white; font-size:10px; border-radius:20px; padding:2px 8px; margin-left:8px; font-weight:900;"></span>
+                </h3>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <!-- F11/F7/AMBAS filter -->
+                    <div id="fpTipoFiltroRow" style="display:flex; gap:4px;">
+                        <button data-tipo="F11" onclick="fpSetTipoFiltro('F11')" style="padding:4px 12px; font-size:10px; font-weight:900; border-radius:6px; border:1.5px solid #E31E24; background:#E31E24; color:white; cursor:pointer; font-family:inherit;">F11</button>
+                        <button data-tipo="F7" onclick="fpSetTipoFiltro('F7')" style="padding:4px 12px; font-size:10px; font-weight:900; border-radius:6px; border:1.5px solid #e2e8f0; background:white; color:#475569; cursor:pointer; font-family:inherit;">F7</button>
+                        <button data-tipo="AMBAS" onclick="fpSetTipoFiltro('AMBAS')" style="padding:4px 12px; font-size:10px; font-weight:900; border-radius:6px; border:1.5px solid #e2e8f0; background:white; color:#475569; cursor:pointer; font-family:inherit;">TODAS</button>
+                    </div>
+                    <!-- Config button -->
+                    <button onclick="fpAbrirConfig()" style="padding:4px 10px; font-size:10px; font-weight:900; border-radius:6px; border:1.5px solid #e2e8f0; background:white; color:#94a3b8; cursor:pointer; font-family:inherit;" title="Configurar temas por mes/posición">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <div id="fpEstado" style="font-size:11px; color:#94a3b8;"></div>
+                </div>
+            </div>
+
+            <!-- Selección de mes + temas -->
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;" id="fpMesesBtns"></div>
+
+            <!-- Contenido del mes -->
+            <div id="fpContenidoMes" style="display:none;">
+                <div id="fpSemanasWrap"></div>
+            </div>
+
+            <!-- Panel de recuento -->
+            <div id="fpRecuento" style="display:none; margin-top:20px; padding-top:16px; border-top:1.5px solid #f1f5f9;">
+                <div style="font-size:11px; font-weight:900; color:#94a3b8; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;"><i class="fas fa-chart-bar" style="color:#E31E24;"></i> RECUENTO</div>
+                <div id="fpRecuentoBody"></div>
+            </div>
+        </div>
+        </div>
+
+        <!-- Modal configuración de temas por mes/posición -->
+        <div id="fpConfigModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; overflow:auto; padding:20px;">
+            <div style="background:white; border-radius:14px; padding:24px; max-width:680px; margin:30px auto; box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h3 style="margin:0; font-size:15px; font-weight:900; color:#1e293b; text-transform:uppercase; letter-spacing:.5px;">
+                        <i class="fas fa-cog" style="color:#E31E24;"></i> Configurar Formaciones
+                    </h3>
+                    <button onclick="document.getElementById('fpConfigModal').style.display='none'" style="background:none; border:none; font-size:18px; color:#94a3b8; cursor:pointer;">✕</button>
+                </div>
+                <div style="margin-bottom:14px; font-size:11px; color:#94a3b8;">Selecciona un mes y define qué se trabajará por posición en las formaciones.</div>
+                <!-- Month tabs inside modal -->
+                <div style="display:flex; gap:4px; flex-wrap:wrap; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid #f1f5f9;" id="fpConfigMesesTabs"></div>
+                <!-- Positions for selected month -->
+                <div id="fpConfigPosiciones"></div>
+                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px; padding-top:14px; border-top:1px solid #f1f5f9;">
+                    <button onclick="document.getElementById('fpConfigModal').style.display='none'" style="padding:8px 18px; font-size:11px; font-weight:700; border-radius:8px; border:1.5px solid #e2e8f0; background:white; color:#475569; cursor:pointer; font-family:inherit;">Cancelar</button>
+                    <button onclick="fpConfigGuardar()" style="padding:8px 18px; font-size:11px; font-weight:900; border-radius:8px; border:none; background:#E31E24; color:white; cursor:pointer; font-family:inherit;">Guardar</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="coord-sub-metodologia" class="coord-subvista">
         <!-- Panel Formulario Partidos -->
-        <div style="margin-top: 30px; border-top: 3px solid #E31E24; padding-top: 20px;">
+        <div style="margin-top: 0; border-top: 3px solid #E31E24; padding-top: 20px;">
             <h3 style="font-weight: 900; text-transform: uppercase; color: #333; margin-bottom: 15px;"><i class="fas fa-clipboard-list" style="color: #E31E24;"></i> Seguimiento de Partidos (Formularios)</h3>
             
             <!-- Tabla Seguimiento de Partidos -->
@@ -718,6 +786,7 @@
             <div style="margin-top: 10px; text-align: center; font-size: 11px; color: #999; font-weight: 800;">
                 * Haz clic en cualquier celda (incluido el título rojo) para escribir. Se guarda al salir del campo.
             </div>
+        </div>
         </div>
 
     </div>
@@ -1050,9 +1119,12 @@
     <div id="tab-obj-semanales" class="tab-content">
         <div class="card-coord" style="padding:18px 22px;">
             <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
-                <h3 style="margin:0; font-size:14px; font-weight:900; color:#1e293b;">
-                    <i class="fas fa-bullseye" style="color:#E31E24; margin-right:7px;"></i> Objetivos Semanales
-                </h3>
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <h3 style="margin:0; font-size:14px; font-weight:900; color:#1e293b;">
+                        <i class="fas fa-bullseye" style="color:#E31E24; margin-right:7px;"></i> Objetivos Semanales
+                    </h3>
+                    <button class="btn-fin" style="background:#f1f5f9;color:#475569;padding:6px 12px;font-size:9px;" onclick="obsAbrirCriterios()"><i class="fas fa-sliders-h"></i> CRITERIOS DE OBJETIVOS</button>
+                </div>
                 <div style="display:flex; gap:6px; flex-wrap:wrap;">
                     <button class="btn-fin obs-subtab-btn" style="background:#E31E24;color:white;" onclick="obsActivarSubTab('finde',this)">PARTIDOS DEL FIN DE SEMANA</button>
                     <button class="btn-fin obs-subtab-btn" onclick="obsActivarSubTab('temporada',this)">SEGUIMIENTO TEMPORADA</button>
@@ -1077,7 +1149,14 @@
                         </div>
                     </div>
                     <div id="obsFindeLabel" style="font-size:11px;font-weight:800;color:#64748b;align-self:center;padding:10px 14px;background:#f1f5f9;border-radius:8px;">Selecciona un fin de semana en el calendario</div>
-                    <div id="obsGlobalStats" style="align-self:flex-start;padding:10px 14px;background:#f0fdf4;border-radius:8px;font-size:10.5px;color:#166534;font-weight:800;min-width:230px;flex:1 1 520px;"></div>
+                    <div id="obsGlobalStats" style="align-self:flex-start;padding:12px 16px;background:#f8fafc;border-radius:8px;font-size:13px;color:#166534;font-weight:800;min-width:230px;flex:1 1 540px;"></div>
+                </div>
+                <!-- TABLA POR EQUIPOS — siempre visible debajo del calendario -->
+                <div style="margin-bottom:16px;">
+                    <div style="font-size:11px;font-weight:900;color:#475569;text-transform:uppercase;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid #e2e8f0;">
+                        <i class="fas fa-table" style="color:#E31E24;margin-right:5px;"></i> CUMPLIMIENTO POR EQUIPO — TODAS LAS JORNADAS
+                    </div>
+                    <div id="obsEquiposGridFinde"></div>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                     <div>
@@ -1150,6 +1229,47 @@
         </div>
     </div>
 
+    <!-- MODAL CRITERIOS DE OBJETIVOS -->
+    <div id="modalCriteriosObjetivo" class="modal-backdrop" style="display:none; position:fixed; z-index:30000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:16px; padding:24px; width:460px; max-width:92vw; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+            <h3 style="margin:0 0 6px 0; font-size:14px; font-weight:900; color:#1e293b;"><i class="fas fa-sliders-h" style="color:#E31E24;margin-right:6px;"></i>Criterios de objetivos</h3>
+            <p style="margin:0 0 14px 0; font-size:11px; color:#999;">El objetivo de cada partido (GANAR / GANAR-EMPATAR / EMPATAR / COMPETIR) se calcula automáticamente comparando nuestra posición y puntos con los del rival antes del partido. Estos umbrales determinan dónde está cada corte.</p>
+            <div id="criteriosObjErrorBanner" style="display:none; background:#fee2e2; color:#dc2626; padding:8px 10px; border-radius:8px; font-size:11px; margin-bottom:10px;"></div>
+            <div id="criteriosObjLoading" style="text-align:center;padding:20px;color:#94a3b8;font-size:12px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>
+            <div id="criteriosObjForm" style="display:none;">
+                <div style="background:#f0fdf4;border-radius:10px;padding:10px 12px;margin-bottom:10px;">
+                    <div style="font-size:10px;font-weight:900;color:#166534;text-transform:uppercase;margin-bottom:8px;">Objetivo GANAR si...</div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
+                        <span style="font-size:11px;color:#475569;flex:1;">Vamos por delante al menos</span>
+                        <input type="number" id="critGanarPos" min="0" style="width:55px;padding:5px 6px;border:1px solid #ddd;border-radius:6px;font-size:12px;text-align:center;font-family:inherit;">
+                        <span style="font-size:11px;color:#475569;">posiciones</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:11px;color:#475569;flex:1;">y al menos</span>
+                        <input type="number" id="critGanarPts" min="0" style="width:55px;padding:5px 6px;border:1px solid #ddd;border-radius:6px;font-size:12px;text-align:center;font-family:inherit;">
+                        <span style="font-size:11px;color:#475569;">puntos de diferencia</span>
+                    </div>
+                </div>
+                <div style="background:#fffbeb;border-radius:10px;padding:10px 12px;margin-bottom:10px;">
+                    <div style="font-size:10px;font-weight:900;color:#92400e;text-transform:uppercase;margin-bottom:8px;">Objetivo EMPATAR si está igualado...</div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
+                        <span style="font-size:11px;color:#475569;flex:1;">Diferencia de posición no mayor de</span>
+                        <input type="number" id="critEmpatarPos" min="0" style="width:55px;padding:5px 6px;border:1px solid #ddd;border-radius:6px;font-size:12px;text-align:center;font-family:inherit;">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:11px;color:#475569;flex:1;">Diferencia de puntos no mayor de</span>
+                        <input type="number" id="critEmpatarPts" min="0" style="width:55px;padding:5px 6px;border:1px solid #ddd;border-radius:6px;font-size:12px;text-align:center;font-family:inherit;">
+                    </div>
+                </div>
+                <p style="margin:0 0 14px 0; font-size:10px; color:#94a3b8;">En el resto de casos el objetivo es GANAR/EMPATAR (vamos algo mejor) o COMPETIR (vamos peor posicionados o con menos puntos).</p>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button onclick="document.getElementById('modalCriteriosObjetivo').style.display='none'" style="flex:1; background:#eee; color:#333; border:none; border-radius:9px; padding:10px; font-weight:800; font-size:12px; cursor:pointer; font-family:inherit;">CERRAR</button>
+                <button id="btnGuardarCriteriosObj" onclick="obsGuardarCriterios()" style="flex:1; background:#E31E24; color:white; border:none; border-radius:9px; padding:10px; font-weight:800; font-size:12px; cursor:pointer; font-family:inherit;">GUARDAR</button>
+            </div>
+        </div>
+    </div>
+
     <!-- BOCADILLO (POPOVER) DE EQUIPACIÓN LLEVADA POR PARTIDO -->
     <div id="popoverEquipacion" style="display:none; position:fixed; background:white; border:1px solid #cbd5e1; border-radius:14px; box-shadow:0 14px 36px rgba(0,0,0,0.22); z-index:10010; width:380px; padding:20px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -1167,9 +1287,6 @@
     </div>
 
     {% if usuario|lower == 'admin' %}
-    <div id="tab-usuarios" class="tab-content">
-        {% include 'gestion_usuarios.html' %}
-    </div>
     {% endif %}
 </div>
 
@@ -2714,6 +2831,16 @@
         } catch (err) { console.error("Error switchTab:", err); }
     }
 
+    function coordActivarSubTab(sub, btn) {
+        document.querySelectorAll('.coord-subtab-btn').forEach(function(b) {
+            b.style.background = '#f1f5f9'; b.style.color = '#475569';
+        });
+        if (btn) { btn.style.background = '#E31E24'; btn.style.color = 'white'; }
+        document.querySelectorAll('.coord-subvista').forEach(function(v) { v.style.display = 'none'; });
+        var el = document.getElementById('coord-sub-' + sub);
+        if (el) el.style.display = '';
+    }
+
     // --- INFORME DE COLORES DE EQUIPACIÓN DE RIVALES (VISITANTE) ---
     function abrirModalCredencialesColores() {
         document.getElementById('coloresModalError').style.display = 'none';
@@ -3349,7 +3476,9 @@
     function actualizarVistaCoordinacion() {
         const equipo = document.getElementById('selectEquipoCoord').value;
         const titulo = document.getElementById('tituloEquipoCoord');
+        const tituloIndiv = document.getElementById('tituloEquipoIndiv');
         const cuerpo = document.getElementById('cuerpoCoordinacion');
+        if (tituloIndiv) tituloIndiv.textContent = equipo || '';
 
         if (!equipo) {
             titulo.style.display = 'none';
@@ -5573,6 +5702,7 @@
             obsCalMes = new Date().getMonth();
             obsRenderCalendario();
             obsRenderStatsGlobal();
+            obsRenderTemporada('obsEquiposGridFinde');
             obsActivarSubTab('finde', document.querySelector('.obs-subtab-btn'));
         } catch (err) {
             document.getElementById('obsLoading').style.display = 'none';
@@ -5635,6 +5765,64 @@
         });
         var total = verde + rojo;
         return { verde: verde, rojo: rojo, pct: total > 0 ? Math.round((verde / total) * 100) : 0 };
+    }
+
+    function obsAbrirCriterios() {
+        document.getElementById('modalCriteriosObjetivo').style.display = 'flex';
+        document.getElementById('criteriosObjForm').style.display = 'none';
+        document.getElementById('criteriosObjErrorBanner').style.display = 'none';
+        document.getElementById('criteriosObjLoading').style.display = 'block';
+        fetch('/api/criterios_objetivo').then(function(r) { return r.json(); }).then(function(data) {
+            document.getElementById('criteriosObjLoading').style.display = 'none';
+            if (data.status !== 'ok') {
+                document.getElementById('criteriosObjErrorBanner').textContent = data.message || 'Error al cargar los criterios.';
+                document.getElementById('criteriosObjErrorBanner').style.display = 'block';
+                return;
+            }
+            var c = data.criterios;
+            document.getElementById('critGanarPos').value = c.ganar_pos_dif_min;
+            document.getElementById('critGanarPts').value = c.ganar_pts_dif_min;
+            document.getElementById('critEmpatarPos').value = c.empatar_pos_dif_max;
+            document.getElementById('critEmpatarPts').value = c.empatar_pts_dif_max;
+            document.getElementById('criteriosObjForm').style.display = 'block';
+        }).catch(function() {
+            document.getElementById('criteriosObjLoading').style.display = 'none';
+            document.getElementById('criteriosObjErrorBanner').textContent = 'Error de conexión al cargar los criterios.';
+            document.getElementById('criteriosObjErrorBanner').style.display = 'block';
+        });
+    }
+
+    function obsGuardarCriterios() {
+        var btn = document.getElementById('btnGuardarCriteriosObj');
+        var payload = {
+            ganar_pos_dif_min: parseInt(document.getElementById('critGanarPos').value, 10) || 0,
+            ganar_pts_dif_min: parseInt(document.getElementById('critGanarPts').value, 10) || 0,
+            empatar_pos_dif_max: parseInt(document.getElementById('critEmpatarPos').value, 10) || 0,
+            empatar_pts_dif_max: parseInt(document.getElementById('critEmpatarPts').value, 10) || 0
+        };
+        btn.disabled = true;
+        btn.textContent = 'GUARDANDO...';
+        fetch('/api/criterios_objetivo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            btn.disabled = false;
+            btn.textContent = 'GUARDAR';
+            if (data.status !== 'ok') {
+                document.getElementById('criteriosObjErrorBanner').textContent = data.message || 'Error al guardar.';
+                document.getElementById('criteriosObjErrorBanner').style.display = 'block';
+                return;
+            }
+            document.getElementById('modalCriteriosObjetivo').style.display = 'none';
+            obsData = null;
+            objSemanalesCargar();
+        }).catch(function() {
+            btn.disabled = false;
+            btn.textContent = 'GUARDAR';
+            document.getElementById('criteriosObjErrorBanner').textContent = 'Error de conexión al guardar.';
+            document.getElementById('criteriosObjErrorBanner').style.display = 'block';
+        });
     }
 
     function obsStatsPorFinde() {
@@ -5702,15 +5890,15 @@
             var mColor = mPct >= 70 ? '#16a34a' : (mPct >= 40 ? '#d97706' : '#dc2626');
             var filas = m.items.map(function(f) {
                 var color = f.pct >= 70 ? '#16a34a' : (f.pct >= 40 ? '#d97706' : '#dc2626');
-                return '<div style="display:flex;justify-content:space-between;gap:8px;padding:1px 6px;font-weight:400;white-space:nowrap;">'
-                    + '<span>'+f.label+'</span>'
-                    + '<span style="font-weight:800;color:'+color+';">'+f.pct+'% <span style="color:#16a34a;">✓'+f.verde+'</span> <span style="color:#dc2626;">✗'+f.rojo+'</span></span>'
+                return '<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 6px;white-space:nowrap;font-size:13px;">'
+                    + '<span style="font-weight:500;color:#475569;">'+f.label+'</span>'
+                    + '<span style="font-weight:400;color:'+color+';">'+f.pct+'% <span style="color:#16a34a;">✓'+f.verde+'</span> <span style="color:#dc2626;">✗'+f.rojo+'</span></span>'
                     + '</div>';
             }).join('');
-            return '<div style="break-inside:avoid;margin-bottom:8px;">'
-                + '<div style="display:flex;justify-content:space-between;align-items:center;background:#dcfce7;padding:3px 6px;border-radius:4px;margin-bottom:2px;">'
-                + '<span style="font-weight:900;font-size:10px;color:#14532d;">'+m.label+'</span>'
-                + '<span style="font-weight:900;font-size:10px;color:'+mColor+';">'+mPct+'% <span style="color:#16a34a;">✓'+m.verde+'</span> <span style="color:#dc2626;">✗'+m.rojo+'</span></span>'
+            return '<div style="break-inside:avoid;margin-bottom:12px;">'
+                + '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 6px;border-bottom:2px solid #bbf7d0;margin-bottom:3px;">'
+                + '<span style="font-weight:700;font-size:14px;color:#14532d;">'+m.label+'</span>'
+                + '<span style="font-weight:400;font-size:14px;color:'+mColor+';">'+mPct+'% <span style="color:#16a34a;">✓'+m.verde+'</span> <span style="color:#dc2626;">✗'+m.rojo+'</span></span>'
                 + '</div>'
                 + filas
                 + '</div>';
@@ -5727,11 +5915,11 @@
             + '<div style="margin-top:6px;column-count:3;column-gap:18px;border-top:1px solid #bbf7d0;padding-top:6px;">'
             + mesesHtml
             + '</div>'
-            + '<div style="display:flex;justify-content:space-between;gap:14px;padding-top:6px;margin-top:6px;border-top:2px solid #16a34a;font-weight:900;">'
-            + '<span>Acumulado total</span><span>'+totalPct+'%  <span style="color:#16a34a;">✓'+totalVerde+'</span> <span style="color:#dc2626;">✗'+totalRojo+'</span></span>'
+            + '<div style="display:flex;justify-content:space-between;gap:14px;padding-top:8px;margin-top:8px;border-top:2px solid #16a34a;font-weight:700;font-size:14px;">'
+            + '<span>Acumulado total</span><span style="font-weight:400;">'+totalPct+'%  <span style="color:#16a34a;">✓'+totalVerde+'</span> <span style="color:#dc2626;">✗'+totalRojo+'</span></span>'
             + '</div>'
-            + '<div style="display:flex;justify-content:space-between;gap:14px;padding-top:2px;font-weight:900;">'
-            + '<span>Media de findes</span><span>'+mediaPct+'%</span>'
+            + '<div style="display:flex;justify-content:space-between;gap:14px;padding-top:4px;font-weight:700;font-size:14px;">'
+            + '<span>Media de findes</span><span style="font-weight:400;">'+mediaPct+'%</span>'
             + '</div>';
     }
 
@@ -5890,9 +6078,9 @@
         return html;
     }
 
-    function obsRenderTemporada() {
+    function obsRenderTemporada(targetId) {
         if (!obsData) return;
-        var el = document.getElementById('obsTemporadaGrid');
+        var el = document.getElementById(targetId || 'obsTemporadaGrid');
         if (!el) return;
         // Detectar qué combinaciones (categoria+letra) tienen múltiples grupos
         var cntGrupos = {};
@@ -5921,38 +6109,39 @@
             var cb = ordenCat[b.categoria] !== undefined ? ordenCat[b.categoria] : 99;
             return ca !== cb ? ca - cb : a.letra.localeCompare(b.letra);
         });
-        var html = '<div style="overflow-x:auto;"><table style="border-collapse:separate;border-spacing:0 4px;font-size:10px;font-family:inherit;"><thead><tr>';
-        html += '<th style="padding:6px 12px;background:#1e293b;color:white;text-align:left;white-space:nowrap;min-width:130px;position:sticky;left:0;z-index:2;border-radius:6px 0 0 6px;">Equipo</th>';
-        for (var j = 1; j <= maxJornada; j++) html += '<th style="padding:6px 4px;background:#1e293b;color:#94a3b8;font-size:8px;text-align:center;min-width:28px;">J.'+j+'</th>';
-        html += '<th style="padding:6px 8px;background:#1e293b;color:#fff;font-size:8.5px;text-align:center;min-width:50px;">% Cump.</th>';
-        html += '<th style="padding:6px 8px;background:#1e293b;color:#fff;font-size:8.5px;text-align:center;min-width:60px;border-radius:0 6px 6px 0;">Detalle</th>';
+        var html = '<div style="overflow-x:auto;"><table style="border-collapse:separate;border-spacing:0 1px;font-size:10px;font-family:inherit;"><thead><tr>';
+        html += '<th style="padding:4px 12px;background:#1e293b;color:white;text-align:left;white-space:nowrap;min-width:130px;position:sticky;left:0;z-index:2;border-radius:6px 0 0 6px;">Equipo</th>';
+        for (var j = 1; j <= maxJornada; j++) html += '<th style="padding:4px 4px;background:#1e293b;color:#94a3b8;font-size:8px;text-align:center;min-width:28px;">J.'+j+'</th>';
+        html += '<th style="padding:4px 8px;background:#1e293b;color:#fff;font-size:12px;text-align:center;min-width:55px;">% Cump.</th>';
+        html += '<th style="padding:4px 8px;background:#1e293b;color:#fff;font-size:12px;text-align:center;min-width:70px;border-radius:0 6px 6px 0;">Detalle</th>';
         html += '</tr></thead><tbody>';
         equipos.forEach(function(eq) {
-            html += '<tr style="height:36px;">';
-            html += '<td style="padding:6px 12px;font-weight:900;font-size:10px;color:#1e293b;white-space:nowrap;background:#f8fafc;position:sticky;left:0;z-index:1;border-right:2px solid #e2e8f0;border-radius:6px 0 0 6px;">'+eq.clave+'</td>';
+            html += '<tr style="height:24px;">';
+            html += '<td style="padding:3px 12px;font-weight:900;font-size:10px;color:#1e293b;white-space:nowrap;background:#f8fafc;position:sticky;left:0;z-index:1;border-right:2px solid #e2e8f0;border-radius:6px 0 0 6px;">'+eq.clave+'</td>';
             var verde = 0, rojo = 0;
             for (var j = 1; j <= maxJornada; j++) {
                 var p = eq.jornadas[j];
-                var bg = '#f1f5f9', title = 'J.'+j;
+                var celda = '<span style="color:#e2e8f0;font-size:11px;">·</span>';
+                var title = 'J.'+j;
                 if (p) {
-                    title = (p.jornada||'J.'+j)+' vs '+p.rival+' — '+(p.resultado||'sin jugar');
+                    title = (p.jornada||'J.'+j)+' vs '+p.rival+' — '+(p.resultado||'sin jugar')+(p.objetivo?' | Obj: '+p.objetivo:'');
                     if (p.estado) {
-                        bg = p.cumplido === true ? '#16a34a' : (p.cumplido === false ? '#dc2626' : '#94a3b8');
-                        if (p.cumplido === true) verde++;
-                        else if (p.cumplido === false) rojo++;
-                    } else { bg = '#e2e8f0'; }
+                        if (p.cumplido === true)  { verde++; celda = '<i class="fas fa-circle-check" style="color:#16a34a;font-size:13px;" title="'+title.replace(/"/g,'&quot;')+'"></i>'; }
+                        else if (p.cumplido === false) { rojo++; celda = '<i class="fas fa-circle-xmark" style="color:#dc2626;font-size:13px;" title="'+title.replace(/"/g,'&quot;')+'"></i>'; }
+                        else { celda = '<i class="fas fa-circle-minus" style="color:#94a3b8;font-size:13px;" title="'+title.replace(/"/g,'&quot;')+'"></i>'; }
+                    }
                 }
-                html += '<td title="'+title.replace(/"/g,'&quot;')+'" style="padding:4px 3px;text-align:center;"><div style="width:20px;height:20px;border-radius:4px;background:'+bg+';margin:auto;"></div></td>';
+                html += '<td style="padding:1px 2px;text-align:center;vertical-align:middle;">'+celda+'</td>';
             }
             var totalEq = verde + rojo;
             var pctEq = totalEq > 0 ? Math.round((verde / totalEq) * 100) : 0;
             var colorEq = pctEq >= 70 ? '#16a34a' : (pctEq >= 40 ? '#d97706' : '#dc2626');
-            html += '<td style="padding:4px 6px;text-align:center;font-weight:900;color:'+(totalEq>0?colorEq:'#cbd5e1')+';background:#f8fafc;">'+(totalEq>0?pctEq+'%':'–')+'</td>';
-            html += '<td style="padding:4px 6px;text-align:center;font-size:9px;white-space:nowrap;background:#f8fafc;border-radius:0 6px 6px 0;"><span style="color:#16a34a;font-weight:800;">✓'+verde+'</span> <span style="color:#dc2626;font-weight:800;">✗'+rojo+'</span></td>';
+            html += '<td style="padding:2px 6px;text-align:center;font-weight:900;font-size:13px;color:'+(totalEq>0?colorEq:'#cbd5e1')+';background:#f8fafc;">'+(totalEq>0?pctEq+'%':'–')+'</td>';
+            html += '<td style="padding:2px 6px;text-align:center;font-size:12px;white-space:nowrap;background:#f8fafc;border-radius:0 6px 6px 0;"><span style="color:#16a34a;font-weight:800;">✓'+verde+'</span> <span style="color:#dc2626;font-weight:800;">✗'+rojo+'</span></td>';
             html += '</tr>';
         });
         html += '</tbody></table></div>';
-        html += '<div style="margin-top:14px;display:flex;gap:18px;font-size:10px;color:#64748b;"><span><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#16a34a;vertical-align:-2px;margin-right:5px;"></span>Objetivo cumplido</span><span><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#dc2626;vertical-align:-2px;margin-right:5px;"></span>No cumplido</span><span><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#e2e8f0;vertical-align:-2px;margin-right:5px;"></span>Sin jugar / sin objetivo</span></div>';
+        html += '<div style="margin-top:10px;display:flex;gap:18px;font-size:10px;color:#64748b;"><span><i class="fas fa-circle-check" style="color:#16a34a;margin-right:4px;"></i>Objetivo cumplido</span><span><i class="fas fa-circle-xmark" style="color:#dc2626;margin-right:4px;"></i>No cumplido</span><span><i class="fas fa-circle-minus" style="color:#94a3b8;margin-right:4px;"></i>Sin objetivo definido</span><span style="color:#e2e8f0;">·</span><span style="color:#94a3b8;">Sin jugar</span></div>';
         el.innerHTML = html;
     }
 
@@ -6042,6 +6231,789 @@
         var dia = dias[d.getDay()] || '';
         return 'J.' + num + ' ' + dia + ' ' + partes[0] + '/' + partes[1];
     }
+
+    // ===== FORMACIONES POR POSICIONES =====
+    const FP_MESES = [
+        {num:'09', label:'SEP'},{num:'10', label:'OCT'},{num:'11', label:'NOV'},
+        {num:'12', label:'DIC'},{num:'01', label:'ENE'},{num:'02', label:'FEB'},
+        {num:'03', label:'MAR'},{num:'04', label:'ABR'},{num:'05', label:'MAY'},{num:'06', label:'JUN'}
+    ];
+    const FP_DIAS = ['L','M','X','J'];
+    const FP_DIAS_LABELS = {L:'Lunes',M:'Martes',X:'Miércoles',J:'Jueves'};
+    const FP_DIAS_SHORT = {L:'Lun',M:'Mar',X:'Mié',J:'Jue'};
+    let _fpData = {};
+    let _fpEquiposF11 = [];
+    let _fpEquiposF7 = [];
+    let _fpTipoFiltro = 'F11'; // 'F11' | 'F7' | 'AMBAS'
+    let _fpMesActivo = null;
+    let _fpSaveTimer = null;
+    let _fpPosicionesCache = {};
+    let _fpAnoMes = {}; // mes('09') -> year(2025)
+    let _fpConfig = {}; // {mes: {temas:{POS:'texto'}, excluidas:['PORT']}}
+    const FP_POSICIONES_SIN_FORMACION = ['PORT','Portero','GK','POR']; // porteros excluidos
+    // Posiciones estándar por formato (mismas que en analisis_plantilla_page.html)
+    const FP_POSICIONES_F7  = ['DEF', 'MC', 'EXT', 'DEL'];
+    const FP_POSICIONES_F11 = ['LAT', 'DEF C', 'MC', 'PIVOTE', 'MP', 'EXT', 'DEL'];
+
+    function _fpGetEquiposActivos() {
+        if (_fpTipoFiltro === 'F7') return _fpEquiposF7.length ? _fpEquiposF7 : _fpEquiposF11;
+        if (_fpTipoFiltro === 'AMBAS') return [...new Set([..._fpEquiposF11, ..._fpEquiposF7])];
+        return _fpEquiposF11;
+    }
+
+    function _fpParsarTemporada(temporada) {
+        // "2025-2026" → sep-dic=2025, ene-jun=2026
+        const partes = (temporada||'').split('-').map(p => parseInt(p.trim())).filter(n => !isNaN(n));
+        const now = new Date().getFullYear();
+        const anoA = partes[0] || now;
+        const anoB = partes[1] || anoA;
+        ['09','10','11','12'].forEach(m => _fpAnoMes[m] = anoA);
+        ['01','02','03','04','05','06'].forEach(m => _fpAnoMes[m] = anoB);
+    }
+
+    function _fpFechasDiaSemana(mes, wIdx) {
+        // wIdx: 0-based week index. Returns [dayNum|null, ...] for L,M,X,J
+        const year = _fpAnoMes[mes] || new Date().getFullYear();
+        const month = parseInt(mes) - 1; // JS 0-based
+        const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+        const adj = (1 - firstDay + 7) % 7; // days from day 1 to first Monday
+        const firstMonday = 1 + adj + wIdx * 7;
+        return [0,1,2,3].map(d => {
+            const date = new Date(year, month, firstMonday + d);
+            return date.getMonth() === month ? date.getDate() : null;
+        });
+    }
+
+    async function fpCargar() {
+        try {
+            const [resF, resE, resL, resC] = await Promise.all([
+                fetch('/api/formaciones_indiv'),
+                fetch('/api/equipos_config'),
+                fetch('/api/equipos_lista'),
+                fetch('/api/formaciones_config')
+            ]);
+            _fpData = await resF.json();
+            const ecData = await resE.json();
+            const listaData = await resL.json();
+            _fpConfig = await resC.json().catch(() => ({}));
+            _fpParsarTemporada(ecData.temporada || '');
+            // F7 = equipos marcados explícitamente como F7 en equipos_config
+            // F11 = todos los equipos de las hojas que NO sean F7 (por defecto F11)
+            const todosEquipos = listaData.equipos || [];
+            const configF7Names = new Set((ecData.equipos || []).filter(e => e.tipo === 'F7').map(e => e.nombre).filter(Boolean));
+            if (todosEquipos.length) {
+                _fpEquiposF11 = todosEquipos.filter(e => !configF7Names.has(e));
+                _fpEquiposF7  = todosEquipos.filter(e =>  configF7Names.has(e));
+            } else {
+                // Fallback si equipos_lista está vacío: usar equipos_config
+                _fpEquiposF11 = (ecData.equipos || []).filter(e => (e.tipo||'F11') === 'F11').map(e => e.nombre).filter(Boolean);
+                _fpEquiposF7  = (ecData.equipos || []).filter(e =>  e.tipo === 'F7').map(e => e.nombre).filter(Boolean);
+            }
+            // Populate selectEquipoIndiv
+            const selIndiv = document.getElementById('selectEquipoIndiv');
+            if (selIndiv && todosEquipos.length) {
+                const current = selIndiv.value;
+                selIndiv.innerHTML = '<option value="">Seleccionar...</option>' +
+                    todosEquipos.map(e => `<option value="${e}" ${e===current?'selected':''}>${e}</option>`).join('');
+            }
+            // Pre-fetch positions for all configured + saved teams
+            const equiposEnSlots = new Set([..._fpGetEquiposActivos()]);
+            Object.values(_fpData).forEach(mesData => {
+                Object.values(mesData || {}).forEach(semData => {
+                    Object.values(semData || {}).forEach(diaSlots => {
+                        if (Array.isArray(diaSlots)) diaSlots.forEach(sl => { if (sl && sl.equipo) equiposEnSlots.add(sl.equipo); });
+                    });
+                });
+            });
+            await Promise.all([...equiposEnSlots].map(async eq => {
+                if (_fpPosicionesCache[eq]) return;
+                try {
+                    const r = await fetch(`/api/formaciones_indiv/jugadores_posicion?equipo=${encodeURIComponent(eq)}`);
+                    const d = await r.json();
+                    _fpPosicionesCache[eq] = d.posiciones || {};
+                } catch(e) { _fpPosicionesCache[eq] = {}; }
+            }));
+            _fpActualizarSugerencias();
+            fpRenderTipoFiltro();
+            fpRenderMeses();
+            fpActualizarRecuento();
+        } catch(e) {
+            console.error('[FP] Error cargando formaciones:', e);
+        }
+    }
+
+    function fpRenderTipoFiltro() {
+        const cont = document.getElementById('fpTipoFiltroRow');
+        if (!cont) return;
+        ['F11','F7','AMBAS'].forEach(t => {
+            const btn = cont.querySelector(`[data-tipo="${t}"]`);
+            if (!btn) return;
+            const active = _fpTipoFiltro === t;
+            btn.style.borderColor = active ? '#E31E24' : '#e2e8f0';
+            btn.style.background = active ? '#E31E24' : 'white';
+            btn.style.color = active ? 'white' : '#475569';
+        });
+    }
+
+    function fpSetTipoFiltro(tipo) {
+        _fpTipoFiltro = tipo;
+        fpRenderTipoFiltro();
+        if (_fpMesActivo) fpRenderSemanasDelMes(_fpMesActivo);
+    }
+
+    function fpRenderMeses() {
+        const cont = document.getElementById('fpMesesBtns');
+        if (!cont) return;
+        cont.innerHTML = FP_MESES.map(m => {
+            const active = m.num === _fpMesActivo;
+            const mc = _fpConfig[m.num] || {};
+            const temasF11 = Object.entries((mc.F11 ? mc.F11.temas : mc.temas) || {}).filter(([,v]) => v);
+            const temasF7  = Object.entries((mc.F7  ? mc.F7.temas  : {})      || {}).filter(([,v]) => v);
+            const partes = [
+                ...temasF11.map(([pos,v]) => `<b style="color:#E31E24">F11</b> <span style="color:#94a3b8;">${pos}:</span> <span style="color:#475569;">${v}</span>`),
+                ...temasF7.map( ([pos,v]) => `<b style="color:#7c3aed">F7</b>  <span style="color:#94a3b8;">${pos}:</span> <span style="color:#475569;">${v}</span>`)
+            ];
+            const resumen = partes.join(' · ');
+            const resumenHtml = resumen ? `<div style="font-size:9px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:260px;">${resumen}</div>` : '';
+            return `<div style="display:flex; flex-direction:column; align-items:flex-start;">
+                <button onclick="fpSeleccionarMes('${m.num}')" style="padding:6px 14px; font-size:11px; font-weight:900; border-radius:8px; border:1.5px solid ${active?'#E31E24':'#e2e8f0'}; background:${active?'#E31E24':'white'}; color:${active?'white':'#475569'}; cursor:pointer; font-family:inherit; transition:.2s;">${m.label}</button>
+                ${resumenHtml}
+            </div>`;
+        }).join('');
+    }
+
+    function fpSeleccionarMes(mes) {
+        _fpMesActivo = mes;
+        fpRenderMeses();
+        fpRenderSemanasDelMes(mes);
+        document.getElementById('fpContenidoMes').style.display = '';
+    }
+
+    function fpRenderSemanasDelMes(mes) {
+        const wrap = document.getElementById('fpSemanasWrap');
+        if (!wrap) return;
+        _fpActualizarSugerencias();
+        _fpEmptySlotCounter = 0;
+        const mesData = _fpData[mes] || {};
+        const totalSem = Math.max(Object.keys(mesData).length, 4);
+        let html = '';
+        const todayD = new Date().getDate();
+        const todayM = new Date().getMonth(); // 0-based
+        const todayY = new Date().getFullYear();
+        const mesYear = _fpAnoMes[mes] || todayY;
+        const mesMonth = parseInt(mes) - 1;
+        for (let w = 1; w <= totalSem; w++) {
+            const wKey = 'W' + w;
+            const semData = mesData[wKey] || {};
+            const fechasDia = _fpFechasDiaSemana(mes, w - 1);
+            const diasLabel = FP_DIAS.map((d, i) => {
+                const dn = fechasDia[i];
+                const esHoy = dn && mesYear === todayY && mesMonth === todayM && dn === todayD;
+                if (!dn) return FP_DIAS_SHORT[d];
+                if (esHoy) return `<span style="color:#E31E24;font-weight:900;">${FP_DIAS_SHORT[d]}&nbsp;${dn} <span style="background:#E31E24;color:white;font-size:8px;padding:1px 5px;border-radius:8px;font-weight:900;vertical-align:middle;margin-left:1px;">HOY</span></span>`;
+                return `${FP_DIAS_SHORT[d]}&nbsp;${dn}`;
+            }).join(' · ');
+            html += `
+            <div style="margin-bottom:14px; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden;">
+                <div style="background:#f8fafc; padding:8px 14px; display:flex; align-items:center; gap:14px; border-bottom:1px solid #e2e8f0;">
+                    <span style="font-size:11px; font-weight:900; color:#475569; text-transform:uppercase; letter-spacing:.5px;">Semana ${w}</span>
+                    <span style="font-size:11px; color:#94a3b8; font-weight:700;">${diasLabel}</span>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(4,1fr);">
+                    ${FP_DIAS.map(d => {
+                        const equiposActivos = new Set(_fpGetEquiposActivos());
+                        const saved = (semData[d] || []).filter(sl => !sl.equipo || equiposActivos.has(sl.equipo));
+                        const renderSlots = [...saved];
+                        while (renderSlots.length < 4) renderSlots.push({});
+                        return `
+                        <div style="border-right:1px solid #e2e8f0; min-width:0;">
+                            <div style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; text-align:center; padding:6px 4px; border-bottom:1px solid #f1f5f9;">${FP_DIAS_LABELS[d]}</div>
+                            <div id="fpSlots_${mes}_${wKey}_${d}">
+                                ${renderSlots.map((sl,si) => fpSlotHTML(mes,wKey,d,si,sl)).join('')}
+                            </div>
+                            <button onclick="fpAnadirSlot('${mes}','${wKey}','${d}')" style="width:100%; padding:5px; font-size:10px; background:transparent; border:none; border-top:1px dashed #e2e8f0; color:#94a3b8; cursor:pointer; font-family:inherit;">+ franja</button>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>`;
+        }
+        html += `<button onclick="fpAnadirSemana('${mes}')" style="width:100%; padding:8px; font-size:11px; font-weight:700; background:transparent; border:1.5px dashed #e2e8f0; border-radius:10px; color:#94a3b8; cursor:pointer; font-family:inherit; margin-top:4px;">+ Añadir semana</button>`;
+        wrap.innerHTML = html;
+    }
+
+    function fpGetSl(mes, wKey, dia, idx) {
+        return ((_fpData[mes]||{})[wKey]||{})[dia]?.[idx] || {};
+    }
+
+    function fpEnsureSl(mes, wKey, dia, idx) {
+        if (!_fpData[mes]) _fpData[mes] = {};
+        if (!_fpData[mes][wKey]) _fpData[mes][wKey] = {};
+        if (!_fpData[mes][wKey][dia]) _fpData[mes][wKey][dia] = [];
+        while (_fpData[mes][wKey][dia].length <= idx) _fpData[mes][wKey][dia].push({});
+        return _fpData[mes][wKey][dia][idx];
+    }
+
+    function fpSlotHTML(mes, wKey, dia, idx, sl) {
+        sl = sl || {};
+        // Compute suggestion for empty slots
+        let sugEquipo = '', sugPosicion = '';
+        const isSug = !sl.equipo && _fpSugerenciasList.length > 0;
+        if (isSug) {
+            const sug = _fpSugerenciasList[_fpEmptySlotCounter % _fpSugerenciasList.length];
+            _fpEmptySlotCounter++;
+            sugEquipo = sug ? sug.equipo : '';
+            sugPosicion = sug ? sug.posicion : '';
+        }
+        const displayEquipo = sl.equipo || sugEquipo;
+        const displayPosicion = sl.posicion || sugPosicion;
+
+        const equipoOpts = ['', ..._fpGetEquiposActivos()].map(e => `<option value="${e}" ${displayEquipo===e?'selected':''}>${e||'-- Equipo --'}</option>`).join('');
+        const cache = _fpPosicionesCache[displayEquipo] || {};
+        const isF7Team = _fpEquiposF7.includes(displayEquipo);
+        const basePosiciones = displayEquipo ? (isF7Team ? FP_POSICIONES_F7 : FP_POSICIONES_F11) : [];
+        const cachePosiciones = Object.keys(cache).filter(p => p && p !== 'Sin posición' && !FP_POSICIONES_SIN_FORMACION.some(x => p.toUpperCase().startsWith(x.toUpperCase())));
+        const posiciones = [...new Set([...basePosiciones, ...cachePosiciones])];
+        let posOpts;
+        if (posiciones.length) {
+            posOpts = ['', ...posiciones].map(p => `<option value="${p}" ${displayPosicion===p?'selected':''}>${p||'-- Posición --'}</option>`).join('');
+        } else if (displayPosicion) {
+            posOpts = `<option value="">-- Posición --</option><option value="${displayPosicion}" selected>${displayPosicion}</option>`;
+        } else {
+            posOpts = `<option value="">-- Posición --</option>`;
+        }
+        const jugadores = displayPosicion ? (cache[displayPosicion] || []) : [];
+        // jugadores is now an array; default = all players selected
+        const selArr = sl.jugadores || (jugadores.length ? jugadores.map(j=>j.nombre) : []);
+        const chipsHtml = jugadores.length
+            ? jugadores.map(j => fpChipHTML(mes,wKey,dia,idx,j,selArr)).join('') + fpAnadirBtnHTML(mes,wKey,dia,idx,sl.equipo||'')
+            : `<span style="font-size:9px; color:#cbd5e1; font-style:italic;">Selecciona equipo y posición</span>`;
+
+        const slotBg = isSug ? 'background:#fafafa;' : '';
+        const selStyle = isSug ? 'color:#94a3b8;' : '';
+
+        return `
+        <div class="fp-slot" id="fpSlot_${mes}_${wKey}_${dia}_${idx}" style="border-bottom:1px solid #f1f5f9; ${slotBg}">
+            <div style="display:grid; grid-template-columns:auto 1fr 1fr; gap:2px; padding:5px 4px 2px; align-items:center;">
+                <div style="display:flex; flex-direction:column; gap:2px;">
+                    <input type="time" value="${sl.hora_ini||''}" title="Hora inicio" style="padding:3px 4px; font-size:9px; border:1px solid #e2e8f0; border-radius:3px; font-family:inherit; width:54px; box-sizing:border-box; color:#475569;" onchange="fpSlotCambio('${mes}','${wKey}','${dia}',${idx},'hora_ini',this.value)">
+                    <input type="time" value="${sl.hora_fin||''}" title="Hora fin" style="padding:3px 4px; font-size:9px; border:1px solid #e2e8f0; border-radius:3px; font-family:inherit; width:54px; box-sizing:border-box; color:#94a3b8;" onchange="fpSlotCambio('${mes}','${wKey}','${dia}',${idx},'hora_fin',this.value)">
+                </div>
+                <select id="fpEq_${mes}_${wKey}_${dia}_${idx}" style="padding:3px 4px; font-size:9px; border:1px solid #e2e8f0; border-radius:3px; font-family:inherit; box-sizing:border-box; min-width:0; ${selStyle}" onchange="fpSlotCambio('${mes}','${wKey}','${dia}',${idx},'equipo',this.value); fpCargarPosicionesParaSlot('${mes}','${wKey}','${dia}',${idx},this.value)">${equipoOpts}</select>
+                <select id="fpPos_${mes}_${wKey}_${dia}_${idx}" style="padding:3px 4px; font-size:9px; border:1px solid #e2e8f0; border-radius:3px; font-family:inherit; box-sizing:border-box; min-width:0; ${selStyle}" onchange="const eqEl=document.getElementById('fpEq_${mes}_${wKey}_${dia}_${idx}'); const sl2=fpEnsureSl('${mes}','${wKey}','${dia}',${idx}); if(!sl2.equipo && eqEl && eqEl.value) sl2.equipo=eqEl.value; fpSlotCambio('${mes}','${wKey}','${dia}',${idx},'posicion',this.value); fpActualizarChipsSlot('${mes}','${wKey}','${dia}',${idx},this.value)">${posOpts}</select>
+            </div>
+            <div id="fpChips_${mes}_${wKey}_${dia}_${idx}" style="padding:3px 4px 5px; min-height:22px; display:flex; flex-wrap:wrap; gap:3px; align-items:center; border-bottom:2px solid #f8fafc;">
+                ${chipsHtml}
+                <button onclick="fpEliminarSlot('${mes}','${wKey}','${dia}',${idx})" style="margin-left:auto; font-size:9px; background:transparent; border:none; color:#fca5a5; cursor:pointer; font-family:inherit; padding:0 2px;" title="Quitar franja">✕</button>
+            </div>
+        </div>`;
+    }
+
+    function fpChipHTML(mes, wKey, dia, idx, jugador, selArr) {
+        const isSelected = (selArr||[]).includes(jugador.nombre);
+        const nameSafe = jugador.nombre.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        return `<span data-name="${jugador.nombre}" onclick="fpToggleJugador('${mes}','${wKey}','${dia}',${idx},'${nameSafe}')"
+            style="font-size:11px; padding:3px 10px; border-radius:2px; cursor:pointer; font-weight:700; border:1.5px solid ${isSelected?'#dc2626':'#e2e8f0'}; background:${isSelected?'#fee2e2':'#f8fafc'}; color:${isSelected?'#dc2626':'#94a3b8'}; white-space:nowrap; display:inline-block;">
+            ${jugador.nombre} <span style="opacity:.6;">(${jugador.count})</span></span>`;
+    }
+
+    function fpAnadirBtnHTML(mes, wKey, dia, idx, equipo) {
+        const sl = fpGetSl(mes, wKey, dia, idx);
+        const cache = _fpPosicionesCache[equipo] || {};
+        // Players already shown as default chips (current position's players)
+        const posActual = sl.posicion || '';
+        const yaEnChips = new Set((cache[posActual] || []).map(j => j.nombre));
+        // Only show players from OTHER positions
+        const allPlayers = Object.entries(cache)
+            .filter(([pos]) => pos !== posActual)
+            .flatMap(([pos, jugs]) => jugs.map(j => ({nombre: j.nombre, pos})));
+        const opts = allPlayers.map(({nombre, pos}) => `<option value="${nombre}">${nombre} (${pos})</option>`).join('');
+        return `<span id="fpAddWrap_${mes}_${wKey}_${dia}_${idx}" style="display:inline-flex; align-items:center; gap:2px;">
+            <button onclick="fpMostrarAnadirJugador('${mes}','${wKey}','${dia}',${idx})" style="font-size:9px; padding:2px 6px; border-radius:2px; border:1px dashed #94a3b8; background:transparent; color:#94a3b8; cursor:pointer; font-family:inherit; white-space:nowrap;">+ jugador</button>
+            <span id="fpAddInput_${mes}_${wKey}_${dia}_${idx}" style="display:none;">
+                <select style="font-size:9px; padding:2px 4px; border:1px solid #1d4ed8; border-radius:2px; font-family:inherit;" onchange="fpAnadirJugadorExtra('${mes}','${wKey}','${dia}',${idx},this.value); this.value=''">
+                    <option value="">-- elegir --</option>${opts}
+                </select>
+            </span>
+        </span>`;
+    }
+
+    function fpMostrarAnadirJugador(mes, wKey, dia, idx) {
+        const el = document.getElementById(`fpAddInput_${mes}_${wKey}_${dia}_${idx}`);
+        if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
+    }
+
+    function fpAnadirJugadorExtra(mes, wKey, dia, idx, nombre) {
+        if (!nombre) return;
+        const sl = fpEnsureSl(mes, wKey, dia, idx);
+        if (!sl.jugadores) sl.jugadores = [];
+        if (!sl.jugadores.includes(nombre)) {
+            sl.jugadores.push(nombre);
+            fpAutoGuardar();
+            // Re-render chips area
+            fpActualizarChipsSlot(mes, wKey, dia, idx, sl.posicion||'', sl.equipo||'');
+        }
+    }
+
+    function fpToggleJugador(mes, wKey, dia, idx, nombre) {
+        const sl = fpEnsureSl(mes, wKey, dia, idx);
+        // Initialise jugadores if first toggle
+        if (!sl.jugadores) {
+            const cache = _fpPosicionesCache[sl.equipo] || {};
+            const jugadores = sl.posicion ? (cache[sl.posicion] || []) : [];
+            sl.jugadores = jugadores.map(j => j.nombre);
+        }
+        const pos = sl.jugadores.indexOf(nombre);
+        if (pos === -1) sl.jugadores.push(nombre);
+        else sl.jugadores.splice(pos, 1);
+        // Update chip style without full re-render
+        const cont = document.getElementById(`fpChips_${mes}_${wKey}_${dia}_${idx}`);
+        if (cont) {
+            cont.querySelectorAll('span[data-name]').forEach(chip => {
+                const isNow = sl.jugadores.includes(chip.dataset.name);
+                chip.style.background = isNow ? '#dbeafe' : '#f8fafc';
+                chip.style.color = isNow ? '#1d4ed8' : '#64748b';
+                chip.style.borderColor = isNow ? '#1d4ed8' : '#e2e8f0';
+            });
+        }
+        fpAutoGuardar();
+    }
+
+    async function fpAplicarSugerencia(mes, wKey, dia, idx, equipo, posicion) {
+        const sl = fpEnsureSl(mes, wKey, dia, idx);
+        sl.equipo = equipo;
+        sl.posicion = posicion;
+        // Cargar posiciones si no están en caché
+        if (!_fpPosicionesCache[equipo]) {
+            try {
+                const r = await fetch(`/api/formaciones_indiv/jugadores_posicion?equipo=${encodeURIComponent(equipo)}`);
+                const d = await r.json();
+                _fpPosicionesCache[equipo] = d.posiciones || {};
+            } catch(e) { _fpPosicionesCache[equipo] = {}; }
+        }
+        // Pre-seleccionar todos los jugadores de la posición sugerida
+        const cache = _fpPosicionesCache[equipo] || {};
+        const jugs = cache[posicion] || [];
+        sl.jugadores = jugs.map(j => j.nombre);
+        fpRenderSemanasDelMes(mes);
+        fpAutoGuardar();
+    }
+
+    async function fpCargarPosicionesParaSlot(mes, wKey, dia, idx, equipo) {
+        if (!equipo) return;
+        if (!_fpPosicionesCache[equipo]) {
+            try {
+                const res = await fetch(`/api/formaciones_indiv/jugadores_posicion?equipo=${encodeURIComponent(equipo)}`);
+                const data = await res.json();
+                _fpPosicionesCache[equipo] = data.posiciones || {};
+            } catch(e) { _fpPosicionesCache[equipo] = {}; }
+        }
+        const sl = fpGetSl(mes, wKey, dia, idx);
+        const posEl = document.getElementById(`fpPos_${mes}_${wKey}_${dia}_${idx}`);
+        if (posEl) {
+            const cache = _fpPosicionesCache[equipo] || {};
+            posEl.innerHTML = ['', ...Object.keys(cache)].map(p => `<option value="${p}" ${sl.posicion===p?'selected':''}>${p||'-- Posición --'}</option>`).join('');
+        }
+        fpActualizarChipsSlot(mes, wKey, dia, idx, sl.posicion||'', equipo);
+    }
+
+    function fpActualizarChipsSlot(mes, wKey, dia, idx, posicion, equipo) {
+        const cont = document.getElementById(`fpChips_${mes}_${wKey}_${dia}_${idx}`);
+        if (!cont) return;
+        const sl = fpGetSl(mes, wKey, dia, idx);
+        const eqFinal = equipo || sl.equipo || '';
+        const cache = _fpPosicionesCache[eqFinal] || {};
+        const jugadores = posicion ? (cache[posicion] || []) : [];
+        // Default: all players selected if jugadores not yet set
+        const selArr = sl.jugadores || (jugadores.length ? jugadores.map(j=>j.nombre) : []);
+        const quitarBtn = cont.querySelector('button[title="Quitar franja"]');
+        if (jugadores.length) {
+            const chips = jugadores.map(j => fpChipHTML(mes,wKey,dia,idx,j,selArr)).join('');
+            cont.innerHTML = chips + fpAnadirBtnHTML(mes,wKey,dia,idx,eqFinal) + (quitarBtn ? quitarBtn.outerHTML : '');
+        } else {
+            cont.innerHTML = `<span style="font-size:9px; color:#cbd5e1; font-style:italic;">Selecciona equipo y posición</span>` + (quitarBtn ? quitarBtn.outerHTML : '');
+        }
+        // If this is the first time showing chips, persist default selection
+        if (!sl.jugadores && jugadores.length) {
+            const slW = fpEnsureSl(mes, wKey, dia, idx);
+            slW.jugadores = jugadores.map(j => j.nombre);
+            fpAutoGuardar();
+        }
+    }
+
+    function fpSlotCambio(mes, wKey, dia, idx, campo, valor) {
+        const sl = fpEnsureSl(mes, wKey, dia, idx);
+        sl[campo] = valor;
+        fpAutoGuardar();
+    }
+
+    function fpAnadirSlot(mes, wKey, dia) {
+        if (!_fpData[mes]) _fpData[mes] = {};
+        if (!_fpData[mes][wKey]) _fpData[mes][wKey] = {};
+        if (!_fpData[mes][wKey][dia]) _fpData[mes][wKey][dia] = [];
+        const idx = _fpData[mes][wKey][dia].length;
+        _fpData[mes][wKey][dia].push({});
+        const cont = document.getElementById(`fpSlots_${mes}_${wKey}_${dia}`);
+        if (cont) cont.insertAdjacentHTML('beforeend', fpSlotHTML(mes, wKey, dia, idx, {}));
+    }
+
+    function fpEliminarSlot(mes, wKey, dia, idx) {
+        if ((_fpData[mes]||{})[wKey]?.[dia]) _fpData[mes][wKey][dia].splice(idx, 1);
+        fpRenderSemanasDelMes(mes);
+        fpAutoGuardar();
+    }
+
+    function fpAnadirSemana(mes) {
+        if (!_fpData[mes]) _fpData[mes] = {};
+        const numExistentes = Object.keys(_fpData[mes]).length;
+        _fpData[mes]['W' + (numExistentes + 1)] = {};
+        fpRenderSemanasDelMes(mes);
+        fpAutoGuardar();
+    }
+
+    function fpAutoGuardar() {
+        clearTimeout(_fpSaveTimer);
+        const est = document.getElementById('fpEstado');
+        if (est) { est.style.color='#f59e0b'; est.innerHTML='<i class="fas fa-spinner fa-spin"></i> Guardando...'; }
+        _fpSaveTimer = setTimeout(async () => {
+            try {
+                const res = await fetch('/api/formaciones_indiv', {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify(_fpData)
+                });
+                if (res.ok) {
+                    if (est) { est.style.color='#16a34a'; est.innerHTML='<i class="fas fa-check"></i> Guardado'; setTimeout(()=>est.innerHTML='', 2000); }
+                    // Refresh player counts
+                    _fpPosicionesCache = {};
+                    fpActualizarRecuento();
+                }
+            } catch(e) {
+                if (est) { est.style.color='#ef4444'; est.textContent='Error al guardar'; }
+            }
+        }, 800);
+    }
+
+    let _fpRecuentoEquipo = null;
+    let _fpSugerenciasList = []; // [{equipo, posicion, count}] ordenadas por count asc
+    let _fpEmptySlotCounter = 0; // contador de slots vacíos durante un render
+
+    function _fpActualizarSugerencias() {
+        // Contar sesiones por (equipo, posicion) en todos los datos guardados
+        const counts = {};
+        Object.values(_fpData).forEach(mesData => {
+            Object.values(mesData || {}).forEach(semData => {
+                Object.values(semData || {}).forEach(diaSlots => {
+                    if (!Array.isArray(diaSlots)) return;
+                    diaSlots.forEach(sl => {
+                        if (sl && sl.equipo && sl.posicion) {
+                            const k = sl.equipo + '||' + sl.posicion;
+                            counts[k] = (counts[k] || 0) + 1;
+                        }
+                    });
+                });
+            });
+        });
+
+        // Iterar posición primero, luego equipos ordenados por sesiones (reparto igualitario)
+        const result = [];
+        const addPosEquipos = (posiciones, equipos) => {
+            posiciones.forEach(pos => {
+                [...equipos]
+                    .map(eq => ({ equipo: eq, posicion: pos, count: counts[eq + '||' + pos] || 0 }))
+                    .sort((a, b) => a.count - b.count || a.equipo.localeCompare(b.equipo))
+                    .forEach(x => result.push(x));
+            });
+        };
+
+        if (_fpTipoFiltro === 'AMBAS') {
+            addPosEquipos(FP_POSICIONES_F11, _fpEquiposF11.length ? _fpEquiposF11 : _fpGetEquiposActivos());
+            addPosEquipos(FP_POSICIONES_F7,  _fpEquiposF7);
+        } else {
+            const posiciones = _fpTipoFiltro === 'F7' ? FP_POSICIONES_F7 : FP_POSICIONES_F11;
+            addPosEquipos(posiciones, _fpGetEquiposActivos());
+        }
+
+        _fpSugerenciasList = result;
+    }
+
+    function _fpBuildStats() {
+        // Returns { equipo: { jugadores:{}, posiciones:{}, meses:{} } }
+        const stats = {};
+        for (const [mes, mesData] of Object.entries(_fpData)) {
+            for (const semData of Object.values(mesData)) {
+                for (const slots of Object.values(semData)) {
+                    for (const sl of (slots || [])) {
+                        if (!sl.equipo) continue;
+                        if (!stats[sl.equipo]) stats[sl.equipo] = {jugadores:{}, posiciones:{}, meses:{}};
+                        const s = stats[sl.equipo];
+                        const pos = sl.posicion || 'Sin posición';
+                        const jugs = sl.jugadores || (sl.jugador ? [sl.jugador] : []);
+                        for (const jug of jugs) {
+                            if (!jug) continue;
+                            s.jugadores[jug] = (s.jugadores[jug]||0) + 1;
+                            s.posiciones[pos] = (s.posiciones[pos]||0) + 1;
+                            s.meses[mes] = (s.meses[mes]||0) + 1;
+                        }
+                    }
+                }
+            }
+        }
+        return stats;
+    }
+
+    function _fpMergeStats(statsArr) {
+        const m = {jugadores:{}, posiciones:{}, meses:{}};
+        for (const s of statsArr) {
+            for (const [k,v] of Object.entries(s.jugadores)) m.jugadores[k] = (m.jugadores[k]||0)+v;
+            for (const [k,v] of Object.entries(s.posiciones)) m.posiciones[k] = (m.posiciones[k]||0)+v;
+            for (const [k,v] of Object.entries(s.meses)) m.meses[k] = (m.meses[k]||0)+v;
+        }
+        return m;
+    }
+
+    function fpFiltroRecuento(equipo) {
+        _fpRecuentoEquipo = equipo;
+        fpActualizarRecuento();
+    }
+
+    function fpActualizarRecuento() {
+        const panel = document.getElementById('fpRecuento');
+        const body = document.getElementById('fpRecuentoBody');
+        const badge = document.getElementById('fpBadgeTotal');
+        if (!panel || !body) return;
+
+        const stats = _fpBuildStats();
+        // Show ALL configured active teams (+ any teams present in saved data)
+        const todosEquiposActivos = _fpGetEquiposActivos();
+        const equipos = [...new Set([...todosEquiposActivos, ...Object.keys(stats)])];
+        const totalSesiones = Object.values(stats).reduce((acc, s) => acc + Object.values(s.jugadores).reduce((a,b)=>a+b,0), 0);
+
+        if (todosEquiposActivos.length === 0 && Object.keys(stats).length === 0) {
+            panel.style.display = 'none';
+            if (badge) badge.style.display = 'none';
+            return;
+        }
+        panel.style.display = '';
+        if (badge) {
+            badge.style.display = '';
+            badge.textContent = totalSesiones > 0 ? totalSesiones + ' sesiones' : equipos.length + ' equipos';
+        }
+
+        // Which equipo is active
+        const activeEq = (_fpRecuentoEquipo && equipos.includes(_fpRecuentoEquipo)) ? _fpRecuentoEquipo : null;
+        const active = activeEq ? (stats[activeEq] || {jugadores:{}, posiciones:{}, meses:{}}) : _fpMergeStats(Object.values(stats));
+
+        // Team filter buttons — ALL configured teams, even those with 0 sessions
+        const btnBase = 'font-size:10px; font-weight:900; padding:4px 12px; border-radius:6px; cursor:pointer; font-family:inherit; border:1.5px solid';
+        const filterBtns = [
+            `<button onclick="fpFiltroRecuento(null)" style="${btnBase} ${!activeEq?'#E31E24; background:#E31E24; color:white':'#e2e8f0; background:white; color:#475569'};">TODOS</button>`,
+            ...equipos.map(eq => `<button onclick="fpFiltroRecuento('${eq}')" style="${btnBase} ${activeEq===eq?'#E31E24; background:#E31E24; color:white':'#e2e8f0; background:white; color:#475569'};">${eq}</button>`)
+        ].join('');
+
+        // Column 1: jugadores sorted by count desc
+        const jugRows = Object.entries(active.jugadores)
+            .sort((a,b) => b[1]-a[1])
+            .map(([jug, cnt]) => `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid #f1f5f9;">
+                    <span style="color:#475569; font-weight:700; font-size:13px;">${jug}</span>
+                    <span style="font-weight:900; color:#E31E24; font-size:18px; min-width:28px; text-align:right;">${cnt}</span>
+                </div>`).join('');
+
+        // Column 2: por posición
+        const posRows = Object.entries(active.posiciones)
+            .sort((a,b) => b[1]-a[1])
+            .map(([pos, cnt]) => `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid #f1f5f9;">
+                    <span style="color:#475569; font-weight:700; font-size:13px; text-transform:uppercase;">${pos}</span>
+                    <span style="font-weight:900; color:#E31E24; font-size:18px; min-width:28px; text-align:right;">${cnt}</span>
+                </div>`).join('');
+
+        // Column 3: por mes en horizontal
+        const mesHeader = FP_MESES.map(m => `<th style="text-align:center; font-size:10px; font-weight:900; color:#94a3b8; padding:4px 8px; text-transform:uppercase;">${m.label}</th>`).join('');
+        const mesCells = FP_MESES.map(m => {
+            const cnt = active.meses[m.num] || 0;
+            return `<td style="text-align:center; font-size:${cnt?'20':'13'}px; font-weight:${cnt?'900':'400'}; color:${cnt?'#E31E24':'#cbd5e1'}; padding:6px 8px;">${cnt||'-'}</td>`;
+        }).join('');
+
+        body.innerHTML = `
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; width:100%;">${filterBtns}</div>
+            <div style="display:grid; grid-template-columns:1fr 160px auto; gap:14px; width:100%; align-items:start;">
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px;">
+                    <div style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; padding-bottom:4px; border-bottom:1px solid #e2e8f0;">Jugadores</div>
+                    ${jugRows || '<div style="font-size:11px; color:#cbd5e1;">Sin datos</div>'}
+                </div>
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px;">
+                    <div style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; padding-bottom:4px; border-bottom:1px solid #e2e8f0;">Por posición</div>
+                    ${posRows || '<div style="font-size:11px; color:#cbd5e1;">Sin datos</div>'}
+                </div>
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; min-width:0;">
+                    <div style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; padding-bottom:4px; border-bottom:1px solid #e2e8f0;">Por mes</div>
+                    <table style="border-collapse:collapse; width:100%;"><thead><tr>${mesHeader}</tr></thead><tbody><tr>${mesCells}</tr></tbody></table>
+                </div>
+            </div>`;
+    }
+
+    // ===== CONFIG FORMACIONES =====
+    let _fpConfigMesActivo = '09';
+    let _fpConfigTipo = 'F11'; // sección activa en el popup: 'F11' o 'F7'
+
+    async function fpAbrirConfig() {
+        document.getElementById('fpConfigModal').style.display = '';
+        fpConfigRenderMeses();
+        fpConfigRenderPosiciones(_fpConfigMesActivo); // render inmediato con lo que haya
+        // Pre-cargar posiciones de TODOS los equipos para que salgan todas las posiciones
+        const todos = [...new Set([..._fpEquiposF11, ..._fpEquiposF7])];
+        await Promise.all(todos.map(async eq => {
+            if (_fpPosicionesCache[eq] && Object.keys(_fpPosicionesCache[eq]).length) return;
+            try {
+                const r = await fetch(`/api/formaciones_indiv/jugadores_posicion?equipo=${encodeURIComponent(eq)}`);
+                const d = await r.json();
+                _fpPosicionesCache[eq] = d.posiciones || {};
+            } catch(e) { _fpPosicionesCache[eq] = {}; }
+        }));
+        fpConfigRenderPosiciones(_fpConfigMesActivo); // re-render con posiciones completas
+    }
+
+    function fpConfigRenderMeses() {
+        const cont = document.getElementById('fpConfigMesesTabs');
+        if (!cont) return;
+        cont.innerHTML = FP_MESES.map(m => {
+            const active = m.num === _fpConfigMesActivo;
+            return `<button onclick="fpConfigSelMes('${m.num}')" style="padding:5px 12px; font-size:10px; font-weight:900; border-radius:7px; border:1.5px solid ${active?'#E31E24':'#e2e8f0'}; background:${active?'#E31E24':'white'}; color:${active?'white':'#475569'}; cursor:pointer; font-family:inherit;">${m.label}</button>`;
+        }).join('');
+    }
+
+    function fpConfigSelMes(mes) {
+        // Guardar sección actual en memoria antes de cambiar mes
+        _fpConfigGuardarEnMemoria(_fpConfigMesActivo, _fpConfigTipo);
+        _fpConfigMesActivo = mes;
+        fpConfigRenderMeses();
+        fpConfigRenderPosiciones(mes);
+    }
+
+    function fpConfigSetTipo(tipo) {
+        // Guardar sección actual en memoria antes de cambiar tipo
+        _fpConfigGuardarEnMemoria(_fpConfigMesActivo, _fpConfigTipo);
+        _fpConfigTipo = tipo;
+        fpConfigRenderPosiciones(_fpConfigMesActivo);
+    }
+
+    function _fpConfigGuardarEnMemoria(mes, tipo) {
+        if (!_fpConfig[mes]) _fpConfig[mes] = {};
+        const cont = document.getElementById('fpConfigPosiciones');
+        if (!cont) return;
+        const temas = {}, excluidas = [];
+        cont.querySelectorAll(`input[id^="fpCfgTema_${tipo}_"]`).forEach(inp => {
+            const pos = inp.id.replace(`fpCfgTema_${tipo}_`, '');
+            if (inp.value.trim()) temas[pos] = inp.value.trim();
+        });
+        cont.querySelectorAll(`input[id^="fpCfgChk_${tipo}_"]`).forEach(chk => {
+            const pos = chk.id.replace(`fpCfgChk_${tipo}_`, '');
+            if (!chk.checked) excluidas.push(pos);
+        });
+        _fpConfig[mes][tipo] = {temas, excluidas};
+    }
+
+    function _fpGetPosicionesTipo(tipo) {
+        // Empezar con la lista estándar del formato (F7 o F11)
+        const base = tipo === 'F7' ? FP_POSICIONES_F7 : FP_POSICIONES_F11;
+        const pos = new Set(base);
+        // Añadir posiciones del caché de ese tipo de equipo (por si hay personalizadas)
+        const equipos = tipo === 'F7' ? _fpEquiposF7 : _fpEquiposF11;
+        equipos.forEach(eq => {
+            Object.keys(_fpPosicionesCache[eq] || {}).forEach(p => {
+                if (!p || p === 'Sin posición') return;
+                if (FP_POSICIONES_SIN_FORMACION.some(x => p.toUpperCase().startsWith(x.toUpperCase()))) return;
+                pos.add(p);
+            });
+        });
+        // Mantener el orden: primero la lista base, luego extras del caché
+        return [...base.filter(p => pos.has(p)), ...[...pos].filter(p => !base.includes(p)).sort()];
+    }
+
+    function _fpTodasPosicionesCache() {
+        // Todas las posiciones de cualquier equipo en caché, excluye PORT
+        const pos = new Set();
+        Object.values(_fpPosicionesCache).forEach(posMap => {
+            Object.keys(posMap || {}).forEach(p => {
+                if (!p || p === 'Sin posición') return;
+                if (FP_POSICIONES_SIN_FORMACION.some(x => p.toUpperCase().startsWith(x.toUpperCase()))) return;
+                pos.add(p);
+            });
+        });
+        return [...pos].sort();
+    }
+
+    function fpConfigRenderPosiciones(mes) {
+        const cont = document.getElementById('fpConfigPosiciones');
+        if (!cont) return;
+
+        // Siempre mostrar ambos botones — F11 y F7 independientemente de configuración
+        const tipoActivo = _fpConfigTipo || 'F11';
+        const colorActivo = tipoActivo === 'F7' ? '#7c3aed' : '#E31E24';
+
+        const mkBtn = (t) => {
+            const active = tipoActivo === t;
+            const col = t === 'F7' ? '#7c3aed' : '#E31E24';
+            return `<button onclick="fpConfigSetTipo('${t}')" style="padding:5px 14px; font-size:11px; font-weight:900; border-radius:7px; cursor:pointer; font-family:inherit; border:1.5px solid ${active?col:'#e2e8f0'}; background:${active?col:'white'}; color:${active?'white':'#475569'};">${t}</button>`;
+        };
+
+        // Posiciones: las del tipo activo; si están vacías usar todas del caché
+        let posiciones = _fpGetPosicionesTipo(tipoActivo);
+        if (!posiciones.length) posiciones = _fpTodasPosicionesCache();
+
+        const mc = ((_fpConfig[mes] || {})[tipoActivo] || {});
+        const temas = mc.temas || {};
+        const excluidas = mc.excluidas || [];
+
+        const posHTML = posiciones.length
+            ? posiciones.map(pos => `
+                <div style="display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid #f8fafc;">
+                    <label style="display:flex; align-items:center; gap:6px; min-width:80px; cursor:pointer;">
+                        <input type="checkbox" id="fpCfgChk_${tipoActivo}_${pos}" ${!excluidas.includes(pos)?'checked':''} style="accent-color:${colorActivo}; width:14px; height:14px;">
+                        <span style="font-size:12px; font-weight:700; color:#475569; text-transform:uppercase;">${pos}</span>
+                    </label>
+                    <input type="text" id="fpCfgTema_${tipoActivo}_${pos}" value="${temas[pos]||''}" placeholder="Tema (ej: Ruptura, Presión alta...)"
+                        style="flex:1; padding:5px 10px; font-size:11px; border:1px solid #e2e8f0; border-radius:6px; font-family:inherit; color:#475569;">
+                </div>`).join('')
+            : '<div style="font-size:11px; color:#cbd5e1; padding:10px 0;">Cargando posiciones...</div>';
+
+        cont.innerHTML = `
+            <div style="display:flex; gap:6px; margin-bottom:14px; align-items:center;">
+                ${mkBtn('F11')}${mkBtn('F7')}
+                <span style="font-size:9px; color:#cbd5e1; margin-left:6px;">PORT excluido automáticamente</span>
+            </div>
+            ${posHTML}`;
+    }
+
+    async function fpConfigGuardar() {
+        const mes = _fpConfigMesActivo;
+        if (!_fpConfig[mes]) _fpConfig[mes] = {};
+        // Guardar sección visible en memoria antes de enviar
+        _fpConfigGuardarEnMemoria(mes, _fpConfigTipo);
+        try {
+            await fetch('/api/formaciones_config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(_fpConfig)});
+            fpRenderMeses();
+            document.getElementById('fpConfigModal').style.display = 'none';
+        } catch(e) { alert('Error guardando configuración'); }
+    }
+
+    // Cargar formaciones cuando se activa el subtab COOR. DESARROLLO INDV
+    document.addEventListener('DOMContentLoaded', function() {
+        // Pre-load on page if coord-sub-individual is visible
+        const el = document.getElementById('coord-sub-individual');
+        if (el && el.style.display !== 'none') fpCargar();
+    });
+
+    // Hook into subtab activation - detect coord-sub-individual becoming visible
+    const _fpObserver = new MutationObserver(function(mutations) {
+        mutations.forEach(function(m) {
+            if (m.target.id === 'coord-sub-individual' && m.target.style.display !== 'none') {
+                if (!_fpMesActivo && !Object.keys(_fpData).length) fpCargar();
+            }
+        });
+    });
+    const _fpTarget = document.getElementById('coord-sub-individual');
+    if (_fpTarget) _fpObserver.observe(_fpTarget, {attributes:true, attributeFilter:['style']});
 
 </script>
 {% endblock %}

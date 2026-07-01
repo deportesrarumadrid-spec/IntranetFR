@@ -208,6 +208,7 @@
                         <th rowspan="2">JUGADOR</th>
                         <th rowspan="2" style="width: 50px;">PIERNA</th>
                         <th rowspan="2" style="width: 80px; position: relative;"><div style="display: flex; flex-direction: column; align-items: center; gap: 2px;"><button class="filter-btn" onclick="toggleFilterPopover(event)" title="Filtrar por posición"><i class="fas fa-sliders-h" style="font-size: 10px;"></i></button><span>POSICIÓN</span></div><div id="filterPopover" class="filter-popover"></div></th>
+                        <th rowspan="2" style="width: 80px;">POS. SEC.</th>
                         <th rowspan="2" style="width: 120px;">FORTALEZAS/<br>DEBILIDADES</th>                        
                         <th rowspan="2">COMENTARIOS</th>
                         <th colspan="2" class="main-stat-header stat-category-fisicas-start" data-category="fisicas" style="text-align: center; border-bottom: 1px solid #f1f5f9;">STATS FÍSICAS</th>
@@ -248,7 +249,7 @@
                         Total columns:
                         JUGADOR (1) + COMENTARIOS (1) + FÍSICAS (2) + TÉCNICAS (10) + TÁCTICAS (5) + PSICOLÓGICAS (4) + DEBILIDADES (1) + FORTALEZAS (1) + POSICIÓN (1) + PIERNA (1) = 27
                     -->
-                    <tr><td colspan="27" style="text-align: center; padding: 20px; color: #999;">Cargando jugadores...</td></tr>
+                    <tr><td colspan="28" style="text-align: center; padding: 20px; color: #999;">Cargando jugadores...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -424,14 +425,14 @@
         console.log("DEBUG: Iniciando cargarJugadoresDetalles()");
         window.jugadoresData = []; // Store data globally for the spider chart
         const tbody = document.getElementById('tbodyJugadoresDetalles');
-        tbody.innerHTML = '<tr><td colspan="27" style="text-align: center; padding: 20px; color: #999;"><i class="fas fa-spinner fa-spin"></i> Cargando jugadores...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="28" style="text-align: center; padding: 20px; color: #999;"><i class="fas fa-spinner fa-spin"></i> Cargando jugadores...</td></tr>';
         
         try {
             const res = await fetch('/api/jugadores_detalles?equipo_actual={{ equipo }}'); // Pass current team to API
             if (!res.ok) {
                 const errorText = await res.text();
                 console.error("API call for jugadores_detalles failed:", res.status, errorText);
-                tbody.innerHTML = `<tr><td colspan="27" style="text-align: center; padding: 20px; color: #ef4444;">Error al cargar jugadores: ${errorText}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="28" style="text-align: center; padding: 20px; color: #ef4444;">Error al cargar jugadores: ${errorText}</td></tr>`;
                 return;
             }
             const data = await res.json();
@@ -440,12 +441,12 @@
 
             if (data.error) {
                 console.error("Error en la API de jugadores_detalles (backend):", data.error);
-                tbody.innerHTML = `<tr><td colspan="27" style="text-align: center; padding: 20px; color: #ef4444;">Error: ${data.error}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="28" style="text-align: center; padding: 20px; color: #ef4444;">Error: ${data.error}</td></tr>`;
                 return;
             }
 
             if (!data.jugadores || data.jugadores.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="27" style="text-align: center; padding: 20px; color: #999;">No hay jugadores disponibles para este equipo.</td></tr>'; // Este mensaje sí es definitivo
+                tbody.innerHTML = '<tr><td colspan="28" style="text-align: center; padding: 20px; color: #999;">No hay jugadores disponibles para este equipo.</td></tr>'; // Este mensaje sí es definitivo
                 return;
             }
             
@@ -519,6 +520,12 @@
                         ${playerPositionOptions.map(opt => `<option value="${opt}" ${player.posicion === opt ? 'selected' : ''}>${opt}</option>`).join('')}
                     </select>
                 `;
+                const posSecSelectHtml = `
+                    <select class="stat-input" onchange="guardarStatDirecta('${player.nombre}', 'POSICION_SEC', this.value)" style="min-width: 70px; text-align: center;">
+                        <option value="" ${!player.posicion_sec ? 'selected' : ''}>-</option>
+                        ${playerPositionOptions.map(opt => `<option value="${opt}" ${player.posicion_sec === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                    </select>
+                `;
 
                 // Generar opciones de pierna
                 const piernaSelectHtml = `
@@ -542,6 +549,7 @@
                         </td>
                         <td>${piernaSelectHtml}</td>
                         <td>${positionSelectHtml}</td>
+                        <td>${posSecSelectHtml}</td>
                         <td style="text-align: center;">
                             <button class="analysis-btn" title="Ver análisis de Fortalezas y Debilidades" onclick='toggleAnalysisPopover(event, ${JSON.stringify(player)})'><i class="fas fa-clipboard-list"></i></button>
                         </td>
@@ -556,7 +564,7 @@
 
         } catch (e) {
             console.error("Error al cargar detalles de jugadores:", e);
-            tbody.innerHTML = `<tr><td colspan="27" style="text-align: center; padding: 20px; color: #ef4444;">Error de conexión o datos: ${e.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="28" style="text-align: center; padding: 20px; color: #ef4444;">Error de conexión o datos: ${e.message}</td></tr>`;
         }
     }
 

@@ -2189,6 +2189,23 @@ def api_obj_semanales_resumen():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@deportivo_bp.route('/api/criterios_objetivo', methods=['GET', 'POST'])
+def api_criterios_objetivo():
+    usuario = session.get('usuario')
+    if not usuario:
+        return jsonify({"status": "error"}), 401
+    from competicion_scraper import load_criterios_objetivo, guardar_criterios_objetivo, CRITERIOS_OBJETIVO_DESCRIPCIONES
+    if request.method == 'POST':
+        if usuario != 'admin':
+            return jsonify({"status": "error", "message": "Solo el admin puede modificar los criterios"}), 403
+        try:
+            criterios = guardar_criterios_objetivo(request.json or {})
+            return jsonify({"status": "ok", "criterios": criterios, "descripciones": CRITERIOS_OBJETIVO_DESCRIPCIONES})
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+    return jsonify({"status": "ok", "criterios": load_criterios_objetivo(), "descripciones": CRITERIOS_OBJETIVO_DESCRIPCIONES})
+
+
 @deportivo_bp.route('/api/shield_proxy')
 def api_shield_proxy():
     """Proxy para servir escudos de la RFFM localmente desde static/shields/."""

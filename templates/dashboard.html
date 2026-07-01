@@ -326,6 +326,13 @@
         .btn-profile.selected { background: #E31E24; color: white; border-color: #E31E24; }
         .pill-checkbox { display: flex; align-items: center; gap: 8px; background: #fff; border: 2px solid #eee; padding: 8px 16px; border-radius: 30px; font-size: 11px; font-weight: 800; cursor: pointer; transition: 0.3s; color: #666; user-select: none; }
         .pill-checkbox.checked { background: #E31E24 !important; color: white !important; border-color: #E31E24 !important; }
+        /* Toggle switch */
+        .toggle-sw { position:relative; display:inline-block; width:38px; height:22px; flex-shrink:0; }
+        .toggle-sw input { opacity:0; width:0; height:0; }
+        .toggle-sl { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:#cbd5e1; border-radius:22px; transition:.25s; }
+        .toggle-sl:before { position:absolute; content:""; height:16px; width:16px; left:3px; bottom:3px; background:white; border-radius:50%; transition:.25s; box-shadow:0 1px 3px rgba(0,0,0,.3); }
+        .toggle-sw input:checked + .toggle-sl { background:#16a34a; }
+        .toggle-sw input:checked + .toggle-sl:before { transform:translateX(16px); }
     </style>
 </head>
 <body>
@@ -386,15 +393,20 @@
         <div id="listaAlquileresSidebar" style="font-size: 0.62rem;">Cargando...</div>
     </div>
 
-    <div id="panelDiscrepanciasJugadores" style="margin: 8px 20px 15px 20px; padding: 8px 10px; background: rgba(255,255,255,0.08); border-radius: 8px;">
-        <div onclick="toggleDiscrepanciasSidebar()" style="display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: rgba(255,255,255,0.8); cursor: pointer; user-select: none;">
-            <span><i class="fas fa-user-check" style="color: white; font-size: 0.66rem; margin-right: 4px;"></i> Listados jugadores pendientes revisar</span>
-            <span style="display:flex; align-items:center; gap:5px;">
-                <span id="badgeDiscrepanciasSidebar" style="display: none; background: white; color: #E31E24; border-radius: 999px; font-size: 0.58rem; padding: 1px 6px; font-weight: 900;"></span>
-                <i id="iconoDiscrepanciasSidebar" class="fas fa-chevron-down" style="font-size: 0.58rem; color: rgba(255,255,255,0.7); transition: transform 0.15s;"></i>
-            </span>
+    <div id="panelAusenciasSidebar" onclick="abrirModalListaAusencias()" style="margin: 8px 20px 15px 20px; padding: 8px 10px; background: rgba(255,255,255,0.08); border-radius: 8px; cursor: pointer; user-select: none;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: rgba(255,255,255,0.8);">
+            <span><i class="fas fa-user-clock" style="color: #fbbf24; font-size: 0.66rem; margin-right: 4px;"></i> Ausencias sin justificar</span>
+            <span id="badgeAusenciasSidebar" style="display: none; background: #fbbf24; color: #1e293b; border-radius: 999px; font-size: 0.58rem; padding: 1px 6px; font-weight: 900;"></span>
         </div>
-        <div id="listaDiscrepanciasSidebar" style="display: none; font-size: 0.62rem; margin-top: 5px;">Cargando...</div>
+        <div id="estadoAusenciasSidebar" style="font-size: 0.58rem; color: rgba(255,255,255,0.5); margin-top: 3px;">Cargando...</div>
+    </div>
+
+    <div id="panelDiscrepanciasJugadores" onclick="abrirModalListaDiscrepancias()" style="margin: 8px 20px 15px 20px; padding: 8px 10px; background: rgba(255,255,255,0.08); border-radius: 8px; cursor: pointer; user-select: none;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: rgba(255,255,255,0.8);">
+            <span><i class="fas fa-user-check" style="color: white; font-size: 0.66rem; margin-right: 4px;"></i> Listados jugadores pendientes</span>
+            <span id="badgeDiscrepanciasSidebar" style="display: none; background: white; color: #E31E24; border-radius: 999px; font-size: 0.58rem; padding: 1px 6px; font-weight: 900;"></span>
+        </div>
+        <div id="estadoDiscrepanciasSidebar" style="font-size: 0.58rem; color: rgba(255,255,255,0.5); margin-top: 3px;">Cargando...</div>
     </div>
     {% endif %}
 </div>
@@ -410,9 +422,50 @@
     </div>
 </div>
 
+<!-- MODAL LISTA AUSENCIAS -->
+<div id="modalListaAusencias" class="modal-backdrop" style="display:none; position:fixed; z-index:30000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:16px; padding:24px; width:820px; max-width:96vw; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 style="margin:0; font-size:14px; font-weight:900; color:#1e293b;"><i class="fas fa-user-clock" style="color:#fbbf24; margin-right:6px;"></i>Ausencias sin justificar</h3>
+            <span onclick="document.getElementById('modalListaAusencias').style.display='none'" style="cursor:pointer; color:#999; font-size:20px; line-height:1;">&times;</span>
+        </div>
+        <div id="filtroEquiposAusencias" style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:10px;"></div>
+        <div id="listaAusenciasModal" style="overflow-y:auto; flex:1; font-size:12px;"></div>
+    </div>
+</div>
+
+<!-- MODAL LISTA DISCREPANCIAS -->
+<div id="modalListaDiscrepancias" class="modal-backdrop" style="display:none; position:fixed; z-index:30000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:16px; padding:24px; width:820px; max-width:96vw; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 style="margin:0; font-size:14px; font-weight:900; color:#1e293b;"><i class="fas fa-user-check" style="color:#E31E24; margin-right:6px;"></i>Listados jugadores pendientes</h3>
+            <span onclick="document.getElementById('modalListaDiscrepancias').style.display='none'" style="cursor:pointer; color:#999; font-size:20px; line-height:1;">&times;</span>
+        </div>
+        <div id="filtroEquiposDiscrepancias" style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:10px;"></div>
+        <div id="listaDiscrepanciasModal" style="overflow-y:auto; flex:1; font-size:12px;"></div>
+    </div>
+</div>
+
+<!-- MODAL AUSENCIA SIN JUSTIFICAR -->
+<div id="modalDetalleAusencia" class="modal-backdrop" style="display:none; position:fixed; z-index:30000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:16px; padding:24px; width:600px; max-width:95vw; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 style="margin:0; font-size:14px; font-weight:900; color:#E31E24; text-transform:uppercase;"><i class="fas fa-user-clock" style="margin-right:6px;"></i>Ausencia sin justificar</h3>
+            <span onclick="document.getElementById('modalDetalleAusencia').style.display='none'" style="cursor:pointer; color:#999; font-size:20px; line-height:1;">&times;</span>
+        </div>
+        <div id="detalleAusenciaInfo" style="font-size:12px; color:#475569; margin-bottom:10px; line-height:1.6;"></div>
+        <div id="ausenciaMotivoBanner" style="display:none; background:#fef9c3; color:#92400e; padding:8px 10px; border-radius:8px; font-size:11px; margin-bottom:8px;"></div>
+        <div id="ausenciaFormulario" style="flex:1; overflow-y:auto; min-height:0;"></div>
+        <div style="display:flex; gap:10px; margin-top:14px; flex-shrink:0;">
+            <button onclick="document.getElementById('modalDetalleAusencia').style.display='none'" style="flex:1; background:#eee; color:#333; border:none; border-radius:9px; padding:10px; font-weight:800; font-size:12px; cursor:pointer; font-family:inherit;">CANCELAR</button>
+            <button id="btnGuardarMotivAusencia" onclick="guardarMotivoAusencia()" style="flex:2; background:#E31E24; color:white; border:none; border-radius:9px; padding:10px; font-weight:800; font-size:12px; cursor:pointer; font-family:inherit;">GUARDAR CAMBIOS</button>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL DETALLE DISCREPANCIA JUGADOR (SIDEBAR) -->
 <div id="modalDetalleDiscrepancia" class="modal-backdrop" style="display:none; position:fixed; z-index:30000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center;">
-    <div style="background:white; border-radius:16px; padding:24px; width:380px; max-height:80vh; overflow-y:auto; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+    <div style="background:white; border-radius:16px; padding:24px; width:560px; max-width:95vw; max-height:85vh; overflow-y:auto; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
             <h3 style="margin:0; font-size:14px; font-weight:900; color:#1e293b; text-transform:uppercase;"><i class="fas fa-user-check" style="color:#E31E24;"></i> Discrepancia</h3>
             <span onclick="document.getElementById('modalDetalleDiscrepancia').style.display='none'" style="cursor:pointer; color:#999; font-size:20px; line-height:1;">&times;</span>
@@ -420,6 +473,112 @@
         <div id="detalleDiscrepanciaBody" style="font-size:12px; color:#333;"></div>
     </div>
 </div>
+
+{% if usuario|lower == 'admin' %}
+<!-- MODAL CONFIGURACIÓN GENERAL (solo admin) -->
+<div id="modalConfigGeneral" class="modal-backdrop" style="display:none; position:fixed; z-index:30000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.55); align-items:flex-start; justify-content:center; padding-top:18px;">
+    <div style="background:white; border-radius:16px; width:96vw; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.4); overflow:hidden;">
+        <!-- Header -->
+        <div style="background:#1e293b; padding:14px 24px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+            <h2 style="margin:0; color:white; font-size:15px; font-weight:900; text-transform:uppercase; letter-spacing:1px;"><i class="fas fa-gear" style="color:#E31E24; margin-right:8px;"></i> Configuración General</h2>
+            <span onclick="document.getElementById('modalConfigGeneral').style.display='none'" style="cursor:pointer; color:rgba(255,255,255,0.7); font-size:24px; line-height:1;">&times;</span>
+        </div>
+        <!-- Tab buttons -->
+        <div style="background:#f8fafc; border-bottom:2px solid #e2e8f0; padding:0 20px; display:flex; gap:0; flex-shrink:0; overflow-x:auto;">
+            <button class="confgen-tab-btn active" onclick="confGenTab('usuarios',this)" style="padding:12px 20px; border:none; background:none; font-weight:900; font-size:11px; text-transform:uppercase; cursor:pointer; color:#E31E24; border-bottom:2px solid #E31E24; margin-bottom:-2px; white-space:nowrap; font-family:inherit; letter-spacing:0.3px;"><i class="fas fa-user-lock" style="margin-right:6px;"></i>Usuarios y Contraseñas</button>
+            <button class="confgen-tab-btn" onclick="confGenTab('accesos',this)" style="padding:12px 20px; border:none; background:none; font-weight:900; font-size:11px; text-transform:uppercase; cursor:pointer; color:#64748b; border-bottom:2px solid transparent; margin-bottom:-2px; white-space:nowrap; font-family:inherit; letter-spacing:0.3px;"><i class="fas fa-bolt" style="margin-right:6px;"></i>Accesos Directos</button>
+            <button class="confgen-tab-btn" onclick="confGenTab('equipos',this)" style="padding:12px 20px; border:none; background:none; font-weight:900; font-size:11px; text-transform:uppercase; cursor:pointer; color:#64748b; border-bottom:2px solid transparent; margin-bottom:-2px; white-space:nowrap; font-family:inherit; letter-spacing:0.3px;"><i class="fas fa-shield-halved" style="margin-right:6px;"></i>Configuración de Equipos</button>
+        </div>
+        <!-- Tab content -->
+        <div style="flex:1; overflow-y:auto; padding:28px;">
+
+            <!-- TAB: USUARIOS -->
+            <div id="confgen-tab-usuarios" class="confgen-tabcontent">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:22px; flex-wrap:wrap; gap:10px;">
+                    <h3 style="margin:0; font-weight:900; color:#1e293b; text-transform:uppercase; font-size:14px;"><i class="fas fa-user-lock" style="color:#E31E24; margin-right:8px;"></i>Gestión de Usuarios y Accesos</h3>
+                    <div style="display:flex; gap:8px;">
+                        <button onclick="cgToggleNuevoPerfil()" style="padding:9px 16px; background:#1e293b; color:white; border:none; border-radius:8px; font-weight:900; cursor:pointer; font-size:11px; text-transform:uppercase; font-family:inherit;"><i class="fas fa-plus" style="margin-right:5px;"></i>CREAR NUEVO PERFIL</button>
+                        <button onclick="cargarPerfilesCG()" style="padding:9px 12px; background:#f1f5f9; color:#475569; border:none; border-radius:8px; cursor:pointer; font-size:13px;" title="Recargar"><i class="fas fa-sync"></i></button>
+                    </div>
+                </div>
+                <!-- New user form -->
+                <div id="cgFormNuevo" style="display:none; margin-bottom:30px; background:#f8fafc; border-radius:12px; padding:20px; border:1px solid #e2e8f0;">
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:16px; align-items:end;">
+                        <div><label style="font-size:10px; font-weight:900; color:#94a3b8; display:block; margin-bottom:6px; text-transform:uppercase;">USUARIO</label><input type="text" id="cgNewUsername" placeholder="Usuario..." style="width:100%; padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:700; box-sizing:border-box; font-family:inherit;"></div>
+                        <div><label style="font-size:10px; font-weight:900; color:#94a3b8; display:block; margin-bottom:6px; text-transform:uppercase;">CONTRASEÑA</label><input type="text" id="cgNewPassword" placeholder="Contraseña..." style="width:100%; padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:700; box-sizing:border-box; font-family:inherit;"></div>
+                        <div style="display:flex; flex-direction:column; gap:6px;">
+                            <label style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase;">PERMISOS</label>
+                            <label style="display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; cursor:pointer;"><input type="checkbox" id="cgCheckEntreno" class="check-coord"> ENTRENAMIENTOS</label>
+                            <label style="display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; cursor:pointer;"><input type="checkbox" id="cgCheckAsist" class="check-coord"> ASISTENCIAS</label>
+                            <label style="display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; cursor:pointer;"><input type="checkbox" id="cgCheckFinanc" class="check-coord"> FINANCIERO</label>
+                            <label style="display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; cursor:pointer;"><input type="checkbox" id="cgCheckDepor" class="check-coord"> D. DEPORTIVA</label>
+                            <label style="display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; cursor:pointer;"><input type="checkbox" id="cgCheckCrono" class="check-coord"> CRONOGRAMA</label>
+                            <label style="display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; cursor:pointer;"><input type="checkbox" id="cgCheckSelEq" class="check-coord"> PEDIR EQUIPO AL ENTRAR</label>
+                        </div>
+                        <div style="display:flex; align-items:flex-end;">
+                            <button onclick="cgCrearPerfil()" style="width:100%; padding:11px; background:#E31E24; color:white; border:none; border-radius:8px; font-weight:900; cursor:pointer; font-size:12px; font-family:inherit; text-transform:uppercase;"><i class="fas fa-cloud-upload-alt" style="margin-right:6px;"></i>GUARDAR NUEVO</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Users table -->
+                <div style="overflow-x:auto; margin-bottom:30px;">
+                    <table style="width:100%; border-collapse:collapse; font-size:12px;" id="cgTablaPerfiles">
+                        <thead><tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0;">
+                            <th style="padding:10px 12px; text-align:left; font-size:10px; font-weight:900; color:#64748b; text-transform:uppercase; white-space:nowrap;">USUARIO</th>
+                            <th style="padding:10px 12px; text-align:left; font-size:10px; font-weight:900; color:#64748b; text-transform:uppercase;">CONTRASEÑA</th>
+                            <th style="padding:10px 12px; text-align:center; font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase;">ENTRENO</th>
+                            <th style="padding:10px 12px; text-align:center; font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase;">ASIST.</th>
+                            <th style="padding:10px 12px; text-align:center; font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase;">FINANC.</th>
+                            <th style="padding:10px 12px; text-align:center; font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase;">D.DEP.</th>
+                            <th style="padding:10px 12px; text-align:center; font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase;">CRONO.</th>
+                            <th style="padding:10px 12px; text-align:center; font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase;">SEL. EQ. / ACCIÓN</th>
+                            <th style="padding:10px 12px; text-align:center; font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase;">ELIMINAR</th>
+                        </tr></thead>
+                        <tbody id="cgTbodyPerfiles"></tbody>
+                    </table>
+                </div>
+                <!-- Email config -->
+                <div style="background:#f8fafc; border-radius:12px; padding:20px; border:1px solid #e2e8f0;">
+                    <h4 style="margin:0 0 6px 0; font-weight:900; color:#1e293b; font-size:13px; text-transform:uppercase;"><i class="fas fa-envelope" style="color:#E31E24; margin-right:8px;"></i>Configuración de Email para Recibos</h4>
+                    <p style="font-size:11px; color:#64748b; margin:0 0 16px 0;">Contraseña de aplicación Gmail — genera en <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color:#E31E24;">myaccount.google.com</a> &gt; Seguridad &gt; Contraseñas de aplicaciones.</p>
+                    <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+                        <div style="flex:1; min-width:200px;"><label style="font-size:10px; font-weight:900; color:#94a3b8; display:block; margin-bottom:6px; text-transform:uppercase;">Email del club</label><input type="email" id="cgEmailRecibos" placeholder="club@gmail.com" style="width:100%; padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:700; box-sizing:border-box; font-family:inherit;"></div>
+                        <div style="flex:1; min-width:200px;"><label style="font-size:10px; font-weight:900; color:#94a3b8; display:block; margin-bottom:6px; text-transform:uppercase;">Contraseña de aplicación</label><input type="password" id="cgAppPass" placeholder="xxxx xxxx xxxx xxxx" style="width:100%; padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:700; box-sizing:border-box; font-family:inherit;"></div>
+                        <button onclick="cgGuardarEmail()" style="padding:10px 20px; background:#E31E24; color:white; border:none; border-radius:8px; font-weight:900; cursor:pointer; font-size:11px; text-transform:uppercase; font-family:inherit; white-space:nowrap; height:40px;"><i class="fas fa-save" style="margin-right:5px;"></i>GUARDAR</button>
+                    </div>
+                    <div id="cgEstadoEmail" style="margin-top:10px; font-size:11px; font-weight:800;"></div>
+                </div>
+            </div>
+
+            <!-- TAB: ACCESOS DIRECTOS -->
+            <div id="confgen-tab-accesos" class="confgen-tabcontent" style="display:none;">
+                <h3 style="margin:0 0 6px 0; font-size:14px; font-weight:900; color:#1e293b;"><i class="fas fa-bolt" style="color:#E31E24; margin-right:8px;"></i>Accesos Directos</h3>
+                <p style="margin:0 0 16px 0; font-size:12px; color:#64748b;">Elige los apartados que quieres tener como icono de acceso directo en la barra superior.</p>
+                <div id="listaConfigAccesosCG" style="display:flex; flex-direction:column; gap:6px; max-width:500px;"></div>
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button onclick="cgGuardarAccesos()" style="background:#E31E24; color:white; border:none; border-radius:9px; padding:11px 24px; font-weight:900; font-size:12px; cursor:pointer; font-family:inherit;">GUARDAR</button>
+                </div>
+            </div>
+
+            <!-- TAB: CONFIGURACIÓN DE EQUIPOS -->
+            <div id="confgen-tab-equipos" class="confgen-tabcontent" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+                    <h3 style="margin:0; font-size:14px; font-weight:900; color:#1e293b;"><i class="fas fa-shield-halved" style="color:#E31E24; margin-right:8px;"></i>Configuración de Equipos</h3>
+                    <button id="ecGuardarBtn" onclick="ecGuardar()" style="background:#E31E24; color:white; border:none; border-radius:8px; padding:10px 20px; font-weight:900; font-size:12px; cursor:pointer; font-family:inherit; transition:.2s;"><i class="fas fa-save" style="margin-right:5px;"></i>GUARDAR TODO</button>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px;">
+                    <label style="font-size:11px; font-weight:900; color:#64748b; text-transform:uppercase; white-space:nowrap;">Temporada</label>
+                    <input type="text" id="ecTemporada" placeholder="25/26" style="padding:8px 14px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; font-weight:900; width:100px; text-align:center; font-family:inherit;">
+                    <button onclick="ecAgregarEquipo()" style="background:#1e293b; color:white; border:none; border-radius:8px; padding:9px 16px; font-weight:900; font-size:11px; cursor:pointer; font-family:inherit; white-space:nowrap;"><i class="fas fa-plus" style="margin-right:5px;"></i>AÑADIR EQUIPO</button>
+                </div>
+                <div id="ecEquiposList" style="display:flex; flex-direction:column; gap:14px;"></div>
+                <div id="ecStatus" style="margin-top:14px; font-size:11px; font-weight:800;"></div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endif %}
 
 
     <div class="main-content">
@@ -458,7 +617,7 @@
         <button class="btn-search-fixed" onclick="toggleBuscadorIntranet(event)" title="Buscar en la intranet">
             <i class="fas fa-magnifying-glass"></i>
         </button>
-        <button class="btn-quickconfig-fixed" onclick="abrirConfigAccesosRapidos()" title="Configurar accesos rápidos">
+        <button class="btn-quickconfig-fixed" onclick="{% if usuario|lower == 'admin' %}abrirConfigGeneral(){% else %}abrirConfigAccesosRapidos(){% endif %}" title="{% if usuario|lower == 'admin' %}Configuración General{% else %}Configurar accesos rápidos{% endif %}">
             <i class="fas fa-gear"></i>
         </button>
         <div id="contenedorAccesosRapidos"></div>
@@ -798,37 +957,168 @@
         let discrepanciaSidebarDetalleActivoIdx = null;
         let discrepanciasSidebarAbierto = false;
 
-        function toggleDiscrepanciasSidebar() {
-            discrepanciasSidebarAbierto = !discrepanciasSidebarAbierto;
-            const cont = document.getElementById('listaDiscrepanciasSidebar');
-            const icono = document.getElementById('iconoDiscrepanciasSidebar');
-            if (cont) cont.style.display = discrepanciasSidebarAbierto ? 'block' : 'none';
-            if (icono) icono.style.transform = discrepanciasSidebarAbierto ? 'rotate(180deg)' : 'rotate(0deg)';
-        }
-
         async function cargarDiscrepanciasSidebar() {
-            const cont = document.getElementById('listaDiscrepanciasSidebar');
-            if (!cont) return;
             try {
                 const res = await fetch('/api/discrepancias_jugadores');
                 const data = await res.json();
                 const badge = document.getElementById('badgeDiscrepanciasSidebar');
+                const estado = document.getElementById('estadoDiscrepanciasSidebar');
                 const avisos = Array.isArray(data.avisos) ? data.avisos : [];
                 discrepanciasJugadoresCache = avisos;
                 if (avisos.length === 0) {
                     badge.style.display = 'none';
-                    cont.innerHTML = `<div style="padding:2px 4px; color:rgba(255,255,255,0.55);">${data.running ? 'Comprobando…' : 'Todo cuadra'}</div>`;
-                    return;
+                    if (estado) estado.textContent = data.running ? 'Comprobando…' : 'Todo cuadra';
+                } else {
+                    const nJug = new Set(avisos.map(a => `${a.equipo}|${a.nombre}`)).size;
+                    badge.textContent = nJug;
+                    badge.style.display = 'inline-block';
+                    if (estado) estado.textContent = `${nJug} jugador${nJug > 1 ? 'es' : ''} — clic para ver`;
                 }
-                badge.textContent = avisos.length;
-                badge.style.display = 'inline-block';
-                cont.innerHTML = avisos.map((a, idx) => {
-                    return `<div class="alquiler-sidebar-row" onclick="abrirDetalleDiscrepanciaSidebar(${idx})">
-                        <span>${a.nombre || ''}</span>
-                        <span>${a.equipo || ''} · ${a.listado_label || ''}</span>
-                    </div>`;
-                }).join('');
             } catch (e) { console.error('Error cargando discrepancias jugadores sidebar', e); }
+        }
+
+        let _filtroEquipoDiscrepancias = 'TODOS';
+
+        function _renderListaDiscrepancias() {
+            const cont = document.getElementById('listaDiscrepanciasModal');
+            if (!cont) return;
+            const avisos = discrepanciasJugadoresCache || [];
+            const filtrados = _filtroEquipoDiscrepancias === 'TODOS'
+                ? avisos
+                : avisos.filter(a => a.equipo === _filtroEquipoDiscrepancias);
+            if (filtrados.length === 0) {
+                cont.innerHTML = '<div style="text-align:center; padding:30px; color:#94a3b8;">Todo cuadra — sin pendientes</div>';
+                return;
+            }
+            const jugadoresMap = {};
+            filtrados.forEach(a => {
+                const key = `${a.equipo}|${a.nombre}`;
+                if (!jugadoresMap[key]) jugadoresMap[key] = { equipo: a.equipo, nombre: a.nombre, listados: [] };
+                jugadoresMap[key].listados.push(a.listado_label || a.listado);
+            });
+            cont.innerHTML = Object.values(jugadoresMap).map(j => {
+                const eq = j.equipo.replace(/'/g, "\\'");
+                const nm = j.nombre.replace(/'/g, "\\'");
+                return `<div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; margin-bottom:6px; background:#f8fafc; border-radius:10px; border-left:3px solid #E31E24; cursor:pointer; gap:10px;" onclick="abrirDiscrepanciaJugador('${eq}','${nm}'); document.getElementById('modalListaDiscrepancias').style.display='none';">
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-weight:900; color:#1e293b; font-size:12px;">${j.nombre}</div>
+                        <div style="font-size:10px; color:#64748b;">${j.equipo}</div>
+                        <div style="font-size:10px; color:#dc2626; margin-top:2px;">Falta en: ${j.listados.join(', ')}</div>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color:#94a3b8; font-size:11px;"></i>
+                </div>`;
+            }).join('');
+        }
+
+        function _setFiltroEquipoDiscrepancias(equipo, btn) {
+            _filtroEquipoDiscrepancias = equipo;
+            document.querySelectorAll('.discr-equipo-btn').forEach(b => {
+                b.style.background = '#f1f5f9';
+                b.style.color = '#475569';
+            });
+            if (btn) { btn.style.background = '#E31E24'; btn.style.color = 'white'; }
+            _renderListaDiscrepancias();
+        }
+
+        function abrirModalListaDiscrepancias() {
+            const filtroDiv = document.getElementById('filtroEquiposDiscrepancias');
+            if (filtroDiv) {
+                const avisos = discrepanciasJugadoresCache || [];
+                const equipos = [...new Set(avisos.map(a => a.equipo))].sort();
+                const btnStyle = 'padding:5px 10px; border:none; border-radius:6px; font-size:10px; font-weight:700; cursor:pointer; font-family:inherit;';
+                filtroDiv.innerHTML = [`<button class="discr-equipo-btn" onclick="_setFiltroEquipoDiscrepancias('TODOS',this)" style="${btnStyle} background:#E31E24; color:white;">TODOS</button>`]
+                    .concat(equipos.map(eq => `<button class="discr-equipo-btn" onclick="_setFiltroEquipoDiscrepancias('${eq.replace(/'/g,"\\'")}',this)" style="${btnStyle} background:#f1f5f9; color:#475569;">${eq}</button>`))
+                    .join('');
+                _filtroEquipoDiscrepancias = 'TODOS';
+            }
+            _renderListaDiscrepancias();
+            document.getElementById('modalListaDiscrepancias').style.display = 'flex';
+        }
+
+        function abrirDiscrepanciaJugador(equipo, nombre) {
+            const LISTADOS = ['DATOS JUGADORES','GPS_POSICIONES','PAGOS JUGADORES','COORDINACION','ASISTENCIAS','CONVOCATORIAS'];
+            const LABELS = {'DATOS JUGADORES':'Ficha','GPS_POSICIONES':'GPS','PAGOS JUGADORES':'Pagos','COORDINACION':'Coordinación','ASISTENCIAS':'Asistencias','CONVOCATORIAS':'Convocatorias'};
+            const avisos = discrepanciasJugadoresCache.filter(a => a.equipo === equipo && a.nombre === nombre);
+            const faltaEn = new Set(avisos.map(a => a.listado));
+            const confirmablesSet = new Set(avisos.filter(a => a.accion_confirmar).map(a => a.listado));
+            const eqEsc = equipo.replace(/'/g,"\\'");
+            const nmEsc = nombre.replace(/'/g,"\\'");
+
+            const rows = LISTADOS.map(l => {
+                const falta = faltaEn.has(l);
+                const confirmable = confirmablesSet.has(l);
+                if (!falta) {
+                    return `<div style="display:flex; align-items:center; gap:14px; padding:12px 6px; border-bottom:1px solid #f1f5f9;">
+                        <label class="toggle-sw" style="pointer-events:none; opacity:0.75;"><input type="checkbox" checked disabled><span class="toggle-sl"></span></label>
+                        <i class="fas fa-check-circle" style="color:#16a34a; font-size:17px; flex-shrink:0;"></i>
+                        <span style="font-size:13px; color:#1e293b; font-weight:700; flex:1;">${LABELS[l]}</span>
+                        <span style="font-size:11px; color:#16a34a; font-weight:700;">OK</span>
+                    </div>`;
+                }
+                const toggle = confirmable
+                    ? `<label class="toggle-sw"><input type="checkbox" class="discr-check" data-listado="${l}"><span class="toggle-sl"></span></label>`
+                    : `<div style="width:38px; flex-shrink:0;"></div>`;
+                const badge = !confirmable
+                    ? `<span style="font-size:10px; color:#92400e; background:#fffbeb; padding:2px 7px; border-radius:4px; font-weight:700;">Info</span>`
+                    : `<span style="font-size:11px; color:#dc2626; font-weight:700;">Falta</span>`;
+                return `<div style="display:flex; align-items:center; gap:14px; padding:12px 6px; border-bottom:1px solid #f1f5f9;">
+                    ${toggle}
+                    <i class="fas fa-times-circle" style="color:#dc2626; font-size:17px; flex-shrink:0;"></i>
+                    <span style="font-size:13px; color:#1e293b; font-weight:700; flex:1;">${LABELS[l]}</span>
+                    ${badge}
+                </div>`;
+            }).join('');
+
+            document.getElementById('detalleDiscrepanciaBody').innerHTML = `
+                <div style="margin-bottom:14px; font-size:12px; line-height:1.8; padding-bottom:12px; border-bottom:2px solid #f1f5f9;">
+                    <div><strong>Jugador:</strong> ${nombre}</div>
+                    <div><strong>Equipo:</strong> ${equipo}</div>
+                </div>
+                <div style="margin-bottom:18px;">${rows}</div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    ${confirmablesSet.size ? `<button onclick="confirmarSeleccionadosDiscrepancia('${eqEsc}','${nmEsc}',true)" style="flex:1; background:#16a34a; color:white; border:none; border-radius:8px; padding:12px 14px; font-weight:900; font-size:11px; cursor:pointer; min-width:160px;">✓ CONFIRMAR SELECCIONADOS</button>` : ''}
+                    <button onclick="declinarTodosDiscrepancia('${eqEsc}','${nmEsc}',true)" style="flex:1; background:#64748b; color:white; border:none; border-radius:8px; padding:12px 14px; font-weight:900; font-size:11px; cursor:pointer; min-width:120px;">DECLINAR TODOS</button>
+                </div>
+            `;
+            discrepanciaSidebarDetalleActivoIdx = -1;
+            document.getElementById('modalDetalleDiscrepancia').style.display = 'flex';
+        }
+
+        async function confirmarSeleccionadosDiscrepancia(equipo, nombre, cierraModal) {
+            const checks = document.querySelectorAll('.discr-check:checked');
+            const listados = Array.from(checks).map(c => c.dataset.listado);
+            for (const listado of listados) {
+                await fetch('/api/discrepancias_jugadores/confirmar', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ equipo, listado, nombre })
+                });
+            }
+            if (cierraModal) document.getElementById('modalDetalleDiscrepancia').style.display = 'none';
+            await cargarDiscrepanciasSidebar();
+        }
+
+        async function confirmarTodosDiscrepancia(equipo, nombre, cierraModal) {
+            const avisos = discrepanciasJugadoresCache.filter(a => a.equipo === equipo && a.nombre === nombre && a.accion_confirmar);
+            for (const a of avisos) {
+                await fetch('/api/discrepancias_jugadores/confirmar', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ equipo: a.equipo, listado: a.listado, nombre: a.nombre })
+                });
+            }
+            if (cierraModal) document.getElementById('modalDetalleDiscrepancia').style.display = 'none';
+            await cargarDiscrepanciasSidebar();
+        }
+
+        async function declinarTodosDiscrepancia(equipo, nombre, cierraModal) {
+            const avisos = discrepanciasJugadoresCache.filter(a => a.equipo === equipo && a.nombre === nombre);
+            for (const a of avisos) {
+                await fetch('/api/discrepancias_jugadores/declinar', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ equipo: a.equipo, listado: a.listado, nombre: a.nombre })
+                });
+            }
+            if (cierraModal) document.getElementById('modalDetalleDiscrepancia').style.display = 'none';
+            await cargarDiscrepanciasSidebar();
         }
 
         function abrirDetalleDiscrepanciaSidebar(idx) {
@@ -889,6 +1179,459 @@
         }
 
         cargarDiscrepanciasSidebar();
+
+        // === AUSENCIAS SIN JUSTIFICAR ===
+        let ausenciasCache = [];
+        let ausenciaActiva = null;
+
+        async function cargarAusenciasSidebar() {
+            try {
+                const res = await fetch('/api/ausencias/alertas');
+                const data = await res.json();
+                const badge = document.getElementById('badgeAusenciasSidebar');
+                const estado = document.getElementById('estadoAusenciasSidebar');
+                ausenciasCache = Array.isArray(data.alertas) ? data.alertas : [];
+                if (ausenciasCache.length === 0) {
+                    badge.style.display = 'none';
+                    if (estado) estado.textContent = data.running ? 'Comprobando…' : 'Sin ausencias pendientes';
+                } else {
+                    badge.textContent = ausenciasCache.length;
+                    badge.style.display = 'inline-block';
+                    if (estado) estado.textContent = `${ausenciasCache.length} pendiente${ausenciasCache.length > 1 ? 's' : ''} — clic para ver`;
+                }
+            } catch (e) { console.error('Error cargando ausencias sidebar', e); }
+        }
+
+        let _filtroEquipoAusencias = 'TODOS';
+
+        function _renderListaAusencias() {
+            const cont = document.getElementById('listaAusenciasModal');
+            if (!cont) return;
+            const lista = _filtroEquipoAusencias === 'TODOS'
+                ? ausenciasCache
+                : ausenciasCache.filter(a => a.equipo === _filtroEquipoAusencias);
+            if (lista.length === 0) {
+                cont.innerHTML = '<div style="text-align:center; padding:30px; color:#94a3b8;">Sin ausencias pendientes de justificar</div>';
+                return;
+            }
+            cont.innerHTML = lista.map((a) => {
+                const idx = ausenciasCache.indexOf(a);
+                const tipoLabel = a.tipo === 'convocatoria' ? '📋 No convocado' : '🏃 Falta entreno';
+                const fechasStr = [...new Set(a.fechas || [])].join(' · ');
+                return `<div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; margin-bottom:6px; background:#f8fafc; border-radius:10px; border-left:3px solid #fbbf24; cursor:pointer; gap:10px;" onclick="abrirDetalleAusencia(${idx})">
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-weight:900; color:#1e293b; font-size:12px;">${a.nombre || ''}</div>
+                        <div style="font-size:10px; color:#64748b;">${a.equipo || ''} · ${tipoLabel}</div>
+                        <div style="font-size:10px; color:#dc2626; margin-top:2px;">${fechasStr}</div>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color:#94a3b8; font-size:11px;"></i>
+                </div>`;
+            }).join('');
+        }
+
+        function _setFiltroEquipoAusencias(equipo, btn) {
+            _filtroEquipoAusencias = equipo;
+            document.querySelectorAll('.aus-equipo-btn').forEach(b => {
+                b.style.background = '#f1f5f9';
+                b.style.color = '#475569';
+                b.style.fontWeight = '700';
+            });
+            if (btn) { btn.style.background = '#E31E24'; btn.style.color = 'white'; }
+            _renderListaAusencias();
+        }
+
+        function abrirModalListaAusencias() {
+            // Build team filter buttons
+            const filtroDiv = document.getElementById('filtroEquiposAusencias');
+            if (filtroDiv) {
+                const equipos = [...new Set(ausenciasCache.map(a => a.equipo))].sort();
+                const btnStyle = 'padding:5px 10px; border:none; border-radius:6px; font-size:10px; font-weight:700; cursor:pointer; font-family:inherit;';
+                filtroDiv.innerHTML = [`<button class="aus-equipo-btn" onclick="_setFiltroEquipoAusencias('TODOS',this)" style="${btnStyle} background:#E31E24; color:white;">TODOS</button>`]
+                    .concat(equipos.map(eq => `<button class="aus-equipo-btn" onclick="_setFiltroEquipoAusencias('${eq.replace(/'/g,"\\'")}',this)" style="${btnStyle} background:#f1f5f9; color:#475569;">${eq}</button>`))
+                    .join('');
+                _filtroEquipoAusencias = 'TODOS';
+            }
+            _renderListaAusencias();
+            document.getElementById('modalListaAusencias').style.display = 'flex';
+        }
+
+        function abrirDetalleAusencia(idx) {
+            ausenciaActiva = ausenciasCache[idx];
+            if (!ausenciaActiva) return;
+            const a = ausenciaActiva;
+            const tipoLabel = a.tipo === 'convocatoria' ? 'No convocado en partidos' : 'Ausente en entrenamientos';
+            document.getElementById('detalleAusenciaInfo').innerHTML = `
+                <div style="margin-bottom:4px;"><strong style="color:#E31E24;">${tipoLabel}</strong></div>
+                <div style="font-size:12px;"><strong>Jugador:</strong> ${a.nombre || '-'} &nbsp;·&nbsp; <strong>Equipo:</strong> ${a.equipo || '-'}</div>
+            `;
+            document.getElementById('ausenciaMotivoBanner').style.display = 'none';
+            const btn = document.getElementById('btnGuardarMotivAusencia');
+            btn.disabled = false; btn.textContent = 'GUARDAR CAMBIOS';
+
+            // Group dates by month
+            const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+            const byMonth = {};
+            const mkOrder = [];
+            (a.fechas || []).forEach(f => {
+                const p = f.split('/');
+                if (p.length < 3) return;
+                const mk = `${p[2]}-${p[1].padStart(2,'0')}`;
+                if (!byMonth[mk]) { byMonth[mk] = { label: `${MESES[parseInt(p[1],10)-1]} ${p[2]}`, fechas: [] }; mkOrder.push(mk); }
+                byMonth[mk].fechas.push(f);
+            });
+
+            const mesesHtml = [...new Set(mkOrder)].sort().map(mk => {
+                const m = byMonth[mk];
+                const diasHtml = m.fechas.map(f => `
+                    <div style="display:flex; align-items:center; gap:10px; padding:7px 2px; border-bottom:1px solid #f8fafc;">
+                        <input type="checkbox" class="aus-dia-check" data-fecha="${f}" style="width:16px; height:16px; accent-color:#E31E24; cursor:pointer; flex-shrink:0;">
+                        <span style="font-size:12px; font-weight:700; color:#374151; min-width:90px; flex-shrink:0;">${f}</span>
+                        <input type="text" class="aus-dia-motivo" data-fecha="${f}" placeholder="Motivo…" style="flex:1; padding:5px 9px; border:1px solid #e2e8f0; border-radius:6px; font-size:11px; font-family:inherit; background:#fff;">
+                    </div>`).join('');
+                return `<div style="margin-bottom:14px;">
+                    <div style="font-size:10px; font-weight:900; text-transform:uppercase; color:#94a3b8; letter-spacing:0.5px; margin-bottom:6px; padding-bottom:4px; border-bottom:2px solid #e2e8f0;">${m.label}</div>
+                    ${diasHtml}
+                </div>`;
+            }).join('');
+
+            document.getElementById('ausenciaFormulario').innerHTML = `
+                <div style="border:1px solid #f1f5f9; border-radius:10px; padding:12px; margin-bottom:12px; overflow-y:auto; max-height:300px;">${mesesHtml}</div>
+                <div style="background:#f8fafc; border-radius:10px; padding:10px; flex-shrink:0;">
+                    <label style="font-size:10px; font-weight:900; color:#64748b; text-transform:uppercase; display:block; margin-bottom:6px;">Motivo para días seleccionados ✓</label>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="text" id="motivoBulkAus" placeholder="Escribe el motivo y pulsa APLICAR…" style="flex:1; padding:8px 10px; border:1px solid #ddd; border-radius:7px; font-size:12px; font-family:inherit;">
+                        <button onclick="aplicarMotivoBulk()" style="background:#1e3a5f; color:#cfe3ff; border:none; border-radius:7px; padding:8px 14px; font-weight:800; font-size:11px; cursor:pointer; white-space:nowrap; font-family:inherit;">APLICAR</button>
+                    </div>
+                </div>`;
+
+            document.getElementById('modalListaAusencias').style.display = 'none';
+            document.getElementById('modalDetalleAusencia').style.display = 'flex';
+        }
+
+        function aplicarMotivoBulk() {
+            const motivo = (document.getElementById('motivoBulkAus')?.value || '').trim();
+            if (!motivo) return;
+            document.querySelectorAll('.aus-dia-check:checked').forEach(chk => {
+                const inp = document.querySelector(`.aus-dia-motivo[data-fecha="${chk.dataset.fecha}"]`);
+                if (inp) inp.value = motivo;
+            });
+            document.getElementById('motivoBulkAus').value = '';
+        }
+
+        async function guardarMotivoAusencia() {
+            if (!ausenciaActiva) return;
+            const dias = [];
+            document.querySelectorAll('.aus-dia-motivo').forEach(inp => {
+                const motivo = inp.value.trim();
+                if (motivo) dias.push({ fecha: inp.dataset.fecha, motivo });
+            });
+            if (dias.length === 0) {
+                document.getElementById('ausenciaMotivoBanner').textContent = 'Escribe al menos un motivo antes de guardar.';
+                document.getElementById('ausenciaMotivoBanner').style.display = 'block';
+                return;
+            }
+            const btn = document.getElementById('btnGuardarMotivAusencia');
+            btn.disabled = true; btn.textContent = 'GUARDANDO…';
+            try {
+                const res = await fetch('/api/ausencias/motivo_dia', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ tipo: ausenciaActiva.tipo, equipo: ausenciaActiva.equipo, nombre: ausenciaActiva.nombre, dias })
+                });
+                if (res.ok) {
+                    document.getElementById('modalDetalleAusencia').style.display = 'none';
+                    ausenciaActiva = null;
+                    setTimeout(cargarAusenciasSidebar, 1500);
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    document.getElementById('ausenciaMotivoBanner').textContent = 'Error: ' + (err.message || 'desconocido');
+                    document.getElementById('ausenciaMotivoBanner').style.display = 'block';
+                    btn.disabled = false; btn.textContent = 'GUARDAR CAMBIOS';
+                }
+            } catch (e) {
+                document.getElementById('ausenciaMotivoBanner').textContent = 'Error de conexión.';
+                document.getElementById('ausenciaMotivoBanner').style.display = 'block';
+                btn.disabled = false; btn.textContent = 'GUARDAR CAMBIOS';
+            }
+        }
+
+        cargarAusenciasSidebar();
+
+        // === CONFIGURACIÓN GENERAL (solo admin) ===
+        {% if usuario|lower == 'admin' %}
+        function abrirConfigGeneral() {
+            document.getElementById('modalConfigGeneral').style.display = 'flex';
+            confGenTab('usuarios', document.querySelector('.confgen-tab-btn'));
+        }
+
+        function confGenTab(tab, btn) {
+            document.querySelectorAll('.confgen-tab-btn').forEach(b => {
+                b.style.color = '#64748b'; b.style.borderBottomColor = 'transparent';
+            });
+            if (btn) { btn.style.color = '#E31E24'; btn.style.borderBottomColor = '#E31E24'; }
+            document.querySelectorAll('.confgen-tabcontent').forEach(t => t.style.display = 'none');
+            document.getElementById('confgen-tab-' + tab).style.display = '';
+            if (tab === 'usuarios') cargarPerfilesCG();
+            if (tab === 'accesos') cgCargarListaAccesos();
+            if (tab === 'equipos') ecCargar();
+        }
+
+        // -- Tab Usuarios --
+        function cgToggleNuevoPerfil() {
+            const f = document.getElementById('cgFormNuevo');
+            f.style.display = f.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function cargarPerfilesCG() {
+            try {
+                const res = await fetch('/api/perfiles');
+                const data = await res.json();
+                if (!Array.isArray(data)) return;
+                const norm = u => { const n={}; for (let k in u) n[k.toUpperCase().replace(/[^A-Z]/g,'')] = u[k]; return n; };
+                const tbody = document.getElementById('cgTbodyPerfiles');
+                if (!tbody) return;
+                const validos = data.filter(u => u && u.USUARIO && u.USUARIO.toString().trim());
+                const esAdmin = u => u.USUARIO && u.USUARIO.toString().toLowerCase() === 'admin';
+                tbody.innerHTML = validos.map(rawU => {
+                    const u = norm(rawU);
+                    const un = rawU.USUARIO;
+                    const dis = esAdmin(rawU) ? 'disabled' : '';
+                    return `<tr data-user="${un}" style="border-bottom:1px solid #f1f5f9;">
+                        <td style="padding:10px 12px; font-weight:900; color:#1e293b;">${un}</td>
+                        <td style="padding:10px 12px;"><input type="text" value="${rawU.CONTRASEÑA||u.CONTRASEA||''}" class="cg-edit-pass" style="width:100px; padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; font-weight:700; font-family:inherit;" ${dis}></td>
+                        <td style="text-align:center; padding:10px 8px;"><input type="checkbox" class="check-coord cg-edit-entrenos" ${u.ENTRENAMIENTOS==='SI'?'checked':''} ${dis}></td>
+                        <td style="text-align:center; padding:10px 8px;"><input type="checkbox" class="check-coord cg-edit-asist" ${u.ASISTENCIAS==='SI'?'checked':''} ${dis}></td>
+                        <td style="text-align:center; padding:10px 8px;"><input type="checkbox" class="check-coord cg-edit-financ" ${u.FINANCIERO==='SI'?'checked':''} ${dis}></td>
+                        <td style="text-align:center; padding:10px 8px;"><input type="checkbox" class="check-coord cg-edit-depor" ${u.DDEPORTIVA==='SI'?'checked':''} ${dis}></td>
+                        <td style="text-align:center; padding:10px 8px;"><input type="checkbox" class="check-coord cg-edit-crono" ${u.CRONOGRAMA==='SI'?'checked':''} ${dis}></td>
+                        <td style="text-align:center; padding:10px 8px;">
+                            <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+                                <input type="checkbox" class="check-coord cg-edit-seleq" ${u.SELEQ==='SI'?'checked':''} ${dis}>
+                                ${esAdmin(rawU)?'': `<button onclick="cgGuardarFila(this,'${un}')" style="background:#E31E24; color:white; border:none; border-radius:5px; padding:5px 10px; font-size:9px; cursor:pointer; font-weight:900; font-family:inherit;"><i class="fas fa-save"></i> GUARDAR</button>`}
+                            </div>
+                        </td>
+                        <td style="text-align:center; padding:10px 8px;">
+                            ${esAdmin(rawU)?'-': `<button onclick="cgEliminarPerfil('${un}')" style="background:none; border:none; color:#dc2626; cursor:pointer; font-size:16px;"><i class="fas fa-trash-alt"></i></button>`}
+                        </td>
+                    </tr>`;
+                }).join('');
+            } catch(e) { console.error('Error cargando perfiles CG', e); }
+        }
+
+        async function cgCrearPerfil() {
+            const user = document.getElementById('cgNewUsername').value.trim();
+            const pass = document.getElementById('cgNewPassword').value.trim();
+            if (!user || !pass) return alert('Usuario y contraseña son obligatorios.');
+            try {
+                const res = await fetch('/api/perfiles', { method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ USUARIO:user, CONTRASEÑA:pass,
+                        ENTRENAMIENTOS: document.getElementById('cgCheckEntreno').checked?'SI':'NO',
+                        ASISTENCIAS: document.getElementById('cgCheckAsist').checked?'SI':'NO',
+                        FINANCIERO: document.getElementById('cgCheckFinanc').checked?'SI':'NO',
+                        'D.DEPORTIVA': document.getElementById('cgCheckDepor').checked?'SI':'NO',
+                        CRONOGRAMA: document.getElementById('cgCheckCrono').checked?'SI':'NO',
+                        'SEL. EQ.': document.getElementById('cgCheckSelEq').checked?'SI':'NO'
+                    })
+                });
+                if (res.ok) { document.getElementById('cgFormNuevo').style.display='none'; cargarPerfilesCG(); }
+                else { const e=await res.json().catch(()=>{}); alert('Error: '+(e&&e.message||'desconocido')); }
+            } catch(e) { alert('Error de conexión.'); }
+        }
+
+        async function cgGuardarFila(btn, username) {
+            const row = btn.closest('tr');
+            const data = {
+                'CONTRASEÑA': row.querySelector('.cg-edit-pass').value,
+                'ENTRENAMIENTOS': row.querySelector('.cg-edit-entrenos').checked?'SI':'NO',
+                'ASISTENCIAS': row.querySelector('.cg-edit-asist').checked?'SI':'NO',
+                'FINANCIERO': row.querySelector('.cg-edit-financ').checked?'SI':'NO',
+                'D.DEPORTIVA': row.querySelector('.cg-edit-depor').checked?'SI':'NO',
+                'CRONOGRAMA': row.querySelector('.cg-edit-crono').checked?'SI':'NO',
+                'SEL. EQ.': row.querySelector('.cg-edit-seleq').checked?'SI':'NO'
+            };
+            const orig = btn.innerHTML;
+            try {
+                const res = await fetch(`/api/perfiles/${username}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+                if (res.ok) { btn.style.background='#16a34a'; btn.innerHTML='<i class="fas fa-check"></i> LISTO'; setTimeout(()=>{btn.style.background='#E31E24'; btn.innerHTML=orig;},2000); }
+                else alert('Error al guardar.');
+            } catch(e) { alert('Error de conexión.'); }
+        }
+
+        async function cgEliminarPerfil(username) {
+            if (!confirm(`¿Eliminar acceso de ${username}?`)) return;
+            await fetch(`/api/perfiles/${username}`, {method:'DELETE'});
+            cargarPerfilesCG();
+        }
+
+        async function cgCargarEmail() {
+            try {
+                const res = await fetch('/api/config_email_recibos');
+                const data = await res.json();
+                const el = document.getElementById('cgEmailRecibos');
+                if (el) el.value = data.email || '';
+                const est = document.getElementById('cgEstadoEmail');
+                if (est) { est.style.color = data.configurado?'#16a34a':'#dc2626'; est.innerHTML = data.configurado ? '<i class="fas fa-circle-check"></i> Configurado correctamente.' : '<i class="fas fa-triangle-exclamation"></i> Sin configurar todavía.'; }
+            } catch(e) {}
+        }
+
+        async function cgGuardarEmail() {
+            const email = document.getElementById('cgEmailRecibos').value.trim();
+            const pass = document.getElementById('cgAppPass').value.trim();
+            if (!email || !pass) return alert('Rellena el email y la contraseña.');
+            const res = await fetch('/api/config_email_recibos', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email, app_password:pass}) });
+            if (res.ok) { document.getElementById('cgAppPass').value=''; cgCargarEmail(); alert('Guardado correctamente.'); }
+            else alert('Error al guardar.');
+        }
+
+        cgCargarEmail();
+
+        // -- Tab Accesos --
+        function cgCargarListaAccesos() {
+            const lista = document.getElementById('listaConfigAccesosCG');
+            if (!lista) return;
+            lista.innerHTML = INDICE_NAVEGACION.map((it, idx) => {
+                const marcado = accesosRapidosSeleccionados.some(a => a.label === it.label);
+                return `<label style="display:flex; align-items:center; gap:9px; padding:9px 12px; border-radius:8px; background:${marcado?'#fee2e2':'#f8fafc'}; cursor:pointer; font-size:12px; font-weight:600; color:#334155; border:1px solid ${marcado?'#fca5a5':'#e2e8f0'};">
+                    <input type="checkbox" data-idx="${idx}" ${marcado?'checked':''} style="width:15px; height:15px; accent-color:#E31E24;">
+                    ${it.label}
+                </label>`;
+            }).join('');
+        }
+
+        async function cgGuardarAccesos() {
+            const checks = document.querySelectorAll('#listaConfigAccesosCG input[type=checkbox]');
+            const seleccion = [];
+            checks.forEach(c => { if (c.checked) seleccion.push(INDICE_NAVEGACION[parseInt(c.dataset.idx)]); });
+            accesosRapidosSeleccionados = seleccion;
+            renderAccesosRapidosFixed();
+            try {
+                await fetch('/api/accesos_rapidos', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({accesos:seleccion}) });
+            } catch(e) {}
+            alert('Accesos directos guardados.');
+        }
+
+        // -- Tab Equipos --
+        const DIAS_SEMANA = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+        let _ecData = { temporada:'', equipos:[] };
+
+        async function ecCargar() {
+            try {
+                const res = await fetch('/api/equipos_config');
+                _ecData = await res.json();
+            } catch(e) { _ecData = {temporada:'', equipos:[]}; }
+            // Si no hay equipos configurados, pre-cargar los equipos existentes en el sistema
+            if (!(_ecData.equipos || []).length) {
+                try {
+                    const resL = await fetch('/api/equipos_lista');
+                    const listaData = await resL.json();
+                    _ecData.equipos = (listaData.equipos || []).map(nombre => ({
+                        nombre, tipo: 'F11', entrenadores: ['','',''], dias: [], horario: ''
+                    }));
+                } catch(e) {}
+            }
+            document.getElementById('ecTemporada').value = _ecData.temporada || '';
+            ecRenderEquipos();
+        }
+
+        function ecRenderEquipos() {
+            const cont = document.getElementById('ecEquiposList');
+            if (!cont) return;
+            const equipos = _ecData.equipos || [];
+            if (equipos.length === 0) {
+                cont.innerHTML = '<div style="text-align:center; padding:30px; color:#94a3b8; font-size:12px;">Sin equipos configurados. Pulsa AÑADIR EQUIPO para comenzar.</div>';
+                return;
+            }
+            cont.innerHTML = equipos.map((eq, i) => `
+                <div class="ec-card" data-idx="${i}" style="background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:12px; padding:18px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+                        <input type="text" class="ec-nombre" value="${eq.nombre||''}" placeholder="Nombre del equipo" style="font-size:14px; font-weight:900; color:#1e293b; border:none; border-bottom:2px solid #E31E24; background:transparent; padding:4px 0; font-family:inherit; flex:1; min-width:150px;">
+                        <div style="display:flex; gap:4px; align-items:center;">
+                            <input type="hidden" class="ec-tipo-val" value="${eq.tipo||'F11'}">
+                            <button class="ec-tipo-btn" data-tipo="F7" onclick="ecToggleTipo(this)" style="padding:4px 10px; font-size:11px; font-weight:900; border-radius:6px; border:1.5px solid ${(eq.tipo||'F11')==='F7'?'#1d4ed8':'#e2e8f0'}; background:${(eq.tipo||'F11')==='F7'?'#1d4ed8':'white'}; color:${(eq.tipo||'F11')==='F7'?'white':'#64748b'}; cursor:pointer; font-family:inherit;">F7</button>
+                            <button class="ec-tipo-btn" data-tipo="F11" onclick="ecToggleTipo(this)" style="padding:4px 10px; font-size:11px; font-weight:900; border-radius:6px; border:1.5px solid ${(eq.tipo||'F11')==='F11'?'#1d4ed8':'#e2e8f0'}; background:${(eq.tipo||'F11')==='F11'?'#1d4ed8':'white'}; color:${(eq.tipo||'F11')==='F11'?'white':'#64748b'}; cursor:pointer; font-family:inherit;">F11</button>
+                        </div>
+                        <button onclick="ecEliminarEquipo(${i})" style="background:#fef2f2; color:#dc2626; border:1px solid #fca5a5; border-radius:6px; padding:5px 12px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fas fa-trash"></i> Eliminar</button>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px;">
+                        <div>
+                            <label style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; display:block; margin-bottom:8px;">Entrenadores (máx. 3)</label>
+                            ${[0,1,2].map(n => `<input type="text" class="ec-entrena" placeholder="Entrenador ${n+1}" value="${(eq.entrenadores||[])[n]||''}" style="width:100%; padding:7px 10px; border:1px solid #e2e8f0; border-radius:7px; font-size:12px; font-weight:600; box-sizing:border-box; margin-bottom:6px; font-family:inherit;">`).join('')}
+                        </div>
+                        <div>
+                            <label style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; display:block; margin-bottom:8px;">Días de entrenamiento</label>
+                            <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                                ${DIAS_SEMANA.map(d => `<label style="display:flex; align-items:center; gap:5px; font-size:11px; font-weight:700; cursor:pointer; padding:4px 8px; background:${(eq.dias||[]).includes(d)?'#E31E24':'white'}; color:${(eq.dias||[]).includes(d)?'white':'#334155'}; border:1px solid ${(eq.dias||[]).includes(d)?'#E31E24':'#e2e8f0'}; border-radius:6px; white-space:nowrap;">
+                                    <input type="checkbox" class="ec-dia" value="${d}" ${(eq.dias||[]).includes(d)?'checked':''} style="display:none;" onchange="this.parentElement.style.background=this.checked?'#E31E24':'white'; this.parentElement.style.color=this.checked?'white':'#334155'; this.parentElement.style.borderColor=this.checked?'#E31E24':'#e2e8f0';">
+                                    ${d}
+                                </label>`).join('')}
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; display:block; margin-bottom:8px;">Horario</label>
+                            <input type="text" class="ec-horario" value="${eq.horario||''}" placeholder="Ej: 18:00 - 19:30" style="width:100%; padding:7px 10px; border:1px solid #e2e8f0; border-radius:7px; font-size:12px; font-weight:600; box-sizing:border-box; font-family:inherit;">
+                        </div>
+                    </div>
+                </div>`).join('');
+        }
+
+        function ecToggleTipo(btn) {
+            const tipo = btn.dataset.tipo;
+            const card = btn.closest('.ec-card');
+            card.querySelector('.ec-tipo-val').value = tipo;
+            card.querySelectorAll('.ec-tipo-btn').forEach(b => {
+                const active = b.dataset.tipo === tipo;
+                b.style.background = active ? '#1d4ed8' : 'white';
+                b.style.color = active ? 'white' : '#64748b';
+                b.style.borderColor = active ? '#1d4ed8' : '#e2e8f0';
+            });
+        }
+
+        function ecAgregarEquipo() {
+            _ecData.equipos = _ecData.equipos || [];
+            _ecData.equipos.push({nombre:'', entrenadores:['','',''], dias:[], horario:'', tipo:'F11'});
+            ecRenderEquipos();
+        }
+
+        function ecEliminarEquipo(idx) {
+            if (!confirm('¿Eliminar este equipo?')) return;
+            _ecData.equipos.splice(idx, 1);
+            ecRenderEquipos();
+        }
+
+        async function ecGuardar() {
+            const btn = document.getElementById('ecGuardarBtn');
+            const est = document.getElementById('ecStatus');
+            const setBtnOK  = () => { if (btn) { btn.style.background='#16a34a'; btn.innerHTML='<i class="fas fa-check-circle" style="margin-right:5px;"></i>GUARDADO'; btn.disabled=false; } };
+            const setBtnErr = (msg) => { if (btn) { btn.style.background='#dc2626'; btn.innerHTML='<i class="fas fa-times-circle" style="margin-right:5px;"></i>ERROR'; btn.disabled=false; } if (est) { est.style.color='#dc2626'; est.textContent=msg; } };
+            const resetBtn  = () => { if (btn) { btn.style.background='#E31E24'; btn.innerHTML='<i class="fas fa-save" style="margin-right:5px;"></i>GUARDAR TODO'; btn.disabled=false; } };
+            try {
+                if (btn) { btn.disabled=true; btn.style.background='#94a3b8'; btn.innerHTML='<i class="fas fa-spinner fa-spin" style="margin-right:5px;"></i>Guardando...'; }
+                const temporada = (document.getElementById('ecTemporada') || {}).value?.trim() || '';
+                const cards = document.querySelectorAll('#ecEquiposList .ec-card');
+                const equipos = Array.from(cards).map(card => ({
+                    nombre: (card.querySelector('.ec-nombre') || {value:''}).value.trim(),
+                    entrenadores: Array.from(card.querySelectorAll('.ec-entrena')).map(i => i.value.trim()),
+                    dias: Array.from(card.querySelectorAll('.ec-dia:checked')).map(c => c.value),
+                    horario: (card.querySelector('.ec-horario') || {value:''}).value.trim(),
+                    tipo: (card.querySelector('.ec-tipo-val') || {value:'F11'}).value || 'F11'
+                }));
+                const payload = { temporada, equipos };
+                const res = await fetch('/api/equipos_config', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+                if (res.ok) {
+                    _ecData = payload;
+                    setBtnOK();
+                    setTimeout(resetBtn, 2500);
+                } else {
+                    const txt = await res.text().catch(() => String(res.status));
+                    setBtnErr(`Error ${res.status}: ${txt}`);
+                    setTimeout(resetBtn, 4000);
+                }
+            } catch(e) {
+                setBtnErr('Error de conexión: ' + (e.message || e));
+                setTimeout(resetBtn, 4000);
+            }
+        }
+        {% endif %}
 
         // === CONVOCATORIAS (compartido entre Asistencias, Mi Equipo y D.Deportiva-Coordinación) ===
         let convocatoriasCacheGlobal = null;
@@ -1345,6 +2088,17 @@
             setTimeout(() => {
                 hideLoader();
             }, 2500); // Failsafe agresivo: 2.5s máximo
+        });
+
+        // Cerrar modales al hacer clic en el fondo (fuera del contenido)
+        document.addEventListener('click', function(e) {
+            var t = e.target;
+            if (!t || !t.style) return;
+            var cls = (typeof t.className === 'string') ? t.className : (t.className && t.className.baseVal) || '';
+            // e.target es el backdrop cuando el clic cae fuera del .modal-content interior
+            if (/\bmodal-backdrop\b|\bmodal-crono\b|\bmodal-ia\b|\bmodal\b/.test(cls)) {
+                t.style.display = 'none';
+            }
         });
     </script>
 </body>

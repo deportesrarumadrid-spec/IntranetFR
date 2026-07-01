@@ -1,0 +1,33 @@
+{
+  "09": {
+    "W1": {
+      "L": [
+        {
+          "equipo": "BENJAMIN A",
+          "hora_fin": "22:22",
+          "hora_ini": "22:22",
+          "jugadores": [
+            "IVANCABEZASA",
+            "LUISLOPEZSA"
+          ],
+          "posicion": "DEF"
+        },
+        {
+          "equipo": "BENJAMIN A",
+          "posicion": "DEL",
+          "jugadores": [
+            "Gus"
+          ]
+        },
+        {
+          "equipo": "BENJAMIN A",
+          "posicion": "DEF",
+          "jugadores": [
+            "Enzo",
+            "Leo"
+          ]
+        }
+      ]
+    }
+  }
+}
