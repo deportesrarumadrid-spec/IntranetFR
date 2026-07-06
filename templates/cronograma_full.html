@@ -6,11 +6,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Montserrat', sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
-        .header-cronograma { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .btn-group { display: flex; gap: 10px; }
-        .btn-view { padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-weight: 900; text-transform: uppercase; transition: 0.3s; background: #eee; color: #666; }
-        .btn-view.active { background: #E31E24; color: white; }
+        body { font-family: 'Montserrat', sans-serif; background: #f4f6f8; margin: 0; padding: 16px; }
+        .header-cronograma { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 14px 20px; border-radius: 4px; border-bottom: 2px solid #E31E24; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 16px; }
+        .btn-group { display: flex; gap: 6px; }
+        .btn-view { padding: 8px 20px; border: 1.5px solid #e2e8f0; border-radius: 4px; cursor: pointer; font-weight: 900; text-transform: uppercase; transition: 0.2s; background: white; color: #64748b; font-size: 11px; font-family: inherit; }
+        .btn-view:hover { border-color: #E31E24; color: #E31E24; }
+        .btn-view.active { background: #E31E24; border-color: #E31E24; color: white; }
         
         /* Pantalla de Carga Global */
         #loader-wrapper {
@@ -48,28 +49,38 @@
         .day-pill:hover:not(.selected) { border-color: #E31E24; color: #E31E24; }
 
         /* Estilos Vista Anual */
-        .grid-anual { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .mes-card { background: white; padding: 15px; border-radius: 12px; border-top: 5px solid #E31E24; min-height: 180px; position: relative; }
-        .mes-card h3 { margin: 0 0 10px 0; font-size: 14px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .grid-anual { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+        .mes-card { background: white; padding: 14px; border-radius: 4px; min-height: 120px; position: relative; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        .mes-card h3 { margin: 0 0 10px 0; font-size: 12px; color: #1e293b; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; letter-spacing: .5px; }
+
+        /* Vista mensual día a día */
+        .grid-mes-dias { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; border: 1px solid #e2e8f0; }
+        .mes-dia-header { text-align:center; font-size:10px; font-weight:900; color:#64748b; padding:8px 0; background:#f8fafc; border-bottom:2px solid #E31E24; text-transform:uppercase; letter-spacing:.5px; }
+        .mes-dia-cell { min-height:80px; border-right:1px solid #f1f5f9; border-bottom:1px solid #f1f5f9; padding:5px; background:white; vertical-align:top; }
+        .mes-dia-cell:nth-child(7n) { border-right:none; }
+        .mes-dia-cell.hoy { background:#fff9f9; }
+        .mes-dia-num { font-size:11px; font-weight:900; color:#64748b; margin-bottom:3px; }
+        .mes-dia-cell.hoy .mes-dia-num { color:#E31E24; }
 
         /* Estilos Vista Semanal */
-        .grid-semanal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; background: white; padding: 15px; border-radius: 15px; overflow-x: auto; min-width: 1000px; }
-        .dia-col { border-right: 1px solid #f1f5f9; padding: 10px; min-height: 500px; }
+        .grid-semanal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; background: white; border: 1px solid #e2e8f0; overflow-x: auto; min-width: 1000px; }
+        .dia-col { border-right: 1px solid #f1f5f9; padding: 12px 8px; min-height: 480px; }
         .dia-col:last-child { border-right: none; }
-        .dia-header { 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 10px; 
-            border-bottom: 3px solid #E31E24; 
-            margin-bottom: 15px; 
-            padding-bottom: 12px; 
+        .dia-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border-bottom: 2px solid #E31E24;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
         }
-        .dia-header .nombre { 
-            font-weight: 900; 
-            font-size: 13px; 
-            color: #333; 
+        .dia-header .nombre {
+            font-weight: 900;
+            font-size: 11px;
+            color: #1e293b;
             text-transform: uppercase;
+            letter-spacing: .5px;
         }
         .btn-plus-dia {
             background: transparent;
@@ -78,40 +89,60 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: 0.3s;
+            transition: 0.2s;
             padding: 0;
             color: #E31E24;
-            font-size: 20px;
+            font-size: 16px;
         }
-        .btn-plus-dia:hover { transform: scale(1.2); color: #000; }
+        .btn-plus-dia:hover { transform: scale(1.2); }
 
         /* Botones de Opción (Pills) */
         .pill-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
-        .pill-opt { padding: 8px 15px; border-radius: 12px; border: 2px solid #f1f5f9; background: #f8fafc; font-size: 10px; font-weight: 900; cursor: pointer; transition: 0.3s; color: #64748b; text-transform: uppercase; }
+        .pill-opt { padding: 6px 14px; border-radius: 4px; border: 1.5px solid #e2e8f0; background: white; font-size: 10px; font-weight: 900; cursor: pointer; transition: 0.2s; color: #64748b; text-transform: uppercase; }
         .pill-opt:hover { border-color: #E31E24; color: #E31E24; }
-        .pill-opt.selected { background: #E31E24; border-color: #E31E24; color: white; box-shadow: 0 4px 12px rgba(227,30,36,0.2); }
-        .btn-add-cat { background: #333; color: white; padding: 8px 12px; border-radius: 12px; font-size: 10px; border: none; cursor: pointer; font-weight: 900; }
+        .pill-opt.selected { background: #E31E24; border-color: #E31E24; color: white; }
+        .btn-add-cat { background: #1e293b; color: white; padding: 6px 12px; border-radius: 4px; font-size: 10px; border: none; cursor: pointer; font-weight: 900; }
 
-        .cat-title { font-size: 9px; font-weight: 900; margin: 10px 0 4px 0; border-bottom: 1px solid #eee; padding-bottom: 2px; }
-        .evento { padding: 6px 10px; margin-bottom: 4px; border-radius: 8px; font-size: 11px; font-weight: 700; border-left: 4px solid #ddd; transition: 0.2s; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; position: relative; }
-        .evento:hover { transform: translateX(4px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .cat-title { font-size: 9px; font-weight: 900; margin: 10px 0 3px 0; color: #94a3b8; letter-spacing: .5px; text-transform: uppercase; }
+        .evento { padding: 5px 8px; margin-bottom: 3px; border-radius: 0; font-size: 11px; font-weight: 700; border-left: 3px solid #e2e8f0; transition: 0.15s; background: white; display: flex; align-items: center; justify-content: space-between; position: relative; color: #1e293b; cursor: context-menu; }
+        .evento:hover { background: #f8fafc; }
 
-        /* Tonos Suaves / Pastel */
-        .ev-deportivo { background: #fff1f2; border-left-color: #fda4af; color: #9f1239; }
-        .ev-deportiva { background: #fff1f2; border-left-color: #fda4af; color: #9f1239; }
-        .ev-mk { background: #eff6ff; border-left-color: #93c5fd; color: #1e40af; }
-        .ev-oficina { background: #f8fafc; border-left-color: #cbd5e1; color: #334155; }
-        .ev-otros { background: #f1f5f9; border-left-color: #d1d5db; color: #475569; }
+        /* Mini calendario selector de día */
+        .mini-cal-day { text-align:center; font-size:9px; font-weight:700; padding:3px 0; cursor:pointer; border-radius:2px; color:#1e293b; }
+        .mini-cal-day:hover { background:#f1f5f9; }
+        .mini-cal-day.sel { background:#E31E24 !important; color:white; }
+        .mini-cal-hdr { text-align:center; font-size:8px; font-weight:900; color:#94a3b8; padding:2px 0; }
 
-        .btn-fin { border: none; padding: 12px; border-radius: 12px; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 11px; text-transform: uppercase; }
-        .alquiler-item { background: #eff6ff; border-left: 4px solid #60a5fa; border-radius: 8px; padding: 5px 10px; margin-bottom: 4px; font-size: 10px; color: #1e3a8a; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.2s; overflow: hidden; }
-        .alquiler-item:hover { transform: translateX(4px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        /* Menú contextual clic derecho */
+        #ctxMenu { position:fixed; display:none; background:white; border:1px solid #e2e8f0; box-shadow:0 6px 20px rgba(0,0,0,0.14); z-index:9900; min-width:190px; overflow:hidden; border-radius:0; }
+        #ctxMenu button { display:flex; align-items:center; gap:10px; width:100%; padding:10px 16px; border:none; background:white; cursor:pointer; font-size:11px; font-weight:700; font-family:inherit; text-align:left; color:#1e293b; border-bottom:1px solid #f1f5f9; }
+        #ctxMenu button:last-child { border-bottom:none; }
+        #ctxMenu button:hover { background:#f8fafc; }
+        #ctxMenu button i { width:16px; text-align:center; }
+
+        /* Solo la línea izquierda lleva color */
+        .ev-deportivo { border-left-color: #f87171; }
+        .ev-deportiva { border-left-color: #f87171; }
+        .ev-mk       { border-left-color: #60a5fa; }
+        .ev-oficina  { border-left-color: #94a3b8; }
+        .ev-otros    { border-left-color: #cbd5e1; }
+
+        .btn-fin { border: none; padding: 11px; border-radius: 6px; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 11px; text-transform: uppercase; }
+        .alquiler-item { background: white; border-left: 3px solid #60a5fa; border-radius: 0; padding: 4px 8px; margin-bottom: 3px; font-size: 10px; color: #1e3a8a; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.15s; overflow: hidden; }
+        .alquiler-item:hover { background: #f0f9ff; }
         .alquiler-item span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .form-control { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; font-family: inherit; font-size: 13px; font-weight: 600; outline: none; transition: 0.3s; }
-        .form-control:focus { border-color: #E31E24; box-shadow: 0 0 0 3px rgba(227,30,36,0.1); }
+        .form-control { width: 100%; padding: 10px 14px; border-radius: 4px; border: 1.5px solid #e2e8f0; font-family: inherit; font-size: 13px; font-weight: 600; outline: none; transition: 0.2s; }
+        .form-control:focus { border-color: #E31E24; box-shadow: 0 0 0 2px rgba(227,30,36,0.08); }
     </style>
 </head>
 <body>
+    <!-- Menú contextual clic derecho -->
+    <div id="ctxMenu">
+        <button id="ctxCheck"><i class="fa-solid fa-check" style="color:#28a745;"></i><span id="ctxCheckLabel">Completar</span></button>
+        <button id="ctxEdit"><i class="fa-solid fa-pencil" style="color:#1e293b;"></i>Editar</button>
+        <button id="ctxDelete"><i class="fa-solid fa-trash" style="color:#dc3545;"></i>Eliminar</button>
+    </div>
+
     <!-- Cargador -->
     <div id="loader-wrapper">
         <div class="loader-container">
@@ -125,15 +156,27 @@
             <img src="/static/ESCUDO SIN FONDO.png" style="height:40px;">
             <h2 id="crono-title-header" style="margin:0; font-size:18px;">CRONOGRAMA DEPORTIVO</h2>
         </div>
-        <div class="btn-group">
-            <button class="btn-view active" onclick="changeView('semanal', this)">SEMANAL</button>
-            <button class="btn-view" onclick="changeView('anual', this)">ANUAL</button>
-            <button class="btn-view" onclick="minimizeCrono()" title="Minimizar"><i class="fas fa-window-minimize"></i></button>
+        <div style="display:flex; align-items:center; gap:16px;">
+            <span style="font-size:10px; color:#94a3b8; font-weight:700;"><i class="fas fa-mouse-pointer" style="margin-right:4px;"></i>Clic derecho sobre una tarea para ver opciones</span>
+            <div class="btn-group">
+                <button class="btn-view active" onclick="changeView('semanal', this)">SEMANAL</button>
+                <button class="btn-view" onclick="changeView('anual', this)">ANUAL</button>
+                <button class="btn-view" onclick="minimizeCrono()" title="Minimizar"><i class="fas fa-window-minimize"></i></button>
+            </div>
         </div>
     </div>
 
     <!-- VISTA ANUAL -->
     <div id="view-anual" class="view-container">
+        <!-- Barra de navegación mes a mes -->
+        <div style="display:flex; align-items:center; gap:12px; background:white; padding:12px 20px; border-radius:10px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+            <button onclick="anualModoToggle()" id="btnAnualModo" style="padding:7px 16px; font-size:11px; font-weight:900; background:#1e293b; color:white; border:none; border-radius:7px; cursor:pointer; text-transform:uppercase; font-family:inherit; white-space:nowrap;">MES A MES</button>
+            <div id="anualMesNav" style="display:none; align-items:center; gap:12px; flex:1;">
+                <button onclick="anualPrevMes()" style="width:34px; height:34px; font-size:16px; font-weight:900; background:#f1f5f9; border:none; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center;">&#8592;</button>
+                <span id="anualMesLabel" style="font-size:15px; font-weight:900; color:#1e293b; text-transform:uppercase; min-width:180px; text-align:center;"></span>
+                <button onclick="anualNextMes()" style="width:34px; height:34px; font-size:16px; font-weight:900; background:#f1f5f9; border:none; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center;">&#8594;</button>
+            </div>
+        </div>
         <div id="main-grid-anual" class="grid-anual">
             {% for m in meses_anual %}
             <div class="mes-card" data-mes="{{ m.num }}" data-anio="{{ m.anio }}" data-iso="{{ m.anio }}-{{ "%02d"|format(m.num) }}-01">
@@ -179,6 +222,22 @@
                     <div class="day-pill-group" id="groupFreq">
                         <!-- Se genera dinámicamente según la vista -->
                     </div>
+                </div>
+
+                <!-- Solo visible en vista ANUAL -->
+                <div id="anualDiaDiv" style="display:none; margin-bottom:20px;">
+                    <label style="font-size:9px; font-weight:900; color:#999; text-transform:uppercase; display:block; margin-bottom:8px;">Día del mes (opcional):</label>
+                    <input type="hidden" id="taskDiaMes" value="">
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:8px; display:inline-block; min-width:210px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
+                            <button type="button" onclick="miniCalPrev()" style="background:transparent;border:none;cursor:pointer;font-size:13px;color:#64748b;padding:2px 8px;font-weight:900;">&#8592;</button>
+                            <span id="miniCalHeader" style="font-size:10px;font-weight:900;color:#1e293b;text-transform:uppercase;letter-spacing:.5px;"></span>
+                            <button type="button" onclick="miniCalNext()" style="background:transparent;border:none;cursor:pointer;font-size:13px;color:#64748b;padding:2px 8px;font-weight:900;">&#8594;</button>
+                        </div>
+                        <div id="miniCalGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;"></div>
+                        <div id="miniCalSelLabel" style="margin-top:5px;font-size:9px;color:#94a3b8;text-align:center;border-top:1px solid #e2e8f0;padding-top:5px;">Sin día fijo</div>
+                    </div>
+                    <button type="button" onclick="miniCalClearDay()" style="display:block;margin-top:5px;background:transparent;border:none;color:#94a3b8;font-size:10px;cursor:pointer;font-family:inherit;">&#10005; Quitar día fijo</button>
                 </div>
 
                 <div style="margin-bottom: 20px;">
@@ -416,6 +475,19 @@
             btnAll.dataset.value = 'TODOS';
             btnAll.onclick = () => toggleDayPill(btnAll, 'TODOS');
             container.appendChild(btnAll);
+
+            // Mostrar mini calendario solo en vista anual
+            const diaDiv = document.getElementById('anualDiaDiv');
+            if (diaDiv) {
+                diaDiv.style.display = (view === 'anual') ? 'block' : 'none';
+                if (view === 'anual') {
+                    _miniCalMes = _anualViendoMes;
+                    _miniCalAnio = _anualViendoAnio;
+                    _miniCalDia = null;
+                    document.getElementById('taskDiaMes').value = '';
+                    renderMiniCal();
+                }
+            }
         }
 
         function changeView(view, btn) {
@@ -424,6 +496,282 @@
             document.querySelectorAll('.btn-view').forEach(b => b.classList.remove('active'));
             document.getElementById('view-' + view).classList.add('active');
             btn.classList.add('active');
+        }
+
+        // --- Menú contextual clic derecho en tareas ---
+        let _evData = {}, _evCounter = 0, _ctxTarget = null;
+
+        document.addEventListener('contextmenu', function(e) {
+            const ev = e.target.closest('.evento');
+            if (!ev || !ev.dataset.evKey) return;
+            e.preventDefault();
+            _ctxTarget = ev;
+            // Actualizar el mes visto según la tarjeta contenedora (vista anual normal)
+            const card = ev.closest('.mes-card');
+            if (card && card.dataset.mes) {
+                _anualViendoMes = parseInt(card.dataset.mes);
+                _anualViendoAnio = parseInt(card.dataset.anio);
+            }
+            const d = _evData[ev.dataset.evKey] || {};
+            const isDone = (d.estado || '').toUpperCase() === 'COMPLETADO';
+            document.getElementById('ctxCheckLabel').textContent = isDone ? 'Marcar pendiente' : 'Completar';
+            document.getElementById('ctxCheck').querySelector('i').style.color = isDone ? '#94a3b8' : '#28a745';
+            const menu = document.getElementById('ctxMenu');
+            menu.style.left = Math.min(e.clientX, window.innerWidth - 200) + 'px';
+            menu.style.top  = Math.min(e.clientY, window.innerHeight - 110) + 'px';
+            menu.style.display = 'block';
+        });
+        document.addEventListener('click', () => { document.getElementById('ctxMenu').style.display = 'none'; });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') document.getElementById('ctxMenu').style.display = 'none'; });
+
+        document.getElementById('ctxCheck').addEventListener('click', function() {
+            const d = _evData[_ctxTarget?.dataset?.evKey]; if (!d) return;
+            document.getElementById('ctxMenu').style.display = 'none';
+            toggleEstadoTarea(d.user, d.fecha, d.tarea, (d.estado||'PENDIENTE').toUpperCase());
+        });
+        document.getElementById('ctxEdit').addEventListener('click', function() {
+            const d = _evData[_ctxTarget?.dataset?.evKey]; if (!d) return;
+            document.getElementById('ctxMenu').style.display = 'none';
+            abrirEdicionTarea(d.user, d.fecha, d.tarea, d.cat, d.user, d.freq);
+        });
+        document.getElementById('ctxDelete').addEventListener('click', function() {
+            const d = _evData[_ctxTarget?.dataset?.evKey]; if (!d) return;
+            document.getElementById('ctxMenu').style.display = 'none';
+            eliminarTareaCronograma(d.user, d.fecha, d.tarea);
+        });
+
+        // --- Mini calendario selector de día ---
+        // _anualViendoMes/_anualViendoAnio rastrean el mes que se está visualizando
+        let _anualViendoMes = new Date().getMonth() + 1;
+        let _anualViendoAnio = new Date().getFullYear();
+        let _miniCalMes = _anualViendoMes;
+        let _miniCalAnio = _anualViendoAnio;
+        let _miniCalDia = null;
+        const MESES_LABEL_MC = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+
+        function renderMiniCal() {
+            const grid = document.getElementById('miniCalGrid');
+            const hdr  = document.getElementById('miniCalHeader');
+            const lbl  = document.getElementById('miniCalSelLabel');
+            if (!grid) return;
+            const diasEnMes = new Date(_miniCalAnio, _miniCalMes, 0).getDate();
+            const offset = (new Date(_miniCalAnio, _miniCalMes - 1, 1).getDay() + 6) % 7;
+            hdr.textContent = `${MESES_LABEL_MC[_miniCalMes-1].slice(0,3)} ${_miniCalAnio}`;
+            const DC = ['L','M','X','J','V','S','D'];
+            let html = DC.map(d => `<div class="mini-cal-hdr">${d}</div>`).join('');
+            for (let i = 0; i < offset; i++) html += '<div></div>';
+            for (let day = 1; day <= diasEnMes; day++) {
+                html += `<div class="mini-cal-day${_miniCalDia === day ? ' sel' : ''}" onclick="miniCalSelDay(${day})">${day}</div>`;
+            }
+            grid.innerHTML = html;
+            if (lbl) lbl.textContent = _miniCalDia ? `Día ${_miniCalDia} de cada mes` : 'Sin día fijo';
+        }
+        function miniCalPrev() { _miniCalMes--; if (_miniCalMes < 1){ _miniCalMes=12; _miniCalAnio--; } renderMiniCal(); }
+        function miniCalNext() { _miniCalMes++; if (_miniCalMes > 12){ _miniCalMes=1; _miniCalAnio++; } renderMiniCal(); }
+        function miniCalSelDay(day) {
+            _miniCalDia = (_miniCalDia === day) ? null : day;
+            document.getElementById('taskDiaMes').value = _miniCalDia || '';
+            renderMiniCal();
+        }
+        function miniCalClearDay() {
+            _miniCalDia = null;
+            document.getElementById('taskDiaMes').value = '';
+            renderMiniCal();
+        }
+
+        // --- Navegación mes a mes en vista ANUAL (con cuadrícula de días) ---
+        let _anualModoMes = false;
+        let _anualMesIdx = 0;
+        let _anualDataCache = null;
+
+        const MESES_NUM = {
+            'ENERO':1,'FEBRERO':2,'MARZO':3,'ABRIL':4,'MAYO':5,'JUNIO':6,
+            'JULIO':7,'AGOSTO':8,'SEPTIEMBRE':9,'OCTUBRE':10,'NOVIEMBRE':11,'DICIEMBRE':12,
+            'ENE':1,'FEB':2,'MAR':3,'ABR':4,'MAY':5,'JUN':6,
+            'JUL':7,'AGO':8,'SEP':9,'OCT':10,'NOV':11,'DIC':12
+        };
+        const DIAS_NUM_LARGO = {
+            'LUNES':1,'MARTES':2,'MIERCOLES':3,'MIÉRCOLES':3,'JUEVES':4,'VIERNES':5,'SABADO':6,'SÁBADO':6,'DOMINGO':0,
+            'L':1,'M':2,'X':3,'J':4,'V':5,'S':6,'D':0
+        };
+
+        async function anualModoToggle() {
+            _anualModoMes = !_anualModoMes;
+            const btn = document.getElementById('btnAnualModo');
+            const nav = document.getElementById('anualMesNav');
+            btn.textContent = _anualModoMes ? 'VER TODOS' : 'MES A MES';
+            btn.style.background = _anualModoMes ? '#E31E24' : '#1e293b';
+            nav.style.display = _anualModoMes ? 'flex' : 'none';
+            if (_anualModoMes) {
+                if (!_anualDataCache) {
+                    try {
+                        const res = await fetch(`/api/cronograma_data?user=${personaAnualEfectiva()}&view=ANUAL&_t=${Date.now()}`);
+                        _anualDataCache = await res.json();
+                    } catch(e) { _anualDataCache = []; }
+                }
+                const hoy = new Date();
+                const cards = Array.from(document.querySelectorAll('#main-grid-anual .mes-card'));
+                const idxHoy = cards.findIndex(c => {
+                    const m = parseInt(c.dataset.mes), a = parseInt(c.dataset.anio);
+                    return m === hoy.getMonth() + 1 && a === hoy.getFullYear();
+                });
+                _anualMesIdx = idxHoy >= 0 ? idxHoy : 0;
+                anualRenderDiasMes();
+            } else {
+                const dayGrid = document.getElementById('anual-dia-grid');
+                if (dayGrid) dayGrid.style.display = 'none';
+                document.querySelectorAll('#main-grid-anual .mes-card').forEach(c => c.style.display = '');
+                document.getElementById('main-grid-anual').style.gridTemplateColumns = '';
+                document.getElementById('anualMesLabel').textContent = '';
+            }
+        }
+
+        function anualPrevMes() {
+            _anualMesIdx = Math.max(0, _anualMesIdx - 1);
+            anualRenderDiasMes();
+        }
+
+        function anualNextMes() {
+            const n = document.querySelectorAll('#main-grid-anual .mes-card').length;
+            _anualMesIdx = Math.min(n - 1, _anualMesIdx + 1);
+            anualRenderDiasMes();
+        }
+
+        function anualRenderDiasMes() {
+            const cards = Array.from(document.querySelectorAll('#main-grid-anual .mes-card'));
+            const card = cards[_anualMesIdx];
+            if (!card) return;
+
+            const mes   = parseInt(card.dataset.mes);
+            const anio  = parseInt(card.dataset.anio);
+            // Guardar el mes visualizado para que el mini cal lo use al editar
+            _anualViendoMes = mes;
+            _anualViendoAnio = anio;
+            const diasEnMes = new Date(anio, mes, 0).getDate();
+            const primerDia = new Date(anio, mes - 1, 1).getDay();
+            const offset    = (primerDia + 6) % 7; // semana empieza lunes
+
+            cards.forEach(c => c.style.display = 'none');
+            document.getElementById('main-grid-anual').style.gridTemplateColumns = '1fr';
+
+            const h3 = card.querySelector('h3');
+            document.getElementById('anualMesLabel').textContent = h3 ? h3.textContent.trim() : '';
+
+            let dayGrid = document.getElementById('anual-dia-grid');
+            if (!dayGrid) {
+                dayGrid = document.createElement('div');
+                dayGrid.id = 'anual-dia-grid';
+                document.getElementById('main-grid-anual').appendChild(dayGrid);
+            }
+            dayGrid.style.display = '';
+
+            const isoMes = `${anio}-${String(mes).padStart(2,'0')}`;
+            const hoy = new Date();
+            const DIAS_HDR = ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'];
+
+            // --- Sección superior: tareas recurrentes del mes (sin fecha fija) ---
+            let html = `<div style="background:white; border:1px solid #e2e8f0; border-left:3px solid #E31E24; padding:10px 14px; margin-bottom:12px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                    <span style="font-size:10px; font-weight:900; color:#64748b; text-transform:uppercase; letter-spacing:.5px;">TAREAS DEL MES</span>
+                    <button onclick="nuevaTareaCronograma('${isoMes}-01', null)" style="padding:4px 12px; font-size:10px; font-weight:900; background:#E31E24; color:white; border:none; cursor:pointer; font-family:inherit;"><i class="fas fa-plus" style="margin-right:4px;"></i>AÑADIR</button>
+                </div>
+                <div id="mes-recurrentes"></div>
+            </div>`;
+
+            // --- Cuadrícula de días ---
+            html += `<div class="grid-mes-dias">`;
+            DIAS_HDR.forEach(d => { html += `<div class="mes-dia-header">${d}</div>`; });
+            for (let i = 0; i < offset; i++) html += `<div class="mes-dia-cell" style="background:#f8fafc;"></div>`;
+            for (let day = 1; day <= diasEnMes; day++) {
+                const iso = `${isoMes}-${String(day).padStart(2,'0')}`;
+                const esHoy = hoy.getFullYear() === anio && hoy.getMonth()+1 === mes && hoy.getDate() === day;
+                html += `<div class="mes-dia-cell${esHoy ? ' hoy' : ''}">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:2px;">
+                        <div class="mes-dia-num">${day}</div>
+                        <button onclick="nuevaTareaCronograma('${iso}', null)" style="background:transparent; border:none; color:#E31E24; cursor:pointer; font-size:11px; padding:0; line-height:1; opacity:0; transition:.15s;" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0" title="Añadir tarea"><i class="fas fa-plus-circle"></i></button>
+                    </div>
+                    <div id="celd-${iso}"></div>
+                </div>`;
+            }
+            html += `</div>`;
+            dayGrid.innerHTML = html;
+
+            // Helper: crear elemento de evento con botones de acción
+            const colores = { DEPORTIVA:'#f87171', DEPORTIVO:'#f87171', MK:'#60a5fa', OFICINA:'#94a3b8', OTROS:'#cbd5e1' };
+            function makeEvEl(ev, small) {
+                const tipo  = (ev.TIPO || 'OTROS').toUpperCase();
+                const isDone = (ev.ESTADO || '').toUpperCase() === 'COMPLETADO';
+                const div = document.createElement('div');
+                div.className = `evento ev-${tipo.toLowerCase()}`;
+                div.style.fontSize = small ? '9px' : '11px';
+                const evKey = ++_evCounter;
+                _evData[evKey] = { user: ev.RESPONSABLE || '', fecha: ev.FECHA_ISO || '', tarea: ev.TAREA || '', cat: tipo, freq: ev.FRECUENCIA || '', estado: ev.ESTADO || 'PENDIENTE' };
+                div.dataset.evKey = evKey;
+                div.innerHTML = `
+                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;${isDone?'text-decoration:line-through;opacity:.45;':''}" title="${ev.TAREA||''}">${ev.TAREA||''}</span>
+                    ${isDone ? '<i class="fa-solid fa-check" style="font-size:8px; color:#28a745; flex-shrink:0;"></i>' : ''}`;
+                return div;
+            }
+
+            // Poblar eventos
+            const secRec = document.getElementById('mes-recurrentes');
+            (_anualDataCache || []).forEach(ev => {
+                const freqRaw = ev.FRECUENCIA || '';
+                // Extraer DIA:n si existe
+                const diaMesMatch = freqRaw.match(/(?:^|,)\s*DIA:(\d+)/i);
+                const diaMes = diaMesMatch ? parseInt(diaMesMatch[1]) : null;
+                const freqParts = freqRaw.replace(/,?\s*DIA:\d+/gi, '').split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+                const fechaNorm = (ev.FECHA_ISO || '').trim().toUpperCase();
+
+                if (ev.FECHA_ISO && ev.FECHA_ISO.includes('-')) {
+                    // Evento con fecha exacta: mostrar solo si está en este mes
+                    const [evA, evM, evD] = ev.FECHA_ISO.split('T')[0].split('-').map(Number);
+                    if (evA === anio && evM === mes) {
+                        const iso = `${anio}-${String(mes).padStart(2,'0')}-${String(evD).padStart(2,'0')}`;
+                        const celd = document.getElementById(`celd-${iso}`);
+                        if (celd) celd.appendChild(makeEvEl(ev, true));
+                    }
+                } else {
+                    // Evento recurrente: comprobar si aplica a este mes
+                    const inThisMonth = freqParts.includes('TODOS') ||
+                        freqParts.some(f => MESES_NUM[f] === mes) ||
+                        MESES_NUM[fechaNorm] === mes;
+
+                    if (!inThisMonth) return;
+
+                    if (diaMes && diaMes >= 1 && diaMes <= diasEnMes) {
+                        // Día fijo del mes → celda exacta
+                        const iso = `${isoMes}-${String(diaMes).padStart(2,'0')}`;
+                        const celd = document.getElementById(`celd-${iso}`);
+                        if (celd) celd.appendChild(makeEvEl(ev, true));
+                    } else {
+                        // ¿Es recurrente por día de la semana? (LUNES, MARTES, L, M, X...)
+                        const dayFreqs = freqParts.filter(f => DIAS_NUM_LARGO[f] !== undefined);
+                        const fechaDia = DIAS_NUM_LARGO[fechaNorm];
+
+                        if (dayFreqs.length > 0 || fechaDia !== undefined) {
+                            const targetDays = new Set(dayFreqs.map(f => DIAS_NUM_LARGO[f]));
+                            if (fechaDia !== undefined) targetDays.add(fechaDia);
+                            for (let day = 1; day <= diasEnMes; day++) {
+                                const dow = new Date(anio, mes-1, day).getDay();
+                                if (targetDays.has(dow)) {
+                                    const iso = `${isoMes}-${String(day).padStart(2,'0')}`;
+                                    const celd = document.getElementById(`celd-${iso}`);
+                                    if (celd) celd.appendChild(makeEvEl(ev, true));
+                                }
+                            }
+                        } else {
+                            // Sin día fijo → sección superior "Tareas del mes"
+                            if (secRec) secRec.appendChild(makeEvEl(ev, false));
+                        }
+                    }
+                }
+            });
+
+            // Si no hay tareas recurrentes, mostrar mensaje
+            if (secRec && !secRec.children.length) {
+                secRec.innerHTML = '<span style="font-size:11px; color:#94a3b8;">No hay tareas del mes.</span>';
+            }
         }
 
         function minimizeCrono() {
@@ -546,6 +894,10 @@
 
         function closeTaskModal() {
             document.getElementById('modalTarea').style.display = 'none';
+            _miniCalDia = null;
+            const diaMesInput = document.getElementById('taskDiaMes');
+            if (diaMesInput) diaMesInput.value = '';
+            editingOriginal = null;
         }
 
         function addCustomCategory() {
@@ -621,7 +973,15 @@
         async function guardarTareaDefinitiva() {
             const tarea = document.getElementById('taskName').value.trim();
             const tipo = document.getElementById('taskCat').value;
-            const frecuencia = getSelectedDays(); // Ahora enviamos L,M,X...
+            let frecuencia = getSelectedDays(); // Ahora enviamos L,M,X...
+            // En vista anual, añadir día del mes si se especificó
+            if (currentView === 'anual') {
+                const diaMesInput = document.getElementById('taskDiaMes');
+                const diaMesVal = diaMesInput ? parseInt(diaMesInput.value) : NaN;
+                if (!isNaN(diaMesVal) && diaMesVal >= 1 && diaMesVal <= 31) {
+                    frecuencia = (frecuencia ? frecuencia + ',' : '') + 'DIA:' + diaMesVal;
+                }
+            }
             
             const owner = getSelectedOwners(); // Soporte multi-responsable
 
@@ -748,7 +1108,7 @@
                 const containerAnual = document.getElementById(`events-anual-${parseInt(partes[1])}-${partes[0]}${suffix}`);
                 if (containerAnual) renderTaskItemAnual(containerAnual, ev, tEsc, fEsc, catEsc, rEsc, frEsc);
             } else {
-                const freqParts = (ev.FRECUENCIA || "").split(',').map(s => s.trim().toUpperCase()).filter(x => x);
+                const freqParts = (ev.FRECUENCIA || "").replace(/,?\s*DIA:\d+/gi, '').split(',').map(s => s.trim().toUpperCase()).filter(x => x);
                 const mesTarget = ev.FECHA_ISO ? ev.FECHA_ISO.toUpperCase() : null;
                 document.querySelectorAll(`.mes-card${suffix}`).forEach(card => {
                     const mNum = parseInt(card.dataset.mes);
@@ -801,15 +1161,12 @@
             const catEsc = tipoLimpio.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
             const estAct = (ev.ESTADO || 'PENDIENTE').toUpperCase();
 
+            const evKey = ++_evCounter;
+            _evData[evKey] = { user: ownerVal, fecha: ev.FECHA_ISO || '', tarea: tareaLimpia, cat: tipoLimpio, freq: ev.FRECUENCIA || '', estado: ev.ESTADO || 'PENDIENTE' };
+            evDiv.dataset.evKey = evKey;
             evDiv.innerHTML = `
-                <div style="display: flex; flex-direction: column; flex: 1; min-width: 0; padding-right: 5px;">
-                    <span style="${isDone ? 'text-decoration: line-through; opacity: 0.4;' : ''} white-space: normal; word-break: break-word; line-height: 1.2; font-size: 11px; color: #1e293b; font-weight: 700;">${tareaLimpia}</span>
-                </div>
-                <div class="task-actions" style="display: flex; gap: 0; align-items: center; flex-shrink: 0; margin-right: -10px; justify-content: flex-end;">
-                    <button onclick="event.stopPropagation(); toggleEstadoTarea('${rEsc}', '${fEsc}', '${tEsc}', '${estAct}')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; border: 1.5px solid ${isDone ? '#28a745' : '#cbd5e1'}; background: ${isDone ? '#f0fdf4' : '#fff'}; color: ${isDone ? '#28a745' : '#cbd5e1'}; transition: 0.2s; flex-shrink: 0; padding: 0;" title="${isDone ? 'Pendiente' : 'Completar'}"><i class="fa-solid fa-check" style="font-size: 10px; font-weight: 900; opacity: ${isDone ? '1' : '0.3'};"></i></button>
-                    <button onclick="event.stopPropagation(); abrirEdicionTarea('${rEsc}', '${fEsc}', '${tEsc}', '${catEsc}', '${rEsc}', '${frEsc}')" style="border:none; background:transparent; color:#1e293b; width:22px; height:22px; border-radius:4px; cursor:pointer; display: flex; align-items: center; justify-content: center; padding: 0;"><i class="fa-solid fa-pencil" style="font-size:10px;"></i></button>
-                    <button onclick="event.stopPropagation(); eliminarTareaCronograma('${rEsc}', '${fEsc}', '${tEsc}')" style="border:none; background:transparent; color:#dc3545; width:22px; height:22px; border-radius:4px; cursor:pointer; display: flex; align-items: center; justify-content: center; padding: 0;"><i class="fa-solid fa-trash" style="font-size:10px;"></i></button>
-                </div>
+                <span style="${isDone ? 'text-decoration: line-through; opacity: 0.4;' : ''} white-space: normal; word-break: break-word; line-height: 1.2; font-size: 11px; color: #1e293b; font-weight: 700; flex:1; min-width:0;">${tareaLimpia}</span>
+                ${isDone ? '<i class="fa-solid fa-check" style="font-size:9px; color:#28a745; flex-shrink:0;"></i>' : ''}
             `;
             section.appendChild(evDiv);
         }
@@ -828,13 +1185,14 @@
             evDiv.style.justifyContent = 'space-between';
             evDiv.style.gap = '5px';
 
+            const evKey = ++_evCounter;
+            _evData[evKey] = { user: ev.RESPONSABLE || '', fecha: ev.FECHA_ISO || '', tarea: ev.TAREA || '', cat: ev.TIPO || '', freq: ev.FRECUENCIA || '', estado: ev.ESTADO || 'PENDIENTE' };
+            evDiv.dataset.evKey = evKey;
+            const diaMesAnual = (ev.FRECUENCIA || '').match(/DIA:(\d+)/i);
+            const diaBadge = diaMesAnual ? `<span style="font-size:8px; color:#94a3b8; flex-shrink:0; margin-left:4px;">·d${diaMesAnual[1]}</span>` : '';
             evDiv.innerHTML = `
                 <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight: 700; ${isDone ? 'text-decoration: line-through; opacity: 0.5;' : ''}" title="${ev.TAREA}">${ev.TAREA}</span>
-                <div class="actions-anual" style="display:flex; gap:0; margin-right: -10px; justify-content: flex-end;">
-                    <button onclick="event.stopPropagation(); toggleEstadoTarea('${rEsc}', '${fEsc}', '${tEsc}', '${estAct}')" style="border:1px solid ${isDone ? '#28a745' : '#cbd5e1'}; background:${isDone ? '#f0fdf4' : '#fff'}; color:${isDone ? '#28a745' : '#cbd5e1'}; width:18px; height:18px; border-radius:3px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s; padding: 0;" title="${isDone ? 'Pendiente' : 'Completar'}"><i class="fa-solid fa-check" style="font-size:8px; font-weight:900; opacity:${isDone ? '1' : '0.3'}"></i></button>
-                    <button onclick="event.stopPropagation(); abrirEdicionTarea('${rEsc}', '${fEsc}', '${tEsc}', '${catEsc}', '${rEsc}', '${frEsc}')" style="border:none; background:transparent; color:#1e293b; width:18px; height:18px; border-radius:3px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s; padding: 0;" onmouseover="this.style.background='#fff'; this.style.color='#E31E24'" onmouseout="this.style.background='transparent'; this.style.color='#1e293b'" title="Editar"><i class="fa-solid fa-pencil" style="font-size:9px;"></i></button>
-                    <button onclick="event.stopPropagation(); eliminarTareaCronograma('${rEsc}', '${fEsc}', '${tEsc}')" style="border:none; background:transparent; color:#dc3545; width:18px; height:18px; border-radius:3px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s; padding: 0;" onmouseover="this.style.transform='scale(1.2)'; this.style.background='#fff'" onmouseout="this.style.transform='scale(1)'; this.style.background='transparent'" title="Eliminar"><i class="fa-solid fa-trash" style="font-size:9px;"></i></button>
-                </div>
+                ${diaBadge}${isDone ? '<i class="fa-solid fa-check" style="font-size:8px; color:#28a745; flex-shrink:0;"></i>' : ''}
             `;
             container.appendChild(evDiv);
         }
@@ -911,12 +1269,51 @@
             }
             
             // --- LÓGICA DE CELDAS MARCADAS (DÍAS) ---
-            if (frecuencia && frecuencia.trim() !== "") {
-                // Si ya es recurrente, marcamos los días que vienen de la base de datos
-                frecuencia.split(',').forEach(d => {
-                    const pill = Array.from(document.querySelectorAll('.day-pill')).find(p => p.innerText === d.trim());
-                    if (pill) pill.classList.add('selected');
-                });
+            // Extraer y mostrar día del mes si está codificado en frecuencia (DIA:n)
+            let frecuenciaSinDia = frecuencia || '';
+            const diaMesMatch = frecuenciaSinDia.match(/(?:^|,)\s*DIA:(\d+)/i);
+            if (diaMesMatch) {
+                const diaInput = document.getElementById('taskDiaMes');
+                if (diaInput) diaInput.value = diaMesMatch[1];
+                frecuenciaSinDia = frecuenciaSinDia.replace(/,?\s*DIA:\d+/gi, '').trim();
+            } else {
+                const diaInput = document.getElementById('taskDiaMes');
+                if (diaInput) diaInput.value = '';
+            }
+
+            // Inicializar mini calendario: usar el mes que el usuario está viendo
+            _miniCalMes = _anualViendoMes;
+            _miniCalAnio = _anualViendoAnio;
+            _miniCalDia = diaMesMatch ? parseInt(diaMesMatch[1]) : null;
+            document.getElementById('taskDiaMes').value = _miniCalDia || '';
+            renderMiniCal();
+
+            // Mapeo de nombres completos de mes → abreviatura para el selector de pills
+            const FULL_TO_ABR = { 'ENERO':'ENE','FEBRERO':'FEB','MARZO':'MAR','ABRIL':'ABR','MAYO':'MAY','JUNIO':'JUN','JULIO':'JUL','AGOSTO':'AGO','SEPTIEMBRE':'SEP','OCTUBRE':'OCT','NOVIEMBRE':'NOV','DICIEMBRE':'DIC' };
+
+            // Fuente de frecuencia: primero FRECUENCIA, si vacío usar FECHA_ISO como fallback
+            let freqFuente = frecuenciaSinDia.trim();
+            if (!freqFuente && fecha && !fecha.includes('-')) {
+                // FECHA_ISO puede ser 'TODOS' o 'ENERO, MARZO' (nombres completos)
+                const fUp = fecha.toUpperCase().trim();
+                if (fUp === 'TODOS') {
+                    freqFuente = 'TODOS';
+                } else {
+                    // Convertir nombres completos a abreviaturas
+                    freqFuente = fUp.split(',').map(m => FULL_TO_ABR[m.trim()] || m.trim()).join(',');
+                }
+            }
+
+            if (freqFuente) {
+                const vals = freqFuente.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+                if (vals.includes('TODOS')) {
+                    document.querySelectorAll('.day-pill').forEach(p => p.classList.add('selected'));
+                } else {
+                    vals.forEach(val => {
+                        const pill = Array.from(document.querySelectorAll('.day-pill')).find(p => p.dataset.value === val);
+                        if (pill) pill.classList.add('selected');
+                    });
+                }
             } else if (fecha && fecha.includes('-')) {
                 // Si es una tarea puntual, inferimos el día de la semana para que la celda aparezca marcada
                 const [y, m, dNum] = fecha.split('-').map(Number);

@@ -60,6 +60,9 @@
                     <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 700; cursor: pointer;">
                         CRONOGRAMA <input type="checkbox" id="checkCronograma" class="check-coord">
                     </label>
+                    <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 700; cursor: pointer;">
+                        ARCHIVOS <input type="checkbox" id="checkArchivos" class="check-coord">
+                    </label>
                 </div>
             </div>
 
@@ -103,6 +106,7 @@
                     <th style="text-align: center; font-size: 9px;">FINANC.</th>
                     <th style="text-align: center; font-size: 9px;">D.DEP.</th>
                     <th style="text-align: center; font-size: 9px;">CRONO.</th>
+                    <th style="text-align: center; font-size: 9px;">ARCHIVOS</th>
                     <th style="text-align: center; font-size: 9px;">SEL. EQ. / ACCIÓN</th>
                     <th style="text-align: center; width: 80px;">ELIMINAR</th>
                 </tr>
@@ -222,6 +226,7 @@ async function cargarPerfiles() {
                 <td style="text-align: center;"><input type="checkbox" class="check-coord edit-financiero" ${u.FINANCIERO === 'SI' ? 'checked' : ''} ${esAdminMaster(rawU) ? 'disabled' : ''}></td>
                 <td style="text-align: center;"><input type="checkbox" class="check-coord edit-deportiva" ${u.DDEPORTIVA === 'SI' ? 'checked' : ''} ${esAdminMaster(rawU) ? 'disabled' : ''}></td>
                 <td style="text-align: center;"><input type="checkbox" class="check-coord edit-cronograma" ${u.CRONOGRAMA === 'SI' ? 'checked' : ''} ${esAdminMaster(rawU) ? 'disabled' : ''}></td>
+                <td style="text-align: center;"><input type="checkbox" class="check-coord edit-archivos" ${u.ARCHIVOS === 'SI' ? 'checked' : ''} ${esAdminMaster(rawU) ? 'disabled' : ''}></td>
                 <td style="text-align: center;">
                     <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                         <input type="checkbox" class="check-coord edit-seleq" ${u.SELEQ === 'SI' ? 'checked' : ''} ${esAdminMaster(rawU) ? 'disabled' : ''}>
@@ -254,7 +259,8 @@ async function crearPerfil() {
         FINANCIERO: document.getElementById('checkFinanc').checked ? 'SI' : 'NO',
         'D.DEPORTIVA': document.getElementById('checkDepor').checked ? 'SI' : 'NO',
         'SEL. EQ.': document.getElementById('checkElegirEquipo').checked ? 'SI' : 'NO',
-        'CRONOGRAMA': document.getElementById('checkCronograma').checked ? 'SI' : 'NO' // New permission
+        'CRONOGRAMA': document.getElementById('checkCronograma').checked ? 'SI' : 'NO',
+        'ARCHIVOS': document.getElementById('checkArchivos').checked ? 'SI' : 'NO'
     };
 
     showLoader();
@@ -303,7 +309,8 @@ async function guardarCambiosFila(btn, username) {
         'FINANCIERO': row.querySelector('.edit-financiero').checked ? 'SI' : 'NO',
         'D.DEPORTIVA': row.querySelector('.edit-deportiva').checked ? 'SI' : 'NO',
         'SEL. EQ.': row.querySelector('.edit-seleq').checked ? 'SI' : 'NO',
-        'CRONOGRAMA': row.querySelector('.edit-cronograma').checked ? 'SI' : 'NO' // New permission
+        'CRONOGRAMA': row.querySelector('.edit-cronograma').checked ? 'SI' : 'NO',
+        'ARCHIVOS': row.querySelector('.edit-archivos').checked ? 'SI' : 'NO'
     };
 
     showLoader();

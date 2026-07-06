@@ -305,6 +305,159 @@ def get_datos_jugadores():
     except:
         return jsonify([])
 
+@jugadores_datos_bp.route('/api/jugadores_datos/fichas_pendientes', methods=['GET'])
+def get_fichas_pendientes():
+    """
+    Cruza DATOS JUGADORES con JUGADORES (roster maestro) + ASISTENCIAS.
+    - pendientes:   jugadores en roster sin ficha en DATOS JUGADORES
+    - sin_asignar:  filas de DATOS JUGADORES sin coincidencia en roster
+                    (incluye flag 'ambiguo' si hay varios jugadores con el mismo nombre)
+    """
+    import unicodedata
+    from app import client, NOMBRE_EXCEL
+    from flask import session as flask_session
+    if not flask_session.get('usuario'):
+        return jsonify({"status": "error"}), 401
+
+    def norm(s):
+        s = str(s).strip().upper()
+        nfkd = unicodedata.normalize('NFKD', s)
+        s = ''.join(c for c in nfkd if not unicodedata.category(c).startswith('M'))
+        return ' '.join(s.split())
+
+    def limpiar_h(h):
+        s = str(h).strip().upper()
+        nfkd = unicodedata.normalize('NFKD', s)
+        return ''.join(c for c in nfkd if not unicodedata.category(c).startswith('M')).replace(' ', '').replace('_', '')
+
+    try:
+        wb = client.open(NOMBRE_EXCEL)
+
+        # --- 1. Leer DATOS JUGADORES (con índice de fila para poder actualizar) ---
+        fichas = []
+        try:
+            sheet_datos = wb.worksheet("DATOS JUGADORES")
+            for idx_f, r in enumerate(sheet_datos.get_all_records()):
+                nombre_n = norm(str(r.get('JUGADOR_NOMBRE', '')) + ' ' + str(r.get('JUGADOR_APELLIDOS', '')))
+                equipo = str(r.get('JUGADOR_EQUIPO_LETRA', '')).strip().upper()
+                nombre_orig = (str(r.get('JUGADOR_NOMBRE', '')) + ' ' + str(r.get('JUGADOR_APELLIDOS', ''))).strip()
+                if nombre_n.strip():
+                    fichas.append({'nombre_norm': nombre_n, 'equipo': equipo, 'nombre_orig': nombre_orig, 'idx': idx_f})
+        except Exception:
+            pass
+
+        # --- 2. Leer JUGADORES (roster maestro — lista para soportar nombres duplicados) ---
+        roster = []  # [{nombre_norm, nombre, equipo}]
+        roster_seen = set()  # clave nombre_norm+equipo para no duplicar la misma combinación
+        try:
+            sheet_jug = wb.worksheet("JUGADORES")
+            all_v = sheet_jug.get_all_values()
+            if all_v:
+                hdrs = [limpiar_h(h) for h in all_v[0]]
+                idx_nom = next((i for i, h in enumerate(hdrs) if h == 'NOMBRE'), 0)
+                idx_eq  = next((i for i, h in enumerate(hdrs) if h in ('EQUIPO', 'CATEGORIA', 'GRUPO', 'EQUIPOS')), 1)
+                for row in all_v[1:]:
+                    nombre_raw = row[idx_nom].strip() if idx_nom < len(row) else ''
+                    equipo_raw = row[idx_eq].strip().upper() if idx_eq < len(row) else ''
+                    if not nombre_raw or nombre_raw in ('-', '—'):
+                        continue
+                    nombre_n = norm(nombre_raw)
+                    key = nombre_n + '|' + equipo_raw
+                    if nombre_n and key not in roster_seen:
+                        roster_seen.add(key)
+                        roster.append({'nombre_norm': nombre_n, 'nombre': nombre_raw, 'equipo': equipo_raw})
+        except Exception:
+            pass
+
+        # --- 3. Completar con ASISTENCIAS ---
+        try:
+            sheet_asis = wb.worksheet("ASISTENCIAS")
+            all_a = sheet_asis.get_all_values()
+            if all_a:
+                ha = [limpiar_h(h) for h in all_a[0]]
+                idx_nom_a = next((i for i, h in enumerate(ha) if h == 'NOMBRE'), 2)
+                idx_eq_a  = next((i for i, h in enumerate(ha) if h in ('EQUIPO', 'CATEGORIA', 'GRUPO')), 1)
+                for row in all_a[1:]:
+                    nombre_raw = row[idx_nom_a].strip() if idx_nom_a < len(row) else ''
+                    equipo_raw = row[idx_eq_a].strip().upper() if idx_eq_a < len(row) else ''
+                    if not nombre_raw or nombre_raw in ('-', '—'):
+                        continue
+                    nombre_n = norm(nombre_raw)
+                    key = nombre_n + '|' + equipo_raw
+                    if nombre_n and key not in roster_seen:
+                        roster_seen.add(key)
+                        roster.append({'nombre_norm': nombre_n, 'nombre': nombre_raw, 'equipo': equipo_raw})
+        except Exception:
+            pass
+
+        # Índice de fichas: cuántas fichas hay por nombre normalizado
+        from collections import Counter
+        fichas_count = Counter(f['nombre_norm'] for f in fichas)
+        # Cuántas veces aparece cada nombre_norm en el roster
+        roster_count = Counter(r['nombre_norm'] for r in roster)
+
+        # --- 4. Fichas pendientes: entradas de roster sin ficha suficiente ---
+        # Si hay N jugadores con el mismo nombre y M fichas, max(0,N-M) están pendientes
+        fichas_usadas = Counter()
+        pendientes = []
+        for r in roster:
+            nn = r['nombre_norm']
+            fichas_disponibles = fichas_count.get(nn, 0)
+            if fichas_usadas[nn] < fichas_disponibles:
+                fichas_usadas[nn] += 1  # esta entrada del roster tiene ficha
+            else:
+                pendientes.append({'nombre': r['nombre'], 'equipo': r['equipo']})
+
+        pendientes.sort(key=lambda x: (x['equipo'], x['nombre']))
+        por_equipo = {}
+        for p in pendientes:
+            eq = p['equipo'] or 'Sin equipo'
+            por_equipo.setdefault(eq, []).append(p['nombre'])
+
+        # --- 5. Sin asignar: fichas sin jugador en roster, con flag de ambigüedad ---
+        roster_norms = set(r['nombre_norm'] for r in roster)
+        # Jugadores del roster por nombre_norm (para mostrar opciones al asignar)
+        roster_por_nombre = {}
+        for r in roster:
+            roster_por_nombre.setdefault(r['nombre_norm'], []).append({'nombre': r['nombre'], 'equipo': r['equipo']})
+
+        sin_asignar = []
+        for f in fichas:
+            if f['nombre_norm'] not in roster_norms:
+                sin_asignar.append({
+                    'nombre_ficha': f['nombre_orig'],
+                    'equipo': f['equipo'],
+                    'idx': f['idx'],
+                    'ambiguo': False,
+                    'opciones': []
+                })
+            elif roster_count[f['nombre_norm']] > 1:
+                # Mismo nombre en varios equipos → ambiguo
+                sin_asignar.append({
+                    'nombre_ficha': f['nombre_orig'],
+                    'equipo': f['equipo'],
+                    'idx': f['idx'],
+                    'ambiguo': True,
+                    'opciones': roster_por_nombre[f['nombre_norm']]
+                })
+
+        # Lista completa del roster para selector de asignación manual
+        roster_lista = sorted(
+            [{'nombre': r['nombre'], 'equipo': r['equipo']} for r in roster],
+            key=lambda x: (x['equipo'], x['nombre'])
+        )
+
+        return jsonify({
+            'total': len(pendientes),
+            'por_equipo': por_equipo,
+            'lista': pendientes,
+            'sin_asignar': sin_asignar,
+            'roster': roster_lista
+        })
+    except Exception as e:
+        return jsonify({'total': 0, 'por_equipo': {}, 'lista': [], 'sin_asignar': [], 'roster': [], 'error': str(e)})
+
+
 @jugadores_datos_bp.route('/api/jugadores_datos/actualizar', methods=['POST'])
 def actualizar_datos_jugador():
     from app import client, NOMBRE_EXCEL

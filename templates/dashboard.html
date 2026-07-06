@@ -281,7 +281,7 @@
 }
 .btn-search-fixed:hover { background: #E31E24; color: white; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(227, 30, 36, 0.3); }
 .btn-quickconfig-fixed {
-    position: fixed; top: 28px; right: 405px; width: 40px; height: 40px;
+    position: fixed; top: 28px; right: 505px; width: 40px; height: 40px;
     border-radius: 50%; background: white; color: #E31E24;
     border: 2px solid #E31E24; cursor: pointer; display: flex;
     align-items: center; justify-content: center; font-size: 15px;
@@ -289,6 +289,24 @@
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 .btn-quickconfig-fixed:hover { background: #E31E24; color: white; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(227, 30, 36, 0.3); }
+.btn-archivos-fixed {
+    position: fixed; top: 28px; right: 455px; width: 40px; height: 40px;
+    border-radius: 50%; background: white; color: #E31E24;
+    border: 2px solid #E31E24; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; font-size: 15px;
+    z-index: 500; transition: all 0.3s ease; text-decoration: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.btn-archivos-fixed:hover { background: #E31E24; color: white; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(227, 30, 36, 0.3); }
+.btn-excel-fixed {
+    position: fixed; top: 28px; right: 405px; width: 40px; height: 40px;
+    border-radius: 50%; background: white; color: #1d6f42;
+    border: 2px solid #1d6f42; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; font-size: 15px;
+    z-index: 500; transition: all 0.3s ease; text-decoration: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.btn-excel-fixed:hover { background: #1d6f42; color: white; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(29,111,66,0.3); }
 .btn-quickaccess-fixed {
     position: fixed; top: 28px; width: 40px; height: 40px;
     border-radius: 50%; background: white; color: #E31E24;
@@ -566,10 +584,40 @@
                     <h3 style="margin:0; font-size:14px; font-weight:900; color:#1e293b;"><i class="fas fa-shield-halved" style="color:#E31E24; margin-right:8px;"></i>Configuración de Equipos</h3>
                     <button id="ecGuardarBtn" onclick="ecGuardar()" style="background:#E31E24; color:white; border:none; border-radius:8px; padding:10px 20px; font-weight:900; font-size:12px; cursor:pointer; font-family:inherit; transition:.2s;"><i class="fas fa-save" style="margin-right:5px;"></i>GUARDAR TODO</button>
                 </div>
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px;">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px; flex-wrap:wrap;">
                     <label style="font-size:11px; font-weight:900; color:#64748b; text-transform:uppercase; white-space:nowrap;">Temporada</label>
-                    <input type="text" id="ecTemporada" placeholder="25/26" style="padding:8px 14px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; font-weight:900; width:100px; text-align:center; font-family:inherit;">
+                    <div id="ecTemporada" style="padding:8px 14px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; font-weight:900; width:100px; text-align:center; font-family:inherit; background:#f8fafc; color:#1e293b; display:inline-block;"></div>
                     <button onclick="ecAgregarEquipo()" style="background:#1e293b; color:white; border:none; border-radius:8px; padding:9px 16px; font-weight:900; font-size:11px; cursor:pointer; font-family:inherit; white-space:nowrap;"><i class="fas fa-plus" style="margin-right:5px;"></i>AÑADIR EQUIPO</button>
+                    <button onclick="abrirCerrarTemporadaModal()" style="background:#7c2d12; color:white; border:none; border-radius:8px; padding:9px 16px; font-weight:900; font-size:11px; cursor:pointer; font-family:inherit; white-space:nowrap; margin-left:auto;"><i class="fas fa-arrow-right" style="margin-right:5px;"></i>CERRAR Y ABRIR SIGUIENTE TEMPORADA</button>
+                </div>
+
+                <!-- Modal Cerrar Temporada -->
+                <div id="cerrarTemporadaModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:99999; overflow:auto; padding:20px;">
+                    <div style="background:white; border-radius:16px; padding:32px; max-width:520px; margin:60px auto; box-shadow:0 30px 80px rgba(0,0,0,0.3);">
+                        <div style="text-align:center; margin-bottom:24px;">
+                            <div style="font-size:48px; margin-bottom:12px;">🔄</div>
+                            <h2 style="margin:0 0 8px; font-size:18px; font-weight:900; color:#7c2d12;">CERRAR Y ABRIR SIGUIENTE TEMPORADA</h2>
+                            <p style="font-size:12px; color:#64748b; margin:0;">Se archivará la temporada actual en el histórico y la intranet quedará <b>limpia y lista</b> para empezar la siguiente.</p>
+                        </div>
+                        <div style="background:#fef2f2; border:1.5px solid #fca5a5; border-radius:10px; padding:16px; margin-bottom:20px; font-size:11px; color:#991b1b;">
+                            <div style="font-weight:900; margin-bottom:8px;">Se archivará y borrará:</div>
+                            <ul style="margin:0; padding-left:18px; line-height:1.8;">
+                                <li>Hojas de registro y datos bancarios (DATOS JUGADORES)</li>
+                                <li>JUGADORES, MI EQUIPO, ASISTENCIAS</li>
+                                <li>GPS, PAGOS JUGADORES, COORDINACION</li>
+                                <li>Formaciones e historiales del año</li>
+                            </ul>
+                        </div>
+                        <div style="margin-bottom:16px;">
+                            <label style="font-size:10px; font-weight:900; color:#64748b; text-transform:uppercase; display:block; margin-bottom:6px;">Nueva temporada</label>
+                            <input type="text" id="nuevaTemporadaInput" placeholder="ej: 2025/2026" style="width:100%; box-sizing:border-box; padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; font-weight:900; text-align:center; font-family:inherit;">
+                        </div>
+                        <div id="cerrarTempStatus" style="margin-bottom:16px; font-size:11px; font-weight:800; min-height:18px;"></div>
+                        <div style="display:flex; gap:10px; justify-content:flex-end;">
+                            <button onclick="document.getElementById('cerrarTemporadaModal').style.display='none'" style="padding:10px 20px; border:1.5px solid #e2e8f0; background:white; color:#475569; border-radius:8px; font-weight:900; font-size:11px; cursor:pointer; font-family:inherit;">Cancelar</button>
+                            <button id="cerrarTempBtn" onclick="confirmarCerrarTemporada()" style="padding:10px 20px; background:#7c2d12; color:white; border:none; border-radius:8px; font-weight:900; font-size:11px; cursor:pointer; font-family:inherit;"><i class="fas fa-arrow-right" style="margin-right:5px;"></i>CONFIRMAR Y ABRIR SIGUIENTE</button>
+                        </div>
+                    </div>
                 </div>
                 <div id="ecEquiposList" style="display:flex; flex-direction:column; gap:14px;"></div>
                 <div id="ecStatus" style="margin-top:14px; font-size:11px; font-weight:800;"></div>
@@ -620,7 +668,27 @@
         <button class="btn-quickconfig-fixed" onclick="{% if usuario|lower == 'admin' %}abrirConfigGeneral(){% else %}abrirConfigAccesosRapidos(){% endif %}" title="{% if usuario|lower == 'admin' %}Configuración General{% else %}Configurar accesos rápidos{% endif %}">
             <i class="fas fa-gear"></i>
         </button>
+        {% if usuario|lower == 'admin' or session.get('permisos', {}).get('ARCHIVOS') == 'SI' %}
+        <button class="btn-archivos-fixed" title="Carpetas y Documentos" onclick="abrirPopupArchivos()">
+            <i class="fas fa-folder-open"></i>
+        </button>
+        <a href="/editor-excel" class="btn-excel-fixed" title="Editor de hojas de cálculo" target="_blank">
+            <i class="fas fa-file-excel"></i>
+        </a>
+        {% endif %}
+
+        <!-- POPUP GESTOR DE ARCHIVOS -->
+        <div id="popupArchivos" style="display:none; position:fixed; z-index:29000; inset:0; background:rgba(0,0,0,.55); align-items:center; justify-content:center;">
+            <div style="background:white; width:92vw; max-width:1100px; height:88vh; border-radius:14px; overflow:hidden; box-shadow:0 24px 70px rgba(0,0,0,.4); display:flex; flex-direction:column;">
+                <div style="background:#1e293b; padding:13px 20px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">
+                    <span style="color:white; font-size:13px; font-weight:900; text-transform:uppercase; letter-spacing:.5px;"><i class="fas fa-folder-open" style="color:#f59e0b; margin-right:8px;"></i>Gestor de Archivos</span>
+                    <button onclick="cerrarPopupArchivos()" style="background:transparent; border:none; color:white; font-size:24px; cursor:pointer; line-height:1;">&times;</button>
+                </div>
+                <iframe id="iframeArchivos" src="" style="flex:1; border:none; width:100%;"></iframe>
+            </div>
+        </div>
         <div id="contenedorAccesosRapidos"></div>
+
 
         <!-- PANEL BUSCADOR INTRANET -->
         <div id="panelBuscadorIntranet" style="display:none; position:fixed; top:75px; right:355px; width:320px; background:white; border-radius:14px; box-shadow:0 14px 36px rgba(0,0,0,0.2); z-index:30000; padding:14px;">
@@ -803,7 +871,7 @@
         function renderAccesosRapidosFixed() {
             const cont = document.getElementById('contenedorAccesosRapidos');
             cont.innerHTML = accesosRapidosSeleccionados.map((it, i) => {
-                const right = 455 + (i * 50);
+                const right = 555 + (i * 50);
                 return `<button class="btn-quickaccess-fixed" data-idx="${i}" style="right:${right}px;" title="${it.label}">
                     <i class="fas fa-star"></i>
                 </button>`;
@@ -1357,6 +1425,23 @@
 
         cargarAusenciasSidebar();
 
+        // === POPUP GESTOR ARCHIVOS ===
+        function abrirPopupArchivos() {
+            const popup = document.getElementById('popupArchivos');
+            const iframe = document.getElementById('iframeArchivos');
+            if (!iframe.src || iframe.src === window.location.href) iframe.src = '/archivos';
+            popup.style.display = 'flex';
+        }
+        function cerrarPopupArchivos() {
+            document.getElementById('popupArchivos').style.display = 'none';
+        }
+        document.getElementById('popupArchivos').addEventListener('click', function(e) {
+            if (e.target === this) cerrarPopupArchivos();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') cerrarPopupArchivos();
+        });
+
         // === CONFIGURACIÓN GENERAL (solo admin) ===
         {% if usuario|lower == 'admin' %}
         function abrirConfigGeneral() {
@@ -1529,7 +1614,8 @@
                     }));
                 } catch(e) {}
             }
-            document.getElementById('ecTemporada').value = _ecData.temporada || '';
+            const elTemp = document.getElementById('ecTemporada');
+            if (elTemp) elTemp.textContent = _ecData.temporada || '';
             ecRenderEquipos();
         }
 
@@ -1606,7 +1692,7 @@
             const resetBtn  = () => { if (btn) { btn.style.background='#E31E24'; btn.innerHTML='<i class="fas fa-save" style="margin-right:5px;"></i>GUARDAR TODO'; btn.disabled=false; } };
             try {
                 if (btn) { btn.disabled=true; btn.style.background='#94a3b8'; btn.innerHTML='<i class="fas fa-spinner fa-spin" style="margin-right:5px;"></i>Guardando...'; }
-                const temporada = (document.getElementById('ecTemporada') || {}).value?.trim() || '';
+                const temporada = (document.getElementById('ecTemporada') || {}).textContent?.trim() || '';
                 const cards = document.querySelectorAll('#ecEquiposList .ec-card');
                 const equipos = Array.from(cards).map(card => ({
                     nombre: (card.querySelector('.ec-nombre') || {value:''}).value.trim(),
@@ -1632,6 +1718,47 @@
             }
         }
         {% endif %}
+
+        // === CERRAR TEMPORADA ===
+        function abrirCerrarTemporadaModal() {
+            const st = document.getElementById('cerrarTempStatus');
+            const btn = document.getElementById('cerrarTempBtn');
+            const inp = document.getElementById('nuevaTemporadaInput');
+            if (st) st.innerHTML = '';
+            if (btn) { btn.disabled = false; btn.style.background = '#7c2d12'; btn.innerHTML = '<i class="fas fa-arrow-right" style="margin-right:5px;"></i>CONFIRMAR Y ABRIR SIGUIENTE'; }
+            if (inp) { inp.value = ''; inp.disabled = false; }
+            document.getElementById('cerrarTemporadaModal').style.display = '';
+            setTimeout(() => { if (inp) inp.focus(); }, 100);
+        }
+
+        async function confirmarCerrarTemporada() {
+            const st = document.getElementById('cerrarTempStatus');
+            const btn = document.getElementById('cerrarTempBtn');
+            const inp = document.getElementById('nuevaTemporadaInput');
+            const nuevaTemp = inp ? inp.value.trim() : '';
+            if (btn) { btn.disabled = true; btn.style.background = '#94a3b8'; btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:5px;"></i>Preparando nueva temporada...'; }
+            if (inp) inp.disabled = true;
+            if (st) { st.style.color = '#94a3b8'; st.innerHTML = 'Archivando datos y limpiando la intranet... puede tardar unos segundos.'; }
+            try {
+                const res = await fetch('/api/cerrar_temporada', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nueva_temporada: nuevaTemp }) });
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    if (st) { st.style.color = '#16a34a'; st.innerHTML = `<i class="fas fa-check-circle"></i> Temporada <b>${data.temporada}</b> archivada. ${data.jugadores_archivados} jugadores en histórico. ¡Nueva temporada lista!`; }
+                    if (btn) { btn.style.background = '#16a34a'; btn.innerHTML = '<i class="fas fa-check-circle" style="margin-right:5px;"></i>¡NUEVA TEMPORADA ABIERTA!'; }
+                    const campTemp = document.getElementById('ecTemporada');
+                    if (campTemp) campTemp.textContent = nuevaTemp;
+                    setTimeout(() => { document.getElementById('cerrarTemporadaModal').style.display = 'none'; }, 3000);
+                } else {
+                    if (st) { st.style.color = '#dc2626'; st.innerHTML = `Error: ${data.message || 'Error desconocido'}`; }
+                    if (btn) { btn.disabled = false; btn.style.background = '#7c2d12'; btn.innerHTML = '<i class="fas fa-arrow-right" style="margin-right:5px;"></i>CONFIRMAR Y ABRIR SIGUIENTE'; }
+                    if (inp) inp.disabled = false;
+                }
+            } catch(e) {
+                if (st) { st.style.color = '#dc2626'; st.innerHTML = 'Error de conexión: ' + (e.message || e); }
+                if (btn) { btn.disabled = false; btn.style.background = '#7c2d12'; btn.innerHTML = '<i class="fas fa-arrow-right" style="margin-right:5px;"></i>CONFIRMAR Y ABRIR SIGUIENTE'; }
+                if (inp) inp.disabled = false;
+            }
+        }
 
         // === CONVOCATORIAS (compartido entre Asistencias, Mi Equipo y D.Deportiva-Coordinación) ===
         let convocatoriasCacheGlobal = null;

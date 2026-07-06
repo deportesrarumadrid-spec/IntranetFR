@@ -667,7 +667,7 @@
 
         <!-- Modal configuración de temas por mes/posición -->
         <div id="fpConfigModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; overflow:auto; padding:20px;">
-            <div style="background:white; border-radius:14px; padding:24px; max-width:680px; margin:30px auto; box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+            <div style="background:white; border-radius:14px; padding:24px; max-width:920px; margin:30px auto; box-shadow:0 20px 60px rgba(0,0,0,0.2);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                     <h3 style="margin:0; font-size:15px; font-weight:900; color:#1e293b; text-transform:uppercase; letter-spacing:.5px;">
                         <i class="fas fa-cog" style="color:#E31E24;"></i> Configurar Formaciones
@@ -797,6 +797,7 @@
             <div class="tab-item active" onclick="switchSubTab(event, 'subtab-gestion-estrategica')" style="font-size: 11px;">GESTIÓN ESTRATÉGICA</div>
             <div class="tab-item" onclick="switchSubTab(event, 'subtab-kpis')" style="font-size: 11px;">KPIs</div>
             <div class="tab-item" onclick="switchSubTab(event, 'subtab-horarios')" style="font-size: 11px;">HORARIOS</div>
+            <div class="tab-item" onclick="switchSubTab(event, 'subtab-base-datos'); bdCargar();" style="font-size: 11px;">BASE DE DATOS</div>
         </div>
         
         <div id="subtab-gestion-estrategica" class="subtab-content active" style="display: grid; grid-template-columns: 1fr 350px; gap: 20px;">
@@ -970,6 +971,34 @@
             <div id="avisoConflictosHorarios" style="display: none; background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; font-size: 11px; font-weight: 700;"></div>
 
             <div id="contenedorPlantillaHorarios"></div>
+        </div>
+
+        <!-- SUBTAB: BASE DE DATOS -->
+        <div id="subtab-base-datos" class="subtab-content" style="display: none;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:10px;">
+                <h3 style="margin:0; font-size:14px; font-weight:900; color:#1e293b;"><i class="fas fa-database" style="color:#E31E24; margin-right:8px;"></i>Base de Datos Histórico de Jugadores</h3>
+                <button onclick="bdCargar(true)" style="background:#1e293b; color:white; border:none; border-radius:8px; padding:8px 16px; font-size:10px; font-weight:900; cursor:pointer; font-family:inherit;"><i class="fas fa-rotate" style="margin-right:5px;"></i>ACTUALIZAR</button>
+            </div>
+            <!-- Tabs por año -->
+            <div id="bdAniosTabs" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px;"></div>
+            <!-- Tabla de jugadores -->
+            <div id="bdTablaWrap"></div>
+        </div>
+    </div>
+
+    <!-- MODAL VER FICHA HISTÓRICA -->
+    <div id="bdFichaModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:99999; overflow:auto; padding:20px;">
+        <div style="background:white; border-radius:14px; padding:28px; max-width:720px; margin:40px auto; box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                <h3 id="bdFichaModalTitulo" style="margin:0; font-size:15px; font-weight:900; color:#1e293b;"></h3>
+                <button onclick="document.getElementById('bdFichaModal').style.display='none'" style="background:none; border:none; font-size:20px; color:#94a3b8; cursor:pointer;">✕</button>
+            </div>
+            <!-- Selector de temporada -->
+            <div style="margin-bottom:16px;">
+                <label style="font-size:10px; font-weight:900; color:#64748b; text-transform:uppercase;">Temporada:</label>
+                <select id="bdFichaTemporadaSel" onchange="bdMostrarDatosFicha()" style="margin-left:8px; padding:5px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; font-family:inherit;"></select>
+            </div>
+            <div id="bdFichaDatos" style="display:grid; grid-template-columns:1fr 1fr; gap:10px 20px;"></div>
         </div>
     </div>
 
@@ -3998,6 +4027,167 @@
     }
 
     // ==========================================
+    // BASE DE DATOS HISTÓRICO
+    // ==========================================
+    let _bdHistorico = null;
+    let _bdAnioActivo = null;
+    let _bdFichaJugador = null; // { nombre, apellidos, temporadas: [{temporada, equipo, datos}] }
+
+    async function bdCargar(forzar) {
+        if (_bdHistorico && !forzar) { bdRenderAnios(); return; }
+        const wrap = document.getElementById('bdTablaWrap');
+        if (wrap) wrap.innerHTML = '<div style="text-align:center; padding:30px; color:#94a3b8; font-size:12px;"><i class="fas fa-spinner fa-spin"></i> Cargando histórico...</div>';
+        try {
+            const res = await fetch('/api/historico_jugadores');
+            _bdHistorico = await res.json();
+        } catch(e) { _bdHistorico = {temporadas:{}}; }
+        bdRenderAnios();
+    }
+
+    function _bdBuildIndex() {
+        const index = {};
+        const temporadas = _bdHistorico ? (_bdHistorico.temporadas || {}) : {};
+        Object.entries(temporadas).forEach(([temp, tempData]) => {
+            (tempData.jugadores || []).forEach(j => {
+                const nombre = (j.JUGADOR_NOMBRE || '').trim();
+                const apellidos = (j.JUGADOR_APELLIDOS || '').trim();
+                const key = (nombre + '|' + apellidos).toLowerCase();
+                if (!index[key]) {
+                    index[key] = { nombre, apellidos, año: j.AÑO_NACIMIENTO, temporadas: [] };
+                }
+                index[key].temporadas.push({ temporada: temp, fecha_cierre: tempData.fecha_cierre, equipo: j.JUGADOR_EQUIPO_LETRA || '', datos: j });
+            });
+        });
+        return Object.values(index);
+    }
+
+    function _bdByAnio() {
+        const byAnio = {};
+        _bdBuildIndex().forEach(p => {
+            const año = p.año ? String(p.año) : 'Sin año';
+            if (!byAnio[año]) byAnio[año] = [];
+            byAnio[año].push(p);
+        });
+        return byAnio;
+    }
+
+    function bdRenderAnios() {
+        const byAnio = _bdByAnio();
+        const anios = Object.keys(byAnio).sort((a, b) => {
+            if (a === 'Sin año') return 1;
+            if (b === 'Sin año') return -1;
+            return parseInt(b) - parseInt(a);
+        });
+        const tabsCont = document.getElementById('bdAniosTabs');
+        if (!tabsCont) return;
+        if (!anios.length) {
+            tabsCont.innerHTML = '<span style="font-size:11px; color:#94a3b8;">No hay datos históricos todavía.</span>';
+            const wrap = document.getElementById('bdTablaWrap');
+            if (wrap) wrap.innerHTML = '';
+            return;
+        }
+        if (!_bdAnioActivo || !byAnio[_bdAnioActivo]) _bdAnioActivo = anios[0];
+        tabsCont.innerHTML = anios.map(a => {
+            const active = a === _bdAnioActivo;
+            return `<button onclick="bdSelAnio('${a}')" style="padding:6px 14px; font-size:11px; font-weight:900; border-radius:7px; cursor:pointer; font-family:inherit; border:1.5px solid ${active?'#E31E24':'#e2e8f0'}; background:${active?'#E31E24':'white'}; color:${active?'white':'#475569'};">${a}</button>`;
+        }).join('');
+        bdRenderTabla(_bdAnioActivo, byAnio[_bdAnioActivo] || []);
+    }
+
+    function bdSelAnio(anio) {
+        _bdAnioActivo = anio;
+        bdRenderAnios();
+    }
+
+    function bdRenderTabla(anio, jugadores) {
+        const wrap = document.getElementById('bdTablaWrap');
+        if (!wrap) return;
+        if (!jugadores.length) { wrap.innerHTML = '<div style="font-size:11px; color:#94a3b8; padding:16px;">Sin jugadores para este año.</div>'; return; }
+        const rows = jugadores.map(p => {
+            const tempBadges = [...new Set(p.temporadas.map(t => t.temporada))]
+                .map(t => `<span style="font-size:9px; font-weight:900; padding:2px 7px; border-radius:4px; background:#f1f5f9; color:#475569; white-space:nowrap;">${t}</span>`).join(' ');
+            const equipos = [...new Set(p.temporadas.map(t => t.equipo).filter(Boolean))].join(', ');
+            const nombreCompleto = [p.nombre, p.apellidos].filter(Boolean).join(' ');
+            const dataJson = btoa(encodeURIComponent(JSON.stringify(p))).replace(/\+/g,'_').replace(/\//g,'-');
+            return `<tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:10px 8px; font-size:12px; font-weight:700; color:#1e293b;">${nombreCompleto}</td>
+                <td style="padding:10px 8px; font-size:11px; color:#64748b;">${anio}</td>
+                <td style="padding:10px 8px; font-size:11px; color:#64748b;">${equipos}</td>
+                <td style="padding:10px 8px;">${tempBadges}</td>
+                <td style="padding:10px 8px;"><button onclick="bdAbrirFicha('${dataJson}')" style="padding:4px 12px; font-size:10px; font-weight:900; background:#1e293b; color:white; border:none; border-radius:5px; cursor:pointer; font-family:inherit;">VER FICHA</button></td>
+            </tr>`;
+        }).join('');
+        wrap.innerHTML = `
+            <div style="font-size:10px; color:#94a3b8; margin-bottom:8px;">${jugadores.length} jugador(es) con año ${anio}</div>
+            <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-family:inherit;">
+                <thead><tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0;">
+                    <th style="padding:10px 8px; font-size:10px; font-weight:900; color:#64748b; text-align:left; text-transform:uppercase;">Jugador</th>
+                    <th style="padding:10px 8px; font-size:10px; font-weight:900; color:#64748b; text-align:left; text-transform:uppercase;">Año Nac.</th>
+                    <th style="padding:10px 8px; font-size:10px; font-weight:900; color:#64748b; text-align:left; text-transform:uppercase;">Equipo(s)</th>
+                    <th style="padding:10px 8px; font-size:10px; font-weight:900; color:#64748b; text-align:left; text-transform:uppercase;">Temporadas</th>
+                    <th style="padding:10px 8px; font-size:10px; font-weight:900; color:#64748b; text-align:left; text-transform:uppercase;">Ficha</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table></div>`;
+    }
+
+    function bdAbrirFicha(dataJson) {
+        try { _bdFichaJugador = JSON.parse(decodeURIComponent(atob(dataJson.replace(/_/g,'+').replace(/-/g,'/')))); }
+        catch(e) { return; }
+        const p = _bdFichaJugador;
+        const nombreCompleto = [p.nombre, p.apellidos].filter(Boolean).join(' ');
+        const tit = document.getElementById('bdFichaModalTitulo');
+        if (tit) tit.textContent = nombreCompleto;
+        const sel = document.getElementById('bdFichaTemporadaSel');
+        if (sel) {
+            sel.innerHTML = p.temporadas.map(t => `<option value="${t.temporada}">${t.temporada} — ${t.equipo||'Sin equipo'}</option>`).join('');
+        }
+        bdMostrarDatosFicha();
+        document.getElementById('bdFichaModal').style.display = '';
+    }
+
+    function bdMostrarDatosFicha() {
+        const p = _bdFichaJugador;
+        if (!p) return;
+        const sel = document.getElementById('bdFichaTemporadaSel');
+        const tempSel = sel ? sel.value : (p.temporadas[0]?.temporada || '');
+        const entry = p.temporadas.find(t => t.temporada === tempSel) || p.temporadas[p.temporadas.length - 1];
+        if (!entry) return;
+        const d = entry.datos || {};
+        const campos = [
+            ['Nombre', [d.JUGADOR_NOMBRE, d.JUGADOR_APELLIDOS].filter(Boolean).join(' ')],
+            ['F. Nacimiento', d.JUGADOR_FECHA_NACIMIENTO],
+            ['Colegio', d.JUGADOR_COLEGIO],
+            ['Domicilio / CP', d.JUGADOR_DOMICILIO_CP],
+            ['Teléfono', d.JUGADOR_TELEFONO_MOVIL],
+            ['Email', d.JUGADOR_EMAIL],
+            ['Padre', d.FAMILIA_NOMBRE_PADRE],
+            ['Madre', d.FAMILIA_NOMBRE_MADRE],
+            ['Forma de pago', d.PAGO_MODALIDAD],
+            ['IBAN / SEPA', d.SEPA_IBAN],
+            ['Titular SEPA', d.SEPA_NOMBRE_DEUDOR],
+            ['Dirección SEPA', d.SEPA_DIRECCION_DEUDOR],
+            ['SWIFT / BIC', d.SEPA_SWIFT_BIC],
+            ['Tipo SEPA', d.SEPA_TIPO_PAGO],
+            ['Tutor firmante', d.AUTORIZA_TUTOR_NOMBRE],
+            ['DNI jugador', d.AUTORIZA_JUGADOR_DNI],
+            ['Fecha / Localidad', d.CIERRE_FECHA_LOCALIDAD],
+            ['Firma tutor', d.CIERRE_FIRMA_TUTOR],
+        ];
+        const fichaUrl = d.ARCHIVO_URL;
+        const cont = document.getElementById('bdFichaDatos');
+        if (!cont) return;
+        cont.innerHTML = campos.map(([label, val]) => {
+            const v = val || '-';
+            return `<div style="padding:8px 0; border-bottom:1px solid #f8fafc;">
+                <div style="font-size:9px; font-weight:900; color:#94a3b8; text-transform:uppercase; margin-bottom:2px;">${label}</div>
+                <div style="font-size:12px; color:#1e293b; font-weight:600;">${v}</div>
+            </div>`;
+        }).join('') + (fichaUrl ? `<div style="grid-column:1/-1; padding-top:12px;"><a href="${fichaUrl}" target="_blank" style="display:inline-block; padding:8px 18px; background:#E31E24; color:white; border-radius:7px; font-size:11px; font-weight:900; text-decoration:none;"><i class="fas fa-file-pdf" style="margin-right:6px;"></i>Ver ficha PDF</a></div>` : '');
+    }
+
+    // ==========================================
     // LÓGICA HORARIOS (plantilla campo + RFFM)
     // ==========================================
     const MESES_HORARIOS = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
@@ -6370,8 +6560,8 @@
             const temasF11 = Object.entries((mc.F11 ? mc.F11.temas : mc.temas) || {}).filter(([,v]) => v);
             const temasF7  = Object.entries((mc.F7  ? mc.F7.temas  : {})      || {}).filter(([,v]) => v);
             const partes = [
-                ...temasF11.map(([pos,v]) => `<b style="color:#E31E24">F11</b> <span style="color:#94a3b8;">${pos}:</span> <span style="color:#475569;">${v}</span>`),
-                ...temasF7.map( ([pos,v]) => `<b style="color:#7c3aed">F7</b>  <span style="color:#94a3b8;">${pos}:</span> <span style="color:#475569;">${v}</span>`)
+                ...temasF11.map(([pos,v]) => `<b style="color:#E31E24">F11</b> <span style="color:#94a3b8;">${pos}:</span> <span style="color:#475569;">${Array.isArray(v) ? v.join(', ') : v}</span>`),
+                ...temasF7.map( ([pos,v]) => `<b style="color:#7c3aed">F7</b>  <span style="color:#94a3b8;">${pos}:</span> <span style="color:#475569;">${Array.isArray(v) ? v.join(', ') : v}</span>`)
             ];
             const resumen = partes.join(' · ');
             const resumenHtml = resumen ? `<div style="font-size:9px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:260px;">${resumen}</div>` : '';
@@ -6902,9 +7092,11 @@
         const cont = document.getElementById('fpConfigPosiciones');
         if (!cont) return;
         const temas = {}, excluidas = [];
-        cont.querySelectorAll(`input[id^="fpCfgTema_${tipo}_"]`).forEach(inp => {
-            const pos = inp.id.replace(`fpCfgTema_${tipo}_`, '');
-            if (inp.value.trim()) temas[pos] = inp.value.trim();
+        cont.querySelectorAll(`.fpCfgTemaList[data-tipo="${tipo}"]`).forEach(container => {
+            const pos = container.dataset.pos;
+            const values = Array.from(container.querySelectorAll('.fpCfgTemaInput'))
+                .map(i => i.value.trim()).filter(v => v);
+            if (values.length) temas[pos] = values;
         });
         cont.querySelectorAll(`input[id^="fpCfgChk_${tipo}_"]`).forEach(chk => {
             const pos = chk.id.replace(`fpCfgChk_${tipo}_`, '');
@@ -6966,15 +7158,25 @@
         const excluidas = mc.excluidas || [];
 
         const posHTML = posiciones.length
-            ? posiciones.map(pos => `
-                <div style="display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid #f8fafc;">
-                    <label style="display:flex; align-items:center; gap:6px; min-width:80px; cursor:pointer;">
+            ? posiciones.map(pos => {
+                const temasArr = Array.isArray(temas[pos]) ? temas[pos] : (temas[pos] ? [temas[pos]] : ['']);
+                const temasInputs = temasArr.map(t =>
+                    `<div style="display:flex; gap:4px; align-items:center;">
+                        <input type="text" class="fpCfgTemaInput" value="${t.replace(/"/g,'&quot;')}" placeholder="Tema (ej: Ruptura, Presión alta...)" style="flex:1; padding:5px 10px; font-size:11px; border:1px solid #e2e8f0; border-radius:6px; font-family:inherit; color:#475569;">
+                        <button onclick="fpCfgQuitarTema(this)" style="padding:2px 8px; font-size:12px; line-height:1; border:none; background:#fee2e2; color:#dc2626; border-radius:4px; cursor:pointer; font-family:inherit; flex-shrink:0;">×</button>
+                    </div>`).join('');
+                return `
+                <div style="display:flex; align-items:flex-start; gap:10px; padding:7px 0; border-bottom:1px solid #f8fafc;">
+                    <label style="display:flex; align-items:center; gap:6px; min-width:80px; cursor:pointer; padding-top:6px;">
                         <input type="checkbox" id="fpCfgChk_${tipoActivo}_${pos}" ${!excluidas.includes(pos)?'checked':''} style="accent-color:${colorActivo}; width:14px; height:14px;">
                         <span style="font-size:12px; font-weight:700; color:#475569; text-transform:uppercase;">${pos}</span>
                     </label>
-                    <input type="text" id="fpCfgTema_${tipoActivo}_${pos}" value="${temas[pos]||''}" placeholder="Tema (ej: Ruptura, Presión alta...)"
-                        style="flex:1; padding:5px 10px; font-size:11px; border:1px solid #e2e8f0; border-radius:6px; font-family:inherit; color:#475569;">
-                </div>`).join('')
+                    <div class="fpCfgTemaList" data-tipo="${tipoActivo}" data-pos="${pos}" style="flex:1; display:flex; flex-direction:column; gap:4px;">
+                        ${temasInputs}
+                        <button class="fpCfgAddBtn" onclick="fpCfgAnadirTema(this)" style="align-self:flex-start; padding:2px 12px; font-size:13px; font-weight:700; border:1.5px dashed #cbd5e1; background:transparent; color:#94a3b8; border-radius:5px; cursor:pointer; font-family:inherit; margin-top:2px;">+</button>
+                    </div>
+                </div>`;
+            }).join('')
             : '<div style="font-size:11px; color:#cbd5e1; padding:10px 0;">Cargando posiciones...</div>';
 
         cont.innerHTML = `
@@ -6983,6 +7185,25 @@
                 <span style="font-size:9px; color:#cbd5e1; margin-left:6px;">PORT excluido automáticamente</span>
             </div>
             ${posHTML}`;
+    }
+
+    function fpCfgAnadirTema(btn) {
+        const cont = btn.closest('.fpCfgTemaList');
+        if (!cont) return;
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; gap:4px; align-items:center;';
+        row.innerHTML = '<input type="text" class="fpCfgTemaInput" placeholder="Tema (ej: Ruptura, Presión alta...)" style="flex:1; padding:5px 10px; font-size:11px; border:1px solid #e2e8f0; border-radius:6px; font-family:inherit; color:#475569;"><button onclick="fpCfgQuitarTema(this)" style="padding:2px 8px; font-size:12px; line-height:1; border:none; background:#fee2e2; color:#dc2626; border-radius:4px; cursor:pointer; font-family:inherit; flex-shrink:0;">×</button>';
+        cont.insertBefore(row, btn);
+        row.querySelector('input').focus();
+    }
+
+    function fpCfgQuitarTema(btn) {
+        const row = btn.closest('div');
+        const cont = row.closest('.fpCfgTemaList');
+        // Mantener al menos una línea vacía
+        const inputs = cont.querySelectorAll('.fpCfgTemaInput');
+        if (inputs.length <= 1) { inputs[0].value = ''; return; }
+        row.remove();
     }
 
     async function fpConfigGuardar() {

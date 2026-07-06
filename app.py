@@ -207,7 +207,8 @@ def parse_dias_entreno(texto):
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
-DATA_FOLDER = os.path.join(BASE_DIR, 'static', 'data')
+DATA_FOLDER   = os.path.join(BASE_DIR, 'static', 'data')
+ARCHIVOS_FOLDER = os.path.join(BASE_DIR, 'static', 'archivos')
 
 # --- CONFIGURACIÓN GOOGLE SHEETS ---
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -226,7 +227,7 @@ def normalizar_cabecera_universal(h):
     s = "".join(c for c in unicodedata.normalize('NFD', str(h).upper().strip()) if unicodedata.category(c) != 'Mn')
     return s.replace(' ', '').replace('_', '').replace('.', '').replace('/', '')
 
-for p in [UPLOAD_FOLDER, DATA_FOLDER]: os.makedirs(p, exist_ok=True)
+for p in [UPLOAD_FOLDER, DATA_FOLDER, ARCHIVOS_FOLDER]: os.makedirs(p, exist_ok=True)
 
 @app.route('/api/guardar_sesion_img', methods=['POST'])
 def guardar_sesion_img():
@@ -1893,6 +1894,7 @@ def api_ausencias_motivo():
 
 
 EQUIPOS_CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'equipos_config.json')
+HISTORICO_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'historico_jugadores.json')
 
 @app.route('/api/equipos_lista')
 def api_equipos_lista():
@@ -1937,6 +1939,98 @@ def api_equipos_config():
             return jsonify(json.load(f))
     except Exception:
         return jsonify({"temporada": "", "equipos": []})
+
+
+@app.route('/api/historico_jugadores')
+def api_historico_jugadores():
+    """Devuelve el histórico completo de jugadores archivados por temporada."""
+    if not session.get('usuario'): return jsonify({"status": "error"}), 401
+    try:
+        with open(HISTORICO_FILE, 'r', encoding='utf-8') as f:
+            return jsonify(json.load(f))
+    except FileNotFoundError:
+        return jsonify({"temporadas": {}})
+    except Exception as e:
+        return jsonify({"temporadas": {}, "error": str(e)})
+
+
+@app.route('/api/cerrar_temporada', methods=['POST'])
+def api_cerrar_temporada():
+    """Archiva la temporada actual y limpia todos los datos de la intranet."""
+    if not session.get('usuario'): return jsonify({"status": "error"}), 401
+    if session.get('usuario', '').lower() != 'admin':
+        return jsonify({"status": "error", "message": "No autorizado"}), 403
+    try:
+        # 1. Leer temporada actual
+        try:
+            with open(EQUIPOS_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                ec = json.load(f)
+        except Exception:
+            ec = {"temporada": "", "equipos": []}
+        temporada = (ec.get('temporada') or '').strip() or 'sin-temporada'
+
+        # 2. Leer DATOS JUGADORES y archivar
+        wb = client.open(NOMBRE_EXCEL)
+        try:
+            sheet_datos = wb.worksheet("DATOS JUGADORES")
+            records = sheet_datos.get_all_records()
+        except Exception:
+            records = []
+
+        jugadores_archivo = []
+        for r in records:
+            fecha_nac = str(r.get('JUGADOR_FECHA_NACIMIENTO', '')).strip()
+            año_nac = None
+            if fecha_nac:
+                m = re.search(r'\b(19|20)\d{2}\b', fecha_nac)
+                if m:
+                    año_nac = int(m.group(0))
+            jugadores_archivo.append({**{k: str(v).strip() for k, v in r.items()}, 'AÑO_NACIMIENTO': año_nac})
+
+        # 3. Guardar en historico
+        try:
+            with open(HISTORICO_FILE, 'r', encoding='utf-8') as f:
+                historico = json.load(f)
+        except Exception:
+            historico = {"temporadas": {}}
+        if 'temporadas' not in historico:
+            historico['temporadas'] = {}
+        historico['temporadas'][temporada] = {
+            'fecha_cierre': datetime.now().strftime('%Y-%m-%d'),
+            'jugadores': jugadores_archivo
+        }
+        os.makedirs(os.path.dirname(HISTORICO_FILE), exist_ok=True)
+        with open(HISTORICO_FILE, 'w', encoding='utf-8') as f:
+            json.dump(historico, f, ensure_ascii=False, indent=2)
+
+        # 4. Limpiar hojas de Google Sheets (mantener fila de cabeceras)
+        errores_hojas = []
+        for hoja_nombre in ["JUGADORES", "MI EQUIPO", "ASISTENCIAS", "DATOS JUGADORES", "GPS_POSICIONES", "PAGOS JUGADORES", "COORDINACION"]:
+            try:
+                hoja = wb.worksheet(hoja_nombre)
+                all_vals = hoja.get_all_values()
+                if len(all_vals) > 1:
+                    hoja.delete_rows(2, len(all_vals))
+            except Exception as e:
+                errores_hojas.append(f"{hoja_nombre}: {e}")
+
+        # 5. Limpiar JSON de formaciones
+        for fpath in [FORMACIONES_FILE, FORMACIONES_CONFIG_FILE]:
+            try:
+                with open(fpath, 'w', encoding='utf-8') as f:
+                    json.dump({}, f)
+            except Exception:
+                pass
+
+        # 6. Establecer nueva temporada (mantener equipos configurados)
+        nueva_temporada = (request.json or {}).get('nueva_temporada', '').strip()
+        ec['temporada'] = nueva_temporada
+        with open(EQUIPOS_CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(ec, f, ensure_ascii=False, indent=2)
+
+        return jsonify({"status": "ok", "temporada": temporada, "jugadores_archivados": len(jugadores_archivo), "errores": errores_hojas})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route('/api/ausencias/motivo_dia', methods=['POST'])
@@ -2513,6 +2607,140 @@ def api_accesos_rapidos_post():
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(accesos, f, ensure_ascii=False, indent=2)
     return jsonify({"status": "success"})
+
+# ============================================================
+# GESTOR DE DOCUMENTOS / ARCHIVOS
+# ============================================================
+def _safe_archivos_path(rel_path):
+    """Resuelve rel_path dentro de ARCHIVOS_FOLDER sin escapar."""
+    clean = os.path.normpath(rel_path or '').lstrip('/\\')
+    full  = os.path.realpath(os.path.join(ARCHIVOS_FOLDER, clean))
+    base  = os.path.realpath(ARCHIVOS_FOLDER)
+    if not full.startswith(base):
+        raise ValueError("Ruta no permitida")
+    return full
+
+def _tiene_acceso_archivos():
+    u = (session.get('usuario') or '').lower()
+    return u == 'admin' or session.get('permisos', {}).get('ARCHIVOS') == 'SI'
+
+@app.route('/archivos')
+def archivos_manager():
+    if not session.get('usuario'): return redirect(url_for('index'))
+    if not _tiene_acceso_archivos(): return "Acceso denegado", 403
+    return render_template('archivos.html', usuario=session.get('usuario'),
+                           permisos=session.get('permisos', {}))
+
+@app.route('/api/archivos/listar')
+def api_archivos_listar():
+    if not session.get('usuario'): return jsonify({'error': 'No auth'}), 401
+    rel = request.args.get('path', '')
+    try:
+        full = _safe_archivos_path(rel)
+        items = []
+        for name in sorted(os.listdir(full), key=lambda n: (not os.path.isdir(os.path.join(full, n)), n.lower())):
+            item_path = os.path.join(full, name)
+            is_dir = os.path.isdir(item_path)
+            rel_item = (rel.rstrip('/') + '/' + name).lstrip('/')
+            items.append({
+                'nombre': name,
+                'tipo': 'carpeta' if is_dir else 'archivo',
+                'ruta': rel_item,
+                'tamano': 0 if is_dir else os.path.getsize(item_path),
+                'fecha': datetime.fromtimestamp(os.path.getmtime(item_path)).strftime('%d/%m/%Y %H:%M'),
+                'ext': '' if is_dir else os.path.splitext(name)[1].lower()
+            })
+        return jsonify({'items': items, 'path': rel})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/archivos/carpeta', methods=['POST'])
+def api_archivos_carpeta():
+    if not session.get('usuario') or not _tiene_acceso_archivos():
+        return jsonify({'error': 'No auth'}), 401
+    data = request.get_json() or {}
+    nombre = (data.get('nombre') or '').strip()
+    rel    = data.get('path', '')
+    if not nombre or any(c in nombre for c in r'/\..'):
+        return jsonify({'error': 'Nombre inválido'}), 400
+    try:
+        nueva = os.path.join(_safe_archivos_path(rel), nombre)
+        if os.path.exists(nueva): return jsonify({'error': 'Ya existe'}), 409
+        os.makedirs(nueva)
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/archivos/subir', methods=['POST'])
+def api_archivos_subir():
+    if not session.get('usuario') or not _tiene_acceso_archivos():
+        return jsonify({'error': 'No auth'}), 401
+    from werkzeug.utils import secure_filename
+    rel   = request.form.get('path', '')
+    f     = request.files.get('archivo')
+    if not f or not f.filename: return jsonify({'error': 'Sin archivo'}), 400
+    try:
+        fname = secure_filename(f.filename)
+        dest  = os.path.join(_safe_archivos_path(rel), fname)
+        f.save(dest)
+        return jsonify({'ok': True, 'nombre': fname})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/archivos/eliminar', methods=['POST'])
+def api_archivos_eliminar():
+    if not session.get('usuario') or not _tiene_acceso_archivos():
+        return jsonify({'error': 'No auth'}), 401
+    import shutil
+    data = request.get_json() or {}
+    try:
+        full = _safe_archivos_path(data.get('ruta', ''))
+        if full == os.path.realpath(ARCHIVOS_FOLDER): return jsonify({'error': 'No puedes borrar la raíz'}), 400
+        if os.path.isdir(full):  shutil.rmtree(full)
+        elif os.path.isfile(full): os.remove(full)
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/archivos/ver/<path:rel_path>')
+def archivos_ver(rel_path):
+    if not session.get('usuario'): return redirect(url_for('index'))
+    from flask import send_file
+    try:
+        return send_file(_safe_archivos_path(rel_path))
+    except Exception as e:
+        return str(e), 404
+
+@app.route('/editor-excel')
+def editor_excel():
+    if not session.get('usuario'): return redirect(url_for('index'))
+    if not _tiene_acceso_archivos(): return "Acceso denegado", 403
+    return render_template('editor_excel.html', usuario=session.get('usuario'))
+
+@app.route('/api/editor_excel/guardar', methods=['POST'])
+def api_editor_excel_guardar():
+    if not session.get('usuario') or not _tiene_acceso_archivos():
+        return jsonify({'error': 'No auth'}), 401
+    import json as json_lib
+    data = request.get_json() or {}
+    nombre = data.get('nombre', 'documento').strip() or 'documento'
+    sheets = data.get('data', [])
+    rel_path = data.get('path', '').strip()
+    from werkzeug.utils import secure_filename
+    try:
+        if rel_path:
+            full_path = _safe_archivos_path(rel_path)
+        else:
+            fname = secure_filename(nombre + '.json')
+            full_path = os.path.join(ARCHIVOS_FOLDER, fname)
+        with open(full_path, 'w', encoding='utf-8') as fh:
+            json_lib.dump({'nombre': nombre, 'sheets': sheets}, fh, ensure_ascii=False)
+        rel = os.path.relpath(full_path, ARCHIVOS_FOLDER).replace('\\', '/')
+        return jsonify({'ok': True, 'path': rel})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+# ============================================================
 
 # --- REGISTRO DE BLUEPRINTS ---
 from financiero import financiero_bp

@@ -530,10 +530,57 @@
 </div>
 
     <!-- SECCIÓN: DATOS COMPLETOS JUGADORES -->
+    <!-- MODAL FICHAS PENDIENTES -->
+    <div id="modalFichasPendientes" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:99999; overflow:auto; padding:16px;">
+        <div style="background:white; border-radius:16px; padding:28px 32px; max-width:1100px; margin:24px auto; box-shadow:0 24px 70px rgba(0,0,0,0.3);">
+            <!-- Cabecera -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                <h3 style="margin:0; font-size:17px; font-weight:900; color:#1e293b;"><i class="fas fa-triangle-exclamation" style="color:#f59e0b; margin-right:8px;"></i>Revisión de fichas / hojas de registro</h3>
+                <button onclick="document.getElementById('modalFichasPendientes').style.display='none'" style="background:none; border:none; font-size:22px; color:#94a3b8; cursor:pointer; line-height:1;">✕</button>
+            </div>
+            <!-- Filtro y botones -->
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:18px;">
+                <select id="fpFiltroEquipo" onchange="fpFiltrar()" style="padding:7px 12px; font-size:12px; border:1.5px solid #e2e8f0; border-radius:8px; font-family:inherit; min-width:180px; font-weight:700; color:#1e293b; background:#f8fafc;">
+                    <option value="">Todos los equipos</option>
+                </select>
+                <button onclick="fpDescargarExcel()" style="padding:7px 16px; font-size:12px; font-weight:900; background:#16a34a; color:white; border:none; border-radius:8px; cursor:pointer; font-family:inherit;"><i class="fas fa-file-excel" style="margin-right:5px;"></i>Descargar Excel</button>
+                <button onclick="fpDescargarImagen()" style="padding:7px 16px; font-size:12px; font-weight:900; background:#1e293b; color:white; border:none; border-radius:8px; cursor:pointer; font-family:inherit;"><i class="fas fa-image" style="margin-right:5px;"></i>Descargar Imagen</button>
+            </div>
+            <div id="fpListaWrap"></div>
+        </div>
+    </div>
+
+    <!-- MODAL ASIGNAR FICHA -->
+    <div id="modalAsignarFicha" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:100000; overflow:auto; padding:16px;">
+        <div style="background:white; border-radius:14px; padding:24px; max-width:500px; margin:80px auto; box-shadow:0 20px 60px rgba(0,0,0,0.35);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                <h4 style="margin:0; font-size:14px; font-weight:900; color:#1e293b;"><i class="fas fa-link" style="color:#3b82f6; margin-right:7px;"></i>Asignar hoja de registro</h4>
+                <button onclick="document.getElementById('modalAsignarFicha').style.display='none'" style="background:none; border:none; font-size:20px; color:#94a3b8; cursor:pointer;">✕</button>
+            </div>
+            <div id="fpAsignarFichaInfo" style="background:#f8fafc; border-radius:8px; padding:10px 14px; font-size:13px; color:#1e293b; margin-bottom:14px; font-weight:700;"></div>
+            <p style="font-size:12px; color:#64748b; margin:0 0 10px;">Selecciona el jugador del roster al que pertenece esta hoja:</p>
+            <input id="fpAsignarBuscar" type="text" placeholder="Buscar jugador..." oninput="fpAsignarFiltrar()" style="width:100%; box-sizing:border-box; padding:8px 12px; font-size:12px; border:1.5px solid #e2e8f0; border-radius:8px; margin-bottom:10px; font-family:inherit;">
+            <div id="fpAsignarLista" style="max-height:280px; overflow-y:auto; border:1.5px solid #e2e8f0; border-radius:8px;"></div>
+            <div style="display:flex; gap:8px; margin-top:14px; justify-content:flex-end;">
+                <button onclick="document.getElementById('modalAsignarFicha').style.display='none'" style="padding:7px 16px; font-size:12px; background:#f1f5f9; border:none; border-radius:8px; cursor:pointer; font-family:inherit; font-weight:700; color:#64748b;">Cancelar</button>
+                <button id="fpAsignarConfirmar" onclick="fpAsignarConfirmar()" style="padding:7px 16px; font-size:12px; font-weight:900; background:#3b82f6; color:white; border:none; border-radius:8px; cursor:pointer; font-family:inherit;" disabled>Asignar</button>
+            </div>
+        </div>
+    </div>
+
     <div id="tab-datos-jugadores" class="tab-content">
+        <!-- Warning fichas pendientes -->
+        <div id="warnFichasPendientes" style="display:none; background:#fff7ed; border:1.5px solid #fdba74; border-radius:10px; padding:12px 16px; margin-bottom:14px; display:flex; align-items:center; gap:12px; cursor:pointer;" onclick="abrirFichasPendientes()">
+            <i class="fas fa-triangle-exclamation" style="color:#f59e0b; font-size:18px; flex-shrink:0;"></i>
+            <div>
+                <div id="warnFichasTexto" style="font-size:12px; font-weight:900; color:#92400e;"></div>
+                <div style="font-size:10px; color:#b45309; margin-top:2px;">Haz clic para ver el listado completo</div>
+            </div>
+        </div>
+
         <div class="fin-card">
             <div class="fin-header">
-                <h2><i class="fas fa-id-card" style="color: #E31E24; margin-right: 10px;"></i> FICHAS TÉCNICAS Y DATOS BANCARIOS</h2>
+                <h2><i class="fas fa-id-card" style="color: #E31E24; margin-right: 10px;"></i> HOJAS DE REGISTRO Y DATOS BANCARIOS</h2>
                 <div style="display: flex; gap: 10px;">
                     <input type="text" id="buscadorDatosJugador" oninput="filtrarTablaDatos()" placeholder="Buscar (nombre, equipo, colegio, IBAN, padre/madre...)" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd; font-weight: 700; font-size: 11px; width: 280px;">
                     <button id="btnToggleEdicionDatos" class="btn-fin" style="background: #f8f9fa; color: #333; border: 1px solid #e2e8f0;" onclick="toggleModoEdicionDatos()">
@@ -3466,6 +3513,202 @@ async function cargarTablaDatosJugadores() {
         datosJugadoresCache = data.map((j, i) => ({ ...j, _idx: i }));
         filtrarTablaDatos();
     } catch (e) { console.error("Error al cargar datos de jugadores:", e); }
+    cargarFichasPendientes();
+}
+
+let _fpPendientesData = null;
+let _fpFiltroActivo = '';
+let _fpAsignarIdx = null;
+let _fpAsignarSeleccionado = null;
+
+async function cargarFichasPendientes() {
+    try {
+        const res = await fetch('/api/jugadores_datos/fichas_pendientes');
+        _fpPendientesData = await res.json();
+        const warn = document.getElementById('warnFichasPendientes');
+        const txt  = document.getElementById('warnFichasTexto');
+        if (!warn || !txt) return;
+        const total = _fpPendientesData.total || 0;
+        const sinAsignar = (_fpPendientesData.sin_asignar || []).length;
+        if (total > 0 || sinAsignar > 0) {
+            const partes = [];
+            if (total > 0) partes.push(`${total} jugador${total > 1 ? 'es' : ''} sin hoja de registro`);
+            if (sinAsignar > 0) partes.push(`${sinAsignar} hoja${sinAsignar > 1 ? 's' : ''} sin asignar a jugador`);
+            txt.textContent = partes.join(' · ');
+            warn.style.display = 'flex';
+        } else {
+            warn.style.display = 'none';
+        }
+    } catch(e) {}
+}
+
+function abrirFichasPendientes() {
+    if (!_fpPendientesData) return;
+    _fpFiltroActivo = '';
+
+    // Poblar filtro de equipos
+    const porEquipo = _fpPendientesData.por_equipo || {};
+    const sinAsignar = _fpPendientesData.sin_asignar || [];
+    const equiposSA = [...new Set(sinAsignar.map(f => f.equipo).filter(Boolean))];
+    const todosEquipos = [...new Set([...Object.keys(porEquipo), ...equiposSA])].sort();
+    const sel = document.getElementById('fpFiltroEquipo');
+    sel.innerHTML = '<option value="">Todos los equipos</option>' +
+        todosEquipos.map(eq => `<option value="${eq}">${eq}</option>`).join('');
+
+    fpRenderLista();
+    document.getElementById('modalFichasPendientes').style.display = '';
+}
+
+function fpFiltrar() {
+    _fpFiltroActivo = document.getElementById('fpFiltroEquipo').value;
+    fpRenderLista();
+}
+
+function fpRenderLista() {
+    if (!_fpPendientesData) return;
+    const wrap = document.getElementById('fpListaWrap');
+    const porEquipo = _fpPendientesData.por_equipo || {};
+    const sinAsignar = _fpPendientesData.sin_asignar || [];
+    const filtro = _fpFiltroActivo;
+    let html = '<div id="fpListaTabla">';
+
+    // --- Sección 1: Hojas pendientes de entregar ---
+    const equiposFilt = Object.keys(porEquipo).sort().filter(eq => !filtro || eq === filtro);
+    html += `<div style="font-size:14px; font-weight:900; color:#92400e; padding:9px 12px; background:#fff7ed; border-radius:9px; margin-bottom:14px; border-left:4px solid #f59e0b;">
+        <i class="fas fa-user-clock" style="margin-right:7px;"></i>Hojas de registro pendientes de entregar
+        <span style="font-weight:400; font-size:11px; color:#b45309; margin-left:8px;">(jugadores en roster sin hoja en DATOS JUGADORES)</span>
+    </div>`;
+    if (!equiposFilt.length) {
+        html += '<div style="font-size:13px; color:#94a3b8; padding:10px 0 20px;">Todos los jugadores tienen hoja de registro.</div>';
+    } else {
+        html += '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:14px; margin-bottom:20px;">';
+        equiposFilt.forEach(eq => {
+            html += `<div style="background:#f8fafc; border-radius:10px; padding:12px 14px; border:1px solid #e2e8f0;">
+                <div style="font-size:11px; font-weight:900; color:#475569; text-transform:uppercase; border-bottom:1.5px solid #e2e8f0; padding-bottom:7px; margin-bottom:8px;">${eq} <span style="font-weight:400; color:#94a3b8;">(${porEquipo[eq].length})</span></div>
+                ${porEquipo[eq].map(n => `<div style="font-size:13px; color:#1e293b; padding:4px 0; border-bottom:1px solid #f1f5f9;">${n}</div>`).join('')}
+            </div>`;
+        });
+        html += '</div>';
+    }
+
+    // --- Sección 2: Hojas sin asignar ---
+    const sinAsignarFilt = sinAsignar.filter(f => !filtro || f.equipo === filtro);
+    html += `<div style="font-size:14px; font-weight:900; color:#1e40af; padding:9px 12px; background:#eff6ff; border-radius:9px; margin-bottom:14px; border-left:4px solid #3b82f6;">
+        <i class="fas fa-file-circle-question" style="margin-right:7px;"></i>Hojas de registro sin asignar
+        <span style="font-weight:400; font-size:11px; color:#1d4ed8; margin-left:8px;">(en DATOS JUGADORES sin coincidencia en roster)</span>
+    </div>`;
+    if (!sinAsignarFilt.length) {
+        html += '<div style="font-size:13px; color:#94a3b8; padding:10px 0;">Todas las hojas están asignadas a un jugador del roster.</div>';
+    } else {
+        html += '<table style="width:100%; border-collapse:collapse; font-size:13px;">';
+        html += '<thead><tr style="border-bottom:2px solid #e2e8f0;"><th style="text-align:left;padding:6px 10px;font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;">Nombre en hoja</th><th style="text-align:left;padding:6px 10px;font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;">Equipo en hoja</th><th style="text-align:left;padding:6px 10px;font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;">Estado</th><th></th></tr></thead><tbody>';
+        sinAsignarFilt.forEach(f => {
+            const etiqueta = f.ambiguo
+                ? `<span style="background:#fef9c3; color:#854d0e; font-size:10px; font-weight:900; padding:2px 7px; border-radius:5px; border:1px solid #fde047;">AMBIGUO</span>`
+                : `<span style="background:#fee2e2; color:#991b1b; font-size:10px; font-weight:900; padding:2px 7px; border-radius:5px; border:1px solid #fca5a5;">SIN COINCIDENCIA</span>`;
+            html += `<tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:7px 10px; font-weight:700;">${f.nombre_ficha}</td>
+                <td style="padding:7px 10px; color:#64748b;">${f.equipo || '—'}</td>
+                <td style="padding:7px 10px;">${etiqueta}</td>
+                <td style="padding:7px 10px; text-align:right;"><button onclick="fpAbrirAsignar(${f.idx}, '${f.nombre_ficha.replace(/'/g,"\\'")}', ${JSON.stringify(f.opciones || [])})" style="padding:4px 12px; font-size:11px; font-weight:900; background:#3b82f6; color:white; border:none; border-radius:7px; cursor:pointer; font-family:inherit; white-space:nowrap;"><i class="fas fa-link" style="margin-right:4px;"></i>Asignar</button></td>
+            </tr>`;
+        });
+        html += '</tbody></table>';
+    }
+
+    html += '</div>';
+    wrap.innerHTML = html;
+}
+
+function fpAbrirAsignar(idx, nombreFicha, opcionesAmbiguas) {
+    _fpAsignarIdx = idx;
+    _fpAsignarSeleccionado = null;
+    document.getElementById('fpAsignarFichaInfo').textContent = `Hoja: ${nombreFicha}`;
+    document.getElementById('fpAsignarConfirmar').disabled = true;
+    document.getElementById('fpAsignarBuscar').value = '';
+
+    // Si es ambiguo, mostrar solo las opciones del roster con ese nombre
+    const roster = opcionesAmbiguas.length > 0 ? opcionesAmbiguas : (_fpPendientesData.roster || []);
+    _fpAsignarRoster = roster;
+    fpAsignarRenderLista(roster);
+    document.getElementById('modalAsignarFicha').style.display = '';
+}
+
+let _fpAsignarRoster = [];
+function fpAsignarFiltrar() {
+    const q = document.getElementById('fpAsignarBuscar').value.toUpperCase();
+    const filtered = _fpAsignarRoster.filter(r => (r.nombre + ' ' + r.equipo).toUpperCase().includes(q));
+    fpAsignarRenderLista(filtered);
+}
+
+function fpAsignarRenderLista(lista) {
+    const div = document.getElementById('fpAsignarLista');
+    if (!lista.length) { div.innerHTML = '<div style="padding:12px; font-size:12px; color:#94a3b8;">Sin resultados</div>'; return; }
+    div.innerHTML = lista.map((r, i) => `
+        <div onclick="fpAsignarSeleccionar(this, '${r.nombre.replace(/'/g,"\\'")}', '${r.equipo.replace(/'/g,"\\'")}' )"
+             style="padding:10px 14px; cursor:pointer; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; font-size:13px;">
+            <span style="font-weight:700;">${r.nombre}</span>
+            <span style="font-size:11px; color:#64748b; background:#f1f5f9; padding:2px 8px; border-radius:5px;">${r.equipo}</span>
+        </div>`).join('');
+}
+
+function fpAsignarSeleccionar(el, nombre, equipo) {
+    document.querySelectorAll('#fpAsignarLista > div').forEach(d => d.style.background = '');
+    el.style.background = '#eff6ff';
+    _fpAsignarSeleccionado = { nombre, equipo };
+    document.getElementById('fpAsignarConfirmar').disabled = false;
+}
+
+async function fpAsignarConfirmar() {
+    if (_fpAsignarIdx === null || !_fpAsignarSeleccionado) return;
+    const btn = document.getElementById('fpAsignarConfirmar');
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+    try {
+        const res = await fetch('/api/jugadores_datos/actualizar', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ idx: _fpAsignarIdx, campos: { JUGADOR_EQUIPO_LETRA: _fpAsignarSeleccionado.equipo } })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            document.getElementById('modalAsignarFicha').style.display = 'none';
+            await cargarFichasPendientes();
+            abrirFichasPendientes();
+        } else {
+            alert('Error al asignar: ' + (data.message || 'desconocido'));
+        }
+    } catch(e) {
+        alert('Error de red al asignar la ficha.');
+    }
+    btn.textContent = 'Asignar';
+    btn.disabled = false;
+}
+
+function fpDescargarExcel() {
+    if (!_fpPendientesData) return;
+    const lista = _fpPendientesData.lista || [];
+    const sinAsignar = _fpPendientesData.sin_asignar || [];
+    let csv = 'Tipo,Equipo,Nombre\n';
+    lista.forEach(p => { csv += `"Pendiente de entregar","${(p.equipo||'').replace(/"/g,'""')}","${(p.nombre||'').replace(/"/g,'""')}"\n`; });
+    sinAsignar.forEach(f => { csv += `"Sin asignar","${(f.equipo||'').replace(/"/g,'""')}","${(f.nombre_ficha||'').replace(/"/g,'""')}"\n`; });
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'fichas_pendientes.csv';
+    a.click();
+}
+
+function fpDescargarImagen() {
+    const tabla = document.getElementById('fpListaTabla');
+    if (!tabla) return;
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Revisión Hojas de Registro</title>
+    <style>body{font-family:Arial,sans-serif;padding:24px;color:#1e293b;font-size:13px;} table{width:100%;border-collapse:collapse;} th{text-align:left;padding:6px 10px;font-size:10px;color:#64748b;text-transform:uppercase;border-bottom:2px solid #e2e8f0;} td{padding:7px 10px;border-bottom:1px solid #f1f5f9;}</style>
+    </head><body>${tabla.innerHTML}</body></html>`;
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => w.print(), 400);
 }
 
 function toggleModoEdicionDatos() {

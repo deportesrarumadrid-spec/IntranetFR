@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Editor — Intranet Club</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/css/pluginsCss.css'/>
+<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/plugins.css'/>
+<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/css/luckysheet.css'/>
+<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/assets/iconfont/iconfont.css'/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',Arial,sans-serif;display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+
+/* Barra superior verde */
+.topbar{
+    background:#217346; height:38px; display:flex; align-items:center;
+    padding:0 10px; gap:6px; flex-shrink:0;
+}
+.topbar a,.topbar button{
+    color:white; background:rgba(0,0,0,.15); border:none; cursor:pointer;
+    font-size:11px; padding:4px 10px; display:flex; align-items:center; gap:5px;
+    font-family:inherit; font-weight:700; text-decoration:none; border-radius:2px;
+    white-space:nowrap;
+}
+.topbar a:hover,.topbar button:hover{background:rgba(0,0,0,.28);}
+.topbar .sep{width:1px;height:22px;background:rgba(255,255,255,.25);margin:0 2px;}
+.topbar .title{
+    flex:1; text-align:center;
+}
+.topbar .title input{
+    background:transparent; border:none; color:white; font-family:inherit;
+    font-size:13px; font-weight:400; text-align:center; width:340px; outline:none;
+}
+.topbar .title input:focus,.topbar .title input:hover{
+    background:rgba(255,255,255,.15); border-radius:2px; padding:1px 6px;
+}
+.btn-save{background:#155232 !important;}
+.btn-save:hover{background:#0d3621 !important;}
+
+/* Luckysheet ocupa todo el resto */
+#luckysheet{flex:1;overflow:hidden;}
+
+/* Modal */
+.modal{display:none;position:fixed;z-index:9000;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;}
+.modal.open{display:flex;}
+.mbox{background:white;width:460px;max-width:94vw;border-radius:2px;box-shadow:0 8px 32px rgba(0,0,0,.3);overflow:hidden;}
+.mhead{background:#217346;color:white;padding:11px 16px;display:flex;justify-content:space-between;align-items:center;}
+.mhead h3{font-size:12px;font-weight:700;margin:0;}
+.mclose{background:transparent;border:none;color:white;font-size:20px;cursor:pointer;}
+.mbody{padding:10px;max-height:58vh;overflow-y:auto;}
+.fi{display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;font-size:11px;color:#222;border-radius:2px;transition:.08s;}
+.fi:hover{background:#e8f4ee;}
+.fi i{width:14px;text-align:center;color:#217346;}
+.fi .dt{margin-left:auto;color:#aaa;font-size:9px;}
+.fd{display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;font-size:11px;color:#222;border-radius:2px;transition:.08s;}
+.fd:hover{background:#fef9e7;}
+.fd i{color:#f59e0b;width:14px;}
+
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#217346;color:white;padding:8px 18px;border-radius:2px;font-size:11px;font-weight:700;display:none;z-index:99999;box-shadow:0 3px 10px rgba(0,0,0,.2);}
+input[type=file]{display:none;}
+</style>
+</head>
+<body>
+
+<!-- BARRA SUPERIOR -->
+<div class="topbar">
+    <a href="/dashboard"><i class="fas fa-arrow-left"></i> Intranet</a>
+    <div class="sep"></div>
+    <button onclick="nuevoDoc()"><i class="fas fa-file"></i> Nuevo</button>
+    <button onclick="abrirModal()"><i class="fas fa-folder-open"></i> Abrir</button>
+    <button onclick="importar()"><i class="fas fa-upload"></i> Importar .xlsx</button>
+    <div class="title"><input type="text" id="nombre" value="Sin título" placeholder="Sin título"></div>
+    <button class="btn-save" onclick="guardar()"><i class="fas fa-save"></i> Guardar</button>
+    <button onclick="exportar()"><i class="fas fa-download"></i> Exportar .xlsx</button>
+</div>
+
+<!-- EDITOR -->
+<div id="luckysheet"></div>
+
+<!-- MODAL ABRIR -->
+<div class="modal" id="modal">
+    <div class="mbox">
+        <div class="mhead">
+            <h3><i class="fas fa-folder-open" style="margin-right:6px;"></i>Abrir documento</h3>
+            <button class="mclose" onclick="cerrarModal()">&times;</button>
+        </div>
+        <div class="mbody" id="listaModal">
+            <div style="text-align:center;padding:24px;color:#aaa;font-size:11px;"><i class="fas fa-spinner fa-spin"></i></div>
+        </div>
+    </div>
+</div>
+
+<input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="onImportar(this)">
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/luckyexcel@1.0.1/dist/luckyexcel.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.js"></script>
+<script>
+let _path = null, _modalPath = '';
+
+// Inicializar con toolbar nativo completo
+luckysheet.create({
+    container: 'luckysheet',
+    lang: 'es',
+    showtoolbar: true,
+    showinfobar: false,
+    showstatisticBar: true,
+    sheetBottomConfig: true,
+    allowUpdate: true,
+    devicePixelRatio: window.devicePixelRatio,
+    data: [{ name:'Hoja1', index:0, status:1, order:0, celldata:[], config:{} }]
+});
+
+function nuevoDoc() {
+    if (!confirm('¿Crear nuevo documento? Guarda los cambios antes.')) return;
+    _path = null;
+    document.getElementById('nombre').value = 'Sin título';
+    luckysheet.destroy();
+    luckysheet.create({ container:'luckysheet', lang:'es', showtoolbar:true, showinfobar:false, showstatisticBar:true, sheetBottomConfig:true,
+        data:[{ name:'Hoja1', index:0, status:1, order:0, celldata:[], config:{} }] });
+}
+
+async function guardar() {
+    const nombre = (document.getElementById('nombre').value.trim() || 'Sin título').replace(/\.json$/, '');
+    try {
+        const res = await fetch('/api/editor_excel/guardar', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre, data: luckysheet.getAllSheets(), path: _path || '' })
+        });
+        const d = await res.json();
+        if (d.ok) { _path = d.path; toast('✓ Guardado'); }
+        else alert('Error: ' + d.error);
+    } catch(e) { alert('Error: ' + e); }
+}
+
+function exportar() {
+    const nombre = document.getElementById('nombre').value.trim() || 'documento';
+    try { luckysheet.exitEditMode(); LuckyExcel.transformLuckysheetToExcel(luckysheet.getAllSheets(), nombre + '.xlsx'); }
+    catch(e) { alert('Error exportando: ' + e); }
+}
+
+function importar() { document.getElementById('fileInput').click(); }
+function onImportar(input) {
+    const file = input.files[0]; if (!file) return;
+    document.getElementById('nombre').value = file.name.replace(/\.[^.]+$/, '');
+    LuckyExcel.transformExcelToLucky(file, function(j) {
+        if (!j?.sheets) { alert('No se pudo leer el archivo.'); return; }
+        luckysheet.destroy();
+        luckysheet.create({ container:'luckysheet', lang:'es', showtoolbar:true, showinfobar:false, showstatisticBar:true, sheetBottomConfig:true, data:j.sheets });
+        _path = null; toast('Archivo importado');
+    });
+    input.value = '';
+}
+
+async function abrirModal(path) {
+    _modalPath = path || '';
+    document.getElementById('modal').classList.add('open');
+    const cont = document.getElementById('listaModal');
+    cont.innerHTML = '<div style="text-align:center;padding:24px;color:#aaa;font-size:11px;"><i class="fas fa-spinner fa-spin"></i></div>';
+    try {
+        const d = await (await fetch('/api/archivos/listar?path=' + encodeURIComponent(_modalPath))).json();
+        const dirs = (d.items||[]).filter(i => i.tipo === 'carpeta');
+        const docs = (d.items||[]).filter(i => ['.json','.xlsx','.xls','.csv'].includes(i.ext));
+        let html = '';
+        if (_modalPath) {
+            const p = _modalPath.includes('/') ? _modalPath.split('/').slice(0,-1).join('/') : '';
+            html += `<div class="fd" onclick="abrirModal('${p}')"><i class="fas fa-arrow-left" style="color:#666;"></i> Volver</div>`;
+        }
+        dirs.forEach(c => { html += `<div class="fd" onclick="abrirModal('${c.ruta}')"><i class="fas fa-folder"></i>${c.nombre}</div>`; });
+        docs.forEach(f => { html += `<div class="fi" onclick="abrirDoc('${f.ruta}','${f.ext}','${f.nombre.replace(/'/g,"\\'")}')"><i class="fas ${f.ext==='.json'?'fa-table-cells':'fa-file-excel'}"></i>${f.nombre}<span class="dt">${f.fecha?f.fecha.split(' ')[0]:''}</span></div>`; });
+        if (!dirs.length && !docs.length) html = '<div style="text-align:center;padding:24px;color:#aaa;font-size:11px;">Sin documentos guardados</div>';
+        cont.innerHTML = html;
+    } catch(e) { cont.innerHTML = '<div style="color:red;padding:12px;font-size:11px;">Error al cargar</div>'; }
+}
+function cerrarModal() { document.getElementById('modal').classList.remove('open'); }
+
+async function abrirDoc(ruta, ext, nombre) {
+    cerrarModal();
+    if (ext === '.json') {
+        const d = await (await fetch('/archivos/ver/' + ruta)).json();
+        document.getElementById('nombre').value = nombre.replace(/\.json$/, '');
+        luckysheet.destroy();
+        luckysheet.create({ container:'luckysheet', lang:'es', showtoolbar:true, showinfobar:false, showstatisticBar:true, sheetBottomConfig:true, data:d.sheets });
+        _path = ruta; toast('Documento abierto');
+    } else {
+        const blob = await (await fetch('/archivos/ver/' + ruta)).blob();
+        document.getElementById('nombre').value = nombre.replace(/\.[^.]+$/, '');
+        LuckyExcel.transformExcelToLucky(new File([blob], nombre), function(j) {
+            if (!j?.sheets) { alert('No se pudo leer.'); return; }
+            luckysheet.destroy();
+            luckysheet.create({ container:'luckysheet', lang:'es', showtoolbar:true, showinfobar:false, showstatisticBar:true, sheetBottomConfig:true, data:j.sheets });
+            _path = null; toast('Archivo abierto');
+        });
+    }
+}
+
+function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 2500);
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
+document.getElementById('modal').addEventListener('click', function(e) { if (e.target === this) cerrarModal(); });
+</script>
+</body>
+</html>

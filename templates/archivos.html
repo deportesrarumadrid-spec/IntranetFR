@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Archivos — Intranet Club</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Montserrat', sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: #f8fafc; }
+
+        /* Mini barra superior solo si es página directa (no iframe) */
+        .arch-topbar { background:#1e293b; padding:10px 18px; display:flex; align-items:center; gap:12px; flex-shrink:0; }
+        .arch-topbar a { color:rgba(255,255,255,.7); font-size:11px; font-weight:900; text-decoration:none; display:flex; align-items:center; gap:6px; }
+        .arch-topbar a:hover { color:white; }
+        .arch-topbar-title { color:white; font-size:13px; font-weight:900; text-transform:uppercase; letter-spacing:.5px; }
+
+        .arch-container { display:flex; flex:1; overflow:hidden; }
+
+        /* Sidebar carpetas */
+        .arch-sidebar { width:200px; flex-shrink:0; background:white; border-right:1px solid #e2e8f0; overflow-y:auto; padding:12px 0; }
+        .arch-sidebar-title { font-size:9px; font-weight:900; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; padding:0 14px 8px; }
+        .arch-tree-item { display:flex; align-items:center; gap:7px; padding:6px 14px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b; transition:.1s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .arch-tree-item:hover { background:#f8fafc; }
+        .arch-tree-item.active { background:#fff0f0; color:#E31E24; }
+        .arch-tree-item i { color:#E31E24; width:14px; text-align:center; flex-shrink:0; }
+
+        /* Panel principal */
+        .arch-main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+
+        /* Barra de acciones */
+        .arch-toolbar { background:white; border-bottom:1px solid #e2e8f0; padding:9px 16px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex-shrink:0; }
+        .arch-breadcrumb { display:flex; align-items:center; gap:4px; flex:1; min-width:0; font-size:11px; font-weight:700; }
+        .arch-breadcrumb span { color:#E31E24; cursor:pointer; white-space:nowrap; }
+        .arch-breadcrumb span:hover { text-decoration:underline; }
+        .arch-breadcrumb .sep { color:#cbd5e1; }
+        .arch-btn { padding:6px 12px; font-size:9px; font-weight:900; border:none; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:5px; text-transform:uppercase; transition:.15s; border-radius:4px; }
+        .arch-btn-red { background:#E31E24; color:white; }
+        .arch-btn-red:hover { background:#c81a1f; }
+        .arch-btn-outline { background:white; color:#1e293b; border:1.5px solid #e2e8f0; }
+        .arch-btn-outline:hover { border-color:#E31E24; color:#E31E24; }
+
+        /* Grid de archivos */
+        .arch-grid-wrap { flex:1; overflow-y:auto; padding:16px; }
+        .arch-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; }
+        .arch-item { background:white; border:1px solid #e2e8f0; padding:12px 8px 8px; display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; transition:.15s; position:relative; border-radius:4px; }
+        .arch-item:hover { border-color:#E31E24; box-shadow:0 2px 8px rgba(227,30,36,.08); }
+        .arch-item-icon { font-size:28px; line-height:1; }
+        .arch-item-name { font-size:9px; font-weight:900; color:#1e293b; text-align:center; word-break:break-word; line-height:1.3; max-width:115px; }
+        .arch-item-meta { font-size:8px; color:#94a3b8; font-weight:700; }
+        .arch-item-del { position:absolute; top:3px; right:3px; background:transparent; border:none; color:#cbd5e1; cursor:pointer; font-size:10px; padding:2px; display:none; }
+        .arch-item:hover .arch-item-del { display:block; }
+        .arch-item-del:hover { color:#E31E24; }
+
+        /* Modal preview */
+        .arch-modal { display:none; position:fixed; z-index:9000; inset:0; background:rgba(0,0,0,.65); align-items:center; justify-content:center; }
+        .arch-modal.open { display:flex; }
+        .arch-modal-box { background:white; width:90vw; max-width:1000px; height:82vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.3); border-radius:8px; }
+        .arch-modal-header { background:#E31E24; color:white; padding:11px 18px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+        .arch-modal-title { font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.5px; }
+        .arch-modal-close { background:transparent; border:none; color:white; font-size:22px; cursor:pointer; line-height:1; padding:0; }
+        .arch-modal-body { flex:1; overflow:auto; padding:14px; }
+
+        #excelTable { border-collapse:collapse; font-size:11px; font-family:'Montserrat',sans-serif; min-width:100%; }
+        #excelTable th { background:#1e293b; color:white; padding:5px 9px; font-size:9px; font-weight:900; text-transform:uppercase; white-space:nowrap; border:1px solid #334155; }
+        #excelTable td { padding:4px 9px; border:1px solid #e2e8f0; color:#1e293b; font-weight:600; white-space:nowrap; }
+        #excelTable tr:nth-child(even) td { background:#f8fafc; }
+
+        .excel-sheet-tabs { display:flex; gap:4px; margin-bottom:10px; flex-wrap:wrap; }
+        .excel-sheet-tab { padding:4px 12px; font-size:10px; font-weight:900; border:1.5px solid #e2e8f0; background:white; cursor:pointer; font-family:inherit; }
+        .excel-sheet-tab.active { background:#E31E24; color:white; border-color:#E31E24; }
+
+        .arch-drop-zone { border:2px dashed #e2e8f0; padding:24px; text-align:center; margin:16px; transition:.15s; border-radius:8px; }
+        .arch-drop-zone.drag-over { border-color:#E31E24; background:#fff0f0; }
+        .arch-drop-zone p { font-size:10px; color:#94a3b8; font-weight:700; margin:6px 0 0; }
+
+        .arch-empty { text-align:center; padding:50px 20px; color:#94a3b8; }
+        .arch-empty i { font-size:40px; margin-bottom:10px; display:block; }
+        .arch-empty p { font-size:11px; font-weight:700; margin:0; }
+    </style>
+</head>
+<body>
+
+<!-- Topbar (solo visible cuando no está en iframe) -->
+<div class="arch-topbar" id="archTopbar">
+    <a href="/dashboard"><i class="fas fa-arrow-left"></i> Volver</a>
+    <span style="color:rgba(255,255,255,.3);">|</span>
+    <span class="arch-topbar-title"><i class="fas fa-folder-open" style="color:#f59e0b;margin-right:6px;"></i>Gestor de Archivos</span>
+</div>
+
+<div class="arch-container">
+    <div class="arch-sidebar">
+        <div class="arch-sidebar-title">Carpetas</div>
+        <div id="archTree"></div>
+    </div>
+    <div class="arch-main">
+        <div class="arch-toolbar">
+            <div class="arch-breadcrumb" id="archBreadcrumb"></div>
+            <button class="arch-btn arch-btn-outline" onclick="archNuevaCarpeta()">
+                <i class="fas fa-folder-plus"></i> Nueva carpeta
+            </button>
+            <button class="arch-btn arch-btn-red" onclick="document.getElementById('archUploadInput').click()">
+                <i class="fas fa-upload"></i> Subir archivo
+            </button>
+            <input type="file" id="archUploadInput" style="display:none;" multiple
+                   accept=".xlsx,.xls,.csv,.pdf,.doc,.docx,.png,.jpg,.jpeg,.txt"
+                   onchange="archSubirArchivos(this.files)">
+        </div>
+        <div class="arch-grid-wrap" id="archGridWrap"
+             ondragover="event.preventDefault(); this.querySelector('.arch-drop-zone')?.classList.add('drag-over')"
+             ondragleave="this.querySelector('.arch-drop-zone')?.classList.remove('drag-over')"
+             ondrop="archOnDrop(event)">
+            <div class="arch-drop-zone" id="archDropZone">
+                <i class="fas fa-cloud-upload-alt" style="font-size:24px; color:#cbd5e1;"></i>
+                <p>Arrastra archivos aquí para subirlos</p>
+            </div>
+            <div class="arch-grid" id="archGrid"></div>
+        </div>
+    </div>
+</div>
+
+<div class="arch-modal" id="archModal">
+    <div class="arch-modal-box">
+        <div class="arch-modal-header">
+            <span class="arch-modal-title" id="archModalTitle">Vista previa</span>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <a id="archModalDownload" href="#" download style="color:white; font-size:10px; font-weight:900; text-decoration:none;">
+                    <i class="fas fa-download"></i> Descargar
+                </a>
+                <button class="arch-modal-close" onclick="archCerrarModal()">&times;</button>
+            </div>
+        </div>
+        <div class="arch-modal-body" id="archModalBody"></div>
+    </div>
+</div>
+
+<script>
+    // Ocultar topbar si estamos en iframe
+    if (window.self !== window.top) {
+        document.getElementById('archTopbar').style.display = 'none';
+    }
+
+    let _archPath = '';
+    let _archWorkbook = null;
+
+    function archIcono(ext, tipo) {
+        if (tipo === 'carpeta') return '<i class="fas fa-folder" style="font-size:28px;color:#f59e0b;"></i>';
+        const m = {
+            '.xlsx':'<i class="fas fa-file-excel" style="color:#1d6f42;font-size:28px;"></i>',
+            '.xls': '<i class="fas fa-file-excel" style="color:#1d6f42;font-size:28px;"></i>',
+            '.csv': '<i class="fas fa-file-csv" style="color:#16a34a;font-size:28px;"></i>',
+            '.pdf': '<i class="fas fa-file-pdf" style="color:#dc2626;font-size:28px;"></i>',
+            '.doc': '<i class="fas fa-file-word" style="color:#2563eb;font-size:28px;"></i>',
+            '.docx':'<i class="fas fa-file-word" style="color:#2563eb;font-size:28px;"></i>',
+            '.png': '<i class="fas fa-file-image" style="color:#7c3aed;font-size:28px;"></i>',
+            '.jpg': '<i class="fas fa-file-image" style="color:#7c3aed;font-size:28px;"></i>',
+            '.jpeg':'<i class="fas fa-file-image" style="color:#7c3aed;font-size:28px;"></i>',
+        };
+        return m[ext] || '<i class="fas fa-file" style="color:#64748b;font-size:28px;"></i>';
+    }
+
+    function archFormatSize(b) {
+        if (!b) return '';
+        if (b < 1024) return b + ' B';
+        if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+        return (b/1048576).toFixed(1) + ' MB';
+    }
+
+    async function archCargar(path) {
+        _archPath = path || '';
+        archRenderBreadcrumb();
+        archRenderTree();
+        const grid = document.getElementById('archGrid');
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#94a3b8;font-size:12px;font-weight:700;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+        try {
+            const res  = await fetch(`/api/archivos/listar?path=${encodeURIComponent(_archPath)}`);
+            const data = await res.json();
+            if (data.error) { grid.innerHTML = `<div style="color:red;padding:20px;">${data.error}</div>`; return; }
+            archRenderGrid(data.items);
+        } catch(e) { grid.innerHTML = '<div style="color:red;padding:20px;">Error al cargar</div>'; }
+    }
+
+    function archRenderGrid(items) {
+        const grid = document.getElementById('archGrid');
+        if (!items.length) { grid.innerHTML = '<div class="arch-empty" style="grid-column:1/-1;"><i class="fas fa-folder-open"></i><p>Carpeta vacía</p></div>'; return; }
+        grid.innerHTML = items.map(it => `
+            <div class="arch-item" ondblclick="archAbrir('${it.ruta}','${it.tipo}','${it.ext}','${it.nombre.replace(/'/g,"\\'")}')">
+                <button class="arch-item-del" onclick="event.stopPropagation();archEliminar('${it.ruta}','${it.nombre.replace(/'/g,"\\'")}','${it.tipo}')" title="Eliminar"><i class="fas fa-times"></i></button>
+                ${archIcono(it.ext, it.tipo)}
+                <div class="arch-item-name" title="${it.nombre}">${it.nombre}</div>
+                <div class="arch-item-meta">${it.tipo==='carpeta' ? '' : archFormatSize(it.tamano)}</div>
+                <div class="arch-item-meta">${it.fecha}</div>
+            </div>`).join('');
+    }
+
+    async function archRenderTree() {
+        const tree = document.getElementById('archTree');
+        try {
+            const res  = await fetch('/api/archivos/listar?path=');
+            const data = await res.json();
+            const carpetas = (data.items||[]).filter(i=>i.tipo==='carpeta');
+            let html = `<div class="arch-tree-item ${!_archPath?'active':''}" onclick="archCargar('')"><i class="fas fa-home"></i> Inicio</div>`;
+            html += carpetas.map(c=>`<div class="arch-tree-item ${_archPath.startsWith(c.ruta)?'active':''}" onclick="archCargar('${c.ruta}')"><i class="fas fa-folder"></i> ${c.nombre}</div>`).join('');
+            tree.innerHTML = html;
+        } catch(e) {}
+    }
+
+    function archRenderBreadcrumb() {
+        const bc = document.getElementById('archBreadcrumb');
+        const partes = _archPath.split('/').filter(Boolean);
+        let html = `<span onclick="archCargar('')"><i class="fas fa-folder-open" style="color:#E31E24;margin-right:4px;"></i>Inicio</span>`;
+        let acc = '';
+        partes.forEach(p => {
+            acc += (acc ? '/' : '') + p;
+            const r = acc;
+            html += `<span class="sep">/</span><span onclick="archCargar('${r}')">${p}</span>`;
+        });
+        bc.innerHTML = html;
+    }
+
+    function archAbrir(ruta, tipo, ext, nombre) {
+        if (tipo === 'carpeta') { archCargar(ruta); return; }
+        const url = `/archivos/ver/${ruta}`;
+        if (['.xlsx','.xls','.csv'].includes(ext)) archAbrirExcel(url, nombre);
+        else if (ext === '.pdf') archAbrirModal(nombre, url, 'pdf');
+        else if (['.png','.jpg','.jpeg','.gif','.webp'].includes(ext)) archAbrirModal(nombre, url, 'img');
+        else window.open(url, '_blank');
+    }
+
+    function archAbrirModal(nombre, url, tipo) {
+        document.getElementById('archModalTitle').textContent = nombre;
+        document.getElementById('archModalDownload').href = url;
+        document.getElementById('archModalDownload').download = nombre;
+        const body = document.getElementById('archModalBody');
+        body.innerHTML = tipo === 'pdf'
+            ? `<iframe src="${url}" style="width:100%;height:100%;border:none;min-height:500px;"></iframe>`
+            : `<img src="${url}" style="max-width:100%;max-height:100%;display:block;margin:auto;">`;
+        document.getElementById('archModal').classList.add('open');
+    }
+
+    async function archAbrirExcel(url, nombre) {
+        document.getElementById('archModalTitle').textContent = nombre;
+        document.getElementById('archModalDownload').href = url;
+        document.getElementById('archModalDownload').download = nombre;
+        const body = document.getElementById('archModalBody');
+        body.innerHTML = '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:28px;color:#E31E24;"></i></div>';
+        document.getElementById('archModal').classList.add('open');
+        try {
+            const ab = await (await fetch(url)).arrayBuffer();
+            _archWorkbook = XLSX.read(ab, { type:'array' });
+            archRenderExcelSheet(0);
+        } catch(e) { body.innerHTML = `<div style="color:red;padding:20px;">Error: ${e}</div>`; }
+    }
+
+    function archRenderExcelSheet(idx) {
+        const body   = document.getElementById('archModalBody');
+        const sheets = _archWorkbook.SheetNames;
+        const data   = XLSX.utils.sheet_to_json(_archWorkbook.Sheets[sheets[idx]], { header:1, defval:'' });
+        const tabs   = sheets.map((s,i)=>`<button class="excel-sheet-tab ${i===idx?'active':''}" onclick="archRenderExcelSheet(${i})">${s}</button>`).join('');
+        if (!data.length) { body.innerHTML = `<div class="excel-sheet-tabs">${tabs}</div><p style="color:#94a3b8;font-size:11px;">Hoja vacía</p>`; return; }
+        const hdrs = data[0];
+        const thead = `<tr>${hdrs.map(h=>`<th>${h??''}</th>`).join('')}</tr>`;
+        const tbody = data.slice(1).map(r=>`<tr>${hdrs.map((_,ci)=>`<td>${r[ci]??''}</td>`).join('')}</tr>`).join('');
+        body.innerHTML = `<div class="excel-sheet-tabs">${tabs}</div><div style="overflow:auto;"><table id="excelTable"><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`;
+    }
+
+    function archCerrarModal() {
+        document.getElementById('archModal').classList.remove('open');
+        document.getElementById('archModalBody').innerHTML = '';
+        _archWorkbook = null;
+    }
+
+    async function archNuevaCarpeta() {
+        const nombre = prompt('Nombre de la nueva carpeta:');
+        if (!nombre?.trim()) return;
+        const res  = await fetch('/api/archivos/carpeta', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({path:_archPath,nombre:nombre.trim()}) });
+        const data = await res.json();
+        if (data.ok) archCargar(_archPath); else alert('Error: '+data.error);
+    }
+
+    async function archSubirArchivos(files) {
+        if (!files?.length) return;
+        for (const f of files) {
+            const fd = new FormData(); fd.append('path', _archPath); fd.append('archivo', f);
+            await fetch('/api/archivos/subir', { method:'POST', body:fd });
+        }
+        archCargar(_archPath);
+        document.getElementById('archUploadInput').value = '';
+    }
+
+    function archOnDrop(e) {
+        e.preventDefault();
+        document.getElementById('archDropZone')?.classList.remove('drag-over');
+        if (e.dataTransfer.files.length) archSubirArchivos(e.dataTransfer.files);
+    }
+
+    async function archEliminar(ruta, nombre, tipo) {
+        if (!confirm(tipo==='carpeta' ? `¿Eliminar carpeta "${nombre}" y todo su contenido?` : `¿Eliminar "${nombre}"?`)) return;
+        const res  = await fetch('/api/archivos/eliminar', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ruta}) });
+        const data = await res.json();
+        if (data.ok) archCargar(_archPath); else alert('Error: '+data.error);
+    }
+
+    document.addEventListener('keydown', e => { if (e.key==='Escape') archCerrarModal(); });
+    document.getElementById('archModal').addEventListener('click', function(e) { if(e.target===this) archCerrarModal(); });
+
+    archCargar('');
+</script>
+</body>
+</html>
