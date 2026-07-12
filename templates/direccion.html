@@ -554,11 +554,16 @@
             <option value="{{ eq }}">{{ eq }}</option>
             {% endfor %}
         </select>
-        <div style="margin-bottom: 25px; display: flex; gap: 14px; align-items: center; flex-wrap:wrap;">
-            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <div style="margin-bottom: 8px;">
+            <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px;">
                 <button class="btn-fin coord-subtab-btn" style="background:#E31E24;color:white;padding:0 14px;font-size:10px;height:36px;border-radius:8px;letter-spacing:.3px;" onclick="coordActivarSubTab('metodologia',this)">COOR. METODOLOGÍA</button>
                 <button class="btn-fin coord-subtab-btn" style="padding:0 14px;font-size:10px;height:36px;border-radius:8px;background:#f1f5f9;color:#475569;letter-spacing:.3px;" onclick="coordActivarSubTab('individual',this)">COOR. DESARROLLO INDV</button>
             </div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <button id="btnTareasMetodologia" onclick="abrirTareasSemanal('metodologia')" style="padding:0 10px;font-size:9px;height:24px;border-radius:5px;border:1.5px solid #0f766e;background:#f0fdf4;color:#0f766e;font-weight:900;cursor:pointer;letter-spacing:.3px;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-list-check"></i> TAREAS SEMANAL — METODOLOGÍA</button>
+                <button id="btnTareasIndividual" onclick="abrirTareasSemanal('individual')" style="display:none;padding:0 10px;font-size:9px;height:24px;border-radius:5px;border:1.5px solid #0f766e;background:#f0fdf4;color:#0f766e;font-weight:900;cursor:pointer;letter-spacing:.3px;align-items:center;gap:4px;"><i class="fas fa-list-check"></i> TAREAS SEMANAL — DESARROLLO INDV</button>
+            </div>
+            <div style="display:flex; gap:14px; align-items:center; margin-top:14px; flex-wrap:wrap;">
             <div style="flex: 1; max-width: 250px; display: none;" id="containerBusquedaJug">
                 <label style="font-size: 10px; font-weight: 900; color: #999; display: block; margin-bottom: 5px;">FILTRAR JUGADOR</label>
                 <div style="position: relative;">
@@ -566,6 +571,7 @@
                 </div>
             </div>
             <h2 id="tituloEquipoCoord" style="margin: 0; font-size: 22px; font-weight: 900; color: #E31E24; text-transform: uppercase; display: none;"></h2>
+            </div>
         </div>
 
         <div id="coord-sub-individual" class="coord-subvista" style="display:none;">
@@ -1423,6 +1429,17 @@
             <div id="formAudioBadge" style="text-align: center; font-size: 12px; font-weight: 800; padding: 12px; border-radius: 10px; margin-top: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid transparent;">-</div>
         </div>
     </div>
+</div>
+
+<!-- MODAL TAREAS SEMANAL COORDINACIÓN -->
+<div id="modalTareasSemanal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:30000;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:white;border-radius:16px;width:1200px;max-width:98vw;max-height:92vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.35);display:flex;flex-direction:column;">
+    <div style="background:#0f766e;color:white;padding:18px 26px;border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;position:sticky;top:0;z-index:1;">
+      <span style="font-weight:900;font-size:15px;letter-spacing:.4px;"><i class="fas fa-list-check" style="margin-right:10px;"></i><span id="modalTareasTitulo">TAREAS SEMANALES</span></span>
+      <span onclick="document.getElementById('modalTareasSemanal').style.display='none'" style="cursor:pointer;font-size:26px;line-height:1;opacity:.8;">&times;</span>
+    </div>
+    <div id="modalTareasBody" style="padding:0;overflow-x:auto;"></div>
+  </div>
 </div>
 
 <!-- MODAL VISOR FOTO + OBJETIVOS (al pulsar VER en Revisión de Objetivos) -->
@@ -2889,6 +2906,126 @@
         document.querySelectorAll('.coord-subvista').forEach(function(v) { v.style.display = 'none'; });
         var el = document.getElementById('coord-sub-' + sub);
         if (el) el.style.display = '';
+        // Mostrar solo el botón de tareas semanal del tab activo
+        var bMet = document.getElementById('btnTareasMetodologia');
+        var bInd = document.getElementById('btnTareasIndividual');
+        if (bMet) bMet.style.display = sub === 'metodologia' ? 'inline-flex' : 'none';
+        if (bInd) bInd.style.display = sub === 'individual'  ? 'inline-flex' : 'none';
+    }
+
+    // ── TAREAS SEMANALES COORDINACIÓN ─────────────────────────────────────────
+    const _TAREAS_COORD = {
+        metodologia: {
+            titulo: 'COOR. METODOLOGÍA — Tareas semanales',
+            grupos: [
+                {
+                    color: null,
+                    filas: [
+                        { lunes: 'VISIONADO ENTRENAMIENTOS', martes: 'VISIONADO ENTRENAMIENTOS', miercoles: 'VISIONADO ENTRENAMIENTOS', jueves: 'VISIONADO ENTRENAMIENTOS', sd: 'AUDIO POSTPARTIDO' },
+                        { lunes: 'ASISTENCIAS/CONVOCATORIAS', martes: 'ASISTENCIAS/CONVOCATORIAS', miercoles: 'ASISTENCIAS/CONVOCATORIAS', jueves: 'ASISTENCIAS/CONVOCATORIAS', sd: '' },
+                    ]
+                },
+                {
+                    color: null,
+                    filas: [
+                        { lunes: 'Revisión diaria hojas entrenamiento Ejer + Metodología', martes: 'Revisión diaria hojas entrenamiento', miercoles: 'Revisión diaria hojas entrenamiento', jueves: 'Revisión diaria hojas entrenamiento Ejer + Metodología', sd: '' },
+                        { lunes: 'INFORME POST PARTIDOS', martes: '', miercoles: '', jueves: '', sd: '' },
+                    ]
+                },
+                {
+                    color: null,
+                    filas: [
+                        { lunes: 'GPS nivel equipo/temporada', martes: 'GPS nivel equipo/temporada', miercoles: 'GPS nivel equipo/temporada', jueves: 'GPS nivel equipo/temporada', sd: '' },
+                    ]
+                },
+                {
+                    color: '#0f766e',
+                    filas: [
+                        { lunes: 'MINICHARLA LUN/MART POST PARTIDO', martes: 'MINICHARLA LUN/MART POST PARTIDO', miercoles: '', jueves: '', sd: '' },
+                    ]
+                },
+                {
+                    color: '#0f766e',
+                    filas: [
+                        { lunes: 'CHARLAS 15 MIN POST ENTRENOS-SEMANAL', martes: 'CHARLAS 15 MIN POST ENTRENOS-SEMANAL', miercoles: 'CHARLAS 15 MIN POST ENTRENOS-SEMANAL', jueves: 'CHARLAS 15 MIN POST ENTRENOS-SEMANAL', sd: '' },
+                    ]
+                },
+            ]
+        },
+        individual: {
+            titulo: 'COOR. DESARROLLO INDV — Tareas semanales',
+            grupos: [
+                {
+                    color: null,
+                    filas: [
+                        { lunes: 'SEGUIMIENTO JUGADORES ENTRENOS PARTIDOS', martes: 'SEGUIMIENTO JUGADORES ENTRENOS PARTIDOS', miercoles: 'SEGUIMIENTO JUGADORES ENTRENOS PARTIDOS', jueves: 'SEGUIMIENTO JUGADORES ENTRENOS PARTIDOS', sd: 'AUDIO POSTPARTIDO' },
+                        { lunes: 'ASISTENCIAS/CONVOCATORIAS', martes: 'ASISTENCIAS/CONVOCATORIAS', miercoles: 'ASISTENCIAS/CONVOCATORIAS', jueves: 'ASISTENCIAS/CONVOCATORIAS', sd: '' },
+                        { lunes: 'INFORME POST PARTIDOS — NOTAS ENTRENAMIENTOS', martes: 'NOTAS ENTRENAMIENTOS', miercoles: 'NOTAS ENTRENAMIENTOS', jueves: 'NOTAS ENTRENAMIENTOS', sd: '' },
+                    ]
+                },
+                {
+                    color: null,
+                    filas: [
+                        { lunes: 'GPS nivel jugador', martes: 'GPS nivel jugador', miercoles: 'GPS nivel jugador', jueves: 'GPS nivel jugador', sd: '' },
+                    ]
+                },
+                {
+                    color: null,
+                    filas: [
+                        { lunes: 'MINICHARLA 2 MEJOR/PEOR PARTIDOS', martes: 'MINICHARLA 2 MEJOR/PEOR PARTIDOS', miercoles: '', jueves: '', sd: '' },
+                    ]
+                },
+                {
+                    color: '#0f766e',
+                    filas: [
+                        { lunes: 'CHARLAS POSICIONES FORMACION', martes: 'CHARLAS POSICIONES FORMACION', miercoles: 'CHARLAS POSICIONES FORMACION', jueves: 'CHARLAS POSICIONES FORMACION', sd: '' },
+                        { lunes: 'CHARLAS IND POST PARTIDO', martes: 'CHARLAS IND POST PARTIDO', miercoles: 'CHARLAS IND POST PARTIDO', jueves: 'CHARLAS IND POST PARTIDO', sd: '' },
+                    ]
+                },
+            ]
+        }
+    };
+
+    function abrirTareasSemanal(tipo) {
+        const cfg  = _TAREAS_COORD[tipo];
+        if (!cfg) return;
+        document.getElementById('modalTareasTitulo').textContent = cfg.titulo;
+        const DIAS = ['lunes','martes','miercoles','jueves','sd'];
+        const LABS = ['LUNES','MARTES','MIÉRCOLES','JUEVES','S/D'];
+        const VBR  = '3px solid #0f766e'; // línea vertical entre días
+
+        let html = `<table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;">
+            <colgroup>
+                <col style="width:21%"><col style="width:21%"><col style="width:21%"><col style="width:21%"><col style="width:16%">
+            </colgroup>
+            <thead>
+                <tr style="background:#0f766e;">
+                    ${LABS.map((l,i) => `<th style="padding:13px 16px;font-size:11px;font-weight:900;color:white;text-align:left;letter-spacing:.5px;${i>0?'border-left:'+VBR+';':''}">${l}</th>`).join('')}
+                </tr>
+            </thead>
+            <tbody>`;
+
+        cfg.grupos.forEach((g, gi) => {
+            const isDark  = !!g.color;
+            const bg      = g.color || (gi % 2 === 0 ? '#ffffff' : '#f8fafc');
+            const txtCol  = isDark ? 'white' : '#1e293b';
+            const rowBdr  = isDark ? '1px solid rgba(255,255,255,.15)' : '1px solid #e8edf2';
+            const colBdr  = isDark ? VBR.replace('#0f766e','rgba(255,255,255,.3)') : VBR;
+
+            g.filas.forEach(fila => {
+                html += `<tr style="background:${bg};border-bottom:${rowBdr};">
+                    ${DIAS.map((d,i) => {
+                        const val = fila[d] || '';
+                        return `<td style="padding:12px 16px;font-weight:${isDark?'900':'700'};font-size:${isDark?'12':'12'}px;color:${val?txtCol:'#c9d1da'};vertical-align:top;${i>0?'border-left:'+colBdr+';':''}line-height:1.4;">${val || '—'}</td>`;
+                    }).join('')}
+                </tr>`;
+            });
+            html += `<tr style="height:8px;background:white;border-bottom:2px solid #e2e8f0;"><td colspan="5"></td></tr>`;
+        });
+
+        html += '</tbody></table>';
+        document.getElementById('modalTareasBody').innerHTML = html;
+        document.getElementById('modalTareasSemanal').style.display = 'flex';
     }
 
     // --- INFORME DE COLORES DE EQUIPACIÓN DE RIVALES (VISITANTE) ---

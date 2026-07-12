@@ -125,6 +125,7 @@
                 {% endif %}
             </select>
             <button class="gps-btn gps-btn-red" onclick="gpsAbrirSubida()"><i class="fas fa-upload"></i> SUBIR INFORME GPS</button>
+            <button class="gps-btn" onclick="gpsFRAbrirModal()" style="background:white;border:2px solid #6366f1;color:#6366f1;font-weight:900;"><i class="fas fa-calculator"></i> VALORACIÓN FR</button>
         </div>
     </div>
 
@@ -420,6 +421,25 @@
     </div>
 </div>
 
+<!-- MODAL VALORACIÓN FR -->
+<div id="gpsFRModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20000;align-items:center;justify-content:center;overflow-y:auto;padding:20px;">
+    <div style="background:white;border-radius:20px;width:860px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+        <div style="padding:20px 24px 14px;border-bottom:1px solid #f1f5f9;position:sticky;top:0;background:white;z-index:2;border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+                <div style="font-size:9px;font-weight:800;color:#6366f1;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;"><i class="fas fa-calculator"></i> VALORACIÓN FR — PESOS</div>
+                <div style="font-size:15px;font-weight:900;color:#1e293b;">Rendimiento y Fatiga GPS</div>
+                <div style="font-size:11px;color:#64748b;font-weight:700;margin-top:2px;">Puntuación 1–10 · Fórmula: Score = Σ( min(10, valor÷ideal × 10) × peso ) ÷ Σpesos</div>
+            </div>
+            <button onclick="document.getElementById('gpsFRModal').style.display='none'" style="background:#f1f5f9;border:none;border-radius:8px;padding:6px 10px;font-size:14px;cursor:pointer;color:#64748b;flex-shrink:0;">✕</button>
+        </div>
+        <div style="padding:20px 24px;" id="gpsFRModalBody"></div>
+        <div style="padding:0 24px 20px;display:flex;gap:10px;justify-content:flex-end;">
+            <button onclick="gpsFRResetPesos()" style="padding:9px 20px;border:2px solid #e2e8f0;border-radius:10px;background:white;color:#64748b;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;">RESTAURAR DEFAULTS</button>
+            <button onclick="gpsFRGuardarPesos()" style="padding:9px 20px;border:none;border-radius:10px;background:#6366f1;color:white;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;"><i class="fas fa-floppy-disk"></i> GUARDAR PESOS</button>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL SUBIR INFORME GPS -->
 <div id="gpsModalSubida" class="modal" style="display:none; position:fixed; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:10005; align-items:center; justify-content:center;">
     <div style="background:white; border-radius:20px; width:420px; max-width:92vw; padding:30px; box-sizing:border-box;">
@@ -589,6 +609,254 @@ const GPS_KPI_BENCHMARKS = {
         'Aficionado': { ENT:[8,13],  PART:[18,28] },
     },
 };
+// ──────────────────────────────────────────────────────────────────────────────
+// ── VALORACIÓN FR (Rendimiento + Fatiga) ─────────────────────────────────────
+const GPS_FR_WEIGHTS_DEFAULT = {
+    rendimiento: [
+        {col:'Distancia Por Minuto',                              key:'dist_min', peso:25},
+        {col:'Máxima Velocidad',                                  key:'vel_max',  peso:20},
+        {col:'Sprints',                                           key:'sprints',  peso:20},
+        {col:'Distancia de Alta Carga Metabólica',                key:'hmld',     peso:15},
+        {col:'Distancia de Alta Velocidad por Minuto (Absoluta)', key:'hsr_min',  peso:20},
+    ],
+    fatiga: [
+        {col:'Deceleraciones (Absoluta)',                         key:'des',      peso:35},
+        {col:'Distancia de Alta Carga Metabólica por Minuto',     key:'hmld_min', peso:30},
+        {col:'Sprints',                                           key:'sprints',  peso:20},
+        {col:'Distancia de Alta Carga Metabólica',                key:'hmld',     peso:15},
+    ],
+};
+let _gpsFRWeights = JSON.parse(JSON.stringify(GPS_FR_WEIGHTS_DEFAULT));
+
+async function gpsFRLoadWeights() {
+    try {
+        const r = await fetch('/api/gps/fr_weights');
+        const d = await r.json();
+        if (d.status === 'ok' && d.weights) _gpsFRWeights = d.weights;
+    } catch(e) {}
+}
+
+function _gpsFRGetIdeal(cat, tipo, pos, key) {
+    if (key === 'sprints') {
+        const r = GPS_KPI_BENCHMARKS.sprints_por_categoria?.[cat]?.[tipo];
+        if (!r) return null;
+        return Array.isArray(r) ? (r[0] + r[1]) / 2 : r;
+    }
+    const posData = GPS_KPI_BENCHMARKS.por_categoria?.[cat]?.[pos]?.[tipo];
+    if (!posData) return null;
+    const v = posData[key];
+    if (v == null) return null;
+    return Array.isArray(v) ? (v[0] + v[1]) / 2 : v;
+}
+
+// valoresJugador: { colName: valorGPS }  (en unidades GPS brutas)
+function gpsFRCalcScore(valoresJugador, categoria, tipoSesion, posicion) {
+    if (!posicion || !categoria) return {rendimiento:{score:null,detalle:[]}, fatiga:{score:null,detalle:[]}};
+    const result = {};
+    for (const tipo of ['rendimiento','fatiga']) {
+        const metricas = (_gpsFRWeights || GPS_FR_WEIGHTS_DEFAULT)[tipo] || [];
+        let totalPeso = 0, totalScore = 0;
+        const detalle = [];
+        for (const m of metricas) {
+            const factorEntry = GPS_KPI_BENCHMARKS.mapeo_columnas[m.col];
+            if (!factorEntry) { detalle.push({...m, valorReal:null, ideal:null, scoreM:null}); continue; }
+            const raw = valoresJugador[m.col];
+            if (raw == null) { detalle.push({...m, valorReal:null, ideal:null, scoreM:null}); continue; }
+            const valorBench = raw * factorEntry.factor;
+            const ideal = _gpsFRGetIdeal(categoria, tipoSesion, posicion, m.key);
+            if (!ideal) { detalle.push({...m, valorReal:valorBench, ideal:null, scoreM:null}); continue; }
+            const ratio = valorBench / ideal;
+            const scoreM = Math.min(10, ratio * 10);
+            totalPeso  += m.peso;
+            totalScore += scoreM * m.peso;
+            detalle.push({...m, valorReal:valorBench, ideal, ratio, scoreM});
+        }
+        result[tipo] = { score: totalPeso > 0 ? totalScore / totalPeso : null, detalle };
+    }
+    return result;
+}
+
+const _gpsFRCache = {}; // clave → { score, detalle }
+let _gpsFRCacheIdx = 0;
+
+function gpsFRCirculosHTML(rend, fat, size, detalleRend, detalleFat) {
+    const s  = size || 24;
+    const bw = 2;
+    const fs = s <= 24 ? 9 : 11;
+    const fmt = v => {
+        if (v == null) return '—';
+        const n = Math.round(v * 10) / 10;
+        return n % 1 === 0 ? String(n) : n.toFixed(1);
+    };
+    const idxR = _gpsFRCacheIdx++;
+    const idxF = _gpsFRCacheIdx++;
+    _gpsFRCache[idxR] = { tipo:'Rendimiento', score: fmt(rend), detalle: detalleRend };
+    _gpsFRCache[idxF] = { tipo:'Fatiga',      score: fmt(fat),  detalle: detalleFat  };
+    return `<div style="display:flex;gap:4px;align-items:center;margin-top:4px;">
+        <div title="Rendimiento FR — clic para ver cálculo"
+            style="width:${s}px;height:${s}px;border-radius:50%;border:${bw}px solid #E31E24;background:white;color:#1e293b;display:flex;align-items:center;justify-content:center;font-size:${fs}px;font-weight:900;flex-shrink:0;cursor:pointer;user-select:none;"
+            onclick="gpsFRCtxMenuIdx(event,${idxR})">${fmt(rend)}</div>
+        <div title="Fatiga FR — clic para ver cálculo"
+            style="width:${s}px;height:${s}px;border-radius:50%;border:${bw}px solid #22d3ee;background:white;color:#1e293b;display:flex;align-items:center;justify-content:center;font-size:${fs}px;font-weight:900;flex-shrink:0;cursor:pointer;user-select:none;"
+            onclick="gpsFRCtxMenuIdx(event,${idxF})">${fmt(fat)}</div>
+    </div>`;
+}
+
+function gpsFRCtxMenuIdx(e, idx) {
+    const d = _gpsFRCache[idx];
+    if (!d) return;
+    gpsFRCtxMenu(e, d.tipo, d.score, d.detalle);
+}
+
+function gpsFRCtxMenu(e, tipo, score, detalle) {
+    e.preventDefault();
+    e.stopPropagation();
+    document.querySelectorAll('.gps-fr-ctx').forEach(m => m.remove());
+    const menu = document.createElement('div');
+    menu.className = 'gps-fr-ctx';
+    menu.style.cssText = `position:fixed;top:${e.clientY}px;left:${e.clientX}px;background:white;border-radius:12px;
+        box-shadow:0 8px 30px rgba(0,0,0,.22);z-index:40000;min-width:280px;font-family:inherit;overflow:hidden;`;
+    const color = tipo === 'Rendimiento' ? '#E31E24' : '#22d3ee';
+    let rows = '';
+    if (detalle && detalle.length) {
+        rows = detalle.map(m => {
+            const label = (m.col||'').replace(' (Absoluta)','').replace(' por Minuto','/ min');
+            const fmtN = v => v == null ? '—' : (Math.round(v*100)/100).toLocaleString('es-ES',{maximumFractionDigits:2});
+            const scoreM = m.scoreM != null ? (Math.round(m.scoreM*10)/10).toFixed(1) : '—';
+            const color2 = m.scoreM == null ? '#94a3b8' : m.scoreM >= 7 ? '#16a34a' : m.scoreM >= 4 ? '#d97706' : '#dc2626';
+            return `<tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:5px 10px;font-size:10px;font-weight:700;color:#334155;">${label}</td>
+                <td style="padding:5px 8px;text-align:right;font-size:10px;color:#64748b;">${fmtN(m.valorReal)}</td>
+                <td style="padding:5px 8px;text-align:right;font-size:10px;color:#94a3b8;">${fmtN(m.ideal)}</td>
+                <td style="padding:5px 10px;text-align:right;font-size:10px;font-weight:900;color:${color2};">${scoreM}</td>
+                <td style="padding:5px 8px;text-align:right;font-size:9px;color:#94a3b8;">${m.peso}%</td>
+            </tr>`;
+        }).join('');
+    }
+    menu.innerHTML = `
+        <div style="padding:10px 12px;background:${color === '#E31E24' ? '#fff5f5' : '#f0fdff'};border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+            <div style="width:28px;height:28px;border-radius:50%;border:2px solid ${color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#1e293b;">${score}</div>
+            <div>
+                <div style="font-size:11px;font-weight:900;color:#1e293b;">${tipo} FR</div>
+                <div style="font-size:9px;color:#64748b;font-weight:700;">Puntuación ponderada 1–10</div>
+            </div>
+        </div>
+        ${rows ? `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">
+            <thead><tr style="background:#f8fafc;">
+                <th style="padding:4px 10px;text-align:left;font-size:9px;color:#94a3b8;font-weight:800;">MÉTRICA</th>
+                <th style="padding:4px 8px;text-align:right;font-size:9px;color:#94a3b8;font-weight:800;">VALOR</th>
+                <th style="padding:4px 8px;text-align:right;font-size:9px;color:#94a3b8;font-weight:800;">IDEAL</th>
+                <th style="padding:4px 10px;text-align:right;font-size:9px;color:#94a3b8;font-weight:800;">SCORE</th>
+                <th style="padding:4px 8px;text-align:right;font-size:9px;color:#94a3b8;font-weight:800;">PESO</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+        </table></div>` : `<div style="padding:12px;font-size:11px;color:#94a3b8;text-align:center;">Sin posición asignada</div>`}`;
+    document.body.appendChild(menu);
+    // Ajustar posición si sale de pantalla
+    const rect = menu.getBoundingClientRect();
+    if (rect.right > window.innerWidth - 10)  menu.style.left = Math.max(10, e.clientX - rect.width) + 'px';
+    if (rect.bottom > window.innerHeight - 10) menu.style.top  = Math.max(10, e.clientY - rect.height) + 'px';
+    const close = () => { menu.remove(); document.removeEventListener('click', close); };
+    setTimeout(() => document.addEventListener('click', close), 60);
+}
+
+function gpsFRAbrirModal() {
+    document.getElementById('gpsFRModal').style.display = 'flex';
+    gpsFRRenderModal();
+}
+
+function gpsFRRenderModal() {
+    const w = _gpsFRWeights || GPS_FR_WEIGHTS_DEFAULT;
+    const renderSeccion = (titulo, tipoClave, color) => {
+        const metricas = w[tipoClave] || [];
+        const totalPeso = metricas.reduce((s,m) => s + (m.peso||0), 0);
+        const rows = metricas.map((m,i) => {
+            const label = m.col.replace(' (Absoluta)','').replace(' por Minuto','/ min');
+            return `<tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:8px 14px;font-size:12px;font-weight:700;color:#334155;">${label}</td>
+                <td style="padding:8px 10px;text-align:center;">
+                    <input type="number" min="0" max="100" value="${m.peso||0}"
+                        id="gpsFRPeso_${tipoClave}_${i}"
+                        style="width:62px;text-align:center;border:1.5px solid #e2e8f0;border-radius:6px;padding:4px 6px;font-size:12px;font-weight:700;font-family:inherit;"
+                        oninput="gpsFRActualizarTotal('${tipoClave}')">
+                </td>
+                <td style="padding:8px 14px;min-width:140px;">
+                    <div style="height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden;">
+                        <div style="height:100%;background:${color};width:${Math.min(100,m.peso||0)}%;border-radius:4px;transition:width .2s;" id="gpsFRBar_${tipoClave}_${i}"></div>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+        return `<div style="margin-bottom:24px;">
+            <div style="font-size:10px;font-weight:900;color:${color};text-transform:uppercase;margin-bottom:10px;letter-spacing:.5px;">
+                <i class="fas fa-circle" style="font-size:8px;margin-right:5px;"></i>${titulo}
+            </div>
+            <table style="width:100%;border-collapse:collapse;border:1px solid #f1f5f9;border-radius:10px;overflow:hidden;">
+                <thead><tr style="background:#1e293b;">
+                    <th style="padding:8px 14px;text-align:left;font-size:10px;color:white;font-weight:800;">MÉTRICA</th>
+                    <th style="padding:8px 10px;text-align:center;font-size:10px;color:white;font-weight:800;">PESO (%)</th>
+                    <th style="padding:8px 14px;font-size:10px;color:white;font-weight:800;">PROPORCIÓN</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+                <tfoot><tr style="background:#f8fafc;">
+                    <td style="padding:7px 14px;font-size:11px;font-weight:900;color:#334155;">TOTAL</td>
+                    <td id="gpsFRTotal_${tipoClave}" style="padding:7px 10px;text-align:center;font-size:12px;font-weight:900;color:${totalPeso===100?'#16a34a':'#dc2626'};">${totalPeso}%</td>
+                    <td style="padding:7px 14px;font-size:10px;color:${totalPeso===100?'#16a34a':'#dc2626'};font-weight:700;">${totalPeso===100?'✓ Correcto':'⚠ Debe sumar 100%'}</td>
+                </tr></tfoot>
+            </table>
+        </div>`;
+    };
+    document.getElementById('gpsFRModalBody').innerHTML = `
+        <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:12px;color:#0369a1;font-weight:700;">
+            <i class="fas fa-info-circle"></i>&nbsp;
+            <strong>Fórmula:</strong> score = Σ( min(10, valor÷ideal × 10) × peso ) ÷ Σpesos &nbsp;|&nbsp;
+            <span style="font-weight:500;">Ambas puntuaciones de 1 a 10 · 10 = alcanza o supera el ideal</span>
+        </div>
+        ${renderSeccion('RENDIMIENTO', 'rendimiento', '#E31E24')}
+        ${renderSeccion('FATIGA', 'fatiga', '#2563eb')}`;
+}
+
+function gpsFRActualizarTotal(tipoClave) {
+    const metricas = (_gpsFRWeights || GPS_FR_WEIGHTS_DEFAULT)[tipoClave] || [];
+    let total = 0;
+    metricas.forEach((_,i) => {
+        const inp = document.getElementById(`gpsFRPeso_${tipoClave}_${i}`);
+        const v = inp ? (parseInt(inp.value)||0) : 0;
+        total += v;
+        const bar = document.getElementById(`gpsFRBar_${tipoClave}_${i}`);
+        if (bar) bar.style.width = Math.min(100,v) + '%';
+    });
+    const el = document.getElementById(`gpsFRTotal_${tipoClave}`);
+    if (el) { el.textContent = total+'%'; el.style.color = total===100?'#16a34a':'#dc2626'; }
+    const hint = el && el.nextElementSibling;
+    if (hint) { hint.textContent = total===100?'✓ Correcto':'⚠ Debe sumar 100%'; hint.style.color = total===100?'#16a34a':'#dc2626'; }
+}
+
+async function gpsFRGuardarPesos() {
+    const base = _gpsFRWeights || GPS_FR_WEIGHTS_DEFAULT;
+    const newW = {rendimiento:[], fatiga:[]};
+    for (const tipo of ['rendimiento','fatiga']) {
+        newW[tipo] = (base[tipo]||[]).map((m,i) => {
+            const inp = document.getElementById(`gpsFRPeso_${tipo}_${i}`);
+            return {...m, peso: inp ? (parseInt(inp.value)||0) : m.peso};
+        });
+    }
+    try {
+        await fetch('/api/gps/fr_weights', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({weights:newW})});
+        _gpsFRWeights = newW;
+        document.getElementById('gpsFRModal').style.display = 'none';
+        if (gpsDatosSesionActual) gpsRenderTabJugadores();
+        if (Object.keys(gpsStatsJugadores||{}).length) gpsRenderStatsJugadores();
+    } catch(e) { alert('Error al guardar los pesos.'); }
+}
+
+async function gpsFRResetPesos() {
+    _gpsFRWeights = JSON.parse(JSON.stringify(GPS_FR_WEIGHTS_DEFAULT));
+    try { await fetch('/api/gps/fr_weights', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({weights:_gpsFRWeights})}); } catch(e){}
+    gpsFRRenderModal();
+    if (gpsDatosSesionActual) gpsRenderTabJugadores();
+    if (Object.keys(gpsStatsJugadores||{}).length) gpsRenderStatsJugadores();
+}
 // ──────────────────────────────────────────────────────────────────────────────
 
 function gpsCategoriaMetrica(nombre) {
@@ -864,10 +1132,17 @@ function gpsRenderTabJugadores() {
         }).join('')}
     </tr>`;
 
+    const _frCat  = gpsExtraerCategoria(gpsEquipoActual);
+    const _frTipo = gpsTipoActivo;
     const tbody = filas.map(j => {
         const pos = (gpsPosicionesActuales[j.nombre] || {}).posicion || '';
+        const scores = pos ? gpsFRCalcScore(j.valores, _frCat, _frTipo, pos) : null;
+        const _rend  = scores?.rendimiento?.score     ?? null;
+        const _fat   = scores?.fatiga?.score          ?? null;
+        const _dRend = scores?.rendimiento?.detalle   ?? null;
+        const _dFat  = scores?.fatiga?.detalle        ?? null;
         return `<tr>
-            <td style="font-weight:700;position:sticky;left:0;background:inherit;z-index:1;">${j.nombre}${pos ? `<br><span style="font-size:9px;color:#94a3b8;font-weight:400;">${pos}</span>` : ''}</td>
+            <td style="font-weight:700;position:sticky;left:0;background:inherit;z-index:1;">${j.nombre}${pos ? `<br><span style="font-size:9px;color:#94a3b8;font-weight:400;">${pos}</span>` : ''}${gpsFRCirculosHTML(_rend, _fat, 24, _dRend, _dFat)}</td>
             ${todasCols.map(m => {
                 const cat  = gpsCategoriaMetrica(m);
                 const ex   = claseExtra(m);
@@ -1770,6 +2045,15 @@ function gpsRenderStatsJugadores() {
         const mejorLabel = mejorK ? mejorK.replace(' (Absoluta)','').replace(' por Minuto','/ min') : '';
         const peorLabel  = peorK  ? peorK.replace(' (Absoluta)','').replace(' por Minuto','/ min') : '';
 
+        // Calcular scores FR para vista acumulada (valores = medias del jugador)
+        const _frVals = {};
+        gpsStatsMetricas.forEach(col => { _frVals[col] = data.metricas[col]?.media ?? null; });
+        const _frScores = pos ? gpsFRCalcScore(_frVals, categoria, gpsTipoActivo, pos) : null;
+        const _frRend   = _frScores?.rendimiento?.score   ?? null;
+        const _frFat    = _frScores?.fatiga?.score        ?? null;
+        const _frDRend  = _frScores?.rendimiento?.detalle ?? null;
+        const _frDFat   = _frScores?.fatiga?.detalle      ?? null;
+
         return `<div style="margin-bottom:12px;border:1px solid #f1f5f9;border-radius:14px;overflow:hidden;">
             <table style="width:100%;border-collapse:collapse;">
                 <tr>
@@ -1783,13 +2067,11 @@ function gpsRenderStatsJugadores() {
                             ).join('')}
                         </select>
                         <div style="font-size:12px;color:#64748b;font-weight:700;">${data.sesiones} sesión${data.sesiones!==1?'es':''}</div>
-                        ${mejorLabel ? `<div style="margin-top:10px;font-size:11px;color:#16a34a;font-weight:800;">▲ MEJOR: ${mejorLabel}</div>` : ''}
-                        ${peorLabel  ? `<div style="font-size:11px;color:#dc2626;font-weight:800;">▼ PEOR: ${peorLabel}</div>`  : ''}
+                        ${gpsFRCirculosHTML(_frRend, _frFat, 32, _frDRend, _frDFat)}
+                        ${mejorLabel ? `<div style="margin-top:10px;font-size:11px;color:#16a34a;font-weight:800;">MEJOR: ${mejorLabel}</div>` : ''}
+                        ${peorLabel  ? `<div style="font-size:11px;color:#dc2626;font-weight:800;">PEOR: ${peorLabel}</div>`  : ''}
                     </td>
                     ${colsHtml}
-                </tr>
-                <tr style="background:#f8fafc;">
-                    <td colspan="${colsActivas.length + 1}" style="padding:4px 16px;font-size:9px;color:#94a3b8;font-weight:700;">MEDIA · VS IDEAL · %DIFER · EVOLUCIÓN MENSUAL</td>
                 </tr>
             </table>
         </div>`;
@@ -2361,6 +2643,8 @@ async function gpsClasificarPendiente(nombreArchivo, idSafe) {
 }
 
 // Auto-inicializar al cargar la página
+gpsFRLoadWeights(); // cargar pesos FR en background
+
 (function() {
     try {
         const sel = document.getElementById('gpsSelectEquipo');

@@ -1,0 +1,15 @@
+{
+  "rendimiento": [
+    {"col": "Distancia Por Minuto", "key": "dist_min", "peso": 25},
+    {"col": "Máxima Velocidad", "key": "vel_max", "peso": 20},
+    {"col": "Sprints", "key": "sprints", "peso": 20},
+    {"col": "Distancia de Alta Carga Metabólica", "key": "hmld", "peso": 15},
+    {"col": "Distancia de Alta Velocidad por Minuto (Absoluta)", "key": "hsr_min", "peso": 20}
+  ],
+  "fatiga": [
+    {"col": "Deceleraciones (Absoluta)", "key": "des", "peso": 35},
+    {"col": "Distancia de Alta Carga Metabólica por Minuto", "key": "hmld_min", "peso": 30},
+    {"col": "Sprints", "key": "sprints", "peso": 20},
+    {"col": "Distancia de Alta Carga Metabólica", "key": "hmld", "peso": 15}
+  ]
+}

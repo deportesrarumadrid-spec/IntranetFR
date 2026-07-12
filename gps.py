@@ -1276,3 +1276,40 @@ def api_gps_dias_entrenamiento():
     except Exception as e:
         print(f"Error en api_gps_dias_entrenamiento: {e}")
         return jsonify({'status': 'error', 'fechas': []})
+
+
+GPS_FR_WEIGHTS_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'gps_fr_weights.json'
+)
+
+GPS_FR_WEIGHTS_DEFAULT = {
+    'rendimiento': [
+        {'col': 'Distancia Por Minuto',                              'key': 'dist_min',  'peso': 25},
+        {'col': 'Máxima Velocidad',                                  'key': 'vel_max',   'peso': 20},
+        {'col': 'Sprints',                                           'key': 'sprints',   'peso': 20},
+        {'col': 'Distancia de Alta Carga Metabólica',                'key': 'hmld',      'peso': 15},
+        {'col': 'Distancia de Alta Velocidad por Minuto (Absoluta)', 'key': 'hsr_min',   'peso': 20},
+    ],
+    'fatiga': [
+        {'col': 'Deceleraciones (Absoluta)',                         'key': 'des',       'peso': 35},
+        {'col': 'Distancia de Alta Carga Metabólica por Minuto',     'key': 'hmld_min',  'peso': 30},
+        {'col': 'Sprints',                                           'key': 'sprints',   'peso': 20},
+        {'col': 'Distancia de Alta Carga Metabólica',                'key': 'hmld',      'peso': 15},
+    ],
+}
+
+
+@gps_bp.route('/api/gps/fr_weights', methods=['GET', 'POST'])
+def api_gps_fr_weights():
+    if request.method == 'GET':
+        try:
+            with open(GPS_FR_WEIGHTS_PATH, 'r', encoding='utf-8') as f:
+                return jsonify({'status': 'ok', 'weights': json.load(f)})
+        except FileNotFoundError:
+            return jsonify({'status': 'ok', 'weights': GPS_FR_WEIGHTS_DEFAULT})
+    data = request.get_json(silent=True) or {}
+    weights = data.get('weights', GPS_FR_WEIGHTS_DEFAULT)
+    os.makedirs(os.path.dirname(GPS_FR_WEIGHTS_PATH), exist_ok=True)
+    with open(GPS_FR_WEIGHTS_PATH, 'w', encoding='utf-8') as f:
+        json.dump(weights, f, ensure_ascii=False, indent=2)
+    return jsonify({'status': 'ok'})
