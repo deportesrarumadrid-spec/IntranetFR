@@ -130,6 +130,7 @@
 }
 
         .menu-item:hover { color: white; background-color: rgba(0,0,0,0.1); }
+        .menu-item-compact { padding-top: 4px !important; padding-bottom: 4px !important; }
 
         /* Caja de Avisos en el Sidebar */
         .avisos-sidebar {
@@ -271,8 +272,18 @@
 .btn-ia-fixed img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .btn-ia-fixed:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 6px 16px rgba(168, 85, 247, 0.5); }
 
-.btn-search-fixed {
+.btn-dropbox-fixed {
     position: fixed; top: 28px; right: 355px; width: 40px; height: 40px;
+    border-radius: 50%; background: white; color: #0061FF;
+    border: 2px solid #0061FF; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; font-size: 16px;
+    z-index: 500; transition: all 0.3s ease; text-decoration: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.btn-dropbox-fixed:hover { background: #0061FF; color: white; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,97,255,0.3); }
+
+.btn-search-fixed {
+    position: fixed; top: 28px; right: 305px; width: 40px; height: 40px;
     border-radius: 50%; background: white; color: #E31E24;
     border: 2px solid #E31E24; cursor: pointer; display: flex;
     align-items: center; justify-content: center; font-size: 16px;
@@ -386,8 +397,12 @@
         {% endif %}
         {% if session.get('permisos', {}).get('ENTRENAMIENTOS') == 'SI' or session.get('permisos', {}).get('D.DEPORTIVA') == 'SI' or usuario|lower == 'admin' %}
         <a href="/clasificaciones" class="menu-item {{ 'active' if request.path == '/clasificaciones' }}" onclick="showLoader()">CLASIFICACIONES Y RESULTADOS</a>
-        <a href="/videoanalisis" class="menu-item {{ 'active' if request.path == '/videoanalisis' }}" onclick="showLoader()">D.VIDEOANALISIS</a>
-        <a href="/gps" class="menu-item {{ 'active' if request.path == '/gps' }}" onclick="showLoader()">GPS</a>
+        <a href="/videoanalisis" class="menu-item menu-item-compact {{ 'active' if request.path == '/videoanalisis' }}" onclick="showLoader()">D.VIDEOANALISIS</a>
+        <a href="/gps" class="menu-item menu-item-compact {{ 'active' if request.path == '/gps' }}" onclick="showLoader()">GPS</a>
+        <a href="/fisioterapia" class="menu-item menu-item-compact {{ 'active' if request.path == '/fisioterapia' }}" onclick="showLoader()">FISIOTERAPIA</a>
+        {% endif %}
+        {% if session.get('permisos', {}).get('RRSS') == 'SI' or usuario|lower == 'admin' %}
+        <a href="/rrss" class="menu-item menu-item-compact {{ 'active' if request.path == '/rrss' }}" onclick="showLoader()">RRSS/MK</a>
         {% endif %}
     </div>
 
@@ -400,6 +415,14 @@
             <h4><i class="fas fa-arrow-up"></i> Valoraciones</h4>
             <div id="listaVals"></div>
         </div>
+    </div>
+
+    <div id="panelCumpleannosSidebar" onclick="abrirModalCumpleannos()" style="margin: 8px 20px 15px 20px; padding: 8px 10px; background: rgba(255,255,255,0.08); border-radius: 8px; cursor: pointer; user-select: none;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: rgba(255,255,255,0.8);">
+            <span><i class="fas fa-birthday-cake" style="color: #f9a8d4; font-size: 0.66rem; margin-right: 4px;"></i> Cumpleaños</span>
+            <span id="badgeCumpleannosSidebar" style="display: none; background: #f9a8d4; color: #1e293b; border-radius: 999px; font-size: 0.58rem; padding: 1px 6px; font-weight: 900;"></span>
+        </div>
+        <div id="estadoCumpleannosSidebar" style="font-size: 0.58rem; color: rgba(255,255,255,0.5); margin-top: 3px;">Cargando...</div>
     </div>
 
     {% if usuario|lower == 'admin' %}
@@ -430,6 +453,17 @@
 </div>
 
 <!-- MODAL DETALLE ALQUILER (SIDEBAR) -->
+<!-- MODAL CUMPLEAÑOS -->
+<div id="modalCumpleannos" onclick="if(event.target===this)this.style.display='none'" style="display:none; position:fixed; z-index:30000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:16px; padding:24px; width:380px; max-height:80vh; overflow-y:auto; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="margin:0; font-size:14px; font-weight:900; color:#1e293b;"><i class="fas fa-birthday-cake" style="color:#E31E24; margin-right:6px;"></i> Cumpleaños próximos</h3>
+            <span onclick="document.getElementById('modalCumpleannos').style.display='none'" style="cursor:pointer; color:#999; font-size:22px; line-height:1;">&times;</span>
+        </div>
+        <div id="modalCumpleannos_body"></div>
+    </div>
+</div>
+
 <div id="modalDetalleAlquiler" class="modal-backdrop" style="display:none; position:fixed; z-index:30000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center;">
     <div style="background:white; border-radius:16px; padding:24px; width:380px; max-height:80vh; overflow-y:auto; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
@@ -636,9 +670,11 @@
                 <span style="font-size: 0.9rem; color: #666; display: flex; gap: 8px; align-items: center;">
                     Bienvenido, <strong id="userId" style="color: #333;">{{ usuario }}</strong>
                     {% if equipo_defecto %}
-                    <span style="background: #E31E24; color: white; border-radius: 999px; padding: 3px 10px; font-size: 0.78rem; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase;">
+                    <span id="topbarEquipoBadge" style="background: #E31E24; color: white; border-radius: 999px; padding: 3px 10px; font-size: 0.78rem; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase;">
                         {{ equipo_defecto }}
                     </span>
+                    {% else %}
+                    <span id="topbarEquipoBadge" style="background: #E31E24; color: white; border-radius: 999px; padding: 3px 10px; font-size: 0.78rem; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; display:none;"></span>
                     {% endif %}
                 </span>
             </div>
@@ -662,6 +698,9 @@
             <span id="badgeCronoGlobal" class="badge-crono">1</span>
         </button>
         {% endif %}
+        <a href="https://www.dropbox.com" class="btn-dropbox-fixed" title="Abrir Dropbox" target="_blank">
+            <i class="fab fa-dropbox"></i>
+        </a>
         <button class="btn-search-fixed" onclick="toggleBuscadorIntranet(event)" title="Buscar en la intranet">
             <i class="fas fa-magnifying-glass"></i>
         </button>
@@ -794,6 +833,8 @@
             { label: 'Clasificaciones y Resultados', ruta: '/clasificaciones', keywords: 'liga tabla puntos partidos resultados' },
             { label: 'D.Videoanálisis', ruta: '/videoanalisis', keywords: 'video analisis tactico postpartido videoanalista entrenador' },
             { label: 'GPS', ruta: '/gps', keywords: 'gps sonra statsports informe rendimiento fisico tracking' },
+            { label: 'Fisioterapia', ruta: '/fisioterapia', keywords: 'fisio fisioterapeuta citas calendario lesion rehabilitacion sesion' },
+            { label: 'RRSS/MK', ruta: '/rrss', keywords: 'redes sociales marketing publicidad contenido difusion' },
         ];
 
         function toggleBuscadorIntranet(evt) {
@@ -1019,6 +1060,70 @@
         }
 
         cargarAlquileresSidebar();
+
+        // === CUMPLEAÑOS (widget sidebar, todos los usuarios) ===
+        let _cumpleannosCache = null;
+        const MESES_ES = ['','enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+        async function cargarCumpleannosSidebar() {
+            const estado = document.getElementById('estadoCumpleannosSidebar');
+            const badge  = document.getElementById('badgeCumpleannosSidebar');
+            try {
+                const res = await fetch('/api/cumpleanos');
+                const data = await res.json();
+                _cumpleannosCache = data;
+                const lista = data.cumpleanos || [];
+                if (!lista.length) {
+                    if (estado) estado.textContent = 'Ninguno en los próximos días';
+                    if (badge)  badge.style.display = 'none';
+                    return;
+                }
+                const total = lista.reduce((s, d) => s + d.jugadores.length, 0);
+                if (badge) { badge.textContent = total; badge.style.display = ''; }
+                const hoyItem = lista.find(d => d.es_hoy);
+                if (hoyItem) {
+                    const nombres = hoyItem.jugadores.map(j => j.nombre.split(' ')[0]).join(', ');
+                    if (estado) estado.innerHTML = `🎂 Hoy: <b>${nombres}</b>`;
+                    mostrarPopupCumpleannos(data, true);
+                } else {
+                    if (estado) estado.textContent = `${total} jugador${total!==1?'es':''} próximamente`;
+                }
+            } catch(e) {
+                if (estado) estado.textContent = 'Sin datos';
+            }
+        }
+
+        function abrirModalCumpleannos() {
+            if (_cumpleannosCache) { mostrarPopupCumpleannos(_cumpleannosCache, false); }
+            else { cargarCumpleannosSidebar().then(() => { if (_cumpleannosCache) mostrarPopupCumpleannos(_cumpleannosCache, false); }); }
+        }
+
+        function mostrarPopupCumpleannos(data, soloSiHoy) {
+            const lista = data.cumpleanos || [];
+            const modal = document.getElementById('modalCumpleannos');
+            const body  = document.getElementById('modalCumpleannos_body');
+            if (!modal || !body) return;
+            if (soloSiHoy && !lista.some(d => d.es_hoy)) return;
+            body.innerHTML = lista.map(dia => {
+                const lbl = dia.es_hoy
+                    ? `<span style="color:#E31E24;">🎂 HOY · ${dia.fecha}</span>`
+                    : `<span style="color:#64748b;">${dia.dia} de ${MESES_ES[dia.mes]}</span>`;
+                return `<div style="margin-bottom:16px;">
+                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;margin-bottom:6px;">${lbl}</div>
+                    ${dia.jugadores.map(j => `
+                        <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f1f5f9;">
+                            <span style="font-size:24px;line-height:1;">🎂</span>
+                            <div>
+                                <div style="font-size:13px;font-weight:700;color:#1e293b;">${j.nombre}</div>
+                                <div style="font-size:11px;color:#94a3b8;">${j.equipo}</div>
+                            </div>
+                        </div>`).join('')}
+                </div>`;
+            }).join('') || `<p style="color:#94a3b8;text-align:center;padding:20px 0;">Sin cumpleaños en los próximos 3 días</p>`;
+            modal.style.display = 'flex';
+        }
+
+        cargarCumpleannosSidebar();
 
         // === DISCREPANCIAS LISTADOS JUGADORES (widget sidebar, solo ADMIN) ===
         let discrepanciasJugadoresCache = [];

@@ -84,8 +84,11 @@ def _client_name():
 
 
 def obtener_equipos_gps():
+    """Devuelve la lista de equipos GPS disponibles.
+    Primero intenta leer de la hoja EQUIPO de Google Sheets;
+    luego añade cualquier equipo que tenga carpeta en el sistema de archivos."""
     client, name = _client_name()
-    equipos = []
+    equipos = set()
     try:
         sheet = client.open(name).worksheet("EQUIPO")
         all_v = sheet.get_all_values()
@@ -93,10 +96,36 @@ def obtener_equipos_gps():
             headers = [str(h).strip().upper() for h in all_v[0]]
             if "EQUIPO" in headers:
                 idx_e = headers.index("EQUIPO")
-                equipos = sorted(set(str(r[idx_e]).strip() for r in all_v[1:] if len(r) > idx_e and r[idx_e].strip()))
+                for r in all_v[1:]:
+                    if len(r) > idx_e and r[idx_e].strip():
+                        equipos.add(r[idx_e].strip())
     except Exception as e:
-        print(f"Error cargando equipos en GPS: {e}")
-    return equipos
+        print(f"Error cargando equipos GPS de Sheets: {e}")
+
+    # Respaldo: leer también desde la hoja GPS (columna EQUIPO)
+    try:
+        sheet_gps = get_gps_sheet()
+        all_v = sheet_gps.get_all_values()
+        for row in all_v[1:]:
+            if row and row[0].strip():
+                equipos.add(row[0].strip())
+    except Exception as e:
+        print(f"Error leyendo equipos de hoja GPS: {e}")
+
+    # Respaldo final: nombres de carpetas en el directorio GPS de uploads
+    try:
+        base = current_app.config.get('UPLOAD_FOLDER', os.path.join(os.getcwd(), 'static', 'uploads'))
+        carpeta_gps = os.path.join(base, 'gps')
+        if os.path.isdir(carpeta_gps):
+            for nombre_carpeta in os.listdir(carpeta_gps):
+                if os.path.isdir(os.path.join(carpeta_gps, nombre_carpeta)):
+                    # Convertir clave sanitizada de vuelta a nombre legible (best-effort)
+                    nombre_display = nombre_carpeta.replace('_', ' ')
+                    equipos.add(nombre_display)
+    except Exception as e:
+        print(f"Error leyendo carpetas GPS: {e}")
+
+    return sorted(equipos)
 
 
 def get_gps_sheet():
@@ -144,6 +173,117 @@ def guardar_info_jugador(equipo, jugador, posicion=None, edad=None):
             sheet.update(f'A{i}:D{i}', [[equipo, jugador, pos_final, edad_final]], value_input_option='USER_ENTERED')
             return
     sheet.append_row([equipo, jugador, posicion or '', edad or ''])
+
+
+def _trimmed_mean_2sigma(values):
+    """Media del equipo eliminando outliers que se alejan >2σ."""
+    if not values:
+        return None
+    if len(values) <= 2:
+        return sum(values) / len(values)
+    mean = sum(values) / len(values)
+    variance = sum((v - mean) ** 2 for v in values) / len(values)
+    std = variance ** 0.5
+    if std == 0:
+        return mean
+    filtered = [v for v in values if abs(v - mean) <= 2 * std]
+    return sum(filtered) / len(filtered) if filtered else mean
+
+
+def _calcular_stats_equipo_mes(equipo, tipo='ENT'):
+    """
+    Para cada sesión y métrica calcula la media del equipo (sin outliers >2σ).
+    Agrupa por mes y devuelve la media mensual + datos por sesión para el calendario.
+    """
+    if not equipo:
+        return None
+    try:
+        inicio_temp, fin_temp = _get_temporada_actual()
+        clave_equipo = sanitizar_equipo_gps(equipo)
+        carpeta_equipo = os.path.join(get_gps_upload_folder(), clave_equipo)
+
+        sesiones_raw = []
+        if os.path.isdir(carpeta_equipo):
+            for fecha_str in sorted(os.listdir(carpeta_equipo)):
+                try:
+                    fecha_dt = datetime.strptime(fecha_str, '%Y-%m-%d')
+                except ValueError:
+                    continue
+                if not (inicio_temp <= fecha_dt <= fin_temp):
+                    continue
+                meta = get_meta_sesion(equipo, fecha_str)
+                if tipo and meta.get('tipo', '') != tipo:
+                    continue
+                carpeta_sesion = os.path.join(carpeta_equipo, fecha_str)
+                csvs = [f for f in os.listdir(carpeta_sesion) if f.lower().endswith('.csv')]
+                if not csvs:
+                    continue
+                try:
+                    datos = parsear_csv_gps(os.path.join(carpeta_sesion, csvs[0]))
+                    sesiones_raw.append({
+                        'fecha': fecha_str,
+                        'mes': fecha_dt.month,
+                        'dia': fecha_dt.day,
+                        'datos': datos,
+                    })
+                except Exception:
+                    pass
+
+        if not sesiones_raw:
+            return {"metricas": [], "meses": [], "por_mes": {}, "sesiones": []}
+
+        todas_metricas = []
+        for s in sesiones_raw:
+            for m in s['datos']['columnas']:
+                if m not in todas_metricas:
+                    todas_metricas.append(m)
+
+        # acum[metrica][mes_str] = [trimmed_mean_sesion, ...]
+        acum = {m: {} for m in todas_metricas}
+        sesiones_out = []
+
+        for s in sesiones_raw:
+            ses_m = {}
+            for m in todas_metricas:
+                vals = [j['valores'].get(m) for j in s['datos']['jugadores']
+                        if j['valores'].get(m) is not None]
+                tm = _trimmed_mean_2sigma(vals) if vals else None
+                if tm is not None:
+                    tm = round(tm, 2)
+                ses_m[m] = tm
+                if tm is not None:
+                    mes_key = str(s['mes'])
+                    acum[m].setdefault(mes_key, []).append(tm)
+            sesiones_out.append({
+                'fecha': s['fecha'],
+                'mes': s['mes'],
+                'dia': s['dia'],
+                'metricas': ses_m,
+            })
+
+        por_mes = {}
+        meses_con_datos = set()
+        for m in todas_metricas:
+            por_mes[m] = {}
+            for mes_key, vals in acum[m].items():
+                por_mes[m][mes_key] = {
+                    'media': round(sum(vals) / len(vals), 2),
+                    'n_sesiones': len(vals),
+                }
+                meses_con_datos.add(int(mes_key))
+
+        meses_orden = [9, 10, 11, 12, 1, 2, 3, 4, 5, 6]
+        meses_sorted = [m for m in meses_orden if m in meses_con_datos]
+
+        return {
+            "metricas": todas_metricas,
+            "meses": meses_sorted,
+            "por_mes": por_mes,
+            "sesiones": sesiones_out,
+        }
+    except Exception as e:
+        print(f"GPS equipo_mes error: {e}")
+        return None
 
 
 def get_gps_upload_folder():
@@ -443,6 +583,74 @@ def generar_comentario_jugador_ia(jugador_dict, info_jugador, promedio):
     return (resp.text or '').strip().strip('"')
 
 
+def _calcular_stats_jugadores(equipo, tipo='ENT'):
+    """Calcula las stats agregadas de jugadores para un equipo/tipo. Mismo algoritmo que la API."""
+    if not equipo:
+        return {}, []
+    try:
+        inicio_temp, fin_temp = _get_temporada_actual()
+        clave_equipo = sanitizar_equipo_gps(equipo)
+        carpeta_equipo = os.path.join(get_gps_upload_folder(), clave_equipo)
+        sesiones = []
+        if os.path.isdir(carpeta_equipo):
+            for fecha_str in sorted(os.listdir(carpeta_equipo)):
+                try:
+                    fecha_dt = datetime.strptime(fecha_str, '%Y-%m-%d')
+                except ValueError:
+                    continue
+                if not (inicio_temp <= fecha_dt <= fin_temp):
+                    continue
+                meta = get_meta_sesion(equipo, fecha_str)
+                tipo_sesion = meta.get('tipo', '')
+                if tipo and tipo_sesion != tipo:
+                    continue
+                carpeta_sesion = os.path.join(carpeta_equipo, fecha_str)
+                csvs = [f for f in os.listdir(carpeta_sesion) if f.lower().endswith('.csv')]
+                if not csvs:
+                    continue
+                try:
+                    datos = parsear_csv_gps(os.path.join(carpeta_sesion, csvs[0]))
+                    sesiones.append({'mes': fecha_dt.month, 'datos': datos})
+                except Exception:
+                    pass
+        if not sesiones:
+            return {}, []
+        todas_metricas = []
+        for s in sesiones:
+            for m in s['datos']['columnas']:
+                if m not in todas_metricas:
+                    todas_metricas.append(m)
+        raw = {}
+        for s in sesiones:
+            mes = str(s['mes'])
+            for j in s['datos']['jugadores']:
+                nombre = j['nombre']
+                if not nombre:
+                    continue
+                if nombre not in raw:
+                    raw[nombre] = {'sesiones': 0, 'metricas': {m: {'vals': [], 'por_mes': {}} for m in todas_metricas}}
+                raw[nombre]['sesiones'] += 1
+                for m in todas_metricas:
+                    v = j['valores'].get(m)
+                    if v is not None:
+                        raw[nombre]['metricas'][m]['vals'].append(v)
+                        raw[nombre]['metricas'][m]['por_mes'].setdefault(mes, []).append(v)
+        resultado = {}
+        for nombre, d in raw.items():
+            resultado[nombre] = {'sesiones': d['sesiones'], 'metricas': {}}
+            for m in todas_metricas:
+                vals = d['metricas'][m]['vals']
+                por_mes = {k: round(sum(v) / len(v), 2) for k, v in d['metricas'][m]['por_mes'].items()}
+                resultado[nombre]['metricas'][m] = {
+                    'media': round(sum(vals) / len(vals), 2) if vals else None,
+                    'por_mes': por_mes
+                }
+        return resultado, todas_metricas
+    except Exception as e:
+        print(f"GPS _calcular_stats_jugadores error: {e}")
+        return {}, []
+
+
 @gps_bp.route('/gps')
 def gps():
     usuario = session.get('usuario')
@@ -453,7 +661,13 @@ def gps():
         return "Acceso denegado", 403
 
     equipos = obtener_equipos_gps()
-    return render_template('gps.html', usuario=usuario, equipos=equipos)
+    equipo_inicial = equipos[0] if equipos else ''
+    stats_inicial, metricas_inicial = _calcular_stats_jugadores(equipo_inicial, 'ENT')
+    return render_template('gps.html', usuario=usuario, equipos=equipos,
+                           equipo_inicial=equipo_inicial,
+                           equipo_defecto=equipo_inicial,
+                           stats_inicial=stats_inicial,
+                           metricas_inicial=metricas_inicial)
 
 
 @gps_bp.route('/api/gps', methods=['GET'])
@@ -469,11 +683,15 @@ def api_gps_lista():
                 continue
             if equipo_filtro and row[0].strip().upper() != equipo_filtro.upper():
                 continue
+            eq = row[0].strip()
+            fe = row[1].strip()
+            meta = get_meta_sesion(eq, fe)
             sesiones.append({
-                "equipo": row[0].strip(),
-                "fecha": row[1].strip(),
+                "equipo": eq,
+                "fecha": fe,
                 "pdf": row[2].strip() if len(row) > 2 else "",
                 "csv": row[3].strip() if len(row) > 3 else "",
+                "tipo": meta.get('tipo', ''),
             })
     return jsonify({"sesiones": sesiones})
 
@@ -509,6 +727,13 @@ def api_gps_upload():
         return jsonify({"status": "error", "message": "No se ha subido ningún archivo."}), 400
 
     registrar_sesion_gps(equipo, fecha, nombre_pdf, nombre_csv)
+
+    tipo = (request.form.get('tipo') or '').strip().upper()
+    if tipo in ('ENT', 'PART'):
+        meta = get_meta_sesion(equipo, fecha)
+        meta['tipo'] = tipo
+        guardar_meta_sesion(equipo, fecha, meta)
+
     return jsonify({"status": "success", "pdf": nombre_pdf, "csv": nombre_csv, "clave_equipo": clave_equipo})
 
 
@@ -751,6 +976,162 @@ def api_gps_benchmark():
     return jsonify({"status": "success"})
 
 
+# ── Metadatos de sesión (tipo ENT/PART) ──────────────────────────────────────
+
+def _get_meta_path(clave_equipo, fecha):
+    return os.path.join(get_gps_upload_folder(), clave_equipo, fecha, 'sesion_meta.json')
+
+def get_meta_sesion(equipo, fecha):
+    ruta = _get_meta_path(sanitizar_equipo_gps(equipo), fecha)
+    if os.path.isfile(ruta):
+        with open(ruta, encoding='utf-8') as f:
+            return json.load(f)
+    return {}
+
+def guardar_meta_sesion(equipo, fecha, meta):
+    clave = sanitizar_equipo_gps(equipo)
+    carpeta = os.path.join(get_gps_upload_folder(), clave, fecha)
+    os.makedirs(carpeta, exist_ok=True)
+    with open(_get_meta_path(clave, fecha), 'w', encoding='utf-8') as f:
+        json.dump(meta, f, ensure_ascii=False)
+
+
+@gps_bp.route('/api/gps/sesion_tipo', methods=['POST'])
+def api_gps_sesion_tipo():
+    """Guarda o actualiza el tipo (ENT/PART) de una sesión."""
+    usuario = session.get('usuario')
+    if not usuario:
+        return jsonify({"status": "error", "message": "No autenticado."}), 401
+    data = request.json or {}
+    equipo = (data.get('equipo') or '').strip()
+    fecha  = (data.get('fecha')  or '').strip()
+    tipo   = (data.get('tipo')   or '').strip().upper()
+    if not equipo or not fecha or tipo not in ('ENT', 'PART'):
+        return jsonify({"status": "error", "message": "Datos incorrectos."}), 400
+    meta = get_meta_sesion(equipo, fecha)
+    meta['tipo'] = tipo
+    guardar_meta_sesion(equipo, fecha, meta)
+    return jsonify({"status": "success"})
+
+
+def _get_temporada_actual():
+    """Devuelve (inicio, fin) de la temporada activa. Sep–Jun."""
+    hoy = datetime.now()
+    if hoy.month >= 9:
+        return datetime(hoy.year, 9, 1), datetime(hoy.year + 1, 6, 30)
+    return datetime(hoy.year - 1, 9, 1), datetime(hoy.year, 6, 30)
+
+
+@gps_bp.route('/api/gps/stats_jugadores')
+def api_gps_stats_jugadores():
+    equipo = (request.args.get('equipo') or '').strip()
+    tipo   = (request.args.get('tipo')   or '').strip().upper()
+    if not equipo:
+        return jsonify({"status": "error", "message": "Falta equipo."}), 400
+    jugadores, metricas = _calcular_stats_jugadores(equipo, tipo)
+    return jsonify({'status': 'ok', 'jugadores': jugadores, 'metricas': metricas,
+                    'num_sesiones': max((v['sesiones'] for v in jugadores.values()), default=0)})
+
+
+@gps_bp.route('/api/gps/equipo_mes')
+def api_gps_equipo_mes():
+    equipo = (request.args.get('equipo') or '').strip()
+    tipo   = (request.args.get('tipo')   or 'ENT').strip().upper()
+    if not equipo:
+        return jsonify({"status": "error", "message": "Falta equipo"}), 400
+    data = _calcular_stats_equipo_mes(equipo, tipo)
+    if data is None:
+        return jsonify({"status": "error", "message": "Error calculando stats"}), 500
+    return jsonify({"status": "success", **data})
+
+
+@gps_bp.route('/api/gps/sugerencias_stat', methods=['POST'])
+def api_gps_sugerencias_stat():
+    """Genera sugerencias de entrenamiento para una métrica concreta del equipo."""
+    data = request.json or {}
+    metrica   = (data.get('metrica')  or '').strip()
+    valor     = data.get('valor')
+    ideal     = data.get('ideal')
+    pct_diff  = data.get('pct_diff')
+    categoria = (data.get('categoria') or '').strip()
+    tipo      = (data.get('tipo')      or 'ENT').strip().upper()
+
+    if not metrica:
+        return jsonify({"status": "error", "message": "Falta métrica"}), 400
+
+    estado = "por encima del ideal" if (pct_diff or 0) >= 0 else "por debajo del ideal"
+    accion = "mantener o mejorar aún más" if (pct_diff or 0) >= 0 else "mejorar y alcanzar el ideal"
+    tipo_label = "entrenamiento" if tipo == 'ENT' else "partido"
+
+    prompt = (
+        f"Eres un preparador físico profesional especializado en fútbol base y amateur. "
+        f"Responde de forma ESQUEMÁTICA y CONCISA. Sin párrafos largos. Usa frases cortas.\n\n"
+        f"DATOS:\n"
+        f"· Métrica: {metrica}\n"
+        f"· Categoría: {categoria} · Sesión: {tipo_label}\n"
+        f"· Valor equipo: {valor} · Ideal: {ideal} · Diferencia: {f'+{pct_diff}' if (pct_diff or 0) >= 0 else pct_diff}%\n"
+        f"· Situación: {estado}\n\n"
+        f"DEVUELVE este JSON exacto (sin markdown, sin texto extra):\n"
+        '{{'
+        '"analisis_puntos": ["punto 1 (máx 15 palabras)", "punto 2", "punto 3"],'
+        '"ejercicios": [{{'
+        '"nombre": "Nombre del ejercicio",'
+        '"objetivo": "1 frase corta",'
+        '"formato": "Ej: 4x6min · 80% int. · pausa 2min",'
+        '"clave": "1 clave táctica/física",'
+        '"busqueda_yt": "english search term for YouTube"'
+        '}}],'
+        '"preguntas_sugeridas": ["pregunta 1?", "pregunta 2?", "pregunta 3?"]'
+        '}}'
+        f"\n\nGenera exactamente 3 ejercicios para {accion} esta métrica."
+    )
+
+    try:
+        model = _modelo_gemini()
+        resp  = model.generate_content(prompt)
+        texto = (resp.text or '').strip().strip('`')
+        if texto.lower().startswith('json'):
+            texto = texto[4:]
+        result = json.loads(texto)
+        return jsonify({"status": "success", **result})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@gps_bp.route('/api/gps/sugerencias_stat/chat', methods=['POST'])
+def api_gps_sugerencias_stat_chat():
+    """Responde preguntas de seguimiento sobre una métrica GPS del equipo."""
+    data = request.json or {}
+    metrica   = (data.get('metrica')  or '').strip()
+    valor     = data.get('valor')
+    ideal     = data.get('ideal')
+    pct_diff  = data.get('pct_diff')
+    categoria = (data.get('categoria') or '').strip()
+    tipo      = (data.get('tipo')      or 'ENT').strip().upper()
+    pregunta  = (data.get('pregunta')  or '').strip()
+
+    if not metrica or not pregunta:
+        return jsonify({"status": "error", "message": "Faltan datos"}), 400
+
+    tipo_label = "entrenamiento" if tipo == 'ENT' else "partido"
+    prompt = (
+        f"Eres un preparador físico profesional especializado en fútbol. "
+        f"Contexto: métrica '{metrica}', categoría {categoria}, sesiones de {tipo_label}. "
+        f"Valor actual del equipo: {valor}. Ideal: {ideal}. "
+        f"Diferencia: {f'+{pct_diff}' if (pct_diff or 0) >= 0 else pct_diff}%.\n\n"
+        f"Pregunta del entrenador: {pregunta}\n\n"
+        f"Responde de forma profesional, concisa (máx. 150 palabras) y práctica. "
+        f"Si mencionas ejercicios específicos, termina con: BUSCAR: [término YouTube en inglés]"
+    )
+
+    try:
+        model = _modelo_gemini()
+        resp  = model.generate_content(prompt)
+        return jsonify({"status": "success", "respuesta": (resp.text or '').strip()})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @gps_bp.route('/api/gps/benchmark/generar', methods=['POST'])
 def api_gps_generar_benchmark():
     """Genera con IA una referencia orientativa por posición+edad para las métricas indicadas."""
@@ -772,3 +1153,126 @@ def api_gps_generar_benchmark():
 
     guardar_benchmark(posicion, edad, metricas, origen='IA')
     return jsonify({"status": "success", "benchmark": {"metricas": metricas, "origen": "IA"}})
+
+
+def _festivos_colegios_madrid(año_ini, año_fin):
+    """Festivos y vacaciones escolares Comunidad de Madrid para una temporada."""
+    from datetime import date, timedelta
+    festivos = set()
+
+    def rango(d_ini, d_fin):
+        d = d_ini
+        while d <= d_fin:
+            festivos.add(d)
+            d += timedelta(days=1)
+
+    # ── Temporada 2025-2026 ──────────────────────────────────────────
+    if año_ini == 2025:
+        # Festivos nacionales/regionales
+        for f in [
+            date(2025, 10, 12),  # Hispanidad
+            date(2025, 11,  1),  # Todos los Santos
+            date(2025, 12,  6),  # Constitución
+            date(2025, 12,  8),  # Inmaculada (lunes → cancela entrenamiento)
+            date(2026,  1,  1),  # Año Nuevo
+            date(2026,  1,  6),  # Reyes
+            date(2026,  3, 19),  # San José
+            date(2026,  4,  2),  # Jueves Santo
+            date(2026,  4,  3),  # Viernes Santo
+            date(2026,  5,  1),  # Trabajador
+            date(2026,  5,  2),  # Comunidad de Madrid
+            date(2026,  5, 15),  # San Isidro
+        ]:
+            festivos.add(f)
+        # Vacaciones Navidad: 20 dic – 7 ene
+        rango(date(2025, 12, 20), date(2026,  1,  7))
+        # Vacaciones Semana Santa: 30 mar – 7 abr (Pascua 5 abr 2026)
+        rango(date(2026,  3, 30), date(2026,  4,  7))
+
+    # ── Temporada 2026-2027 (esqueleto para el futuro) ───────────────
+    if año_ini == 2026:
+        for f in [
+            date(2026, 10, 12),
+            date(2026, 11,  1),
+            date(2026, 12,  6),
+            date(2026, 12,  8),
+            date(2027,  1,  1),
+            date(2027,  1,  6),
+            date(2027,  5,  1),
+            date(2027,  5,  2),
+        ]:
+            festivos.add(f)
+        rango(date(2026, 12, 21), date(2027,  1,  7))
+        # Semana Santa 2027: Pascua 28 mar → ~22-31 mar
+        rango(date(2027,  3, 22), date(2027,  3, 31))
+
+    return festivos
+
+
+@gps_bp.route('/api/gps/dias_entrenamiento')
+def api_gps_dias_entrenamiento():
+    """Devuelve los días de entrenamiento del equipo de la temporada, basado en el horario de STAFF."""
+    import calendar as cal_mod
+    from datetime import date
+
+    equipo = (request.args.get('equipo') or '').strip().upper()
+    if not equipo:
+        return jsonify({'status': 'error', 'fechas': []})
+
+    def _parse_dias(texto):
+        mapping = {
+            'L': 0, 'LUNES': 0, 'M': 1, 'MARTES': 1,
+            'X': 2, 'MIERCOLES': 2, 'MIÉRCOLES': 2,
+            'J': 3, 'JUEVES': 3, 'V': 4, 'VIERNES': 4,
+            'S': 5, 'SABADO': 5, 'SÁBADO': 5, 'D': 6, 'DOMINGO': 6
+        }
+        res = []
+        for p in (texto or '').upper().replace(';', ',').replace(' ', ',').split(','):
+            p = p.strip()
+            if p in mapping and mapping[p] not in res:
+                res.append(mapping[p])
+        return res
+
+    try:
+        client, name = _client_name()
+
+        # Buscar horario en STAFF
+        dias_semana = []
+        try:
+            staff_records = client.open(name).worksheet("STAFF").get_all_records()
+            for s in staff_records:
+                eq = str(s.get('EQUIPO', '')).strip().upper().replace('_', ' ')
+                if eq == equipo.replace('_', ' '):
+                    dias_semana = _parse_dias(str(s.get('DIAS ENTRENAMIENTO', '')))
+                    if dias_semana:
+                        break
+        except Exception as e:
+            print(f"GPS dias_entrenamiento - error STAFF: {e}")
+
+        if not dias_semana:
+            return jsonify({'status': 'ok', 'fechas': [], 'source': 'none'})
+
+        # Temporada: Sep del año anterior → Jun del año en curso
+        hoy = date.today()
+        año_fin = hoy.year if hoy.month >= 7 else hoy.year
+        año_ini = año_fin - 1
+        meses_temp = [
+            (año_ini, 9), (año_ini, 10), (año_ini, 11), (año_ini, 12),
+            (año_fin, 1), (año_fin, 2), (año_fin, 3), (año_fin, 4), (año_fin, 5), (año_fin, 6)
+        ]
+
+        festivos = _festivos_colegios_madrid(año_ini, año_fin)
+
+        fechas = []
+        for (año, mes) in meses_temp:
+            dias_en_mes = cal_mod.monthrange(año, mes)[1]
+            for dia in range(1, dias_en_mes + 1):
+                f = date(año, mes, dia)
+                if f.weekday() in dias_semana and f <= hoy and f not in festivos:
+                    fechas.append(f"{dia:02d}/{mes:02d}/{año}")
+
+        return jsonify({'status': 'ok', 'fechas': fechas, 'source': 'staff'})
+
+    except Exception as e:
+        print(f"Error en api_gps_dias_entrenamiento: {e}")
+        return jsonify({'status': 'error', 'fechas': []})

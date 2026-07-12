@@ -37,6 +37,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;display:flex;flex-direction:column;
 }
 .btn-save{background:#155232 !important;}
 .btn-save:hover{background:#0d3621 !important;}
+#btnGuardarEnTarea:hover{background:#d97706 !important;}
 
 /* Luckysheet ocupa todo el resto */
 #luckysheet{flex:1;overflow:hidden;}
@@ -70,8 +71,14 @@ input[type=file]{display:none;}
     <button onclick="nuevoDoc()"><i class="fas fa-file"></i> Nuevo</button>
     <button onclick="abrirModal()"><i class="fas fa-folder-open"></i> Abrir</button>
     <button onclick="importar()"><i class="fas fa-upload"></i> Importar .xlsx</button>
-    <div class="title"><input type="text" id="nombre" value="Sin título" placeholder="Sin título"></div>
+    <div class="title">
+        <input type="text" id="nombre" value="Sin título" placeholder="Sin título">
+        <span id="tareaContextoBadge" style="display:none; font-size:10px; color:rgba(255,255,255,.7); margin-left:10px; font-weight:400; white-space:nowrap;"></span>
+    </div>
     <button class="btn-save" onclick="guardar()"><i class="fas fa-save"></i> Guardar</button>
+    <button id="btnGuardarEnTarea" style="display:none; background:#f59e0b; color:white;" onclick="guardarEnTarea()">
+        <i class="fas fa-paperclip"></i> Guardar en tarea
+    </button>
     <button onclick="exportar()"><i class="fas fa-download"></i> Exportar .xlsx</button>
 </div>
 
@@ -205,6 +212,85 @@ function toast(msg) {
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
 document.getElementById('modal').addEventListener('click', function(e) { if (e.target === this) cerrarModal(); });
+
+// ── Contexto de tarea (params en la URL) ───────────────────────────────────
+const _urlParams   = new URLSearchParams(window.location.search);
+const _tareaNombre = _urlParams.get('tarea') || '';
+const _tareaFecha  = _urlParams.get('fecha') || '';
+const _tareaUser   = _urlParams.get('user')  || '';
+const _tareaCat    = _urlParams.get('cat')   || '';
+
+// Abrir JSON adjunto directamente desde URL
+const _openUrl = _urlParams.get('open') || '';
+const _openNombre = _urlParams.get('nombre') || '';
+if (_openUrl) {
+    fetch(_openUrl)
+        .then(r => r.json())
+        .then(j => {
+            if (j.sheets) {
+                luckysheet.destroy();
+                luckysheet.create({ container:'luckysheet', lang:'es', showtoolbar:true, showinfobar:false,
+                    showstatisticBar:true, sheetBottomConfig:true, data:j.sheets });
+                document.getElementById('nombre').value = j.nombre || _openNombre || 'Sin título';
+            }
+        }).catch(() => {});
+}
+
+if (_tareaNombre && _tareaFecha) {
+    // Mostrar badge de contexto en la barra
+    const fechaDisp = _tareaFecha.split('-').reverse().join('/');
+    document.getElementById('tareaContextoBadge').style.display = 'inline';
+    document.getElementById('tareaContextoBadge').textContent =
+        `📌 ${fechaDisp} · ${_tareaCat || ''} · ${_tareaUser}`;
+    // Sugerir nombre de archivo
+    const nombreSug = `${_tareaFecha}_${_tareaCat}_${_tareaUser}_${_tareaNombre}`.replace(/\s+/g,'_').slice(0, 60);
+    document.getElementById('nombre').value = nombreSug;
+    // Mostrar botón "Guardar en tarea"
+    document.getElementById('btnGuardarEnTarea').style.display = 'flex';
+}
+
+function _tareaKey(fecha, user, tarea) {
+    return [fecha, user, tarea].join('|').replace(/[^a-zA-Z0-9|\-_. ]/g, '_');
+}
+
+async function guardarEnTarea() {
+    const btn = document.getElementById('btnGuardarEnTarea');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+    try {
+        const nombre = document.getElementById('nombre').value.trim() || 'excel_tarea';
+
+        // Obtener datos de las hojas
+        let sheets;
+        try { sheets = luckysheet.getAllSheets(); }
+        catch(e) { alert('Error al leer el Excel: ' + e); return; }
+
+        const key = _tareaKey(_tareaFecha, _tareaUser, _tareaNombre);
+
+        // Subir directamente como adjunto JSON (se abre en el editor al pinchar)
+        const blob = new Blob([JSON.stringify({ nombre, sheets })], { type: 'application/json' });
+        const fd = new FormData();
+        fd.append('key', key);
+        fd.append('archivo', new File([blob], nombre + '.json', { type: 'application/json' }));
+
+        let res, d;
+        try {
+            res = await fetch('/api/tareas/adjuntos/subir', { method: 'POST', body: fd });
+            d = await res.json();
+        } catch(e) {
+            alert('Error de conexión al subir: ' + e); return;
+        }
+        if (!d.ok) { alert('Error del servidor: ' + d.error); return; }
+
+        toast('✓ Guardado en la tarea');
+    } catch(e) {
+        alert('Error inesperado: ' + e);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paperclip"></i> Guardar en tarea';
+    }
+}
+// ──────────────────────────────────────────────────────────────────────────────
 </script>
 </body>
 </html>

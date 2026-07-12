@@ -136,10 +136,22 @@
     </style>
 </head>
 <body>
+    <!-- Popup rápido de adjuntos -->
+    <div id="adjRapidoOverlay" style="display:none;position:fixed;inset:0;z-index:19000;" onclick="document.getElementById('adjRapidoOverlay').style.display='none'"></div>
+    <div id="adjRapidoPopup" style="display:none;position:fixed;z-index:19001;background:white;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.22);min-width:280px;max-width:360px;overflow:hidden;">
+        <div style="background:#1e293b;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+            <span style="color:white;font-size:11px;font-weight:900;"><i class="fas fa-paperclip" style="margin-right:6px;"></i>Archivos adjuntos</span>
+            <button onclick="document.getElementById('adjRapidoOverlay').style.display='none';document.getElementById('adjRapidoPopup').style.display='none'" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;line-height:1;">&times;</button>
+        </div>
+        <div id="adjRapidoCont" style="padding:10px;display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;"></div>
+    </div>
+
     <!-- Menú contextual clic derecho -->
     <div id="ctxMenu">
         <button id="ctxCheck"><i class="fa-solid fa-check" style="color:#28a745;"></i><span id="ctxCheckLabel">Completar</span></button>
         <button id="ctxEdit"><i class="fa-solid fa-pencil" style="color:#1e293b;"></i>Editar</button>
+        <button id="ctxAdjuntar"><i class="fa-solid fa-paperclip" style="color:#475569;"></i>Adjuntar archivo</button>
+        <button id="ctxExcel"><i class="fa-solid fa-file-excel" style="color:#16a34a;"></i>Nuevo Excel</button>
         <button id="ctxDelete"><i class="fa-solid fa-trash" style="color:#dc3545;"></i>Eliminar</button>
     </div>
 
@@ -151,10 +163,42 @@
         </div>
     </div>
 
+    <!-- Panel lateral RRSS (solo Ruben) -->
+    <div id="rrssPanel" style="display:none;position:fixed;top:0;right:0;width:380px;height:100vh;background:white;box-shadow:-4px 0 30px rgba(0,0,0,.18);z-index:20000;overflow-y:auto;font-family:Montserrat,sans-serif;">
+        <div style="background:#1e293b;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:1;">
+            <span style="color:white;font-weight:900;font-size:13px;display:flex;align-items:center;gap:8px;"><i class="fas fa-bullhorn" style="color:#E31E24;"></i> RRSS / MK</span>
+            <button onclick="cerrarRrssPanel()" style="background:none;border:none;color:white;font-size:22px;cursor:pointer;line-height:1;">&times;</button>
+        </div>
+
+        <!-- Planning tipo -->
+        <div style="padding:14px 16px;border-bottom:1px solid #f1f5f9;">
+            <div style="font-size:10px;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:10px;letter-spacing:.5px;">📌 Plantilla semanal</div>
+            <div id="rrssPanelTipo" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
+        </div>
+
+        <!-- Planning esta semana -->
+        <div style="padding:14px 16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <div style="font-size:10px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;">📅 Esta semana</div>
+                <div style="display:flex;gap:6px;">
+                    <button onclick="rrssNavPanel(-1)" style="background:#f1f5f9;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:900;">‹</button>
+                    <button onclick="rrssNavPanel(1)"  style="background:#f1f5f9;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:900;">›</button>
+                </div>
+            </div>
+            <div id="rrssPanelSemanaLabel" style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:10px;"></div>
+            <div id="rrssPanelSemana"></div>
+        </div>
+    </div>
+
     <div class="header-cronograma">
         <div style="display:flex; align-items:center; gap:15px;">
             <img src="/static/ESCUDO SIN FONDO.png" style="height:40px;">
             <h2 id="crono-title-header" style="margin:0; font-size:18px;">CRONOGRAMA DEPORTIVO</h2>
+            {% if persona_seleccionada|upper == 'RUBEN' %}
+            <button id="btnRrssPanel" onclick="toggleRrssPanel()" style="background:#E31E24;color:white;border:none;border-radius:8px;padding:6px 14px;font-size:11px;font-weight:900;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit;">
+                <i class="fas fa-bullhorn"></i> RRSS
+            </button>
+            {% endif %}
         </div>
         <div style="display:flex; align-items:center; gap:16px;">
             <span style="font-size:10px; color:#94a3b8; font-weight:700;"><i class="fas fa-mouse-pointer" style="margin-right:4px;"></i>Clic derecho sobre una tarea para ver opciones</span>
@@ -265,6 +309,23 @@
                 </div>
                 {% endif %}
 
+                <!-- Sección adjuntos -->
+                <div style="margin-bottom:20px; border-top:1px solid #f1f5f9; padding-top:16px;">
+                    <label style="font-size:9px; font-weight:900; color:#999; text-transform:uppercase; display:block; margin-bottom:10px;">Archivos adjuntos</label>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+                        <button type="button" onclick="document.getElementById('tareaFileInput').click()"
+                            style="display:flex;align-items:center;gap:6px;background:#f8fafc;border:1.5px dashed #cbd5e1;color:#475569;font-size:10px;font-weight:800;padding:6px 12px;cursor:pointer;border-radius:6px;font-family:inherit;">
+                            <i class="fas fa-paperclip"></i> Adjuntar archivo
+                        </button>
+                        <button type="button" onclick="abrirExcelDesdeTarea()"
+                            style="display:flex;align-items:center;gap:6px;background:#f0fdf4;border:1.5px solid #86efac;color:#16a34a;font-size:10px;font-weight:800;padding:6px 12px;cursor:pointer;border-radius:6px;font-family:inherit;">
+                            <i class="fas fa-file-excel"></i> Nuevo Excel
+                        </button>
+                    </div>
+                    <input type="file" id="tareaFileInput" style="display:none;" multiple onchange="tareaSubirAdjuntos(this.files)">
+                    <div id="tareaAdjuntosCont" style="display:flex;flex-direction:column;gap:6px;"></div>
+                </div>
+
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
                     <button class="btn-fin" onclick="closeTaskModal()" style="background: #f1f5f9; color: #64748b;">CANCELAR</button>
                     <button id="btnSaveTask" class="btn-fin" onclick="guardarTareaDefinitiva()" style="background: #E31E24; color: white; box-shadow: 0 8px 15px rgba(227,30,36,0.2);">GUARDAR TAREA</button>
@@ -371,6 +432,15 @@
             </div>
             {% endfor %}
         </div>
+        <!-- Barra RRSS horizontal (solo Ruben) -->
+        {% if persona_seleccionada|upper == 'RUBEN' %}
+        <div id="rrss-tipo-bar" style="display:none;margin-top:16px;background:white;border:1px solid #e2e8f0;border-left:3px solid #a78bfa;min-width:1000px;">
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid #f1f5f9;background:#faf5ff;">
+                <span style="font-size:9px;font-weight:900;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;"><i class="fas fa-bullhorn" style="margin-right:4px;"></i>RRSS — Planning tipo</span>
+            </div>
+            <div id="rrss-tipo-cols" style="display:grid;grid-template-columns:repeat(7,1fr);gap:0;"></div>
+        </div>
+        {% endif %}
         <div id="extra-semanal-container"></div>
     </div>
 
@@ -533,6 +603,19 @@
             const d = _evData[_ctxTarget?.dataset?.evKey]; if (!d) return;
             document.getElementById('ctxMenu').style.display = 'none';
             abrirEdicionTarea(d.user, d.fecha, d.tarea, d.cat, d.user, d.freq);
+        });
+        document.getElementById('ctxAdjuntar').addEventListener('click', function() {
+            const d = _evData[_ctxTarget?.dataset?.evKey]; if (!d) return;
+            document.getElementById('ctxMenu').style.display = 'none';
+            abrirEdicionTarea(d.user, d.fecha, d.tarea, d.cat, d.user, d.freq);
+            // Pequeño delay para que el modal esté visible antes de disparar el input
+            setTimeout(() => document.getElementById('tareaFileInput').click(), 300);
+        });
+        document.getElementById('ctxExcel').addEventListener('click', function() {
+            const d = _evData[_ctxTarget?.dataset?.evKey]; if (!d) return;
+            document.getElementById('ctxMenu').style.display = 'none';
+            const p = new URLSearchParams({ tarea: d.tarea, fecha: d.fecha, user: d.user, cat: d.cat });
+            window.open('/editor-excel?' + p.toString(), '_blank');
         });
         document.getElementById('ctxDelete').addEventListener('click', function() {
             const d = _evData[_ctxTarget?.dataset?.evKey]; if (!d) return;
@@ -707,9 +790,12 @@
                 const evKey = ++_evCounter;
                 _evData[evKey] = { user: ev.RESPONSABLE || '', fecha: ev.FECHA_ISO || '', tarea: ev.TAREA || '', cat: tipo, freq: ev.FRECUENCIA || '', estado: ev.ESTADO || 'PENDIENTE' };
                 div.dataset.evKey = evKey;
+                const _adjKeyA = _tareaKey(ev.FECHA_ISO || '', ev.RESPONSABLE || '', ev.TAREA || '');
+                const _hasAdjA = _adjuntosKeys.has(_adjKeyA);
                 div.innerHTML = `
                     <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;${isDone?'text-decoration:line-through;opacity:.45;':''}" title="${ev.TAREA||''}">${ev.TAREA||''}</span>
-                    ${isDone ? '<i class="fa-solid fa-check" style="font-size:8px; color:#28a745; flex-shrink:0;"></i>' : ''}`;
+                    ${_hasAdjA ? `<i class="fas fa-paperclip" style="font-size:13px;color:#475569;flex-shrink:0;cursor:pointer;" title="Ver adjuntos" onclick="event.stopPropagation();abrirAdjuntosRapido('${_adjKeyA.replace(/'/g,"\\'")}',this)" ></i>` : ''}
+                    ${isDone ? '<i class="fa-solid fa-check" style="font-size:13px;color:#28a745;flex-shrink:0;"></i>' : ''}`;
                 return div;
             }
 
@@ -778,6 +864,9 @@
             // Enviar mensaje al padre para ocultar el modal y mostrar el indicador
             window.parent.postMessage('minimizeCronograma', '*');
         }
+
+        // Cargar keys de adjuntos al inicio para mostrar el icono de clip
+        _cargarAdjuntosKeys();
 
         // Inicialización basada en la URL al cargar la página
         window.addEventListener('DOMContentLoaded', () => {
@@ -892,12 +981,164 @@
             return Array.from(pills).map(p => mapOwnerParaVista(p.innerText)).join(',');
         }
 
+        // ── Adjuntos de tareas ─────────────────────────────────────────
+        let _tareaAdjKey = '';
+        let _adjuntosKeys = new Set();
+
+        function _tareaKey(fecha, user, tarea) {
+            return [fecha, user, tarea].join('|').replace(/[^a-zA-Z0-9|\-_. ]/g, '_');
+        }
+
+        async function _cargarAdjuntosKeys() {
+            try {
+                const r = await fetch('/api/tareas/adjuntos/todas');
+                const d = await r.json();
+                _adjuntosKeys = new Set(d.keys || []);
+            } catch(e) {}
+        }
+
+        function abrirExcelDesdeTarea() {
+            const tarea = (document.getElementById('taskName').value || '').trim();
+            const cat   = document.getElementById('taskCat').value || '';
+            const user  = (function(){
+                const pills = document.querySelectorAll('#groupOwner .pill-opt.selected');
+                return pills.length ? Array.from(pills).map(p => p.innerText).join(',') : (PERSONA_MOSTRADA || '');
+            })();
+            if (tarea && currentIsoFecha) {
+                const p = new URLSearchParams({ tarea, fecha: currentIsoFecha, user, cat });
+                window.open('/editor-excel?' + p.toString(), '_blank');
+            } else {
+                window.open('/editor-excel', '_blank');
+            }
+        }
+
+        function tareaAbrirAdjuntos(fecha, user, tarea) {
+            _tareaAdjKey = _tareaKey(fecha, user, tarea);
+            _cargarAdjuntos();
+        }
+
+        async function abrirAdjuntosRapido(key, anchorEl) {
+            const popup   = document.getElementById('adjRapidoPopup');
+            const overlay = document.getElementById('adjRapidoOverlay');
+            const cont    = document.getElementById('adjRapidoCont');
+            cont.innerHTML = '<div style="text-align:center;padding:10px;color:#94a3b8;font-size:11px;"><i class="fas fa-spinner fa-spin"></i></div>';
+            overlay.style.display = 'block';
+            popup.style.display   = 'block';
+            // Posicionar cerca del elemento que disparó el click
+            if (anchorEl) {
+                const r = anchorEl.getBoundingClientRect();
+                popup.style.top  = Math.min(r.bottom + 4, window.innerHeight - 300) + 'px';
+                popup.style.left = Math.min(r.left, window.innerWidth - 380) + 'px';
+            } else {
+                popup.style.top  = '50%';
+                popup.style.left = '50%';
+                popup.style.transform = 'translate(-50%,-50%)';
+            }
+            try {
+                const r = await fetch('/api/tareas/adjuntos?key=' + encodeURIComponent(key));
+                const d = await r.json();
+                const archivos = d.archivos || [];
+                if (!archivos.length) {
+                    cont.innerHTML = '<div style="text-align:center;padding:16px;color:#94a3b8;font-size:11px;">Sin archivos adjuntos</div>';
+                    return;
+                }
+                cont.innerHTML = archivos.map(a => {
+                    const esJson = a.nombre.endsWith('.json');
+                    const href   = esJson
+                        ? `/editor-excel?open=${encodeURIComponent(a.url)}&nombre=${encodeURIComponent(a.nombre.replace('.json',''))}`
+                        : a.url;
+                    const icono  = esJson ? 'fas fa-file-excel' : _adjIcono(a.nombre);
+                    const color  = esJson ? '#16a34a' : '#475569';
+                    return `<div style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:7px 10px;">
+                        <i class="${icono}" style="color:${color};font-size:13px;width:16px;text-align:center;"></i>
+                        <a href="${href}" target="_blank" style="flex:1;font-size:11px;font-weight:700;color:#1e293b;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${a.nombre}">${a.nombre}</a>
+                    </div>`;
+                }).join('');
+            } catch(e) {
+                cont.innerHTML = '<div style="color:red;font-size:11px;padding:10px;">Error al cargar</div>';
+            }
+        }
+
+        async function _cargarAdjuntos() {
+            const cont = document.getElementById('tareaAdjuntosCont');
+            if (!_tareaAdjKey) { cont.innerHTML = ''; return; }
+            try {
+                const r = await fetch('/api/tareas/adjuntos?key=' + encodeURIComponent(_tareaAdjKey));
+                const d = await r.json();
+                _renderAdjuntos(d.archivos || []);
+            } catch(e) { cont.innerHTML = ''; }
+        }
+
+        function _renderAdjuntos(archivos) {
+            const cont = document.getElementById('tareaAdjuntosCont');
+            if (!archivos.length) { cont.innerHTML = ''; return; }
+            cont.innerHTML = archivos.map(a => {
+                const esJson = a.nombre.endsWith('.json');
+                const href = esJson
+                    ? `/editor-excel?open=${encodeURIComponent(a.url)}&nombre=${encodeURIComponent(a.nombre.replace('.json',''))}`
+                    : a.url;
+                return `
+                <div style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;">
+                    <i class="${_adjIcono(a.nombre)}" style="color:${esJson?'#16a34a':'#64748b'};font-size:12px;width:14px;text-align:center;"></i>
+                    <a href="${href}" target="_blank" style="flex:1;font-size:10px;font-weight:700;color:#1e293b;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${a.nombre}">${a.nombre}</a>
+                    <button onclick="tareaEliminarAdjunto('${a.nombre.replace(/'/g,"\\'")}')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:12px;padding:0;" title="Eliminar"><i class="fas fa-times"></i></button>
+                </div>`;
+            }).join('');
+        }
+
+        function _adjIcono(nombre) {
+            const ext = nombre.split('.').pop().toLowerCase();
+            if (['xlsx','xls','csv'].includes(ext)) return 'fas fa-file-excel';
+            if (ext === 'pdf') return 'fas fa-file-pdf';
+            if (['doc','docx'].includes(ext)) return 'fas fa-file-word';
+            if (['png','jpg','jpeg','gif'].includes(ext)) return 'fas fa-file-image';
+            return 'fas fa-file';
+        }
+
+        async function tareaSubirAdjuntos(files) {
+            if (!files?.length) return;
+            const cont = document.getElementById('tareaAdjuntosCont');
+            for (const f of files) {
+                const fd = new FormData();
+                fd.append('key', _tareaAdjKey);
+                fd.append('archivo', f);
+                await fetch('/api/tareas/adjuntos/subir', { method:'POST', body:fd });
+            }
+            document.getElementById('tareaFileInput').value = '';
+            await _cargarAdjuntos();
+            // Actualizar badge en el calendario
+            _actualizarBadgeAdjuntos();
+        }
+
+        async function tareaEliminarAdjunto(nombre) {
+            await fetch('/api/tareas/adjuntos/eliminar', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ key: _tareaAdjKey, nombre })
+            });
+            await _cargarAdjuntos();
+            _actualizarBadgeAdjuntos();
+        }
+
+        async function _actualizarBadgeAdjuntos() {
+            try {
+                const r = await fetch('/api/tareas/adjuntos?key=' + encodeURIComponent(_tareaAdjKey));
+                const d = await r.json();
+                // Actualizar todos los eventos que tengan este key
+                document.querySelectorAll('[data-adj-key="' + CSS.escape(_tareaAdjKey) + '"]').forEach(el => {
+                    el.style.display = d.archivos?.length ? 'inline' : 'none';
+                });
+            } catch(e) {}
+        }
+        // ──────────────────────────────────────────────────────────────
+
         function closeTaskModal() {
             document.getElementById('modalTarea').style.display = 'none';
             _miniCalDia = null;
             const diaMesInput = document.getElementById('taskDiaMes');
             if (diaMesInput) diaMesInput.value = '';
             editingOriginal = null;
+            _tareaAdjKey = '';
+            document.getElementById('tareaAdjuntosCont').innerHTML = '';
         }
 
         function addCustomCategory() {
@@ -951,6 +1192,10 @@
                 const dayBtn = Array.from(document.querySelectorAll('.day-pill')).find(b => b.dataset.value === dayChar);
                 if (dayBtn) dayBtn.classList.add('selected');
             }
+
+            // Adjuntos: tarea nueva no tiene key todavía
+            _tareaAdjKey = '';
+            document.getElementById('tareaAdjuntosCont').innerHTML = '';
 
             // MOSTRAR EL MODAL (Faltaba esta línea)
             document.getElementById('modalTarea').style.display = 'flex';
@@ -1061,6 +1306,9 @@
             await renderUserSchedule(personaAnualEfectiva(), '', 'ANUAL');
             ordenarMesesTemporada();
             cargarTodosLosAlquileres();
+            {% if persona_seleccionada|upper == 'RUBEN' %}
+            inyectarTareasRrssTipo();
+            {% endif %}
         }
 
         async function renderUserSchedule(user, suffix, modo) {
@@ -1164,9 +1412,12 @@
             const evKey = ++_evCounter;
             _evData[evKey] = { user: ownerVal, fecha: ev.FECHA_ISO || '', tarea: tareaLimpia, cat: tipoLimpio, freq: ev.FRECUENCIA || '', estado: ev.ESTADO || 'PENDIENTE' };
             evDiv.dataset.evKey = evKey;
+            const _adjKey1 = _tareaKey(ev.FECHA_ISO || '', ownerVal, tareaLimpia);
+            const _hasAdj1 = _adjuntosKeys.has(_adjKey1);
             evDiv.innerHTML = `
                 <span style="${isDone ? 'text-decoration: line-through; opacity: 0.4;' : ''} white-space: normal; word-break: break-word; line-height: 1.2; font-size: 11px; color: #1e293b; font-weight: 700; flex:1; min-width:0;">${tareaLimpia}</span>
-                ${isDone ? '<i class="fa-solid fa-check" style="font-size:9px; color:#28a745; flex-shrink:0;"></i>' : ''}
+                ${_hasAdj1 ? `<i class="fas fa-paperclip" style="font-size:13px;color:#475569;flex-shrink:0;cursor:pointer;" title="Ver adjuntos" onclick="event.stopPropagation();abrirAdjuntosRapido('${_adjKey1.replace(/'/g,"\\'")}')" ></i>` : ''}
+                ${isDone ? '<i class="fa-solid fa-check" style="font-size:13px;color:#28a745;flex-shrink:0;"></i>' : ''}
             `;
             section.appendChild(evDiv);
         }
@@ -1190,9 +1441,13 @@
             evDiv.dataset.evKey = evKey;
             const diaMesAnual = (ev.FRECUENCIA || '').match(/DIA:(\d+)/i);
             const diaBadge = diaMesAnual ? `<span style="font-size:8px; color:#94a3b8; flex-shrink:0; margin-left:4px;">·d${diaMesAnual[1]}</span>` : '';
+            const _adjKeyB = _tareaKey(ev.FECHA_ISO || '', ev.RESPONSABLE || '', ev.TAREA || '');
+            const _hasAdjB = _adjuntosKeys.has(_adjKeyB);
             evDiv.innerHTML = `
                 <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight: 700; ${isDone ? 'text-decoration: line-through; opacity: 0.5;' : ''}" title="${ev.TAREA}">${ev.TAREA}</span>
-                ${diaBadge}${isDone ? '<i class="fa-solid fa-check" style="font-size:8px; color:#28a745; flex-shrink:0;"></i>' : ''}
+                ${diaBadge}
+                ${_hasAdjB ? `<i class="fas fa-paperclip" style="font-size:13px;color:#475569;flex-shrink:0;cursor:pointer;" title="Ver adjuntos" onclick="event.stopPropagation();abrirAdjuntosRapido('${_adjKeyB.replace(/'/g,"\\'")}')" ></i>` : ''}
+                ${isDone ? '<i class="fa-solid fa-check" style="font-size:13px;color:#28a745;flex-shrink:0;"></i>' : ''}
             `;
             container.appendChild(evDiv);
         }
@@ -1330,6 +1585,9 @@
                     if (pill) pill.classList.add('selected');
                 }
             }
+
+            // Cargar adjuntos de la tarea existente
+            tareaAbrirAdjuntos(fecha, responsable, tarea);
 
             document.getElementById('modalTarea').style.display = 'flex';
         }
@@ -1602,6 +1860,243 @@
                 }).join('');
             } catch (e) { console.error("Error cargando alquileres", e); }
         }
+        // ══════════════════════════════════════════════════════════════
+        // ── RRSS PANEL (solo Ruben) ────────────────────────────────────
+        // ══════════════════════════════════════════════════════════════
+        {% if persona_seleccionada|upper == 'RUBEN' %}
+
+        const RRSS_DIAS_PANEL = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+        const RRSS_TIPO_DOW   = [1,2,3,4,5,6,0]; // getDay() values for Mon-Sun
+        const RRSS_MESES_ES   = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+        let _rrssPanelOffset = 0;
+        let _rrssTipoData    = {};
+        let _rrssTipoEstados = {};
+
+        function toggleRrssPanel() {
+            const panel = document.getElementById('rrssPanel');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                _cargarRrssTipo();
+                _cargarRrssSemanaPanel();
+            } else {
+                panel.style.display = 'none';
+            }
+        }
+
+        function cerrarRrssPanel() {
+            document.getElementById('rrssPanel').style.display = 'none';
+        }
+
+        function rrssNavPanel(delta) {
+            _rrssPanelOffset += delta;
+            _cargarRrssSemanaPanel();
+        }
+
+        function _getLunesPanel(offset) {
+            const hoy = new Date();
+            const dow = (hoy.getDay() + 6) % 7;
+            const l   = new Date(hoy); l.setDate(hoy.getDate() - dow + offset * 7);
+            l.setHours(0,0,0,0); return l;
+        }
+
+        async function _cargarRrssTipo() {
+            try {
+                const res = await fetch('/api/rrss/planning/tipo');
+                const d   = await res.json();
+                _rrssTipoData = d.tipo || {};
+                _renderRrssTipoPanel();
+            } catch(e) { console.error('[rrss panel] tipo:', e); }
+        }
+
+        function _renderRrssTipoPanel() {
+            const cont = document.getElementById('rrssPanelTipo');
+            const TIPO_KEYS = ['TIPO-LUN','TIPO-MAR','TIPO-MIE','TIPO-JUE','TIPO-VIE','TIPO-SAB','TIPO-DOM'];
+            cont.innerHTML = TIPO_KEYS.map((k,i) => {
+                const val = _rrssTipoData[k] || '';
+                return `<div style="background:#f8fafc;border-radius:8px;padding:6px;min-height:60px;">
+                    <div style="font-size:8px;font-weight:900;color:#94a3b8;text-transform:uppercase;margin-bottom:4px;">${RRSS_DIAS_PANEL[i]}</div>
+                    <div style="font-size:9px;color:${val?'#1e293b':'#cbd5e1'};line-height:1.4;">${val || '—'}</div>
+                </div>`;
+            }).join('');
+        }
+
+        async function _cargarRrssSemanaPanel() {
+            const lunes = _getLunesPanel(_rrssPanelOffset);
+            const dom   = new Date(lunes); dom.setDate(lunes.getDate() + 6);
+            document.getElementById('rrssPanelSemanaLabel').textContent =
+                `${lunes.getDate()} ${RRSS_MESES_ES[lunes.getMonth()]} — ${dom.getDate()} ${RRSS_MESES_ES[dom.getMonth()]} ${dom.getFullYear()}`;
+            const lunesIso = lunes.toISOString().substring(0,10);
+            try {
+                const [resP, resE] = await Promise.all([
+                    fetch(`/api/rrss/planning?lunes=${lunesIso}`),
+                    fetch(`/api/rrss/tipo/estados?lunes=${lunesIso}`)
+                ]);
+                const pd = await resP.json();
+                const ed = await resE.json();
+                const semana = pd.semana || {};
+                _rrssTipoEstados = ed.estados || {};
+                _renderRrssSemanaPanel(lunes, semana);
+            } catch(e) { console.error('[rrss panel] semana:', e); }
+        }
+
+        function _renderRrssSemanaPanel(lunes, semana) {
+            const TIPO_KEYS = ['TIPO-LUN','TIPO-MAR','TIPO-MIE','TIPO-JUE','TIPO-VIE','TIPO-SAB','TIPO-DOM'];
+            const cont = document.getElementById('rrssPanelSemana');
+            let html = '';
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(lunes); d.setDate(lunes.getDate() + i);
+                const iso = d.toISOString().substring(0,10);
+                const planVal  = semana[iso] || '';
+                const tipoVal  = _rrssTipoData[TIPO_KEYS[i]] || '';
+                const eKey     = iso + '|' + TIPO_KEYS[i];
+                const hecho    = (_rrssTipoEstados[eKey] || '').toUpperCase() === 'COMPLETADO';
+                const hoy      = new Date(); hoy.setHours(0,0,0,0);
+                const isHoy    = d.getTime() === hoy.getTime();
+                html += `<div style="border-radius:10px;border:1.5px solid ${isHoy?'#E31E24':'#f1f5f9'};padding:10px;margin-bottom:8px;${hecho?'background:#f0fdf4;':''}">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                        <div style="font-size:10px;font-weight:900;color:${isHoy?'#E31E24':'#1e293b'};text-transform:uppercase;">${RRSS_DIAS_PANEL[i]} ${d.getDate()}/${d.getMonth()+1}</div>
+                        ${tipoVal ? `<button onclick="rrssToggleHecho('${eKey}', this)" style="background:${hecho?'#16a34a':'#f1f5f9'};color:${hecho?'white':'#64748b'};border:none;border-radius:6px;padding:3px 10px;font-size:10px;font-weight:900;cursor:pointer;font-family:inherit;">${hecho?'✓ HECHO':'Marcar'}</button>` : ''}
+                    </div>
+                    ${tipoVal ? `<div style="font-size:10px;color:#475569;margin-bottom:6px;line-height:1.4;${hecho?'text-decoration:line-through;opacity:.5;':''}">${tipoVal}</div>` : ''}
+                    ${planVal ? `<div style="font-size:10px;color:#7c3aed;font-weight:700;line-height:1.4;background:#f5f3ff;border-radius:6px;padding:5px 8px;">${planVal}</div>` : ''}
+                    ${!tipoVal && !planVal ? `<div style="font-size:10px;color:#cbd5e1;">Sin planificar</div>` : ''}
+                </div>`;
+            }
+            cont.innerHTML = html;
+        }
+
+        async function rrssToggleHecho(eKey, btn) {
+            const actual = (_rrssTipoEstados[eKey] || '').toUpperCase();
+            const nuevo  = actual === 'COMPLETADO' ? 'PENDIENTE' : 'COMPLETADO';
+            try {
+                await fetch('/api/rrss/tipo/estado', {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({key: eKey, estado: nuevo})
+                });
+                _rrssTipoEstados[eKey] = nuevo;
+                // Re-render semana
+                const lunes = _getLunesPanel(_rrssPanelOffset);
+                const lunesIso = lunes.toISOString().substring(0,10);
+                const res = await fetch(`/api/rrss/planning?lunes=${lunesIso}`);
+                const pd = await res.json();
+                _renderRrssSemanaPanel(lunes, pd.semana || {});
+            } catch(e) { console.error('[rrss] toggle hecho:', e); }
+        }
+
+        // ── Tareas RRSS tipo — barra horizontal debajo del semanal ──────
+        const TIPO_KEYS_CRONO = ['TIPO-LUN','TIPO-MAR','TIPO-MIE','TIPO-JUE','TIPO-VIE','TIPO-SAB','TIPO-DOM'];
+        let _rrssEstadosCrono = {};
+
+        async function inyectarTareasRrssTipo() {
+            const bar = document.getElementById('rrss-tipo-bar');
+            const cols = document.getElementById('rrss-tipo-cols');
+            if (!bar || !cols) return;
+            try {
+                const hoy = new Date(); const dow = (hoy.getDay()+6)%7;
+                const lunes = new Date(hoy); lunes.setDate(hoy.getDate()-dow); lunes.setHours(0,0,0,0);
+                const lunesIso = lunes.toISOString().substring(0,10);
+
+                const [resT, resE] = await Promise.all([
+                    fetch('/api/rrss/planning/tipo'),
+                    fetch(`/api/rrss/tipo/estados?lunes=${lunesIso}`)
+                ]);
+                const td = await resT.json();
+                const ed = await resE.json();
+                const tipo = td.tipo || {};
+                _rrssEstadosCrono = ed.estados || {};
+
+                // Verificar si hay al menos un contenido
+                const hayContenido = TIPO_KEYS_CRONO.some(k => (tipo[k] || '').trim());
+                if (!hayContenido) { bar.style.display = 'none'; return; }
+                bar.style.display = '';
+
+                cols.innerHTML = '';
+                for (let i = 0; i < 7; i++) {
+                    const d = new Date(lunes); d.setDate(lunes.getDate() + i);
+                    const iso     = d.toISOString().substring(0,10);
+                    const tipoKey = TIPO_KEYS_CRONO[i];
+                    const contenido = (tipo[tipoKey] || '').trim();
+                    const eKey    = iso + '|' + tipoKey;
+                    const hecho   = (_rrssEstadosCrono[eKey] || '').toUpperCase() === 'COMPLETADO';
+
+                    const col = document.createElement('div');
+                    col.style.cssText = 'border-right:1px solid #f1f5f9;padding:8px 8px;min-height:48px;';
+                    if (i === 6) col.style.borderRight = 'none';
+
+                    if (contenido) {
+                        col.innerHTML = `
+                        <div class="evento" data-ekey="${eKey}" style="border-left-color:#a78bfa;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:5px;${hecho?'opacity:.5;':''}">
+                            <span style="flex:1;white-space:normal;word-break:break-word;line-height:1.2;font-size:11px;font-weight:700;${hecho?'text-decoration:line-through;':''}">${contenido}</span>
+                            <i class="fa-solid fa-check" style="font-size:13px;color:#16a34a;flex-shrink:0;display:${hecho?'inline':'none'};"></i>
+                        </div>`;
+                        col.querySelector('.evento').addEventListener('click', function() {
+                            rrssToggleHechoCrono(eKey, this);
+                        });
+                        col.querySelector('.evento').addEventListener('contextmenu', function(e) {
+                            e.preventDefault();
+                            rrssCtxMenuCrono(eKey, e.clientX, e.clientY, this);
+                        });
+                    }
+                    cols.appendChild(col);
+                }
+            } catch(e) { console.error('[rrss crono] inyectar tipo:', e); }
+        }
+
+        async function rrssToggleHechoCrono(eKey, evDiv) {
+            const actual = (_rrssEstadosCrono[eKey] || '').toUpperCase();
+            const nuevo  = actual === 'COMPLETADO' ? 'PENDIENTE' : 'COMPLETADO';
+            try {
+                await fetch('/api/rrss/tipo/estado', {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({key: eKey, estado: nuevo})
+                });
+                _rrssEstadosCrono[eKey] = nuevo;
+                const txt  = evDiv.querySelector('span');
+                const icon = evDiv.querySelector('.fa-check');
+                if (nuevo === 'COMPLETADO') {
+                    evDiv.style.opacity = '.5';
+                    if (txt) txt.style.textDecoration = 'line-through';
+                    if (icon) icon.style.display = 'inline';
+                } else {
+                    evDiv.style.opacity = '1';
+                    if (txt) txt.style.textDecoration = '';
+                    if (icon) icon.style.display = 'none';
+                }
+            } catch(e) { console.error('[rrss crono] toggle:', e); }
+        }
+
+        // Menú contextual para tareas RRSS (solo marcar/desmarcar)
+        function rrssCtxMenuCrono(eKey, x, y, evDiv) {
+            // Reutilizar el ctxMenu existente pero con opciones reducidas
+            const hecho = (_rrssEstadosCrono[eKey] || '').toUpperCase() === 'COMPLETADO';
+            const menu  = document.getElementById('ctxMenu');
+            // Ocultar opciones que no aplican a RRSS
+            document.getElementById('ctxEdit').style.display    = 'none';
+            document.getElementById('ctxAdjuntar').style.display= 'none';
+            document.getElementById('ctxExcel').style.display   = 'none';
+            document.getElementById('ctxDelete').style.display  = 'none';
+            const checkBtn  = document.getElementById('ctxCheck');
+            const checkLbl  = document.getElementById('ctxCheckLabel');
+            checkLbl.textContent = hecho ? 'Desmarcar' : 'Completar';
+            // Reemplazar handler temporalmente
+            const nuevoCheck = checkBtn.cloneNode(true);
+            nuevoCheck.querySelector('span').textContent = hecho ? 'Desmarcar' : 'Completar';
+            nuevoCheck.addEventListener('click', () => {
+                menu.style.display = 'none';
+                rrssToggleHechoCrono(eKey, evDiv);
+                // Restaurar opciones del menú
+                ['ctxEdit','ctxAdjuntar','ctxExcel','ctxDelete'].forEach(id => {
+                    document.getElementById(id).style.display = '';
+                });
+            });
+            checkBtn.parentNode.replaceChild(nuevoCheck, checkBtn);
+            menu.style.left = x + 'px';
+            menu.style.top  = y + 'px';
+            menu.style.display = 'block';
+        }
+
+        {% endif %}
     </script>
 </body>
 </html>

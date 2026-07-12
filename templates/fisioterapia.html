@@ -1,0 +1,649 @@
+{% extends 'dashboard.html' %}
+{% block content %}
+<style>
+.fisio-wrap { font-family:'Montserrat',sans-serif; display:flex; flex-direction:column; gap:20px; padding-bottom:40px; }
+.fisio-card { background:white; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,.05); padding:22px; border:1px solid #f1f5f9; }
+.fisio-card h2 { font-size:15px; font-weight:900; color:#1e293b; text-transform:uppercase; margin:0 0 16px; display:flex; align-items:center; gap:10px; }
+.fisio-card h2 i { color:#E31E24; }
+.fisio-tab-btn { padding:8px 18px; border-radius:8px; border:2px solid #e2e8f0; background:white; color:#64748b; font-size:11px; font-weight:800; cursor:pointer; text-transform:uppercase; transition:.15s; }
+.fisio-tab-btn.activo { background:#1e293b; color:white; border-color:#1e293b; }
+.fisio-nav-btn { background:white; border:2px solid #e2e8f0; border-radius:8px; padding:5px 12px; cursor:pointer; font-size:12px; font-weight:800; color:#475569; }
+.fisio-nav-btn:hover { background:#f8fafc; }
+
+.slot-libre { background:#f8fafc; border:1.5px dashed #e2e8f0; border-radius:8px; padding:8px 10px; margin-bottom:5px; cursor:pointer; transition:.1s; display:flex; align-items:center; justify-content:space-between; }
+.slot-libre:hover { border-color:#7c3aed; background:#faf5ff; }
+.slot-reservado { background:white; border:1.5px solid #fca5a5; border-left:3px solid #E31E24; border-radius:8px; padding:8px 10px; margin-bottom:5px; cursor:pointer; transition:.1s; }
+.slot-reservado:hover { box-shadow:0 2px 10px rgba(0,0,0,.1); transform:translateY(-1px); }
+.slot-realizado { border-color:#86efac !important; border-left-color:#16a34a !important; }
+
+.kpi-badge { background:#f1f5f9; border-radius:10px; padding:14px 16px; text-align:center; }
+.kpi-badge .val { font-size:26px; font-weight:900; color:#1e293b; line-height:1; }
+.kpi-badge .lbl { font-size:9px; font-weight:800; color:#94a3b8; text-transform:uppercase; margin-top:4px; }
+.bar-row { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+.bar-fill { height:10px; border-radius:99px; transition:.3s; }
+
+.fisio-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:30000; align-items:center; justify-content:center; }
+.fisio-modal-box { background:white; border-radius:16px; width:480px; max-height:88vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+.fisio-modal-head { background:#1e293b; color:white; padding:16px 20px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center; }
+.fisio-modal-head span:first-child { font-weight:900; font-size:14px; }
+.fisio-modal-close { cursor:pointer; font-size:22px; line-height:1; }
+.fisio-modal-body { padding:20px; font-size:13px; }
+.fisio-field label { font-size:10px; font-weight:800; color:#64748b; display:block; margin-bottom:4px; text-transform:uppercase; }
+.fisio-field input, .fisio-field select, .fisio-field textarea {
+    width:100%; padding:9px 11px; border:1.5px solid #e2e8f0; border-radius:8px;
+    font-size:12px; font-family:inherit; color:#1e293b; box-sizing:border-box; }
+.fisio-field textarea { resize:vertical; }
+.fisio-field { margin-bottom:12px; }
+.btn-rojo  { background:#E31E24; color:white; border:none; border-radius:8px; padding:10px 22px; font-size:11px; font-weight:900; cursor:pointer; }
+.btn-gris  { background:#f1f5f9; color:#475569; border:none; border-radius:8px; padding:10px 18px; font-size:11px; font-weight:800; cursor:pointer; }
+.btn-verde { background:#16a34a; color:white; border:none; border-radius:8px; padding:10px 18px; font-size:11px; font-weight:900; cursor:pointer; }
+</style>
+
+<div class="fisio-wrap">
+
+  <!-- Header + tabs -->
+  <div class="fisio-card" style="padding:16px 22px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <h2 style="margin:0;"><i class="fas fa-stethoscope"></i> FISIOTERAPIA</h2>
+      <div style="display:flex;gap:8px;">
+        <button class="fisio-tab-btn activo" id="tabBtnSemana" onclick="fisioTab('semana')">📅 Semana</button>
+        <button class="fisio-tab-btn" id="tabBtnKpi" onclick="fisioTab('kpi')">📊 Datos</button>
+        <button class="fisio-tab-btn" id="tabBtnConfig" onclick="fisioTab('config')">⚙️ Config</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB SEMANA -->
+  <div id="secSemana" class="fisio-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="fisio-nav-btn" onclick="fisioSemana(-1)">&#8249;</button>
+        <span id="fisioSemanaLabel" style="font-size:13px;font-weight:900;color:#1e293b;">Cargando...</span>
+        <button class="fisio-nav-btn" onclick="fisioSemana(1)">&#8250;</button>
+        <button class="fisio-nav-btn" onclick="fisioOffset=0;fisioCargarSemana()" style="font-size:10px;">HOY</button>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div class="kpi-badge" style="padding:8px 14px;">
+          <div class="val" id="fisioResReservadas" style="font-size:18px;">—</div>
+          <div class="lbl">Reservadas</div>
+        </div>
+        <div class="kpi-badge" style="padding:8px 14px;">
+          <div class="val" id="fisioResLibres" style="font-size:18px;color:#16a34a;">—</div>
+          <div class="lbl">Libres</div>
+        </div>
+        <div class="kpi-badge" style="padding:8px 14px;">
+          <div class="val" id="fisioResCap" style="font-size:18px;color:#94a3b8;">—</div>
+          <div class="lbl">Slots semana</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leyenda -->
+    <div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;color:#64748b;">
+        <div style="width:12px;height:12px;border:1.5px dashed #e2e8f0;border-radius:3px;background:#f8fafc;"></div>Disponible (clic para crear cita)
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;color:#64748b;">
+        <div style="width:12px;height:12px;border-left:3px solid #E31E24;border:1.5px solid #fca5a5;border-radius:3px;background:white;"></div>Reservada
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;color:#64748b;">
+        <div style="width:12px;height:12px;border-left:3px solid #16a34a;border:1.5px solid #86efac;border-radius:3px;background:white;"></div>Realizada
+      </div>
+    </div>
+
+    <div id="fisioSemanaGrid">
+      <div style="text-align:center;padding:40px;color:#94a3b8;">Cargando calendario...</div>
+    </div>
+  </div>
+
+  <!-- TAB KPIs -->
+  <div id="secKpi" style="display:none;">
+    <div id="fisioKpiWrap">
+      <div style="text-align:center;padding:40px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>
+    </div>
+  </div>
+
+  <!-- TAB CONFIG -->
+  <div id="secConfig" style="display:none;">
+    <div class="fisio-card">
+      <h2><i class="fas fa-sliders-h"></i> Configuración del calendario</h2>
+
+      <!-- Duración de cita -->
+      <div style="margin-bottom:22px;">
+        <div style="font-size:11px;font-weight:900;color:#475569;text-transform:uppercase;margin-bottom:10px;">Duración de cada cita</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;" id="cfgSlotBtns">
+          <button class="cfg-slot-btn" data-min="30"  onclick="cfgSelSlot(this)">30 min</button>
+          <button class="cfg-slot-btn" data-min="45"  onclick="cfgSelSlot(this)">45 min</button>
+          <button class="cfg-slot-btn" data-min="60"  onclick="cfgSelSlot(this)">60 min</button>
+          <button class="cfg-slot-btn" data-min="90"  onclick="cfgSelSlot(this)">90 min</button>
+          <button class="cfg-slot-btn" data-min="120" onclick="cfgSelSlot(this)">2 horas</button>
+        </div>
+      </div>
+
+      <!-- Horario por día -->
+      <div style="margin-bottom:22px;">
+        <div style="font-size:11px;font-weight:900;color:#475569;text-transform:uppercase;margin-bottom:10px;">Horario por día</div>
+        <div id="cfgDiasGrid" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;">
+        <button class="btn-gris" onclick="fisioCargarConfig()">↺ Restablecer</button>
+        <button class="btn-verde" onclick="fisioGuardarConfig()"><i class="fas fa-save"></i> Guardar configuración</button>
+      </div>
+      <div id="cfgMsgOk" style="display:none;margin-top:12px;background:#dcfce7;border-radius:8px;padding:10px 14px;font-size:12px;font-weight:700;color:#166534;">
+        ✅ Configuración guardada correctamente
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<style>
+.cfg-slot-btn { padding:8px 16px;border-radius:8px;border:2px solid #e2e8f0;background:white;color:#475569;font-size:11px;font-weight:800;cursor:pointer;transition:.15s; }
+.cfg-slot-btn.activo { background:#7c3aed;color:white;border-color:#7c3aed; }
+.cfg-dia-row { display:grid;grid-template-columns:90px 1fr;align-items:center;gap:12px;background:#f8fafc;border-radius:10px;padding:10px 14px;border:1.5px solid #f1f5f9; }
+.cfg-dia-row.inactivo { opacity:.5; }
+.cfg-toggle { position:relative;display:inline-block;width:36px;height:20px;cursor:pointer;flex-shrink:0; }
+.cfg-toggle input { opacity:0;width:0;height:0; }
+.cfg-toggle-sl { position:absolute;inset:0;background:#cbd5e1;border-radius:99px;transition:.2s; }
+.cfg-toggle-sl:before { content:'';position:absolute;left:3px;bottom:3px;width:14px;height:14px;background:white;border-radius:50%;transition:.2s; }
+.cfg-toggle input:checked + .cfg-toggle-sl { background:#7c3aed; }
+.cfg-toggle input:checked + .cfg-toggle-sl:before { transform:translateX(16px); }
+.cfg-hora-sel { padding:5px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:12px;font-weight:700;color:#1e293b;background:white;font-family:inherit;cursor:pointer; }
+</style>
+
+<!-- MODAL: slot libre → crear cita -->
+<div id="modalCrear" class="fisio-modal" onclick="if(event.target===this)this.style.display='none'">
+  <div class="fisio-modal-box">
+    <div class="fisio-modal-head">
+      <span><i class="fas fa-plus-circle"></i> NUEVA CITA</span>
+      <span class="fisio-modal-close" onclick="document.getElementById('modalCrear').style.display='none'">&times;</span>
+    </div>
+    <div class="fisio-modal-body">
+      <div style="background:#f1f5f9;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-weight:900;font-size:12px;color:#1e293b;" id="crearFechaHoraLabel">—</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="fisio-field"><label>Nombre</label><input id="crearNombre" type="text" placeholder="Nombre"></div>
+        <div class="fisio-field"><label>Apellido</label><input id="crearApellido" type="text" placeholder="Apellido"></div>
+        <div class="fisio-field"><label>Equipo</label><input id="crearEquipo" type="text" placeholder="Equipo"></div>
+        <div class="fisio-field"><label>Correo</label><input id="crearCorreo" type="email" placeholder="correo@email.com"></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:6px;">
+        <button class="btn-gris" onclick="document.getElementById('modalCrear').style.display='none'">Cancelar</button>
+        <button class="btn-rojo" onclick="fisioCrearCita()"><i class="fas fa-save"></i> Crear cita</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: slot reservado → ver / editar / cancelar -->
+<div id="modalCita" class="fisio-modal" onclick="if(event.target===this)this.style.display='none'">
+  <div class="fisio-modal-box">
+    <div class="fisio-modal-head">
+      <span><i class="fas fa-stethoscope"></i> DETALLE CITA</span>
+      <span class="fisio-modal-close" onclick="document.getElementById('modalCita').style.display='none'">&times;</span>
+    </div>
+    <div id="modalCitaBody" class="fisio-modal-body"></div>
+  </div>
+</div>
+
+<script>
+let fisioOffset = 0;
+let fisioCitasCache = [];
+let _crearFecha = '', _crearHora = '';
+let _fisioConfig = {{ fisio_config | tojson }};
+const DIAS_ES      = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+const DIAS_ES_FULL = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+const MESES_ES     = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const TIPOS_LESION = {{ tipos_lesion | tojson }};
+
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+function fisioTab(t) {
+    document.getElementById('secSemana').style.display = t==='semana' ? '' : 'none';
+    document.getElementById('secKpi').style.display    = t==='kpi'    ? '' : 'none';
+    document.getElementById('secConfig').style.display = t==='config' ? '' : 'none';
+    document.getElementById('tabBtnSemana').classList.toggle('activo', t==='semana');
+    document.getElementById('tabBtnKpi').classList.toggle('activo', t==='kpi');
+    document.getElementById('tabBtnConfig').classList.toggle('activo', t==='config');
+    if (t === 'kpi')    fisioCargarKpis();
+    if (t === 'config') fisioRenderConfig();
+}
+
+// ── Semana ────────────────────────────────────────────────────────────────────
+function fisioSemana(delta) { fisioOffset += delta; fisioCargarSemana(); }
+
+async function fisioCargarSemana() {
+    document.getElementById('fisioSemanaGrid').innerHTML =
+        '<div style="text-align:center;padding:30px;color:#94a3b8;">Cargando...</div>';
+    try {
+        const res  = await fetch(`/api/fisio/semana?offset=${fisioOffset}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        fisioCitasCache = data.citas || [];
+
+        const ini = new Date(data.semana_inicio + 'T00:00:00');
+        const fin = new Date(data.semana_fin    + 'T00:00:00');
+        document.getElementById('fisioSemanaLabel').textContent =
+            `${ini.getDate()} ${MESES_ES[ini.getMonth()]} — ${fin.getDate()} ${MESES_ES[fin.getMonth()]} ${fin.getFullYear()}`;
+        document.getElementById('fisioResReservadas').textContent = data.reservadas ?? '—';
+        document.getElementById('fisioResLibres').textContent     = data.libres     ?? '—';
+        document.getElementById('fisioResCap').textContent        = data.capacidad  ?? '—';
+        document.getElementById('fisioSemanaGrid').innerHTML = fisioRenderGrid(data.citas, ini);
+    } catch(e) {
+        document.getElementById('fisioSemanaGrid').innerHTML =
+            `<div style="text-align:center;padding:30px;color:#dc2626;font-size:12px;">Error: ${e.message}</div>`;
+    }
+}
+
+function fisioRenderGrid(slots, lunes) {
+    const map = {};
+    slots.forEach(s => {
+        const d   = new Date(s.fecha + 'T00:00:00');
+        const dow = (d.getDay() + 6) % 7;
+        if (!map[dow]) map[dow] = [];
+        map[dow].push(s);
+    });
+
+    let html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;">';
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(lunes); d.setDate(lunes.getDate() + i);
+        const dd = d.getDate(), mm = MESES_ES[d.getMonth()].substring(0,3);
+        const isHoy = d.toDateString() === new Date().toDateString();
+        const diaSlots = (map[i] || []).sort((a,b) => a.hora.localeCompare(b.hora));
+
+        html += `<div style="background:${isHoy?'#fef9f9':'#f8fafc'};border-radius:12px;padding:10px 8px;min-height:120px;border:${isHoy?'2px solid #E31E24':'1px solid #f1f5f9'};">
+            <div style="font-size:9px;font-weight:900;color:${isHoy?'#E31E24':'#94a3b8'};text-align:center;margin-bottom:8px;text-transform:uppercase;">${DIAS_ES[i]} ${dd} ${mm}</div>`;
+
+        if (!diaSlots.length) {
+            html += '<div style="font-size:9px;color:#cbd5e1;text-align:center;margin-top:16px;">Sin horario</div>';
+        } else {
+            diaSlots.forEach(s => {
+                if (s.es_reservado) {
+                    const cls  = 'slot-reservado' + (s.realizada==='SI' ? ' slot-realizado' : '');
+                    const icon = s.realizada==='SI' ? '✓' : s.realizada==='NO' ? '✗' : '';
+                    const iclr = s.realizada==='SI' ? '#16a34a' : '#dc2626';
+                    html += `<div class="${cls}" onclick="fisioAbrirCita('${s.id}','${s.fecha}','${s.hora}')">
+                        <div style="font-size:11px;font-weight:900;color:#1e293b;">${s.hora} ${icon?`<span style="color:${iclr}">${icon}</span>`:''}</div>
+                        <div style="font-size:11px;font-weight:700;color:#E31E24;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.nombre} ${s.apellido}</div>
+                        <div style="font-size:9px;color:#94a3b8;">${s.equipo||'—'}</div>
+                    </div>`;
+                } else {
+                    html += `<div class="slot-libre" onclick="fisioAbrirCrear('${s.fecha}','${s.hora}')">
+                        <span style="font-size:10px;font-weight:700;color:#94a3b8;">${s.hora}</span>
+                        <span style="font-size:14px;color:#7c3aed;font-weight:900;">+</span>
+                    </div>`;
+                }
+            });
+        }
+        html += '</div>';
+    }
+    return html + '</div>';
+}
+
+// ── Crear cita ────────────────────────────────────────────────────────────────
+function fisioAbrirCrear(fecha, hora) {
+    _crearFecha = fecha; _crearHora = hora;
+    const d = new Date(fecha + 'T00:00:00');
+    document.getElementById('crearFechaHoraLabel').textContent =
+        `${DIAS_ES[(d.getDay()+6)%7]} ${d.getDate()} ${MESES_ES[d.getMonth()]} ${d.getFullYear()}  ·  ${hora}h`;
+    ['crearNombre','crearApellido','crearEquipo','crearCorreo'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('modalCrear').style.display = 'flex';
+}
+
+async function fisioCrearCita() {
+    const nombre   = document.getElementById('crearNombre').value.trim();
+    const apellido = document.getElementById('crearApellido').value.trim();
+    const equipo   = document.getElementById('crearEquipo').value.trim();
+    const correo   = document.getElementById('crearCorreo').value.trim();
+    if (!nombre) { alert('Introduce el nombre del jugador'); return; }
+    try {
+        const res = await fetch('/api/fisio/crear', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({fecha:_crearFecha, hora:_crearHora, nombre, apellido, equipo, correo})
+        });
+        const d = await res.json();
+        if (d.status === 'ok') {
+            document.getElementById('modalCrear').style.display = 'none';
+            fisioCargarSemana();
+        } else { alert('Error: ' + (d.error || 'desconocido')); }
+    } catch(e) { alert('Error al crear cita: ' + e.message); }
+}
+
+// ── Ver / editar / cancelar cita ─────────────────────────────────────────────
+function fisioAbrirCita(id, fecha, hora) {
+    const c = fisioCitasCache.find(x => x.id === id) || {id,fecha,hora,nombre:'',apellido:'',equipo:'',correo:'',tipo_lesion:'',comentario:'',realizada:''};
+    const tiposOpts = TIPOS_LESION.map(t =>
+        `<option value="${t}" ${c.tipo_lesion===t?'selected':''}>${t}</option>`).join('');
+    const d = new Date(fecha + 'T00:00:00');
+    const fechaLabel = `${DIAS_ES[(d.getDay()+6)%7]} ${d.getDate()} ${MESES_ES[d.getMonth()]} ${d.getFullYear()}  ·  ${hora}h`;
+
+    document.getElementById('modalCitaBody').innerHTML = `
+        <div style="background:#f1f5f9;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-weight:900;font-size:12px;color:#1e293b;">${fechaLabel}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+            <div><div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;margin-bottom:2px;">Jugador</div>
+                <div style="font-weight:700;color:#1e293b;">${c.nombre} ${c.apellido}</div></div>
+            <div><div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;margin-bottom:2px;">Equipo</div>
+                <div style="font-weight:700;color:#1e293b;">${c.equipo||'—'}</div></div>
+            <div style="grid-column:1/-1;"><div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;margin-bottom:2px;">Correo</div>
+                <div style="font-weight:600;color:#475569;font-size:12px;">${c.correo||'—'}</div></div>
+        </div>
+        <hr style="border:none;border-top:1px solid #f1f5f9;margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:900;color:#1e293b;margin-bottom:10px;text-transform:uppercase;">📋 Parte del fisioterapeuta</div>
+        <div class="fisio-field">
+            <label>Tipo de lesión / motivo</label>
+            <select id="citaTipoLesion"><option value="">— Seleccionar —</option>${tiposOpts}</select>
+        </div>
+        <div class="fisio-field">
+            <label>Comentario</label>
+            <textarea id="citaComentario" rows="3">${c.comentario||''}</textarea>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;flex-wrap:wrap;gap:10px;">
+            <div style="display:flex;gap:14px;align-items:center;">
+                <span style="font-size:10px;font-weight:800;color:#64748b;">¿Sesión realizada?</span>
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;font-weight:700;color:#16a34a;">
+                    <input type="radio" name="citaRealizada" value="SI" ${c.realizada!=='NO'?'checked':''}> Sí
+                </label>
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;font-weight:700;color:#dc2626;">
+                    <input type="radio" name="citaRealizada" value="NO" ${c.realizada==='NO'?'checked':''}> No
+                </label>
+            </div>
+            <div style="display:flex;gap:8px;">
+                <button class="btn-gris" style="color:#dc2626;" onclick="fisioCancelarCita('${id}')">🗑 Cancelar cita</button>
+                <button class="btn-verde" onclick="fisioGuardarParte('${id}','${fecha}','${hora}','${c.nombre}','${c.apellido}','${c.equipo}','${c.correo}')">💾 Guardar</button>
+            </div>
+        </div>`;
+    document.getElementById('modalCita').style.display = 'flex';
+}
+
+async function fisioGuardarParte(id,fecha,hora,nombre,apellido,equipo,correo) {
+    const tipo      = document.getElementById('citaTipoLesion').value;
+    const coment    = document.getElementById('citaComentario').value;
+    const realizada = document.querySelector('input[name="citaRealizada"]:checked')?.value || 'SI';
+    try {
+        const res = await fetch('/api/fisio/guardar', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({event_id:id,fecha,hora,nombre,apellido,equipo,correo,
+                                  tipo_lesion:tipo,comentario:coment,realizada})
+        });
+        const d = await res.json();
+        if (d.status === 'ok') {
+            const c = fisioCitasCache.find(x => x.id === id);
+            if (c) { c.tipo_lesion=tipo; c.comentario=coment; c.realizada=realizada; }
+            document.getElementById('modalCita').style.display = 'none';
+            fisioCargarSemana();
+        } else { alert('Error: ' + (d.error||'desconocido')); }
+    } catch(e) { alert('Error al guardar: ' + e.message); }
+}
+
+async function fisioCancelarCita(id) {
+    if (!confirm('¿Cancelar esta cita? Se eliminará del calendario de Google.')) return;
+    try {
+        const res = await fetch('/api/fisio/cancelar', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({event_id: id})
+        });
+        const d = await res.json();
+        if (d.status === 'ok') {
+            document.getElementById('modalCita').style.display = 'none';
+            fisioCargarSemana();
+        } else { alert('Error: ' + (d.error||'desconocido')); }
+    } catch(e) { alert('Error al cancelar: ' + e.message); }
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────────────────
+async function fisioCargarKpis() {
+    const wrap = document.getElementById('fisioKpiWrap');
+    wrap.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+    try {
+        const res  = await fetch('/api/fisio/kpis');
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        const _card = (title, icon, body) =>
+            `<div class="fisio-card" style="margin-bottom:16px;">
+                <h2><i class="${icon}"></i> ${title}</h2>
+                ${body}
+            </div>`;
+
+        // ── USO POR EQUIPO ───────────────────────────────────────────────
+        const equipos = Object.entries(data.por_equipo||{}).sort((a,b)=>b[1].total-a[1].total);
+        const maxEq   = Math.max(1,...equipos.map(([,v])=>v.total));
+        const bodyEq  = equipos.length===0 ? '<div style="color:#94a3b8;font-size:12px;">Sin datos</div>'
+            : `<table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <thead><tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+                  <th style="text-align:left;padding:7px 10px;font-size:9px;font-weight:900;color:#94a3b8;">EQUIPO</th>
+                  <th style="text-align:center;padding:7px;font-size:9px;font-weight:900;color:#94a3b8;">SESIONES</th>
+                  <th style="text-align:center;padding:7px;font-size:9px;font-weight:900;color:#94a3b8;">REALIZADAS</th>
+                  <th style="padding:7px 10px;font-size:9px;font-weight:900;color:#94a3b8;min-width:120px;">USO</th>
+                </tr></thead><tbody>
+                ${equipos.map(([eq,v])=>{
+                    const pct=v.total>0?Math.round(v.total/maxEq*100):0;
+                    return `<tr style="border-bottom:1px solid #f1f5f9;">
+                      <td style="padding:7px 10px;font-weight:700;color:${v.total===0?'#94a3b8':'#1e293b'};">${eq}</td>
+                      <td style="text-align:center;padding:7px;font-weight:900;color:${v.total===0?'#94a3b8':'#1e293b'};">${v.total}</td>
+                      <td style="text-align:center;padding:7px;color:#16a34a;font-weight:700;">${v.realizadas||0}</td>
+                      <td style="padding:7px 10px;">
+                        <div style="display:flex;align-items:center;gap:6px;">
+                          <div style="flex:1;background:#e2e8f0;border-radius:99px;height:8px;">
+                            <div style="background:${v.total===0?'#e2e8f0':'#E31E24'};height:8px;border-radius:99px;width:${pct}%;"></div>
+                          </div>
+                          <span style="font-size:10px;font-weight:800;color:#475569;width:24px;">${v.total}</span>
+                        </div>
+                      </td>
+                    </tr>`;
+                }).join('')}</tbody></table>`;
+
+        // ── ACUMULADO ─────────────────────────────────────────────────────
+        const ac = data.acumulado || {};
+        const bodyAc = `
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
+                ${[['Reservadas',ac.total_reservadas??0,'#E31E24'],
+                   ['Realizadas',ac.total_realizadas??0,'#16a34a'],
+                   ['Capacidad total',ac.total_capacidad??0,'#475569']].map(([l,v,c])=>
+                    `<div class="kpi-badge"><div class="val" style="color:${c};">${v}</div><div class="lbl">${l}</div></div>`
+                ).join('')}
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+                ${[['% Uso acumulado',(ac.pct_uso??0)+'%','#7c3aed'],
+                   ['% Sin usar',(ac.pct_no_uso??0)+'%','#94a3b8']].map(([l,v,c])=>
+                    `<div class="kpi-badge"><div class="val" style="color:${c};">${v}</div><div class="lbl">${l}</div></div>`
+                ).join('')}
+            </div>
+            <div style="background:#f8fafc;border-radius:10px;padding:12px 14px;">
+                <div style="background:#e2e8f0;border-radius:99px;height:12px;overflow:hidden;">
+                    <div style="background:linear-gradient(90deg,#16a34a,#22c55e);height:12px;border-radius:99px;width:${ac.pct_uso??0}%;"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:9px;font-weight:700;color:#94a3b8;">
+                    <span style="color:#16a34a;">Usado ${ac.pct_uso??0}%</span>
+                    <span>Sin usar ${ac.pct_no_uso??0}%</span>
+                </div>
+            </div>`;
+
+        // ── POR MES ───────────────────────────────────────────────────────
+        const meses = Object.entries(data.por_mes||{}).filter(([m])=>m!=='Sin fecha');
+        const MNAMES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        const bodyMes = meses.length===0 ? '<div style="color:#94a3b8;font-size:12px;">Sin datos aún</div>'
+            : `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:400px;">
+                <thead><tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+                  <th style="text-align:left;padding:7px 10px;font-size:9px;font-weight:900;color:#94a3b8;">MES</th>
+                  <th style="text-align:center;padding:7px;font-size:9px;font-weight:900;color:#94a3b8;">CAP.</th>
+                  <th style="text-align:center;padding:7px;font-size:9px;font-weight:900;color:#E31E24;">USADAS</th>
+                  <th style="text-align:center;padding:7px;font-size:9px;font-weight:900;color:#64748b;">NO USADAS</th>
+                  <th style="padding:7px 10px;font-size:9px;font-weight:900;color:#94a3b8;min-width:130px;">% USO</th>
+                </tr></thead><tbody>
+                ${meses.map(([m,v])=>{
+                    const pct=v.pct_uso??0;
+                    const color=pct>=70?'#16a34a':pct>=40?'#f59e0b':'#E31E24';
+                    const label=`${MNAMES[parseInt(m.substring(5))-1]} ${m.substring(0,4)}`;
+                    return `<tr style="border-bottom:1px solid #f1f5f9;">
+                      <td style="padding:7px 10px;font-weight:800;color:#1e293b;">${label}</td>
+                      <td style="text-align:center;padding:7px;color:#94a3b8;">${v.capacidad??'—'}</td>
+                      <td style="text-align:center;padding:7px;font-weight:900;color:#E31E24;">${v.reservadas}</td>
+                      <td style="text-align:center;padding:7px;color:#64748b;">${v.no_usadas??'—'}</td>
+                      <td style="padding:7px 10px;">
+                        <div style="display:flex;align-items:center;gap:6px;">
+                          <div style="flex:1;background:#f1f5f9;border-radius:99px;height:8px;overflow:hidden;">
+                            <div style="background:${color};height:8px;border-radius:99px;width:${pct}%;"></div>
+                          </div>
+                          <span style="font-size:10px;font-weight:900;color:${color};width:36px;">${pct}%</span>
+                        </div>
+                      </td>
+                    </tr>`;
+                }).join('')}</tbody></table></div>`;
+
+        // ── FRANJAS HORARIAS ──────────────────────────────────────────────
+        const franjas = data.franjas||[];
+        let bodyFranjas = '<div style="color:#94a3b8;font-size:12px;">Sin datos aún</div>';
+        if (franjas.length) {
+            const maxPct=Math.max(...franjas.map(f=>f.pct),1);
+            const minPct=Math.min(...franjas.filter(f=>f.disponibles>0).map(f=>f.pct));
+            bodyFranjas=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;">
+                ${franjas.map(f=>{
+                    const isMax=f.pct===maxPct&&f.pct>0, isMin=f.pct===minPct&&f.disponibles>0;
+                    const bg=isMax?'#dcfce7':isMin?'#fef2f2':'#f8fafc';
+                    const bord=isMax?'1.5px solid #86efac':isMin?'1.5px solid #fca5a5':'1.5px solid #f1f5f9';
+                    const pc=isMax?'#16a34a':isMin?'#dc2626':'#475569';
+                    return `<div style="background:${bg};border:${bord};border-radius:10px;padding:10px 12px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                            <span style="font-size:13px;font-weight:900;color:#1e293b;">${f.hora}</span>
+                            <span style="font-size:12px;font-weight:900;color:${pc};">${f.pct}%</span>
+                        </div>
+                        <div style="background:#e2e8f0;border-radius:99px;height:6px;margin-bottom:5px;overflow:hidden;">
+                            <div style="background:${pc};height:6px;border-radius:99px;width:${f.pct}%;"></div>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;font-size:9px;font-weight:700;color:#94a3b8;">
+                            <span style="color:#E31E24;">${f.reservadas} usadas</span>
+                            <span>${f.disponibles} disp.</span>
+                        </div>
+                        ${isMax?'<div style="font-size:8px;font-weight:900;color:#16a34a;margin-top:3px;">▲ MÁS USADA</div>':''}
+                        ${isMin?'<div style="font-size:8px;font-weight:900;color:#dc2626;margin-top:3px;">▼ MENOS USADA</div>':''}
+                    </div>`;
+                }).join('')}</div>`;
+        }
+
+        // ── LESIONES Y JUGADORES ──────────────────────────────────────────
+        const les=data.lesiones||[]; const maxL=les.length?les[0][1]:1;
+        const bodyLes=les.length===0?'<div style="color:#94a3b8;font-size:12px;">Sin datos</div>'
+            :les.map(([l,n])=>`<div class="bar-row">
+                <div style="flex:1;font-size:11px;font-weight:700;color:#1e293b;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l}</div>
+                <div style="width:80px;background:#f1f5f9;border-radius:99px;height:8px;"><div class="bar-fill" style="background:#E31E24;width:${Math.round(n/maxL*100)}%;"></div></div>
+                <div style="font-size:11px;font-weight:900;color:#475569;width:22px;text-align:right;">${n}</div>
+            </div>`).join('');
+
+        const jugs=data.top_jugadores||[]; const maxJ=jugs.length?jugs[0][1]:1;
+        const bodyJug=jugs.length===0?'<div style="color:#94a3b8;font-size:12px;">Sin datos</div>'
+            :jugs.map(([j,n],i)=>`<div class="bar-row">
+                <div style="font-size:10px;font-weight:900;color:#94a3b8;width:16px;">${i+1}</div>
+                <div style="flex:1;font-size:11px;font-weight:700;color:#1e293b;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${j}</div>
+                <div style="width:60px;background:#f1f5f9;border-radius:99px;height:8px;"><div class="bar-fill" style="background:#7c3aed;width:${Math.round(n/maxJ*100)}%;"></div></div>
+                <div style="font-size:11px;font-weight:900;color:#475569;width:22px;text-align:right;">${n}</div>
+            </div>`).join('');
+
+        wrap.innerHTML =
+            _card('Uso por equipo',               'fas fa-users',          bodyEq) +
+            _card('Acumulado total',              'fas fa-chart-line',     bodyAc) +
+            _card('Sesiones por mes',             'fas fa-calendar-alt',   bodyMes) +
+            _card('Franjas horarias disponibles', 'fas fa-clock',          bodyFranjas) +
+            `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">` +
+            _card('Lesiones frecuentes',          'fas fa-bone',           bodyLes) +
+            _card('Jugadores que más asisten',    'fas fa-child-reaching', bodyJug) +
+            `</div>`;
+
+    } catch(e) {
+        document.getElementById('fisioKpiWrap').innerHTML =
+            `<div style="color:#dc2626;font-size:11px;padding:16px;">Error: ${e.message}</div>`;
+    }
+}
+
+fisioCargarSemana();
+
+// ── Config ────────────────────────────────────────────────────────────────────
+function _horasOptions(sel) {
+    let opts = '';
+    for (let h = 6; h <= 22; h++) opts += `<option value="${h}" ${sel===h?'selected':''}>${h}:00</option>`;
+    return opts;
+}
+
+function fisioRenderConfig() {
+    const cfg = _fisioConfig;
+    // Botones de duración
+    document.querySelectorAll('.cfg-slot-btn').forEach(b => {
+        b.classList.toggle('activo', parseInt(b.dataset.min) === cfg.slot_minutos);
+    });
+    // Grid de días
+    const grid = document.getElementById('cfgDiasGrid');
+    grid.innerHTML = '';
+    for (let i = 0; i < 7; i++) {
+        const d   = cfg.dias[String(i)] || {activo: i < 5, hora_ini: 9, hora_fin: 17};
+        const row = document.createElement('div');
+        row.className = 'cfg-dia-row' + (d.activo ? '' : ' inactivo');
+        row.id = `cfgRow${i}`;
+        row.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px;">
+                <label class="cfg-toggle">
+                    <input type="checkbox" id="cfgActivo${i}" onchange="cfgToggleDia(${i})" ${d.activo?'checked':''}>
+                    <span class="cfg-toggle-sl"></span>
+                </label>
+                <span style="font-size:12px;font-weight:800;color:#1e293b;">${DIAS_ES_FULL[i]}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;" id="cfgHoras${i}" ${d.activo?'':'style="opacity:.4;pointer-events:none;"'}>
+                <span style="font-size:10px;font-weight:700;color:#94a3b8;">Apertura</span>
+                <select class="cfg-hora-sel" id="cfgIni${i}">${_horasOptions(d.hora_ini)}</select>
+                <span style="font-size:10px;font-weight:700;color:#94a3b8;">Cierre</span>
+                <select class="cfg-hora-sel" id="cfgFin${i}">${_horasOptions(d.hora_fin)}</select>
+            </div>`;
+        grid.appendChild(row);
+    }
+}
+
+function cfgSelSlot(btn) {
+    document.querySelectorAll('.cfg-slot-btn').forEach(b => b.classList.remove('activo'));
+    btn.classList.add('activo');
+    _fisioConfig.slot_minutos = parseInt(btn.dataset.min);
+}
+
+function cfgToggleDia(i) {
+    const chk  = document.getElementById(`cfgActivo${i}`);
+    const row  = document.getElementById(`cfgRow${i}`);
+    const hrs  = document.getElementById(`cfgHoras${i}`);
+    const act  = chk.checked;
+    row.classList.toggle('inactivo', !act);
+    hrs.style.opacity        = act ? '1' : '.4';
+    hrs.style.pointerEvents  = act ? '' : 'none';
+    _fisioConfig.dias[String(i)] = _fisioConfig.dias[String(i)] || {};
+    _fisioConfig.dias[String(i)].activo = act;
+}
+
+async function fisioCargarConfig() {
+    try {
+        const res = await fetch('/api/fisio/config');
+        _fisioConfig = await res.json();
+        fisioRenderConfig();
+    } catch(e) { console.error('[fisio config]', e); }
+}
+
+async function fisioGuardarConfig() {
+    // Recoger valores actuales del DOM
+    const dias = {};
+    for (let i = 0; i < 7; i++) {
+        const activo   = document.getElementById(`cfgActivo${i}`)?.checked ?? false;
+        const hora_ini = parseInt(document.getElementById(`cfgIni${i}`)?.value ?? 9);
+        const hora_fin = parseInt(document.getElementById(`cfgFin${i}`)?.value ?? 17);
+        dias[String(i)] = {activo, hora_ini, hora_fin};
+    }
+    const payload = {slot_minutos: _fisioConfig.slot_minutos, dias};
+    try {
+        const res = await fetch('/api/fisio/config', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const d = await res.json();
+        if (d.status === 'ok') {
+            _fisioConfig = d.config;
+            const msg = document.getElementById('cfgMsgOk');
+            msg.style.display = '';
+            setTimeout(() => msg.style.display = 'none', 3000);
+        } else { alert('Error: ' + (d.error || 'desconocido')); }
+    } catch(e) { alert('Error al guardar: ' + e.message); }
+}
+</script>
+{% endblock %}

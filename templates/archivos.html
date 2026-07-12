@@ -77,6 +77,14 @@
 
         .arch-empty { text-align:center; padding:50px 20px; color:#94a3b8; }
         .arch-empty i { font-size:40px; margin-bottom:10px; display:block; }
+
+        /* Dropbox */
+        .arch-btn-dropbox { background:#0061FF; color:white; }
+        .arch-btn-dropbox:hover { background:#004dc7; }
+        .dbx-toast { position:fixed; bottom:16px; right:16px; background:#1e293b; color:white; padding:10px 16px; border-radius:8px; font-size:11px; font-weight:700; display:none; z-index:9999; max-width:320px; box-shadow:0 4px 14px rgba(0,0,0,.3); }
+        .dbx-toast.show { display:block; }
+        .dbx-toast i { margin-right:6px; }
+        .dbx-badge { display:inline-block; background:rgba(255,255,255,.25); border-radius:10px; padding:1px 7px; font-size:9px; margin-left:6px; }
         .arch-empty p { font-size:11px; font-weight:700; margin:0; }
     </style>
 </head>
@@ -106,6 +114,9 @@
             <input type="file" id="archUploadInput" style="display:none;" multiple
                    accept=".xlsx,.xls,.csv,.pdf,.doc,.docx,.png,.jpg,.jpeg,.txt"
                    onchange="archSubirArchivos(this.files)">
+            <button class="arch-btn arch-btn-dropbox" id="btnDbxSync" onclick="dbxSync()">
+                <i class="fab fa-dropbox"></i> Sincronizar Dropbox
+            </button>
         </div>
         <div class="arch-grid-wrap" id="archGridWrap"
              ondragover="event.preventDefault(); this.querySelector('.arch-drop-zone')?.classList.add('drag-over')"
@@ -304,6 +315,47 @@
 
     document.addEventListener('keydown', e => { if (e.key==='Escape') archCerrarModal(); });
     document.getElementById('archModal').addEventListener('click', function(e) { if(e.target===this) archCerrarModal(); });
+
+    // ── Dropbox sync ──────────────────────────────────────────
+    function dbxToast(msg, ok=true) {
+        let el = document.getElementById('dbxToast');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'dbxToast';
+            el.className = 'dbx-toast';
+            document.body.appendChild(el);
+        }
+        el.innerHTML = (ok ? '<i class="fab fa-dropbox"></i>' : '<i class="fas fa-exclamation-triangle"></i>') + msg;
+        el.classList.add('show');
+        clearTimeout(el._timer);
+        el._timer = setTimeout(() => el.classList.remove('show'), 4500);
+    }
+
+    async function dbxSync() {
+        const btn = document.getElementById('btnDbxSync');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sincronizando...';
+        try {
+            const [upRes, dnRes] = await Promise.all([
+                fetch('/api/dropbox/subir',    { method:'POST' }),
+                fetch('/api/dropbox/descargar',{ method:'POST' })
+            ]);
+            const up = await upRes.json();
+            const dn = await dnRes.json();
+            if (up.ok && dn.ok) {
+                dbxToast(`Sincronizado: ${up.subidos} subidos · ${dn.descargados} descargados`, true);
+                archCargar(_archPath);
+            } else {
+                dbxToast((up.error || dn.error || 'Error desconocido'), false);
+            }
+        } catch(e) {
+            dbxToast('Error de conexión: ' + e, false);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fab fa-dropbox"></i> Sincronizar Dropbox';
+        }
+    }
+    // ──────────────────────────────────────────────────────────
 
     archCargar('');
 </script>

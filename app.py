@@ -501,8 +501,8 @@ def login():
     if usuario_ingresado.lower() == 'admin':
         session['usuario'] = 'admin'
         session['permisos'] = {
-            'ENTRENAMIENTOS': 'SI', 'ASISTENCIAS': 'SI', 'FINANCIERO': 'SI', 'D.DEPORTIVA': 'SI', 'USUARIOS': 'SI'
-            , 'CRONOGRAMA': 'SI' # Admin master always has Cronograma access
+            'ENTRENAMIENTOS': 'SI', 'ASISTENCIAS': 'SI', 'FINANCIERO': 'SI', 'D.DEPORTIVA': 'SI', 'USUARIOS': 'SI',
+            'CRONOGRAMA': 'SI', 'RRSS': 'SI'
         }
         return redirect(url_for('deportivo_bp.direccion_deportiva'))
 
@@ -538,6 +538,7 @@ def login():
                     'FINANCIERO': check_p('FINANCIERO'),
                     'D.DEPORTIVA': check_p('D.DEPORTIVA'),
                     'CRONOGRAMA': check_p('CRONOGRAMA'),
+                    'RRSS': check_p('RRSS'),
                     'SEL. EQ.': 'SI' if str(user_data.get('SELEQ', user_data.get('SELEQ.', 'NO'))).strip().upper() == 'SI' else 'NO'
                 }
                 session['permisos'] = perms
@@ -798,6 +799,68 @@ def obtener_asistencias():
         print(f"Error al leer asistencias: {e}")
         return jsonify([])
 
+
+@app.route('/api/asistencias_matrix')
+def api_asistencias_matrix():
+    """Devuelve todas las asistencias de un equipo con fecha completa para la matriz."""
+    equipo = (request.args.get('equipo') or '').strip().lower()
+    if not equipo:
+        return jsonify({'fechas': [], 'jugadores': [], 'datos': {}})
+    try:
+        sheet = client.open(NOMBRE_EXCEL).worksheet("ASISTENCIAS")
+        todo = sheet.get_all_values()
+        if not todo:
+            return jsonify({'fechas': [], 'jugadores': [], 'datos': {}})
+
+        fechas_set = set()
+        datos = {}  # {jugador: {fecha: estado}}
+
+        for fila in todo[1:]:
+            if len(fila) < 3:
+                continue
+            if fila[1].strip().lower() != equipo:
+                continue
+            fecha_raw = fila[0].strip()   # "dd/mm/yyyy" o "dd/mm/yy"
+            nombre    = fila[2].strip()
+            estado     = fila[4].strip() if len(fila) > 4 else ''
+            valoracion = fila[5].strip() if len(fila) > 5 else ''
+            if not fecha_raw or not nombre:
+                continue
+            # Normalizar fecha a "dd/mm/yyyy"
+            partes = fecha_raw.split('/')
+            if len(partes) < 2:
+                continue
+            try:
+                dia = int(partes[0])
+                mes = int(partes[1])
+                anio = int(partes[2]) if len(partes) > 2 else 2026
+                if anio < 100:
+                    anio += 2000
+                fecha_norm = f"{dia:02d}/{mes:02d}/{anio}"
+            except (ValueError, IndexError):
+                continue
+
+            fechas_set.add(fecha_norm)
+            if nombre not in datos:
+                datos[nombre] = {}
+            datos[nombre][fecha_norm] = {'estado': estado, 'val': valoracion}
+
+        # Ordenar fechas cronológicamente
+        def sort_fecha(f):
+            d, m, y = f.split('/')
+            return (int(y), int(m), int(d))
+
+        fechas_sorted = sorted(fechas_set, key=sort_fecha)
+        jugadores_sorted = sorted(datos.keys())
+
+        return jsonify({
+            'fechas': fechas_sorted,
+            'jugadores': jugadores_sorted,
+            'datos': datos
+        })
+    except Exception as e:
+        print(f"Error asistencias_matrix: {e}")
+        return jsonify({'fechas': [], 'jugadores': [], 'datos': {}})
 
 
 @app.route('/obtener_observaciones_jugadores')
@@ -2205,6 +2268,50 @@ def api_formaciones_jugadores_posicion():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@app.route('/api/cumpleanos')
+def api_cumpleanos():
+    if not session.get('usuario'): return jsonify({"cumpleanos": []}), 401
+    from datetime import date, timedelta
+    def _parse_dia_mes(s):
+        if not s: return None
+        m = re.match(r'^(\d{1,2})[/\-\.](\d{1,2})[/\-\.](\d{2,4})$', s.strip())
+        if m: return int(m.group(1)), int(m.group(2))
+        m = re.match(r'^(\d{4})[/\-\.](\d{1,2})[/\-\.](\d{1,2})$', s.strip())
+        if m: return int(m.group(3)), int(m.group(2))
+        return None
+    try:
+        hoy = date.today()
+        dias_obj = [hoy + timedelta(days=i) for i in range(3)]
+        sheet = client.open(NOMBRE_EXCEL).worksheet("DATOS JUGADORES")
+        all_vals = sheet.get_all_values()
+        if not all_vals: return jsonify({'cumpleanos': []})
+        headers = [h.strip().upper() for h in all_vals[0]]
+        def idx(k): return headers.index(k) if k in headers else -1
+        i_nom = idx('JUGADOR_NOMBRE'); i_ape = idx('JUGADOR_APELLIDOS')
+        i_fec = idx('JUGADOR_FECHA_NACIMIENTO'); i_eq = idx('JUGADOR_EQUIPO_LETRA')
+        if i_fec == -1: return jsonify({'cumpleanos': []})
+        grupos = {d: [] for d in dias_obj}
+        for row in all_vals[1:]:
+            def g(i): return row[i].strip() if i != -1 and len(row) > i else ''
+            nom = (g(i_nom) + (' ' + g(i_ape) if i_ape != -1 else '')).strip()
+            if not nom: continue
+            dm = _parse_dia_mes(g(i_fec))
+            if not dm: continue
+            dia, mes = dm
+            for d in dias_obj:
+                if d.day == dia and d.month == mes:
+                    grupos[d].append({'nombre': nom, 'equipo': g(i_eq)})
+        resultado = []
+        for d in dias_obj:
+            if grupos[d]:
+                resultado.append({'fecha': d.strftime('%d/%m'), 'dia': d.day, 'mes': d.month,
+                                   'es_hoy': d == hoy, 'jugadores': grupos[d]})
+        return jsonify({'cumpleanos': resultado})
+    except Exception as e:
+        print(f"[api_cumpleanos] {e}")
+        return jsonify({'cumpleanos': []})
+
+
 @app.route('/api/alquileres_proximos')
 def api_alquileres_proximos():
     if not session.get('usuario'): return jsonify({"status": "error", "message": "No session"}), 401
@@ -2741,6 +2848,198 @@ def api_editor_excel_guardar():
         return jsonify({'error': str(e)}), 400
 
 # ============================================================
+# DROPBOX SYNC
+# ============================================================
+_DBX_CONFIG_PATH = os.path.join(BASE_DIR, 'dropbox_config.json')
+
+def _get_dropbox_client():
+    import json as _json
+    import dropbox
+    if not os.path.exists(_DBX_CONFIG_PATH):
+        raise ValueError("No hay configuración de Dropbox")
+    with open(_DBX_CONFIG_PATH, encoding='utf-8') as f:
+        cfg = _json.load(f)
+    token = cfg.get('access_token', '')
+    if not token:
+        raise ValueError("Token de Dropbox vacío")
+    return dropbox.Dropbox(token), cfg.get('dropbox_folder', '/IntranetClub')
+
+@app.route('/api/dropbox/estado')
+def api_dropbox_estado():
+    if not session.get('usuario') or not _tiene_acceso_archivos():
+        return jsonify({'error': 'No auth'}), 401
+    try:
+        dbx, folder = _get_dropbox_client()
+        acc = dbx.users_get_current_account()
+        return jsonify({'ok': True, 'nombre': acc.name.display_name, 'email': acc.email, 'folder': folder})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+
+@app.route('/api/dropbox/subir', methods=['POST'])
+def api_dropbox_subir():
+    """Sube todos los archivos de static/archivos/ a Dropbox."""
+    if not session.get('usuario') or not _tiene_acceso_archivos():
+        return jsonify({'error': 'No auth'}), 401
+    try:
+        import dropbox
+        dbx, dbx_folder = _get_dropbox_client()
+        subidos, errores = [], []
+        base = os.path.realpath(ARCHIVOS_FOLDER)
+        for root, dirs, files in os.walk(base):
+            for fname in files:
+                local_path = os.path.join(root, fname)
+                rel = os.path.relpath(local_path, base).replace('\\', '/')
+                dbx_path = dbx_folder.rstrip('/') + '/' + rel
+                try:
+                    with open(local_path, 'rb') as f:
+                        dbx.files_upload(f.read(), dbx_path,
+                                         mode=dropbox.files.WriteMode.overwrite,
+                                         mute=True)
+                    subidos.append(rel)
+                except Exception as ex:
+                    errores.append({'archivo': rel, 'error': str(ex)})
+        return jsonify({'ok': True, 'subidos': len(subidos), 'errores': errores})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+
+@app.route('/api/dropbox/descargar', methods=['POST'])
+def api_dropbox_descargar():
+    """Descarga archivos nuevos/actualizados de Dropbox a static/archivos/."""
+    if not session.get('usuario') or not _tiene_acceso_archivos():
+        return jsonify({'error': 'No auth'}), 401
+    try:
+        import dropbox
+        dbx, dbx_folder = _get_dropbox_client()
+        descargados, errores = [], []
+
+        def _listar(path):
+            try:
+                res = dbx.files_list_folder(path, recursive=True)
+                entries = list(res.entries)
+                while res.has_more:
+                    res = dbx.files_list_folder_continue(res.cursor)
+                    entries += res.entries
+                return entries
+            except dropbox.exceptions.ApiError:
+                return []
+
+        entries = _listar(dbx_folder)
+        for entry in entries:
+            if not isinstance(entry, dropbox.files.FileMetadata):
+                continue
+            rel = entry.path_display[len(dbx_folder):].lstrip('/')
+            local_path = os.path.join(ARCHIVOS_FOLDER, rel.replace('/', os.sep))
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
+            # Solo descarga si no existe o es más reciente en Dropbox
+            if not os.path.exists(local_path) or \
+               entry.server_modified.timestamp() > os.path.getmtime(local_path):
+                try:
+                    _, resp = dbx.files_download(entry.path_display)
+                    with open(local_path, 'wb') as f:
+                        f.write(resp.content)
+                    descargados.append(rel)
+                except Exception as ex:
+                    errores.append({'archivo': rel, 'error': str(ex)})
+        return jsonify({'ok': True, 'descargados': len(descargados), 'errores': errores})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+
+# ============================================================
+# ─── ADJUNTOS DE TAREAS ────────────────────────────────────────────────────────
+
+_TAREAS_ADJ_DIR  = os.path.join(BASE_DIR, 'static', 'archivos', '_tareas_adjuntos')
+_TAREAS_ADJ_JSON = os.path.join(BASE_DIR, 'static', 'data', 'tareas_adjuntos.json')
+
+def _leer_tareas_adj():
+    import json as _j
+    try:
+        with open(_TAREAS_ADJ_JSON, encoding='utf-8') as f:
+            return _j.load(f)
+    except Exception:
+        return {}
+
+def _guardar_tareas_adj(data):
+    import json as _j
+    os.makedirs(os.path.dirname(_TAREAS_ADJ_JSON), exist_ok=True)
+    with open(_TAREAS_ADJ_JSON, 'w', encoding='utf-8') as f:
+        _j.dump(data, f, ensure_ascii=False, indent=2)
+
+import re as _re
+
+def _key_to_folder(key):
+    """Convierte una clave de adjunto a nombre de carpeta válido en Windows."""
+    return _re.sub(r'[^\w\-.]', '_', key)
+
+@app.route('/api/tareas/adjuntos/todas')
+def api_tareas_adjuntos_todas():
+    if not session.get('usuario'):
+        return jsonify({'error': 'No auth'}), 401
+    data = _leer_tareas_adj()
+    keys = [k for k, v in data.items() if v]
+    return jsonify({'keys': keys})
+
+@app.route('/api/tareas/adjuntos')
+def api_tareas_adjuntos_listar():
+    if not session.get('usuario'):
+        return jsonify({'error': 'No auth'}), 401
+    key = request.args.get('key', '')
+    data = _leer_tareas_adj()
+    archivos = []
+    folder = _key_to_folder(key)
+    for nombre in data.get(key, []):
+        url = '/static/archivos/_tareas_adjuntos/' + folder + '/' + nombre
+        archivos.append({'nombre': nombre, 'url': url})
+    return jsonify({'archivos': archivos})
+
+@app.route('/api/tareas/adjuntos/subir', methods=['POST'])
+def api_tareas_adjuntos_subir():
+    if not session.get('usuario'):
+        return jsonify({'ok': False, 'error': 'No auth'}), 401
+    try:
+        key = request.form.get('key', '').strip()
+        f   = request.files.get('archivo')
+        if not key or not f:
+            return jsonify({'ok': False, 'error': 'Faltan datos'})
+        from werkzeug.utils import secure_filename
+        nombre  = secure_filename(f.filename)
+        folder  = _key_to_folder(key)
+        carpeta = os.path.join(_TAREAS_ADJ_DIR, folder)
+        os.makedirs(carpeta, exist_ok=True)
+        f.save(os.path.join(carpeta, nombre))
+        data  = _leer_tareas_adj()
+        lista = data.setdefault(key, [])
+        if nombre not in lista:
+            lista.append(nombre)
+        _guardar_tareas_adj(data)
+        return jsonify({'ok': True, 'nombre': nombre})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+
+@app.route('/api/tareas/adjuntos/eliminar', methods=['POST'])
+def api_tareas_adjuntos_eliminar():
+    if not session.get('usuario'):
+        return jsonify({'ok': False, 'error': 'No auth'}), 401
+    try:
+        body   = request.get_json(force=True) or {}
+        key    = body.get('key', '').strip()
+        nombre = body.get('nombre', '').strip()
+        if not key or not nombre:
+            return jsonify({'ok': False, 'error': 'Faltan datos'})
+        from werkzeug.utils import secure_filename
+        nombre_safe = secure_filename(nombre)
+        folder = _key_to_folder(key)
+        ruta   = os.path.join(_TAREAS_ADJ_DIR, folder, nombre_safe)
+        if os.path.exists(ruta):
+            os.remove(ruta)
+        data = _leer_tareas_adj()
+        if key in data and nombre_safe in data[key]:
+            data[key].remove(nombre_safe)
+        _guardar_tareas_adj(data)
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
+
+# ───────────────────────────────────────────────────────────────────────────────
 
 # --- REGISTRO DE BLUEPRINTS ---
 from financiero import financiero_bp
@@ -2757,6 +3056,8 @@ from asistente_ia import asistente_bp # Importar el blueprint del asistente IA
 from horarios import horarios_bp # Importar el blueprint de horarios (RFFM)
 from videoanalisis import videoanalisis_bp
 from gps import gps_bp
+from fisioterapia import fisio_bp
+from rrss import rrss_bp
 app.register_blueprint(financiero_bp)
 app.register_blueprint(deportivo_bp)
 app.register_blueprint(jugadores_datos_bp)
@@ -2771,6 +3072,8 @@ app.register_blueprint(asistente_bp) # Registrar el blueprint del asistente IA
 app.register_blueprint(horarios_bp) # Registrar el blueprint de horarios (RFFM)
 app.register_blueprint(videoanalisis_bp)
 app.register_blueprint(gps_bp)
+app.register_blueprint(fisio_bp)
+app.register_blueprint(rrss_bp)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001, use_reloader=True)

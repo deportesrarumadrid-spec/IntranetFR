@@ -1,0 +1,636 @@
+{% extends 'dashboard.html' %}
+{% block content %}
+<style>
+.rrss-wrap { font-family:'Montserrat',sans-serif; display:flex; flex-direction:column; gap:20px; padding-bottom:40px; }
+.rrss-card { background:white; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,.05); padding:20px; border:1px solid #f1f5f9; }
+.rrss-card h2 { font-size:14px; font-weight:900; color:#1e293b; text-transform:uppercase; margin:0 0 14px; display:flex; align-items:center; gap:8px; }
+.rrss-nav-btn { background:white; border:2px solid #e2e8f0; border-radius:8px; padding:5px 12px; cursor:pointer; font-size:12px; font-weight:800; color:#475569; }
+.rrss-nav-btn:hover { background:#f8fafc; }
+.plan-textarea { width:100%; border:none; background:transparent; resize:none; padding:2px 0; font-family:'Montserrat',sans-serif; font-size:10px; color:#1e293b; outline:none; flex:1; min-height:60px; box-sizing:border-box; cursor:text; }
+.plan-textarea::placeholder { color:#cbd5e1; }
+.plan-textarea:focus { color:#1e293b; }
+
+.video-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:10px; border:1px solid #f1f5f9; margin-bottom:6px; transition:.1s; }
+.video-item:hover { background:#f8fafc; }
+.video-check { width:22px; height:22px; border-radius:6px; border:2px solid #e2e8f0; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:.15s; font-size:13px; }
+.video-check:hover { border-color:#16a34a; background:#f0fdf4; }
+.btn-ver-video { background:#f1f5f9; color:#475569; border:none; border-radius:7px; padding:5px 10px; font-size:10px; font-weight:800; cursor:pointer; white-space:nowrap; }
+.btn-ver-video:hover { background:#e2e8f0; }
+
+.btn-subir  { background:#E31E24; color:white; border:none; border-radius:8px; padding:9px 16px; font-size:11px; font-weight:900; cursor:pointer; display:flex; align-items:center; gap:7px; }
+.btn-subidos { background:#1e293b; color:white; border:none; border-radius:8px; padding:9px 16px; font-size:11px; font-weight:900; cursor:pointer; display:flex; align-items:center; gap:7px; position:relative; }
+.btn-guardar-plan { background:#7c3aed; color:white; border:none; border-radius:8px; padding:8px 16px; font-size:10px; font-weight:900; cursor:pointer; }
+
+.rrss-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:30000; align-items:center; justify-content:center; }
+.rrss-modal-box { background:white; border-radius:16px; width:500px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+.rrss-modal-box.wide { width:700px; }
+.rrss-modal-head { background:#1e293b; color:white; padding:14px 20px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center; font-weight:900; font-size:13px; position:sticky; top:0; z-index:1; }
+.rrss-modal-body { padding:20px; }
+.rf label { font-size:10px; font-weight:800; color:#64748b; display:block; margin-bottom:4px; text-transform:uppercase; }
+.rf input { width:100%; padding:9px 11px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:12px; font-family:inherit; color:#1e293b; box-sizing:border-box; }
+.rf { margin-bottom:12px; }
+.red-check { display:inline-flex; align-items:center; gap:5px; background:#f1f5f9; border-radius:8px; padding:6px 12px; cursor:pointer; font-size:11px; font-weight:700; color:#475569; margin:3px; border:2px solid transparent; }
+.red-check input { width:auto; padding:0; margin:0; }
+.red-check.sel { border-color:#7c3aed; background:#f5f3ff; color:#7c3aed; }
+
+.subido-item { border:1px solid #f1f5f9; border-radius:12px; padding:14px; margin-bottom:10px; }
+.subido-item:hover { background:#f8fafc; }
+.btn-play { background:#7c3aed; color:white; border:none; border-radius:8px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:5px; }
+.btn-play:hover { background:#6d28d9; }
+</style>
+
+<div class="rrss-wrap">
+
+  <!-- Header -->
+  <div class="rrss-card" style="padding:14px 20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <h2 style="margin:0;"><i class="fas fa-bullhorn" style="color:#E31E24;"></i> RRSS / MARKETING</h2>
+    </div>
+  </div>
+
+  <!-- Sección vídeos -->
+  <div class="rrss-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+      <h2 style="margin:0;"><i class="fas fa-film"></i> Vídeos pendientes de publicar</h2>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn-subidos" onclick="rrssAbrirSubidos()">
+          <i class="fas fa-check-circle"></i> Subidos a redes
+          <span id="badgeSubidos" style="background:#E31E24;color:white;border-radius:99px;padding:1px 7px;font-size:10px;font-weight:900;display:none;">0</span>
+        </button>
+        <input type="file" id="inputVideo" accept="video/*" style="display:none" onchange="rrssSubirVideo(this)">
+        <button class="btn-subir" onclick="document.getElementById('inputVideo').click()">
+          <i class="fas fa-cloud-upload-alt"></i> Subir vídeo
+        </button>
+      </div>
+    </div>
+    <div id="rrssVideoUploadStatus" style="display:none;font-size:11px;color:#7c3aed;font-weight:700;margin-bottom:10px;"></div>
+    <div id="rrssVideoLista">
+      <div style="color:#94a3b8;font-size:12px;">Cargando vídeos...</div>
+    </div>
+  </div>
+
+  <!-- Planning tipo (plantilla semanal) -->
+  <div class="rrss-card" id="cardTipo">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+      <h2 style="margin:0;"><i class="fas fa-layer-group"></i> Planning tipo <span style="font-size:10px;font-weight:600;color:#94a3b8;text-transform:none;">— plantilla semanal recurrente</span></h2>
+      <div style="display:flex;gap:8px;">
+        <button id="btnEditarTipo" class="rrss-nav-btn" style="background:#1e293b;color:white;border-color:#1e293b;" onclick="rrssActivarEdicionTipo()">
+          ✏️ Editar
+        </button>
+        <button id="btnGuardarTipo" class="btn-guardar-plan" style="display:none;" onclick="rrssGuardarTipo()">
+          💾 Guardar plantilla
+        </button>
+        <button id="btnCancelarTipo" class="rrss-nav-btn" style="display:none;" onclick="rrssDesactivarEdicionTipo()">
+          Cancelar
+        </button>
+      </div>
+    </div>
+    <div id="tipoGrid">
+      <div style="color:#94a3b8;text-align:center;padding:20px;">Cargando...</div>
+    </div>
+  </div>
+
+  <!-- Calendario planning mensual -->
+  <div class="rrss-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+      <h2 style="margin:0;"><i class="fas fa-calendar-alt"></i> Planning mensual</h2>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="rrss-nav-btn" onclick="rrssMes(-1)">&#8249;</button>
+        <span id="rrssMesLabel" style="font-size:13px;font-weight:900;color:#1e293b;min-width:140px;text-align:center;">—</span>
+        <button class="rrss-nav-btn" onclick="rrssMes(1)">&#8250;</button>
+        <button class="rrss-nav-btn" onclick="rrssHoy()" style="font-size:10px;">HOY</button>
+        <button class="btn-guardar-plan" onclick="rrssGuardarTodo()">💾 Guardar todo</button>
+      </div>
+    </div>
+    <!-- Cabecera días semana -->
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;">
+      <div style="font-size:9px;font-weight:900;color:#94a3b8;text-align:center;text-transform:uppercase;">Lun</div>
+      <div style="font-size:9px;font-weight:900;color:#94a3b8;text-align:center;text-transform:uppercase;">Mar</div>
+      <div style="font-size:9px;font-weight:900;color:#94a3b8;text-align:center;text-transform:uppercase;">Mié</div>
+      <div style="font-size:9px;font-weight:900;color:#94a3b8;text-align:center;text-transform:uppercase;">Jue</div>
+      <div style="font-size:9px;font-weight:900;color:#94a3b8;text-align:center;text-transform:uppercase;">Vie</div>
+      <div style="font-size:9px;font-weight:900;color:#94a3b8;text-align:center;text-transform:uppercase;">Sáb</div>
+      <div style="font-size:9px;font-weight:900;color:#94a3b8;text-align:center;text-transform:uppercase;">Dom</div>
+    </div>
+    <div id="rrssPlanGrid">
+      <div style="color:#94a3b8;text-align:center;padding:30px;">Cargando...</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL: marcar vídeo publicado -->
+<div id="modalMarcarVideo" class="rrss-modal" onclick="if(event.target===this)this.style.display='none'">
+  <div class="rrss-modal-box">
+    <div class="rrss-modal-head">
+      <span>✅ Marcar como publicado</span>
+      <span onclick="document.getElementById('modalMarcarVideo').style.display='none'" style="cursor:pointer;font-size:20px;">&times;</span>
+    </div>
+    <div class="rrss-modal-body">
+      <div style="font-size:12px;font-weight:700;color:#1e293b;margin-bottom:14px;background:#f1f5f9;padding:10px;border-radius:8px;" id="marcarVideoNombreLbl">—</div>
+      <div class="rf">
+        <label>Fecha de publicación</label>
+        <input type="date" id="marcarFecha">
+      </div>
+      <div class="rf">
+        <label>Redes sociales donde se publicó</label>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
+          {% for r in redes %}
+          <div class="red-check" data-red="{{ r }}" onclick="toggleRed(this)">{{ r }}</div>
+          {% endfor %}
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
+        <button style="background:#f1f5f9;color:#475569;border:none;border-radius:8px;padding:9px 16px;font-size:11px;font-weight:800;cursor:pointer;" onclick="document.getElementById('modalMarcarVideo').style.display='none'">Cancelar</button>
+        <button style="background:#16a34a;color:white;border:none;border-radius:8px;padding:9px 20px;font-size:11px;font-weight:900;cursor:pointer;" onclick="rrssConfirmarMarcar()">✅ Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: vídeos subidos a redes -->
+<div id="modalSubidos" class="rrss-modal" onclick="if(event.target===this)this.style.display='none'">
+  <div class="rrss-modal-box wide">
+    <div class="rrss-modal-head">
+      <span>✅ Vídeos publicados en redes</span>
+      <span onclick="cerrarModalSubidos()" style="cursor:pointer;font-size:20px;">&times;</span>
+    </div>
+    <div class="rrss-modal-body" id="modalSubidosBody">
+      <div style="color:#94a3b8;font-size:12px;">Cargando...</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: reproductor vídeo -->
+<div id="modalPlayer" class="rrss-modal" onclick="if(event.target===this)cerrarPlayer()">
+  <div class="rrss-modal-box wide" style="width:680px;">
+    <div class="rrss-modal-head">
+      <span id="playerTitulo">▶ Reproductor</span>
+      <span onclick="cerrarPlayer()" style="cursor:pointer;font-size:20px;">&times;</span>
+    </div>
+    <div style="padding:16px;background:#000;border-radius:0 0 16px 16px;">
+      <video id="playerVideo" controls style="width:100%;border-radius:8px;max-height:420px;">
+        Tu navegador no soporta reproducción de vídeo.
+      </video>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: opciones vídeo pendiente -->
+<div id="modalOpcionesVideo" class="rrss-modal" onclick="if(event.target===this)this.style.display='none'">
+  <div class="rrss-modal-box" style="width:360px;">
+    <div class="rrss-modal-head">
+      <span>⋯ Opciones</span>
+      <span onclick="document.getElementById('modalOpcionesVideo').style.display='none'" style="cursor:pointer;font-size:20px;">&times;</span>
+    </div>
+    <div class="rrss-modal-body">
+      <div style="font-size:12px;font-weight:700;color:#1e293b;margin-bottom:14px;background:#f1f5f9;padding:10px;border-radius:8px;" id="opcionesVideoNombreLbl">—</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button onclick="rrssReproducir(_videoActual)" style="background:#7c3aed;color:white;border:none;border-radius:8px;padding:10px;font-size:11px;font-weight:800;cursor:pointer;text-align:left;">
+          ▶ Reproducir vídeo
+        </button>
+        <button onclick="rrssAbrirRenombrar()" style="background:#f1f5f9;color:#1e293b;border:none;border-radius:8px;padding:10px;font-size:11px;font-weight:800;cursor:pointer;text-align:left;">
+          ✏️ Cambiar título
+        </button>
+        <button onclick="rrssEliminarVideo()" style="background:#fef2f2;color:#dc2626;border:none;border-radius:8px;padding:10px;font-size:11px;font-weight:800;cursor:pointer;text-align:left;">
+          🗑 Eliminar de Dropbox
+        </button>
+        <button onclick="document.getElementById('modalOpcionesVideo').style.display='none'" style="background:#f8fafc;color:#94a3b8;border:none;border-radius:8px;padding:10px;font-size:11px;cursor:pointer;">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: renombrar vídeo -->
+<div id="modalRenombrar" class="rrss-modal" onclick="if(event.target===this)this.style.display='none'">
+  <div class="rrss-modal-box" style="width:420px;">
+    <div class="rrss-modal-head">
+      <span>✏️ Cambiar título del vídeo</span>
+      <span onclick="document.getElementById('modalRenombrar').style.display='none'" style="cursor:pointer;font-size:20px;">&times;</span>
+    </div>
+    <div class="rrss-modal-body">
+      <div style="font-size:10px;color:#94a3b8;margin-bottom:4px;font-weight:700;">NOMBRE ACTUAL</div>
+      <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:16px;background:#f1f5f9;padding:10px;border-radius:8px;" id="renombrarNombreActual">—</div>
+      <div class="rf">
+        <label>Nuevo título (incluyendo extensión, ej: video-final.mp4)</label>
+        <input type="text" id="renombrarNuevoNombre" placeholder="nuevo-nombre.mp4">
+      </div>
+      <div id="renombrarError" style="display:none;color:#dc2626;font-size:11px;font-weight:700;margin-bottom:8px;"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
+        <button style="background:#f1f5f9;color:#475569;border:none;border-radius:8px;padding:9px 16px;font-size:11px;font-weight:800;cursor:pointer;" onclick="document.getElementById('modalRenombrar').style.display='none'">Cancelar</button>
+        <button style="background:#1e293b;color:white;border:none;border-radius:8px;padding:9px 20px;font-size:11px;font-weight:900;cursor:pointer;" onclick="rrssConfirmarRenombrar()">Renombrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let rrssOffset = 0;
+let _videoActual = null;
+let _planData    = {};
+let _todosVideos = [];
+const DIAS_FULL = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+const MESES_ES  = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+// ── Vídeos ────────────────────────────────────────────────────────────────────
+async function rrssCargarVideos() {
+    try {
+        const res  = await fetch('/api/rrss/videos');
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        _todosVideos = data.videos || [];
+
+        const pendientes = _todosVideos.filter(v => !v.publicado);
+        const subidos    = _todosVideos.filter(v => v.publicado);
+
+        // Badge
+        const badge = document.getElementById('badgeSubidos');
+        if (subidos.length) { badge.textContent = subidos.length; badge.style.display = ''; }
+        else { badge.style.display = 'none'; }
+
+        // Lista pendientes
+        if (!pendientes.length) {
+            document.getElementById('rrssVideoLista').innerHTML =
+                '<div style="color:#94a3b8;font-size:12px;padding:10px 0;">Todos los vídeos están publicados o no hay vídeos aún.</div>';
+        } else {
+            document.getElementById('rrssVideoLista').innerHTML = pendientes.map(v => `
+                <div class="video-item">
+                    <div class="video-check" title="Marcar como publicado" onclick="rrssClickMarcar(${JSON.stringify(v).replace(/"/g,'&quot;')})"></div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:12px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${v.nombre}</div>
+                        <div style="font-size:10px;color:#94a3b8;">Subido: ${v.fecha_subida}</div>
+                    </div>
+                    <button class="btn-ver-video" onclick="rrssReproducir(${JSON.stringify(v).replace(/"/g,'&quot;')})" title="Ver vídeo">▶ Ver</button>
+                    <button onclick="rrssClickOpciones(${JSON.stringify(v).replace(/"/g,'&quot;')})"
+                        style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:18px;padding:4px 8px;line-height:1;">⋯</button>
+                </div>`).join('');
+        }
+    } catch(e) {
+        document.getElementById('rrssVideoLista').innerHTML =
+            `<div style="color:#dc2626;font-size:11px;">Error: ${e.message}</div>`;
+    }
+}
+
+async function rrssSubirVideo(input) {
+    const file = input.files[0]; if (!file) return;
+    const status = document.getElementById('rrssVideoUploadStatus');
+    status.style.display = '';
+    status.textContent = `⏳ Subiendo "${file.name}" a Dropbox...`;
+    const fd = new FormData(); fd.append('archivo', file);
+    try {
+        const res = await fetch('/api/rrss/video/subir', {method:'POST', body:fd});
+        const d   = await res.json();
+        if (d.status==='ok') {
+            status.textContent = `✅ "${file.name}" subido correctamente`;
+            setTimeout(()=>{ status.style.display='none'; }, 3000);
+            rrssCargarVideos();
+        } else { status.textContent = `❌ Error: ${d.error}`; }
+    } catch(e) { status.textContent = `❌ Error: ${e.message}`; }
+    input.value = '';
+}
+
+function rrssClickMarcar(v) {
+    _videoActual = v;
+    document.getElementById('marcarVideoNombreLbl').textContent = v.nombre;
+    document.getElementById('marcarFecha').value = new Date().toISOString().substring(0,10);
+    document.querySelectorAll('.red-check').forEach(l => l.classList.remove('sel'));
+    document.getElementById('modalMarcarVideo').style.display = 'flex';
+}
+
+function rrssClickOpciones(v) {
+    _videoActual = v;
+    document.getElementById('opcionesVideoNombreLbl').textContent = v.nombre;
+    document.getElementById('modalOpcionesVideo').style.display = 'flex';
+}
+
+function toggleRed(el) {
+    el.classList.toggle('sel');
+}
+
+async function rrssConfirmarMarcar() {
+    const fecha = document.getElementById('marcarFecha').value;
+    const redes = [...document.querySelectorAll('.red-check.sel')]
+                    .map(l => l.dataset.red).join(', ');
+    if (!fecha) { alert('Selecciona una fecha'); return; }
+    try {
+        const res = await fetch('/api/rrss/video/marcar', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({nombre:_videoActual.nombre, publicado:true, fecha_publicacion:fecha, redes})
+        });
+        const d = await res.json();
+        if (d.status==='ok') {
+            document.getElementById('modalMarcarVideo').style.display = 'none';
+            rrssCargarVideos();
+        } else { alert('Error: ' + d.error); }
+    } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function rrssEliminarVideo() {
+    if (!confirm(`¿Eliminar "${_videoActual.nombre}" de Dropbox?`)) return;
+    try {
+        const res = await fetch('/api/rrss/video/eliminar', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({nombre:_videoActual.nombre, dbx_path:_videoActual.dbx_path})
+        });
+        const d = await res.json();
+        if (d.status==='ok') {
+            document.getElementById('modalOpcionesVideo').style.display='none';
+            rrssCargarVideos();
+        } else { alert('Error: ' + d.error); }
+    } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ── Renombrar ─────────────────────────────────────────────────────────────────
+function rrssAbrirRenombrar() {
+    document.getElementById('modalOpcionesVideo').style.display = 'none';
+    document.getElementById('renombrarNombreActual').textContent = _videoActual.nombre;
+    document.getElementById('renombrarNuevoNombre').value = _videoActual.nombre;
+    document.getElementById('renombrarError').style.display = 'none';
+    document.getElementById('modalRenombrar').style.display = 'flex';
+    setTimeout(() => {
+        const inp = document.getElementById('renombrarNuevoNombre');
+        inp.focus();
+        const dot = inp.value.lastIndexOf('.');
+        if (dot > 0) inp.setSelectionRange(0, dot);
+        else inp.select();
+    }, 100);
+}
+
+async function rrssConfirmarRenombrar() {
+    const nuevoNombre = document.getElementById('renombrarNuevoNombre').value.trim();
+    const errEl = document.getElementById('renombrarError');
+    errEl.style.display = 'none';
+    if (!nuevoNombre) { errEl.textContent = 'El nombre no puede estar vacío.'; errEl.style.display = ''; return; }
+    if (nuevoNombre === _videoActual.nombre) { document.getElementById('modalRenombrar').style.display='none'; return; }
+    try {
+        const res = await fetch('/api/rrss/video/renombrar', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({nombre_old: _videoActual.nombre, nombre_new: nuevoNombre, dbx_path: _videoActual.dbx_path})
+        });
+        const d = await res.json();
+        if (d.status==='ok') {
+            document.getElementById('modalRenombrar').style.display = 'none';
+            rrssCargarVideos();
+        } else {
+            errEl.textContent = 'Error: ' + d.error;
+            errEl.style.display = '';
+        }
+    } catch(e) { errEl.textContent = 'Error: ' + e.message; errEl.style.display = ''; }
+}
+
+// ── Modal "Subidos a redes" ───────────────────────────────────────────────────
+function rrssAbrirSubidos() {
+    const subidos = _todosVideos.filter(v => v.publicado);
+    const body = document.getElementById('modalSubidosBody');
+    if (!subidos.length) {
+        body.innerHTML = '<div style="color:#94a3b8;font-size:12px;text-align:center;padding:20px;">No hay vídeos publicados aún.</div>';
+    } else {
+        body.innerHTML = subidos.map(v => `
+            <div class="subido-item">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:13px;font-weight:800;color:#1e293b;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${v.nombre}</div>
+                        <div style="font-size:11px;color:#64748b;margin-bottom:4px;">
+                            📅 Publicado: <strong>${v.fecha_publicacion}</strong>
+                        </div>
+                        <div style="font-size:11px;color:#7c3aed;font-weight:700;">${v.redes || '—'}</div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+                        <button class="btn-play" onclick="rrssReproducir(${JSON.stringify(v).replace(/"/g,'&quot;')})">
+                            ▶ Reproducir
+                        </button>
+                        <button onclick="rrssDesmarcar(${JSON.stringify(v).replace(/"/g,'&quot;')})"
+                            style="background:#f1f5f9;color:#64748b;border:none;border-radius:8px;padding:6px 12px;font-size:10px;font-weight:700;cursor:pointer;">
+                            ↩ Desmarcar
+                        </button>
+                    </div>
+                </div>
+            </div>`).join('');
+    }
+    document.getElementById('modalSubidos').style.display = 'flex';
+}
+
+function cerrarModalSubidos() {
+    document.getElementById('modalSubidos').style.display = 'none';
+}
+
+async function rrssDesmarcar(v) {
+    try {
+        const res = await fetch('/api/rrss/video/marcar', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({nombre:v.nombre, publicado:false, fecha_publicacion:'', redes:''})
+        });
+        const d = await res.json();
+        if (d.status==='ok') { cerrarModalSubidos(); rrssCargarVideos(); }
+        else { alert('Error: ' + d.error); }
+    } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ── Reproductor ───────────────────────────────────────────────────────────────
+async function rrssReproducir(v) {
+    document.getElementById('playerTitulo').textContent = '▶ ' + v.nombre;
+    document.getElementById('playerVideo').src = '';
+    document.getElementById('modalSubidos').style.display = 'none';
+    document.getElementById('modalOpcionesVideo').style.display = 'none';
+    document.getElementById('modalPlayer').style.display = 'flex';
+    try {
+        const res  = await fetch(`/api/rrss/video/link?path=${encodeURIComponent(v.dbx_path)}`);
+        const data = await res.json();
+        if (data.url) {
+            document.getElementById('playerVideo').src = data.url;
+        } else {
+            alert('No se pudo obtener el enlace: ' + (data.error || 'desconocido'));
+            cerrarPlayer();
+        }
+    } catch(e) { alert('Error: ' + e.message); cerrarPlayer(); }
+}
+
+function cerrarPlayer() {
+    const v = document.getElementById('playerVideo');
+    v.pause(); v.src = '';
+    document.getElementById('modalPlayer').style.display = 'none';
+}
+
+// ── Planning mensual ──────────────────────────────────────────────────────────
+let _mesOffset = 0;
+
+function rrssMes(delta) { _mesOffset += delta; rrssCargarMes(); }
+function rrssHoy() { _mesOffset = 0; rrssCargarMes(); }
+
+function _getMesActual() {
+    const hoy = new Date();
+    return new Date(hoy.getFullYear(), hoy.getMonth() + _mesOffset, 1);
+}
+
+async function rrssCargarMes() {
+    const primer = _getMesActual();
+    const year   = primer.getFullYear();
+    const month  = primer.getMonth(); // 0-based
+    const mesStr = `${year}-${String(month+1).padStart(2,'0')}`;
+    document.getElementById('rrssMesLabel').textContent =
+        `${MESES_ES[month].charAt(0).toUpperCase() + MESES_ES[month].slice(1)} ${year}`;
+    document.getElementById('rrssPlanGrid').innerHTML =
+        '<div style="color:#94a3b8;text-align:center;padding:30px;">Cargando...</div>';
+    try {
+        const res  = await fetch(`/api/rrss/planning?mes=${mesStr}`);
+        const data = await res.json();
+        _planData  = data.dias || {};
+        document.getElementById('rrssPlanGrid').innerHTML = rrssRenderMes(year, month);
+        document.querySelectorAll('.plan-textarea').forEach(ta =>
+            ta.addEventListener('blur', () => rrssAutoGuardar(ta))
+        );
+    } catch(e) {
+        document.getElementById('rrssPlanGrid').innerHTML =
+            `<div style="color:#dc2626;font-size:12px;">Error: ${e.message}</div>`;
+    }
+}
+
+function rrssRenderMes(year, month) {
+    const hoy     = new Date(); hoy.setHours(0,0,0,0);
+    const primer  = new Date(year, month, 1);
+    const ultimo  = new Date(year, month + 1, 0);
+    // Lunes=0 … Domingo=6
+    const inicioCol = (primer.getDay() + 6) % 7; // offset columna del primer día
+    const totalDias = ultimo.getDate();
+
+    let html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;">';
+
+    // Celdas vacías antes del primer día
+    for (let i = 0; i < inicioCol; i++) {
+        html += '<div style="min-height:90px;"></div>';
+    }
+
+    for (let d = 1; d <= totalDias; d++) {
+        const fecha  = new Date(year, month, d);
+        const iso    = fecha.toISOString().substring(0,10);
+        const isHoy  = fecha.getTime() === hoy.getTime();
+        const esFinde = (fecha.getDay() === 0 || fecha.getDay() === 6);
+        const val    = _planData[iso] || '';
+        const bgCol  = esFinde ? '#fafafa' : 'white';
+        const numColor = isHoy ? '#E31E24' : (esFinde ? '#94a3b8' : '#1e293b');
+        html += `<div style="display:flex;flex-direction:column;gap:4px;background:${bgCol};border-radius:10px;border:1.5px solid ${isHoy?'#E31E24':'#f1f5f9'};padding:6px;min-height:90px;cursor:text;" onclick="this.querySelector('textarea').focus()">
+            <div style="font-size:11px;font-weight:900;color:${numColor};pointer-events:none;">${d}</div>
+            <textarea class="plan-textarea" data-fecha="${iso}" placeholder="Escribe aquí...">${val}</textarea>
+        </div>`;
+    }
+
+    // Rellenar última fila si hace falta
+    const totalCeldas = inicioCol + totalDias;
+    const resto = totalCeldas % 7;
+    if (resto !== 0) {
+        for (let i = 0; i < 7 - resto; i++) {
+            html += '<div style="min-height:90px;"></div>';
+        }
+    }
+
+    return html + '</div>';
+}
+
+async function rrssAutoGuardar(ta) {
+    const fecha     = ta.dataset.fecha;
+    const contenido = ta.value;
+    try {
+        const res = await fetch('/api/rrss/planning', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({fecha, contenido})
+        });
+        const d = await res.json();
+        if (d.status==='ok') {
+            ta.style.color = '#16a34a';
+            setTimeout(() => ta.style.color = '', 1200);
+        }
+    } catch(e) { console.error('[rrss] autoguardar:', e); }
+}
+
+async function rrssGuardarTodo() {
+    for (const ta of document.querySelectorAll('.plan-textarea')) await rrssAutoGuardar(ta);
+}
+
+// ── Planning tipo ─────────────────────────────────────────────────────────────
+const TIPO_KEYS  = ['TIPO-LUN','TIPO-MAR','TIPO-MIE','TIPO-JUE','TIPO-VIE','TIPO-SAB','TIPO-DOM'];
+const TIPO_LABEL = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+let _tipoData = {};
+let _tipoEditing = false;
+
+async function rrssCargarTipo() {
+    try {
+        const res  = await fetch('/api/rrss/planning/tipo');
+        const data = await res.json();
+        _tipoData  = data.tipo || {};
+        rrssRenderTipo();
+    } catch(e) {
+        document.getElementById('tipoGrid').innerHTML =
+            `<div style="color:#dc2626;font-size:12px;">Error: ${e.message}</div>`;
+    }
+}
+
+function rrssRenderTipo() {
+    const esFinde = [false,false,false,false,false,true,true];
+    if (_tipoEditing) {
+        let html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;">';
+        TIPO_KEYS.forEach((key, i) => {
+            const val   = _tipoData[key] || '';
+            const bgCol = esFinde[i] ? '#fafafa' : 'white';
+            html += `<div style="display:flex;flex-direction:column;gap:6px;">
+                <div style="font-size:9px;font-weight:900;color:${esFinde[i]?'#94a3b8':'#1e293b'};text-transform:uppercase;">${TIPO_LABEL[i]}</div>
+                <textarea id="tipo_${key}" style="width:100%;min-height:100px;border:1.5px solid #7c3aed;border-radius:8px;padding:8px;font-size:11px;font-family:Montserrat,sans-serif;color:#1e293b;resize:vertical;box-sizing:border-box;background:${bgCol};">${val}</textarea>
+            </div>`;
+        });
+        html += '</div>';
+        document.getElementById('tipoGrid').innerHTML = html;
+    } else {
+        let html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;">';
+        TIPO_KEYS.forEach((key, i) => {
+            const val   = _tipoData[key] || '';
+            const bgCol = esFinde[i] ? '#fafafa' : 'white';
+            html += `<div style="display:flex;flex-direction:column;gap:6px;background:${bgCol};border-radius:10px;border:1px solid #f1f5f9;padding:10px;min-height:80px;">
+                <div style="font-size:9px;font-weight:900;color:${esFinde[i]?'#94a3b8':'#1e293b'};text-transform:uppercase;border-bottom:2px solid ${esFinde[i]?'#f1f5f9':'#e2e8f0'};padding-bottom:4px;margin-bottom:4px;">${TIPO_LABEL[i]}</div>
+                <div style="font-size:11px;color:${val?'#1e293b':'#cbd5e1'};white-space:pre-wrap;line-height:1.5;">${val || 'Sin planificar'}</div>
+            </div>`;
+        });
+        html += '</div>';
+        document.getElementById('tipoGrid').innerHTML = html;
+    }
+}
+
+function rrssActivarEdicionTipo() {
+    _tipoEditing = true;
+    rrssRenderTipo();
+    document.getElementById('btnEditarTipo').style.display  = 'none';
+    document.getElementById('btnGuardarTipo').style.display = '';
+    document.getElementById('btnCancelarTipo').style.display= '';
+}
+
+function rrssDesactivarEdicionTipo() {
+    _tipoEditing = false;
+    rrssRenderTipo();
+    document.getElementById('btnEditarTipo').style.display  = '';
+    document.getElementById('btnGuardarTipo').style.display = 'none';
+    document.getElementById('btnCancelarTipo').style.display= 'none';
+}
+
+async function rrssGuardarTipo() {
+    const tipo = {};
+    TIPO_KEYS.forEach(key => {
+        const el = document.getElementById('tipo_' + key);
+        if (el) tipo[key] = el.value;
+    });
+    try {
+        const res = await fetch('/api/rrss/planning/tipo', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({tipo})
+        });
+        const d = await res.json();
+        if (d.status==='ok') {
+            _tipoData = tipo;
+            rrssDesactivarEdicionTipo();
+        } else { alert('Error: ' + d.error); }
+    } catch(e) { alert('Error: ' + e.message); }
+}
+
+// Init
+rrssCargarVideos();
+rrssCargarMes();
+rrssCargarTipo();
+</script>
+{% endblock %}

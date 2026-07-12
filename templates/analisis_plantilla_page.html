@@ -416,6 +416,19 @@
 </div>
 
 
+<!-- MODAL FISIOTERAPIA JUGADOR -->
+<div id="modalFisioJugador" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:30000;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:white;border-radius:16px;width:560px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column;">
+    <div style="background:#0e7490;color:white;padding:16px 20px;border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+      <span style="font-weight:900;font-size:14px;"><i class="fas fa-stethoscope"></i> FISIOTERAPIA — <span id="fisioJugadorNombre"></span></span>
+      <span onclick="document.getElementById('modalFisioJugador').style.display='none'" style="cursor:pointer;font-size:22px;line-height:1;">&times;</span>
+    </div>
+    <div id="fisioJugadorBody" style="padding:20px;font-size:13px;">
+      <div style="text-align:center;padding:30px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>
+    </div>
+  </div>
+</div>
+
 <!-- Toast para mensajes de autoguardado -->
 <div id="toast-autoguardado" style="position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: white; padding: 12px 25px; border-radius: 30px; font-weight: 800; font-size: 11px; z-index: 10001; transition: 0.4s; opacity: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 10px; border: 1px solid #333;"></div>
 
@@ -545,6 +558,7 @@
                             <div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">
                                 <span style="flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${player.nombre}</span>
                                 <button class="spider-chart-btn" title="Ver perfil de jugador" onclick='toggleSpiderChartPopover(event, ${JSON.stringify(player)})'><i class="fas fa-chart-pie"></i></button>
+                                <button class="spider-chart-btn" title="Historial fisioterapia" style="color:#0891b2;" onclick='abrirFisioJugador("${player.nombre.replace(/"/g,'&quot;')}")'><i class="fas fa-stethoscope"></i></button>
                             </div>
                         </td>
                         <td>${piernaSelectHtml}</td>
@@ -975,4 +989,46 @@
             }
         }
     });
+
+    // ── Historial Fisioterapia por jugador ────────────────────────────────────
+    async function abrirFisioJugador(nombre) {
+        const modal = document.getElementById('modalFisioJugador');
+        const body  = document.getElementById('fisioJugadorBody');
+        document.getElementById('fisioJugadorNombre').textContent = nombre;
+        body.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+        modal.style.display = 'flex';
+        try {
+            const res  = await fetch('/api/fisio/jugador?nombre=' + encodeURIComponent(nombre));
+            const data = await res.json();
+            const visitas = data.visitas || [];
+            if (!visitas.length) {
+                body.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px;">Sin visitas registradas</div>';
+                return;
+            }
+            const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+            body.innerHTML = `
+                <div style="margin-bottom:14px;font-size:11px;color:#64748b;font-weight:700;">
+                    ${visitas.length} visita${visitas.length!==1?'s':''} registrada${visitas.length!==1?'s':''}
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                ${visitas.map(v => {
+                    const d = v.fecha ? new Date(v.fecha + 'T00:00:00') : null;
+                    const fechaLabel = d ? `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}` : v.fecha || '—';
+                    const realizada  = (v.realizada || '').toUpperCase() === 'SI';
+                    const color      = realizada ? '#16a34a' : '#dc2626';
+                    const dot        = realizada ? '✓' : '✗';
+                    return `<div style="background:#f8fafc;border-radius:10px;padding:12px 14px;border-left:3px solid ${color};">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                            <span style="font-size:12px;font-weight:900;color:#1e293b;">${fechaLabel}${v.hora ? '  ·  ' + v.hora + 'h' : ''}</span>
+                            <span style="font-size:10px;font-weight:800;color:${color};">${dot} ${realizada ? 'Realizada' : 'No realizada'}</span>
+                        </div>
+                        ${v.tipo_lesion ? `<div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:4px;"><i class="fas fa-bone"></i> ${v.tipo_lesion}</div>` : ''}
+                        ${v.comentario  ? `<div style="font-size:11px;color:#475569;line-height:1.4;">${v.comentario}</div>` : ''}
+                    </div>`;
+                }).join('')}
+                </div>`;
+        } catch(e) {
+            body.innerHTML = `<div style="padding:20px;color:#dc2626;font-size:12px;">Error: ${e.message}</div>`;
+        }
+    }
 </script>
