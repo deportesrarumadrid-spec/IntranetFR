@@ -1,0 +1,28 @@
+{
+  "PRE A": {
+    "ENTRENAMIENTOS": [
+      {
+        "fecha": "13/07/2026",
+        "texto": "prueba coor ind"
+      }
+    ],
+    "PARTIDOS": [],
+    "TECNICO": [],
+    "TACTICO": [],
+    "FISICO": [],
+    "EXTRADEPORTIVO": []
+  },
+  "BEN A": {
+    "ENTRENAMIENTOS": [
+      {
+        "fecha": "13/07/2026",
+        "texto": "prueba coorde"
+      }
+    ],
+    "PARTIDOS": [],
+    "TECNICO": [],
+    "TACTICO": [],
+    "FISICO": [],
+    "EXTRADEPORTIVO": []
+  }
+}

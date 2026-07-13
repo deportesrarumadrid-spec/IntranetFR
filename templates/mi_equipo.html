@@ -13,7 +13,7 @@
     /* Main grid for chart + monthly rankings and overall ranking */
     .main-stats-grid {
         display: grid;
-        grid-template-columns: 1.8fr 1.1fr 1.4fr 1fr; /* Evolución al doble de ancho, resto fluido */
+        grid-template-columns: 1.8fr 1.6fr 1fr 2fr;
         gap: 8px;
         align-items: stretch;
     }
@@ -51,116 +51,121 @@
     .full-ranking-list {
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 0;
     }
     .full-ranking-item {
         display: flex;
         align-items: center;
-        padding: 8px 15px; /* Increased padding for a finer look */
-        border-radius: 12px;
-        background: #fdfdfd;
-        border: 1px solid #f1f5f9;
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.03); /* Subtle shadow */
+        padding: 10px 14px;
+        background: white;
+        border-bottom: 1px solid #f1f5f9;
+        border-left: 3px solid transparent;
+        transition: background 0.15s ease;
     }
-    .full-ranking-item:hover {
-        border-color: transparent;
-        box-shadow: none;
-    }
+    .full-ranking-item:last-child { border-bottom: none; }
+    .full-ranking-item:hover { background: #f8fafc; }
     .full-ranking-pos {
-        font-weight: 800; /* Bolder position */
-        font-size: 13px; /* Slightly larger */
-        color: #94a3b8;
-        min-width: 28px; /* Adjusted width */
+        font-weight: 700;
+        font-size: 11px;
+        color: #cbd5e1;
+        min-width: 22px;
         text-align: center;
     }
     .full-ranking-name {
         flex: 1;
-        font-weight: 600; /* Finer name */
-        font-size: 14px;
+        font-weight: 700;
+        font-size: 12px;
         color: #1e293b;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        margin-left: 10px; /* More space */
+        margin-left: 10px;
+        text-transform: uppercase;
+        letter-spacing: .3px;
+    }
+    .full-ranking-bar-wrap {
+        width: 60px;
+        height: 4px;
+        background: #f1f5f9;
+        border-radius: 99px;
+        margin: 0 10px;
+        flex-shrink: 0;
+        overflow: hidden;
+    }
+    .full-ranking-bar-fill {
+        height: 100%;
+        border-radius: 99px;
+        background: #94a3b8;
     }
     .full-ranking-stats {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 11px; /* Smaller stats */
-        font-weight: 500; /* Finer stats */
-        color: #64748b; /* Lighter color for subtlety */
-        min-width: 80px; /* Ensure enough space */
-        justify-content: flex-end;
+        font-size: 10px;
+        font-weight: 600;
+        color: #94a3b8;
+        min-width: 62px;
+        text-align: right;
     }
     .full-ranking-perc {
-        font-weight: 800; /* Bolder percentage */
-        font-size: 16px; /* Slightly larger percentage */
-        min-width: 55px; /* Adjusted width */
+        font-weight: 800;
+        font-size: 13px;
+        min-width: 42px;
         text-align: right;
-        margin-left: 10px; /* Space from stats */
+        margin-left: 10px;
+        color: #1e293b;
     }
     .full-ranking-item.top-player {
-        background: #dcfce7;
-        border-color: #bbf7d0;
+        border-left-color: #15803d;
     }
-    .full-ranking-item.top-player .full-ranking-name,
-    .full-ranking-item.top-player .full-ranking-perc,
-    .full-ranking-item.top-player .full-ranking-stats {
-        color: #15803d;
-    }
+    .full-ranking-item.top-player .full-ranking-name { color: #15803d; }
+    .full-ranking-item.top-player .full-ranking-perc { color: #15803d; }
+    .full-ranking-item.top-player .full-ranking-bar-fill { background: #15803d; }
     .full-ranking-item.bottom-player {
-        background: #fee2e2;
-        border-color: #fecdd3;
+        border-left-color: #E31E24;
     }
-    .full-ranking-item.bottom-player .full-ranking-name,
-    .full-ranking-item.bottom-player .full-ranking-perc,
-    .full-ranking-item.bottom-player .full-ranking-stats {
-        color: #b91c1c;
-    }
+    .full-ranking-item.bottom-player .full-ranking-name { color: #b91c1c; }
+    .full-ranking-item.bottom-player .full-ranking-perc { color: #b91c1c; }
+    .full-ranking-item.bottom-player .full-ranking-bar-fill { background: #E31E24; }
 
-    /* Estilos Modernos para Asistencias */
-    .month-rank-box.prominent { 
-        margin-bottom: 15px; 
-        padding: 12px; 
-        background: #f8fafc; 
-        border-radius: 16px; 
-        border: 1px solid #f1f5f9; 
+    /* Estilos ASISTENCIAS POR MES */
+    .month-rank-box.prominent {
+        margin-bottom: 12px;
+        padding: 10px 12px;
+        background: white;
+        border-left: 3px solid #E31E24;
+        border-radius: 0 8px 8px 0;
+        border-top: 1px solid #f1f5f9;
+        border-right: 1px solid #f1f5f9;
+        border-bottom: 1px solid #f1f5f9;
     }
-    .month-rank-title { font-size: 14px; font-weight: 900; color: #1e293b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
-    
+    .month-rank-title {
+        font-size: 10px; font-weight: 900; color: #94a3b8;
+        margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;
+    }
     .rank-mini-item {
-        display: flex; align-items: center; gap: 8px; font-size: 14px; 
-        font-weight: 500; margin-bottom: 4px; /* Más fino */
+        display: flex; align-items: center; gap: 6px;
+        font-size: 11px; font-weight: 600; margin-bottom: 3px;
     }
-    .rank-mini-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .rank-mini-perc { font-weight: 700; min-width: 45px; text-align: right; }
-    
+    .rank-mini-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .rank-mini-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #1e293b; }
+    .rank-mini-perc { font-weight: 800; font-size: 12px; min-width: 38px; text-align: right; }
+    .rank-mini-sep { height: 1px; background: #f1f5f9; margin: 5px 0; }
+
     .history-grid-title {
-        font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; /* Reduced margin-top */
-        letter-spacing: 1px; margin: 10px 0 10px 0; text-align: center; /* Reduced margin-top */
+        font-size: 9px; font-weight: 900; color: #cbd5e1;
+        text-transform: uppercase; letter-spacing: 1.5px;
+        margin: 10px 0 8px; text-align: center;
     }
-    .history-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-    .history-item { background: #fff; border: 1px solid #f1f5f9; border-radius: 10px; padding: 6px 4px; text-align: center; }
-    .history-month-name { font-size: 9px; font-weight: 900; color: #1e293b; margin-bottom: 4px; text-transform: uppercase; }
-    .history-values {
-        display: flex;
-        flex-direction: column;
-        font-size: 10px;
-        font-weight: 500; /* Más fino */
-        gap: 2px;
-        text-align: left; /* Align content of history-values to the left */
-        padding-left: 4px; /* Small padding for visual balance */
+    .history-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+    .history-item {
+        background: #f8fafc; border-radius: 8px; padding: 7px 5px;
+        border-top: 2px solid transparent;
     }
-    .history-val {
-        display: flex;
-        align-items: center;
-        gap: 2px;
-        justify-content: space-between; /* Distribute name and percentage */
-    }
-    .history-player-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .history-player-perc { font-weight: 700; min-width: 35px; text-align: right; }
+    .history-item.hi-top { border-top-color: #15803d; }
+    .history-month-name { font-size: 9px; font-weight: 900; color: #475569; margin-bottom: 5px; text-transform: uppercase; text-align: center; }
+    .history-values { display: flex; flex-direction: column; gap: 2px; }
+    .history-val { display: flex; align-items: center; gap: 3px; }
+    .history-val-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+    .history-player-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; font-weight: 600; color: #475569; }
+    .history-player-perc { font-size: 9px; font-weight: 700; min-width: 28px; text-align: right; }
     
     .scroll-v { overflow-y: auto; padding-right: 5px; }
     .scroll-v::-webkit-scrollbar { width: 4px; }
@@ -185,9 +190,11 @@
 
 <div class="mi-equipo-layout">
     {% include 'analisis_plantilla_page.html' %}
+    <!-- Grupo EVOLUCIÓN ASISTENCIA: 4 cards en grid 4 columnas -->
+    <div class="sec-wrapper" data-for="sec-evolucion">
     <div class="main-stats-grid">
         <!-- Bloque 1: Gráfico -->
-        <div class="card-modern">
+        <div id="sec-evolucion" class="card-modern">
             <div class="card-title"><i class="fas fa-chart-line"></i> EVOLUCIÓN ASISTENCIA</div>
             <div style="flex: 1; min-height: 0;">
                 <canvas id="chartAsistencia"></canvas>
@@ -200,68 +207,72 @@
                 <span style="display: flex; gap: 6px;">
                     <i class="fas fa-arrow-up" style="color:#22c55e; font-size: 12px;"></i><i class="fas fa-arrow-down" style="color:#ef4444; font-size: 12px;"></i>
                 </span>
-                ASISTENCIAS
+                ASISTENCIAS POR MES
             </div>
             <div id="containerMonthlyRankings" class="scroll-v" style="flex: 1;"></div>
         </div>
 
         <!-- Bloque 3: Ranking Global (Multi-columna) -->
         <div class="card-modern">
-            <div class="card-title" style="margin-bottom: 10px;">ASISTENCIAS PLANTILLA</div>
+            <div class="card-title" style="margin-bottom: 10px;">ASISTENCIAS GLOBAL</div>
             <div class="scroll-v" style="flex: 1;">
                 <div id="tbodyFullRanking" class="full-ranking-list"></div>
             </div>
         </div>
 
-        <!-- Bloque 4: Rendimiento Flechas -->
+        <!-- Bloque 4: NOTAS -->
         <div class="card-modern">
-            <div class="card-title" style="margin-bottom: 10px;"><i class="fas fa-arrows-up-down"></i> RENDIMIENTO</div>
-            <table class="table-val">
-                <thead>
-                    <tr>
-                        <th>MES</th>
-                        <th><i class="fas fa-arrow-up" style="color:#15803d"></i> ALTO</th>
-                        <th><i class="fas fa-arrow-right" style="color:#f59e0b"></i> NORMAL</th>
-                        <th><i class="fas fa-arrow-down" style="color:#ef4444"></i> BAJO</th>
-                        <th style="text-align: center;">
-                            <span style="display: flex; gap: 6px; justify-content: center;">
-                                <i class="fas fa-comments" style="color:#3b82f6; font-size: 12px;"></i>
-                            </span>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody id="tbodyValoracion"></tbody>
-            </table>
+            <div class="card-title" style="margin-bottom: 10px; display:flex; align-items:center; justify-content:space-between;">
+                <span>NOTAS</span>
+                <div style="display:flex; gap:4px;">
+                    <button id="meMatrizBtnPrev" onclick="meMatrizNav(-1)"
+                        style="width:26px;height:26px;border-radius:6px;border:1px solid #e2e8f0;background:white;color:#475569;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;">&#8592;</button>
+                    <button id="meMatrizBtnNext" onclick="meMatrizNav(1)" disabled
+                        style="width:26px;height:26px;border-radius:6px;border:1px solid #e2e8f0;background:white;color:#cbd5e1;font-size:12px;cursor:not-allowed;display:flex;align-items:center;justify-content:center;">&#8594;</button>
+                </div>
+            </div>
+            <div id="meMatrizCont" style="flex:1; overflow:auto; font-size:10px;">
+                <div style="color:#94a3b8;font-size:12px;text-align:center;padding:30px;">Cargando...</div>
+            </div>
         </div>
-        
-        <!-- Bloque 5: Historial de Partidos (Full width) -->
-        <div class="card-modern" style="grid-column: 1 / -1;">
+    </div>
+    </div><!-- /sec-wrapper sec-evolucion -->
+
+    <!-- Historial de Partidos -->
+    <div class="sec-wrapper" data-for="sec-historial">
+        <div id="sec-historial" class="card-modern" style="height: auto;">
             <div class="card-title" style="margin-bottom: 15px;"><i class="fas fa-clipboard-list"></i> HISTORIAL DE PARTIDOS (DETALLES DEL EQUIPO)</div>
             <div id="containerHistorialPartidos" style="display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px;">
                 <!-- Rellenado por JS -->
             </div>
         </div>
+    </div><!-- /sec-wrapper sec-historial -->
 
-        <!-- Bloque 6: Convocatorias (Full width) -->
-        <div class="card-modern" style="grid-column: 1 / -1;">
-            <div class="card-title" style="margin-bottom: 15px;"><i class="fas fa-bell-concierge"></i> CONVOCATORIAS</div>
+    <!-- Convocatorias -->
+    <div class="sec-wrapper" data-for="sec-convocatorias">
+        <div id="sec-convocatorias" class="card-modern" style="height: auto;">
+            <div class="card-title" style="margin-bottom: 15px;"><i class="fas fa-shirt"></i> CONVOCATORIAS</div>
             <div id="containerConvocatoriasMiEquipo"></div>
         </div>
+    </div><!-- /sec-wrapper sec-convocatorias -->
 
-        <!-- Bloque 7: Videoanálisis (Full width) -->
-        <div class="card-modern" style="grid-column: 1 / -1;">
+    <!-- Videoanálisis -->
+    <div class="sec-wrapper" data-for="sec-videoanalisis">
+        <div id="sec-videoanalisis" class="card-modern" style="height: auto;">
             <div class="card-title" style="margin-bottom: 15px;"><i class="fas fa-video"></i> VIDEOANÁLISIS</div>
             <div id="containerVideoanalisisMiEquipo" style="display:flex; flex-direction:column; gap:12px;"></div>
         </div>
+    </div><!-- /sec-wrapper sec-videoanalisis -->
 
-        <!-- Bloque 8: Metodología (Full width) -->
-        {% if categoria_metodologia %}
-        <div class="card-modern" style="grid-column: 1 / -1; padding:0; overflow:hidden;">
-            <div class="card-title" style="margin: 15px 15px 0;"><i class="fas fa-chalkboard-teacher"></i> METODOLOGÍA ({{ categoria_metodologia }})</div>
+    <!-- Metodología -->
+    {% if categoria_metodologia %}
+    <div class="sec-wrapper" data-for="sec-metodologia">
+        <div id="sec-metodologia" class="card-modern" style="height: auto; padding:0; overflow:hidden;">
+            <div class="card-title" style="margin: 15px 15px 0;"><i class="fas fa-chalkboard-teacher"></i> METODOLOGÍA</div>
             <div id="containerMetodologiaMiEquipo"></div>
         </div>
-        {% endif %}
-    </div>
+    </div><!-- /sec-wrapper sec-metodologia -->
+    {% endif %}
 </div>
 
 <script>
@@ -279,12 +290,12 @@
 
         allAsistenciaData = data.asistencia;
         renderChart(allAsistenciaData);
-        renderValoracion(data.tabla_valoracion); // This function is still needed for the bottom-left card
         renderFullRanking(data.total_ranking); // New call
         renderMonthlyRankings(allAsistenciaData); // New call
         
-        cargarHistorialPartidos(); // Cargar formularios de partido
+        cargarHistorialPartidos();
         cargarYRenderConvocatorias("{{ equipo }}", 'containerConvocatoriasMiEquipo');
+        meMatrizCargar();
     }
     
     function parseDateString(dateStr) {
@@ -387,54 +398,91 @@
 
     function renderChart(asis) {
         const ctx = document.getElementById('chartAsistencia').getContext('2d');
-        
+
+        const gradient = ctx.createLinearGradient(0, 0, 0, 260);
+        gradient.addColorStop(0, 'rgba(227,30,36,0.18)');
+        gradient.addColorStop(0.6, 'rgba(227,30,36,0.05)');
+        gradient.addColorStop(1, 'rgba(227,30,36,0)');
+
         chartAsistencia = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: asis.labels,
-                datasets: [
-                    {
-                        label: 'Media Asistencia %',
-                        data: asis.media,
-                        borderColor: '#E31E24',
-                        backgroundColor: 'rgba(227, 30, 36, 0.05)',
-                        borderWidth: 4,
-                        pointBackgroundColor: '#fff',
-                        pointBorderColor: '#E31E24',
-                        pointBorderWidth: 3,
-                        pointRadius: 6,
-                        pointHoverRadius: 9,
-                        tension: 0.4,
-                        fill: true
-                    }
-                ]
+                labels: asis.labels.map(l => l.split(' ')[0].toUpperCase()),
+                datasets: [{
+                    label: 'Media Asistencia %',
+                    data: asis.media,
+                    borderColor: '#E31E24',
+                    backgroundColor: gradient,
+                    borderWidth: 2,
+                    pointBackgroundColor: '#E31E24',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 7,
+                    pointHoverBackgroundColor: '#E31E24',
+                    pointHoverBorderColor: '#fff',
+                    pointHoverBorderWidth: 2.5,
+                    tension: 0.4,
+                    fill: true
+                }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        display: false, // Removed legend as per request
-                    },
+                    legend: { display: false },
                     datalabels: {
-                        display: true,
+                        display: (context) => context.dataset.data[context.dataIndex] > 0,
                         align: 'top',
                         anchor: 'end',
-                        offset: 5,
-                        color: '#E31E24',
-                        font: { weight: 'bold', size: 12 },
-                        formatter: (val) => val + '%'
+                        offset: 6,
+                        color: '#1e293b',
+                        font: { weight: '800', size: 12 },
+                        formatter: (val) => val.toFixed(2).replace(/\.?0+$/, '') + '%',
+                        backgroundColor: 'rgba(255,255,255,0.92)',
+                        borderRadius: 4,
+                        padding: { top: 3, bottom: 3, left: 6, right: 6 }
                     },
                     tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleColor: '#f8fafc',
+                        bodyColor: '#94a3b8',
+                        borderColor: 'rgba(255,255,255,0.08)',
+                        borderWidth: 1,
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: false,
                         callbacks: {
+                            title: (items) => items[0].label,
                             label: (ctx) => asis.ratio[ctx.dataIndex]
                         }
                     }
                 },
                 scales: {
-                    y: { beginAtZero: true, max: 100, ticks: { font: { weight: 'bold' } }, grid: { color: '#f1f5f9' } },
-                    x: { grid: { display: false }, ticks: { font: { weight: 'bold' } } }
-                } // Removed onClick handler as monthly ranking card is removed
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        border: { display: false },
+                        grid: { color: '#f1f5f9', lineWidth: 1 },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { size: 10, weight: '600' },
+                            callback: (val) => val + '%',
+                            maxTicksLimit: 6,
+                            padding: 6
+                        }
+                    },
+                    x: {
+                        border: { display: false },
+                        grid: { display: false },
+                        ticks: {
+                            color: '#475569',
+                            font: { size: 10, weight: '700' },
+                            padding: 6
+                        }
+                    }
+                },
+                layout: { padding: { top: 32, right: 16, bottom: 0, left: 0 } }
             }
         });
     }
@@ -463,97 +511,53 @@
 
         let html = '';
 
-        // 1. Renderizar meses destacados (Junio/Mayo)
+        // 1. Renderizar meses destacados
         prominent.forEach(m => {
             const sorted = [...m.players].sort((a, b) => b.perc - a.perc);
-            const top2 = sorted.slice(0, 2);
-            const bottom2 = sorted.length > 2 ? sorted.slice(-2).reverse() : [];
-
+            const top2    = sorted.slice(0, 2);
+            const bottom2 = sorted.length > 2 ? sorted.slice(-2).reverse() : (sorted.length === 2 ? [sorted[1]] : []);
             html += `
                 <div class="month-rank-box prominent">
                     <div class="month-rank-title">${m.label}</div>
                     ${top2.map(p => `
                         <div class="rank-mini-item">
-                            <i class="fas fa-arrow-up text-green-subtle" style="font-size: 10px;"></i>
-                            <span class="rank-mini-name text-green-subtle">${p.nombre.split(' ')[0]}</span>
-                            <span class="rank-mini-perc text-green-subtle">${p.perc}%</span>
-                        </div>
-                    `).join('')}
-                    <div style="height: 4px;"></div>
+                            <span class="rank-mini-dot" style="background:#15803d;"></span>
+                            <span class="rank-mini-name">${p.nombre.split(' ')[0]}</span>
+                            <span class="rank-mini-perc" style="color:#15803d;">${p.perc}%</span>
+                        </div>`).join('')}
+                    ${bottom2.length ? '<div class="rank-mini-sep"></div>' : ''}
                     ${bottom2.map(p => `
                         <div class="rank-mini-item">
-                            <i class="fas fa-arrow-down text-red-subtle" style="font-size: 10px;"></i>
-                            <span class="rank-mini-name text-red-subtle">${p.nombre.split(' ')[0]}</span>
-                            <span class="rank-mini-perc text-red-subtle">${p.perc}%</span>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
+                            <span class="rank-mini-dot" style="background:#E31E24;"></span>
+                            <span class="rank-mini-name">${p.nombre.split(' ')[0]}</span>
+                            <span class="rank-mini-perc" style="color:#E31E24;">${p.perc}%</span>
+                        </div>`).join('')}
+                </div>`;
         });
 
         // 2. Renderizar historial en 4 columnas
         if (history.length > 0) {
-            html += `<div class="history-grid-title">Meses Anteriores</div>`;
-            html += `<div class="history-grid">`;
+            html += `<div class="history-grid-title">Meses anteriores</div><div class="history-grid">`;
             history.forEach(m => {
                 const sorted = [...m.players].sort((a, b) => b.perc - a.perc);
-                
-                let playersHtml = '';
+                const rows = [];
+                if (sorted[0]) rows.push({ p: sorted[0], color: '#15803d' });
+                if (sorted[1]) rows.push({ p: sorted[1], color: '#15803d' });
+                if (sorted.length > 2) rows.push({ p: sorted[sorted.length - 2], color: '#E31E24' });
+                if (sorted.length > 2) rows.push({ p: sorted[sorted.length - 1], color: '#E31E24' });
+                else if (sorted.length === 2) rows.push({ p: sorted[1], color: '#E31E24' });
 
-                // Top 2 players
-                if (sorted.length > 0) {
-                    playersHtml += `
+                html += `<div class="history-item hi-top">
+                    <div class="history-month-name">${m.label.split(' ')[0].substring(0,3)}</div>
+                    <div class="history-values">
+                        ${rows.map(r => `
                         <div class="history-val">
-                            <i class="fas fa-arrow-up text-green-subtle" style="font-size:7px"></i>
-                            <span class="history-player-name text-green-subtle" title="${sorted[0].nombre}">${sorted[0].nombre.split(' ')[0]}</span>
-                            <span class="history-player-perc text-green-subtle">${sorted[0].perc}%</span>
-                        </div>`;
-                }
-                if (sorted.length > 1) {
-                    playersHtml += `
-                        <div class="history-val">
-                            <i class="fas fa-arrow-up text-green-subtle" style="font-size:7px"></i>
-                            <span class="history-player-name text-green-subtle" title="${sorted[1].nombre}">${sorted[1].nombre.split(' ')[0]}</span>
-                            <span class="history-player-perc text-green-subtle">${sorted[1].perc}%</span>
-                        </div>`;
-                }
-
-                // Add a separator if there are enough players to show distinct top and bottom
-                if (sorted.length > 2) {
-                    playersHtml += `<div style="height: 4px;"></div>`; // Small visual separator
-                }
-
-                // Bottom 2 players (only if they are distinct from the top 2)
-                if (sorted.length > 2) { // If 3 or more players, we can show distinct top 2 and bottom 2
-                    playersHtml += `
-                        <div class="history-val">
-                            <i class="fas fa-arrow-down text-red-subtle" style="font-size:7px"></i>
-                            <span class="history-player-name text-red-subtle" title="${sorted[sorted.length - 2].nombre}">${sorted[sorted.length - 2].nombre.split(' ')[0]}</span>
-                            <span class="history-player-perc text-red-subtle">${sorted[sorted.length - 2].perc}%</span>
-                        </div>
-                        <div class="history-val">
-                            <i class="fas fa-arrow-down text-red-subtle" style="font-size:7px"></i>
-                            <span class="history-player-name text-red-subtle" title="${sorted[sorted.length - 1].nombre}">${sorted[sorted.length - 1].nombre.split(' ')[0]}</span>
-                            <span class="history-player-perc text-red-subtle">${sorted[sorted.length - 1].perc}%</span>
-                        </div>`;
-                } else if (sorted.length === 2) { // If exactly 2 players, the second player is also the worst
-                    playersHtml += `
-                        <div class="history-val">
-                            <i class="fas fa-arrow-down text-red-subtle" style="font-size:7px"></i>
-                            <span class="history-player-name text-red-subtle" title="${sorted[1].nombre}">${sorted[1].nombre.split(' ')[0]}</span>
-                            <span class="history-player-perc text-red-subtle">${sorted[1].perc}%</span>
-                        </div>`;
-                }
-                // If sorted.length is 1, only the top 1 is shown, no separate bottom section.
-
-                html += `
-                    <div class="history-item">
-                        <div class="history-month-name">${m.label.split(' ')[0].substring(0,3)}</div>
-                        <div class="history-values">
-                            ${playersHtml}
-                        </div>
+                            <span class="history-val-dot" style="background:${r.color};"></span>
+                            <span class="history-player-name" title="${r.p.nombre}">${r.p.nombre.split(' ')[0]}</span>
+                            <span class="history-player-perc" style="color:${r.color};">${r.p.perc}%</span>
+                        </div>`).join('')}
                     </div>
-                `;
+                </div>`;
             });
             html += `</div>`;
         }
@@ -575,9 +579,10 @@
                 <div class="full-ranking-item ${itemClass}">
                     <span class="full-ranking-pos">${i+1}</span>
                     <span class="full-ranking-name" title="${p.nombre}">${p.nombre.split(' ')[0]}</span>
-                    <span class="full-ranking-stats">
-                        ${p.si_count} SI / ${p.total_available_days}
-                    </span>
+                    <div class="full-ranking-bar-wrap">
+                        <div class="full-ranking-bar-fill" style="width:${p.perc}%;"></div>
+                    </div>
+                    <span class="full-ranking-stats">${p.si_count}/${p.total_available_days}</span>
                     <span class="full-ranking-perc">${p.perc}%</span>
                 </div>
             `;
@@ -586,12 +591,13 @@
 
     function renderValoracion(tabla_valoracion) {
         const tbody = document.getElementById('tbodyValoracion');
+        if (!tbody) return;
         tbody.innerHTML = '';
         if (tabla_valoracion && tabla_valoracion.length > 0) {
             tabla_valoracion.forEach(row => {
                 tbody.innerHTML += `
                     <tr>
-                        <td>${row.mes}</td>
+                        <td>${row.mes.split(' ')[0]}</td>
                         <td class="cell-perc" style="color:#15803d;" title="${row.n_arriba} flechas">${row.arriba}%</td>
                         <td class="cell-perc" style="color:#f59e0b;" title="${row.n_medio} flechas">${row.medio}%</td>
                         <td class="cell-perc" style="color:#ef4444;" title="${row.n_abajo} flechas">${row.abajo}%</td>
@@ -602,6 +608,113 @@
         } else {
             tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #999;">No hay datos de valoración.</td></tr>';
         }
+    }
+
+    const MESES_ES_ME = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    let _meData = null;      // { fechas, jugadores, datos, mesesMap, mesesList }
+    let _meOffset = 0;       // 0 = últimos 2 meses; aumenta al ir atrás
+
+    async function meMatrizCargar() {
+        const cont = document.getElementById('meMatrizCont');
+        if (!cont) return;
+        const equipo = "{{ equipo }}";
+        if (!equipo) return;
+        try {
+            const res  = await fetch(`/api/asistencias_matrix?equipo=${encodeURIComponent(equipo)}`);
+            const data = await res.json();
+            const { fechas, jugadores, datos } = data;
+            if (!fechas || !fechas.length || !jugadores || !jugadores.length) {
+                cont.innerHTML = '<div style="color:#94a3b8;font-size:11px;text-align:center;padding:20px;">Sin datos.</div>';
+                return;
+            }
+            // Agrupar fechas por mes (orden cronológico)
+            const mesesMap = {};
+            fechas.forEach(f => {
+                const [d, m, y] = f.split('/');
+                const clave = `${m}/${y}`;
+                if (!mesesMap[clave]) mesesMap[clave] = [];
+                mesesMap[clave].push(f);
+            });
+            const mesesList = Object.keys(mesesMap); // cronológico
+            _meData = { fechas, jugadores, datos, mesesMap, mesesList };
+            _meOffset = 0;
+            meMatrizRender();
+        } catch(e) {
+            document.getElementById('meMatrizCont').innerHTML =
+                `<div style="color:#dc2626;font-size:11px;padding:20px;">Error: ${e.message}</div>`;
+        }
+    }
+
+    function meMatrizRender() {
+        const cont = document.getElementById('meMatrizCont');
+        if (!cont || !_meData) return;
+        const { jugadores, datos, mesesMap, mesesList } = _meData;
+        const total = mesesList.length;
+
+        // Calcular slice de 2 meses según offset
+        const end   = total - _meOffset;
+        const start = Math.max(0, end - 2);
+        const visibles = mesesList.slice(start, end);
+
+        // Botones nav
+        const btnPrev = document.getElementById('meMatrizBtnPrev');
+        const btnNext = document.getElementById('meMatrizBtnNext');
+        const canPrev = end - 2 > 0;
+        const canNext = _meOffset > 0;
+        if (btnPrev) { btnPrev.disabled = !canPrev; btnPrev.style.color = canPrev ? '#475569' : '#e2e8f0'; btnPrev.style.cursor = canPrev ? 'pointer' : 'not-allowed'; }
+        if (btnNext) { btnNext.disabled = !canNext; btnNext.style.color = canNext ? '#475569' : '#e2e8f0'; btnNext.style.cursor = canNext ? 'pointer' : 'not-allowed'; }
+
+        // Construir fechas visibles
+        const fechasVis = visibles.flatMap(c => mesesMap[c]);
+
+        let thMeses = '<th style="position:sticky;left:0;z-index:2;background:#1e293b;min-width:110px;"></th>';
+        let thDias  = '<th style="position:sticky;left:0;z-index:2;background:#1e293b;font-size:11px;font-weight:700;color:white;padding:7px 10px;min-width:110px;">JUGADOR</th>';
+        visibles.forEach(clave => {
+            const fs = mesesMap[clave];
+            const [m, y] = clave.split('/');
+            thMeses += `<th colspan="${fs.length}" style="background:#1e293b;color:white;font-size:11px;font-weight:700;text-align:center;border-left:2px solid #334155;padding:6px 4px;white-space:nowrap;">${MESES_ES_ME[parseInt(m)]} ${y}</th>`;
+            fs.forEach(f => {
+                thDias += `<th style="background:#1e293b;color:#94a3b8;font-size:10px;font-weight:600;text-align:center;min-width:36px;padding:5px 3px;border-left:1px solid #334155;">${f.split('/')[0]}</th>`;
+            });
+        });
+
+        let filas = '';
+        jugadores.forEach((jug, idx) => {
+            const bg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+            let celdas = '';
+            fechasVis.forEach((f, fi) => {
+                const celda = (datos[jug] || {})[f] || {};
+                const estado = ((typeof celda === 'object' ? celda.estado : celda) || '').trim().toUpperCase();
+                const val    = ((typeof celda === 'object' ? celda.val    : '')    || '').trim().toUpperCase();
+                const bl = fi > 0 && f.split('/')[1] !== fechasVis[fi-1].split('/')[1]
+                    ? 'border-left:2px solid #e2e8f0;' : 'border-left:1px solid #f1f5f9;';
+                let cel = '';
+                if (estado === 'SI') {
+                    if (val === 'EXCELENTE') cel = `<span style="display:inline-flex;align-items:center;justify-content:center;border:2px solid #16a34a;border-radius:3px;width:20px;height:16px;font-size:13px;font-weight:900;color:#16a34a;">↑</span>`;
+                    else if (val === 'MAL')  cel = `<span style="display:inline-flex;align-items:center;justify-content:center;border:2px solid #dc2626;border-radius:3px;width:20px;height:16px;font-size:13px;font-weight:900;color:#dc2626;">↓</span>`;
+                    else                     cel = `<span style="font-size:14px;font-weight:900;color:#2563eb;">→</span>`;
+                } else if (estado === 'NO') {
+                    cel = `<span style="font-size:13px;font-weight:900;color:#dc2626;">✕</span>`;
+                }
+                celdas += `<td style="text-align:center;vertical-align:middle;${bl}padding:6px 3px;background:${bg};">${cel}</td>`;
+            });
+            filas += `<tr>
+                <td style="position:sticky;left:0;z-index:1;background:${bg};font-size:12px;font-weight:700;color:#1e293b;padding:8px 10px;white-space:nowrap;border-bottom:1px solid #f1f5f9;">${jug.split(' ')[0]}</td>
+                ${celdas}
+            </tr>`;
+        });
+
+        cont.innerHTML = `<table style="border-collapse:collapse;font-family:'Montserrat',sans-serif;width:100%;">
+            <thead><tr>${thMeses}</tr><tr>${thDias}</tr></thead>
+            <tbody>${filas}</tbody>
+        </table>`;
+    }
+
+    function meMatrizNav(dir) {
+        if (!_meData) return;
+        const total = _meData.mesesList.length;
+        _meOffset = Math.max(0, Math.min(total - 2, _meOffset - dir));
+        meMatrizRender();
     }
 
     async function cargarVideoanalisisMiEquipo() {
@@ -663,7 +776,7 @@
 
     function renderFilaMetodologiaRO(fila, etiqueta, esPrimera, totalFilas) {
         let html = '<tr>';
-        if (esPrimera) html += `<td style="background:#f1f5f9; font-weight:900; color:#333; writing-mode:vertical-rl; text-orientation:mixed; letter-spacing:3px; padding:6px 2px; border:1px solid #ddd;" rowspan="${totalFilas}">${etiqueta}</td>`;
+        if (esPrimera) html += `<td style="background:#f1f5f9; font-weight:900; color:#333; writing-mode:vertical-rl; text-orientation:mixed; letter-spacing:3px; padding:6px 2px; border:1px solid #ddd; text-align:center; vertical-align:middle;" rowspan="${totalFilas}">${etiqueta}</td>`;
         MESES_METODOLOGIA_RO.forEach(mes => {
             html += `<td style="border:1px solid #ddd; padding:6px; text-align:center; font-size:11px; font-weight:700; color:#1e293b;">${(fila[mes] || '').replace(/</g, '&lt;')}</td>`;
         });

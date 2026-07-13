@@ -213,7 +213,9 @@ ARCHIVOS_FOLDER = os.path.join(BASE_DIR, 'static', 'archivos')
 # --- CONFIGURACIÓN GOOGLE SHEETS ---
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_name(os.path.join(BASE_DIR, "secretos.json"), scope)
-client = gspread.authorize(creds)
+from sheets_cache import CachedClient
+_raw_client = gspread.authorize(creds)
+client = CachedClient(_raw_client, ttl=90)  # caché 90s — lecturas instantáneas en caliente
 NOMBRE_EXCEL = "Control Asistencia Club"
 app.gs_client = client
 app.gs_name = NOMBRE_EXCEL
@@ -3074,6 +3076,83 @@ app.register_blueprint(videoanalisis_bp)
 app.register_blueprint(gps_bp)
 app.register_blueprint(fisio_bp)
 app.register_blueprint(rrss_bp)
+
+# --- SEGUIMIENTO COORD ENTRENAMIENTOS ---
+_SEG_COORD_FILE = os.path.join('static', 'data', 'seguimiento_coord_comentarios.json')
+
+def _seg_coord_leer():
+    if not os.path.exists(_SEG_COORD_FILE):
+        return {}
+    with open(_SEG_COORD_FILE, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+def _seg_coord_guardar(data):
+    with open(_SEG_COORD_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+_SEG_COORD_CATS = ['ENTRENAMIENTOS','PARTIDOS','TECNICO','TACTICO','FISICO','EXTRADEPORTIVO']
+
+def _seg_coord_equipo_init(data, equipo):
+    if equipo not in data:
+        data[equipo] = {}
+    for cat in _SEG_COORD_CATS:
+        if cat not in data[equipo]:
+            data[equipo][cat] = []
+
+def _abreviar_equipo(nombre):
+    """BENJAMIN A → BEN A, INFANTIL C → INF C, ALEVIN FEMENINO → ALE FEM, etc."""
+    n = (nombre or '').strip().upper()
+    mapa = [
+        ('PREBENJAMIN', 'PRE'), ('PREBENJAMÍN', 'PRE'),
+        ('BENJAMIN', 'BEN'), ('BENJAMÍN', 'BEN'),
+        ('ALEVIN', 'ALE'), ('ALEVÍN', 'ALE'),
+        ('INFANTIL', 'INF'),
+        ('CADETE', 'CDT'),
+        ('JUVENIL', 'JUV'),
+    ]
+    for full, abbr in mapa:
+        if n.startswith(full):
+            resto = n[len(full):].strip().replace('FEMENINO', 'FEM').replace('FEMENINA', 'FEM')
+            return (abbr + ' ' + resto).strip() if resto else abbr
+    return n
+
+def _buscar_clave_seg_coord(data, equipo):
+    """Busca en data por nombre completo o abreviado, insensible a mayúsculas."""
+    if equipo in data:
+        return equipo
+    abr = _abreviar_equipo(equipo)
+    if abr in data:
+        return abr
+    eq_up, abr_up = equipo.upper(), abr.upper()
+    for k in data:
+        if k.upper() in (eq_up, abr_up):
+            return k
+    return equipo
+
+@app.route('/api/seguimiento_coord/<equipo>')
+def api_seguimiento_coord_get(equipo):
+    if 'usuario' not in session:
+        return jsonify({'error': 'no auth'}), 401
+    data = _seg_coord_leer()
+    clave = _buscar_clave_seg_coord(data, equipo)
+    _seg_coord_equipo_init(data, clave)
+    return jsonify({'categorias': data[clave]})
+
+@app.route('/api/seguimiento_coord', methods=['POST'])
+def api_seguimiento_coord_post():
+    if 'usuario' not in session:
+        return jsonify({'error': 'no auth'}), 401
+    body = request.get_json() or {}
+    equipo    = (body.get('equipo')    or '').strip()
+    categoria = (body.get('categoria') or '').strip().upper()
+    texto     = (body.get('texto')     or '').strip()
+    if not equipo or not texto or categoria not in _SEG_COORD_CATS:
+        return jsonify({'error': 'missing'}), 400
+    data = _seg_coord_leer()
+    _seg_coord_equipo_init(data, equipo)
+    data[equipo][categoria].append({'fecha': datetime.now().strftime('%d/%m/%Y'), 'texto': texto})
+    _seg_coord_guardar(data)
+    return jsonify({'categorias': data[equipo]})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001, use_reloader=True)

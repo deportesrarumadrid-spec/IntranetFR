@@ -297,15 +297,15 @@ def api_stats_mi_equipo():
         # Formatear datos finales para Chart.js
         asis_chart = {"labels": [], "media": [], "ratio": [], "monthly_player_rankings": []}
         tabla_valoracion = []
-        nombres_m = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
-        
+        nombres_m = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"]
+
         total_stats_individual = {} # {nombre: {"si": 0, "x": 0, "total": 0}}
 
         hoy = datetime.now() # Get current date for filtering
 
         for m_num, y_num in meses_periodo:
             m_clave = f"{m_num:02d}/{y_num}"
-            lbl = f"{nombres_m[m_num-1]}{str(y_num)[2:]}"
+            lbl = f"{nombres_m[m_num-1]} {str(y_num)[2:]}"
             
             # Filter out future months: only process months up to the current one
             if y_num > hoy.year or (y_num == hoy.year and m_num > hoy.month):

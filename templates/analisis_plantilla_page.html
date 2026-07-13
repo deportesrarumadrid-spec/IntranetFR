@@ -188,8 +188,125 @@
     .modal { display: none; position: fixed; z-index: 10005; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; backdrop-filter: blur(5px); }
 </style>
 
+<!-- Barra de navegación arrastrable — sticky -->
+<style>
+#sec-jugadores,#sec-equipo,#sec-analisis,#sec-evolucion,
+#sec-historial,#sec-convocatorias,#sec-videoanalisis,#sec-metodologia{scroll-margin-top:38px;}
+#secNavBar{display:flex;gap:0;overflow-x:auto;white-space:nowrap;border-bottom:2px solid #e2e8f0;scrollbar-width:none;}
+#secNavBar::-webkit-scrollbar{display:none}
+.sec-nav-btn{background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;padding:6px 14px;font-size:10px;font-weight:800;color:#64748b;cursor:grab;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;transition:color .15s;font-family:inherit;text-transform:uppercase;}
+.sec-nav-btn:hover{color:#E31E24;}
+.sec-nav-btn.dragging{opacity:.35;cursor:grabbing;}
+.sec-nav-btn.drag-over{border-left:2px solid #E31E24;background:rgba(227,30,36,.06);}
+</style>
+<div style="position:sticky;top:-25px;z-index:100;background:#f4f7f6;margin:-25px -25px 12px -25px;padding:4px 25px 0;order:-1;">
+    <div id="secNavBar"></div>
+</div>
+<script>
+(function(){
+    const NAV_KEY = 'secNavOrder_v1';
+    const ITEMS = [
+        {id:'sec-jugadores',  icon:'fa-users',              label:'JUGADORES'},
+        {id:'sec-equipo',     icon:'fa-futbol',             label:'EQUIPO'},
+        {id:'sec-analisis',   icon:'fa-clipboard-list',     label:'FALLOS A TRABAJAR'},
+        {id:'sec-evolucion',  icon:'fa-chart-line',         label:'EVOLUCIÓN ASISTENCIA'},
+        {id:'sec-historial',  icon:'fa-clipboard-list',     label:'HISTORIAL DE PARTIDOS'},
+        {id:'sec-convocatorias',icon:'fa-shirt',            label:'CONVOCATORIAS'},
+        {id:'sec-videoanalisis',icon:'fa-video',            label:'VIDEOANÁLISIS'},
+        {id:'sec-metodologia',icon:'fa-chalkboard-teacher', label:'METODOLOGÍA'},
+    ];
+
+    function loadOrder(){
+        try{
+            const saved = JSON.parse(localStorage.getItem(NAV_KEY)||'null');
+            if(saved && saved.length === ITEMS.length) return saved;
+        }catch(e){}
+        return ITEMS.map(i=>i.id);
+    }
+
+    function saveOrder(order){ localStorage.setItem(NAV_KEY, JSON.stringify(order)); }
+
+    function getOrder(){
+        return Array.from(document.querySelectorAll('#secNavBar .sec-nav-btn')).map(b=>b.dataset.sec);
+    }
+
+    function renderNav(order){
+        const bar = document.getElementById('secNavBar');
+        bar.innerHTML = '';
+        order.forEach(secId=>{
+            const item = ITEMS.find(i=>i.id===secId);
+            if(!item) return;
+            const btn = document.createElement('button');
+            btn.className = 'sec-nav-btn';
+            btn.dataset.sec = secId;
+            btn.draggable = true;
+            btn.innerHTML = `<i class="fas ${item.icon}" style="font-size:9px;pointer-events:none;"></i> ${item.label}`;
+            btn.addEventListener('click', ()=>{ document.getElementById(secId)?.scrollIntoView({behavior:'smooth'}); });
+            btn.addEventListener('dragstart', onDragStart);
+            btn.addEventListener('dragover',  onDragOver);
+            btn.addEventListener('dragleave', onDragLeave);
+            btn.addEventListener('drop',      onDrop);
+            btn.addEventListener('dragend',   onDragEnd);
+            bar.appendChild(btn);
+        });
+    }
+
+    let dragSrc = null;
+
+    function onDragStart(e){
+        dragSrc = this;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', this.dataset.sec);
+    }
+    function onDragOver(e){
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if(this !== dragSrc) this.classList.add('drag-over');
+    }
+    function onDragLeave(){ this.classList.remove('drag-over'); }
+    function onDrop(e){
+        e.preventDefault();
+        this.classList.remove('drag-over');
+        if(this === dragSrc) return;
+        const bar = document.getElementById('secNavBar');
+        const btns = Array.from(bar.querySelectorAll('.sec-nav-btn'));
+        const fromIdx = btns.indexOf(dragSrc);
+        const toIdx   = btns.indexOf(this);
+        if(fromIdx < toIdx) bar.insertBefore(dragSrc, this.nextSibling);
+        else                bar.insertBefore(dragSrc, this);
+        saveOrder(getOrder());
+        updateSectionOrder();
+    }
+    function onDragEnd(){
+        this.classList.remove('dragging');
+        document.querySelectorAll('.sec-nav-btn').forEach(b=>b.classList.remove('drag-over'));
+    }
+
+    function updateSectionOrder(){
+        const order = getOrder();
+        document.querySelectorAll('.sec-wrapper').forEach(function(wrapper){
+            const pos = order.indexOf(wrapper.dataset.for);
+            wrapper.style.order = pos >= 0 ? pos : 999;
+        });
+    }
+
+    renderNav(loadOrder());
+
+    // updateSectionOrder debe ejecutarse DESPUÉS de que todo el DOM esté cargado,
+    // ya que los sec-wrapper de mi_equipo.html se renderizan DESPUÉS de este script.
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', updateSectionOrder);
+    } else {
+        // DOM ya completo (ej. recarga parcial), ejecutar ahora
+        updateSectionOrder();
+    }
+})();
+</script>
+
+<div class="sec-wrapper" data-for="sec-jugadores">
 <div class="card-modern" style="padding: 15px;">
-        <div class="card-title"><i class="fas fa-users"></i> DETALLES DE JUGADORES</div>
+        <div id="sec-jugadores" class="card-title"><i class="fas fa-users"></i> JUGADORES</div>
         <!-- Contenedor para botones de selección de stats y mensaje de información -->
         <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">
             <!-- Botones de selección de stats centrados -->
@@ -207,8 +324,7 @@
                     <tr>
                         <th rowspan="2">JUGADOR</th>
                         <th rowspan="2" style="width: 50px;">PIERNA</th>
-                        <th rowspan="2" style="width: 80px; position: relative;"><div style="display: flex; flex-direction: column; align-items: center; gap: 2px;"><button class="filter-btn" onclick="toggleFilterPopover(event)" title="Filtrar por posición"><i class="fas fa-sliders-h" style="font-size: 10px;"></i></button><span>POSICIÓN</span></div><div id="filterPopover" class="filter-popover"></div></th>
-                        <th rowspan="2" style="width: 80px;">POS. SEC.</th>
+                        <th rowspan="2" style="width: 80px; position: relative;">POSICIÓN<div id="filterPopover" class="filter-popover"></div></th>
                         <th rowspan="2" style="width: 120px;">FORTALEZAS/<br>DEBILIDADES</th>                        
                         <th rowspan="2">COMENTARIOS</th>
                         <th colspan="2" class="main-stat-header stat-category-fisicas-start" data-category="fisicas" style="text-align: center; border-bottom: 1px solid #f1f5f9;">STATS FÍSICAS</th>
@@ -253,109 +369,88 @@
                 </tbody>
             </table>
         </div>
-</div>
 
-<!-- DETALLES DEL EQUIPO -->
-<div class="card-modern" style="padding: 15px; margin-top: 20px;">
-    <div class="card-title"><i class="fas fa-shield-alt"></i> DETALLES DEL EQUIPO</div>
+</div><!-- /card-modern JUGADORES -->
+</div><!-- /sec-wrapper sec-jugadores -->
+
+<div class="sec-wrapper" data-for="sec-equipo">
+<div class="card-modern" style="padding: 15px;">
+    <div id="sec-equipo" class="card-title"><i class="fas fa-futbol"></i> EQUIPO</div>
     
-    <div style="overflow-x: auto;">
-        <table class="table-val team-detail-table" style="width: 100%; table-layout: fixed;">
-            <thead>
-                <tr>
-                    <th colspan="1" style="text-align: center; font-size: 11px; font-weight: 900; color: #1e293b; padding: 10px 6px; border-bottom: 2px solid #E31E24;">ENTRENAMIENTOS</th>
-                    <th colspan="1" style="text-align: center; font-size: 11px; font-weight: 900; color: #1e293b; padding: 10px 6px; border-bottom: 2px solid #E31E24;">PARTIDOS</th>
-                    <th colspan="1" style="text-align: center; font-size: 11px; font-weight: 900; color: #1e293b; padding: 10px 6px; border-bottom: 2px solid #E31E24;">TÉCNICO</th>
-                    <th colspan="1" style="text-align: center; font-size: 11px; font-weight: 900; color: #1e293b; padding: 10px 6px; border-bottom: 2px solid #E31E24;">TÁCTICO</th>
-                    <th colspan="1" style="text-align: center; font-size: 11px; font-weight: 900; color: #1e293b; padding: 10px 6px; border-bottom: 2px solid #E31E24;">FÍSICO</th>
-                    <th colspan="1" style="text-align: center; font-size: 11px; font-weight: 900; color: #1e293b; padding: 10px 6px; border-bottom: 2px solid #E31E24;">EXTRADEPORTIVO</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td style="padding: 6px; vertical-align: top;"><textarea class="team-details-textarea" style="min-height: 70px; font-size: 12px;" onchange="guardarDetalleEquipo('comentarios_entrenamientos', this.value)" placeholder="comentarios"></textarea></td>
-                    <td style="padding: 6px; vertical-align: top;"><textarea class="team-details-textarea" style="min-height: 70px; font-size: 12px;" onchange="guardarDetalleEquipo('comentarios_partidos', this.value)" placeholder="comentarios"></textarea></td>
-                    <td style="padding: 6px; vertical-align: top;"><textarea class="team-details-textarea" style="min-height: 70px; font-size: 12px;" onchange="guardarDetalleEquipo('comentarios_tecnico', this.value)" placeholder="comentarios"></textarea></td>
-                    <td style="padding: 6px; vertical-align: top;"><textarea class="team-details-textarea" style="min-height: 70px; font-size: 12px;" onchange="guardarDetalleEquipo('comentarios_tactico', this.value)" placeholder="comentarios"></textarea></td>
-                    <td style="padding: 6px; vertical-align: top;"><textarea class="team-details-textarea" style="min-height: 70px; font-size: 12px;" onchange="guardarDetalleEquipo('comentarios_fisico', this.value)" placeholder="comentarios"></textarea></td>
-                    <td style="padding: 6px; vertical-align: top;"><textarea class="team-details-textarea" style="min-height: 70px; font-size: 12px;" onchange="guardarDetalleEquipo('comentarios_extradeportivo', this.value)" placeholder="comentarios"></textarea></td>
-                </tr>
-            </tbody>
-        </table>
+    <!-- FILA 1: ENTRENAMIENTOS + PARTIDOS -->
+    <div style="display:flex; border:1px solid #e2e8f0; border-radius:8px 8px 0 0; overflow:hidden;">
+        {% set bloques_fila1 = [
+            ('ENTRENAMIENTOS','comentarios_entrenamientos','evol_entrenamientos'),
+            ('PARTIDOS','comentarios_partidos','evol_partidos')
+        ] %}
+        {% for titulo, key_com, key_evol in bloques_fila1 %}
+        {% set cat_id = key_com.replace('comentarios_', '')|upper %}
+        <div style="flex:1; padding:12px; {% if not loop.last %}border-right:2px solid #e2e8f0;{% endif %}">
+            <div style="text-align:center; font-size:11px; font-weight:900; color:#1e293b; padding-bottom:6px; margin-bottom:8px; border-bottom:2px solid #E31E24;">{{ titulo }}</div>
+            <div id="coord-hist-{{ cat_id }}" style="display:none; margin-bottom:8px;">
+                <div class="coord-hist-list"></div>
+            </div>
+            <textarea class="team-details-textarea" style="min-height:70px; font-size:12px; width:100%; box-sizing:border-box;" onchange="guardarDetalleEquipo('{{ key_com }}', this.value)" placeholder="comentarios"></textarea>
+            <div style="text-align:center; font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin:10px 0 6px;">EVOLUCIÓN TEMPORADA</div>
+            <div style="display:flex; gap:4px;">
+                <div style="flex:1; text-align:center;">
+                    <div style="font-size:9px; font-weight:900; color:#1e293b; text-transform:uppercase; margin-bottom:3px;">INICIO</div>
+                    <input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('{{ key_evol }}_inicio', this.value)" placeholder="nota">
+                </div>
+                <div style="flex:1; text-align:center;">
+                    <div style="font-size:9px; font-weight:900; color:#1e293b; text-transform:uppercase; margin-bottom:3px;">MEDIO</div>
+                    <input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('{{ key_evol }}_medio', this.value)" placeholder="nota">
+                </div>
+                <div style="flex:1; text-align:center;">
+                    <div style="font-size:9px; font-weight:900; color:#1e293b; text-transform:uppercase; margin-bottom:3px;">FINAL</div>
+                    <input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('{{ key_evol }}_final', this.value)" placeholder="nota">
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
 
-    <!-- EVOLUCIÓN TEMPORADA -->
-    <div style="margin-top: 20px; overflow-x: auto;">
-        <table class="table-val team-detail-table" style="width: 100%; table-layout: fixed;">
-            <thead>
-                <tr>
-                    <th colspan="3" style="text-align: center; font-size: 9px; color: #64748b; padding: 6px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0;">evolución temporada</th>
-                    <th colspan="3" style="text-align: center; font-size: 9px; color: #64748b; padding: 6px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0;">evolución temporada</th>
-                    <th colspan="3" style="text-align: center; font-size: 9px; color: #64748b; padding: 6px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0;">evolución temporada</th>
-                    <th colspan="3" style="text-align: center; font-size: 9px; color: #64748b; padding: 6px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0;">evolución temporada</th>
-                    <th colspan="3" style="text-align: center; font-size: 9px; color: #64748b; padding: 6px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0;">evolución temporada</th>
-                    <th colspan="3" style="text-align: center; font-size: 9px; color: #64748b; padding: 6px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0;">evolución temporada</th>
-                </tr>
-                <tr>
-                    <!-- Entrenamientos -->
-                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">INICIO</th>
-                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">MEDIO</th>
-                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase; border-right: 1px solid #e2e8f0;">FINAL</th>
-                    <!-- Partidos -->
-                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">INICIO</th>
-                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">MEDIO</th>
-                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase; border-right: 1px solid #e2e8f0;">FINAL</th>
-                    <!-- Técnico -->
-                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">INICIO</th>
-                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">MEDIO</th>
-                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase; border-right: 1px solid #e2e8f0;">FINAL</th>
-                    <!-- Táctico -->
-                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">INICIO</th>
-                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">MEDIO</th>
-                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase; border-right: 1px solid #e2e8f0;">FINAL</th>
-                    <!-- Físico -->
-                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">INICIO</th>
-                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">MEDIO</th>
-                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase; border-right: 1px solid #e2e8f0;">FINAL</th>
-                    <!-- Extradeportivo -->
-                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">INICIO</th>
-                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">MEDIO</th>
-                    <th style="text-align: center; font-size: 10px; color: #1e293b; padding: 4px; font-weight: 900; text-transform: uppercase;">FINAL</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <!-- Entrenamientos -->
-                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_entrenamientos_inicio', this.value)" placeholder="nota"></td>
-                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_entrenamientos_medio', this.value)" placeholder="nota"></td>
-                    <td style="padding: 4px; border-right: 1px solid #e2e8f0;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_entrenamientos_final', this.value)" placeholder="nota"></td>
-                    <!-- Partidos -->
-                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_partidos_inicio', this.value)" placeholder="nota"></td>
-                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_partidos_medio', this.value)" placeholder="nota"></td>
-                    <td style="padding: 4px; border-right: 1px solid #e2e8f0;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_partidos_final', this.value)" placeholder="nota"></td>
-                    <!-- Técnico -->
-                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_tecnico_inicio', this.value)" placeholder="nota"></td>
-                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_tecnico_medio', this.value)" placeholder="nota"></td>
-                    <td style="padding: 4px; border-right: 1px solid #e2e8f0;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_tecnico_final', this.value)" placeholder="nota"></td>
-                    <!-- Táctico -->
-                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_tactico_inicio', this.value)" placeholder="nota"></td>
-                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_tactico_medio', this.value)" placeholder="nota"></td>
-                    <td style="padding: 4px; border-right: 1px solid #e2e8f0;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_tactico_final', this.value)" placeholder="nota"></td>
-                    <!-- Físico -->
-                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_fisico_inicio', this.value)" placeholder="nota"></td>
-                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_fisico_medio', this.value)" placeholder="nota"></td>
-                    <td style="padding: 4px; border-right: 1px solid #e2e8f0;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_fisico_final', this.value)" placeholder="nota"></td>
-                    <!-- Extradeportivo -->
-                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_extradeportivo_inicio', this.value)" placeholder="nota"></td>
-                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_extradeportivo_medio', this.value)" placeholder="nota"></td>
-                    <td style="padding: 4px;"><input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('evol_extradeportivo_final', this.value)" placeholder="nota"></td>
-                </tr>
-            </tbody>
-        </table>
+    <!-- FILA 2: TÉCNICO + TÁCTICO + FÍSICO + EXTRADEPORTIVO -->
+    <div style="display:flex; border:1px solid #e2e8f0; border-top:none; border-radius:0 0 8px 8px; overflow:hidden;">
+        {% set bloques_fila2 = [
+            ('TÉCNICO','comentarios_tecnico','evol_tecnico'),
+            ('TÁCTICO','comentarios_tactico','evol_tactico'),
+            ('FÍSICO','comentarios_fisico','evol_fisico'),
+            ('EXTRADEPORTIVO','comentarios_extradeportivo','evol_extradeportivo')
+        ] %}
+        {% for titulo, key_com, key_evol in bloques_fila2 %}
+        {% set cat_id = key_com.replace('comentarios_', '')|upper %}
+        <div style="flex:1; padding:12px; {% if not loop.last %}border-right:2px solid #e2e8f0;{% endif %}">
+            <div style="text-align:center; font-size:11px; font-weight:900; color:#1e293b; padding-bottom:6px; margin-bottom:8px; border-bottom:2px solid #E31E24;">{{ titulo }}</div>
+            <div id="coord-hist-{{ cat_id }}" style="display:none; margin-bottom:8px;">
+                <div class="coord-hist-list"></div>
+            </div>
+            <textarea class="team-details-textarea" style="min-height:70px; font-size:12px; width:100%; box-sizing:border-box;" onchange="guardarDetalleEquipo('{{ key_com }}', this.value)" placeholder="comentarios"></textarea>
+            <div style="text-align:center; font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin:10px 0 6px;">EVOLUCIÓN TEMPORADA</div>
+            <div style="display:flex; gap:4px;">
+                <div style="flex:1; text-align:center;">
+                    <div style="font-size:9px; font-weight:900; color:#1e293b; text-transform:uppercase; margin-bottom:3px;">INICIO</div>
+                    <input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('{{ key_evol }}_inicio', this.value)" placeholder="nota">
+                </div>
+                <div style="flex:1; text-align:center;">
+                    <div style="font-size:9px; font-weight:900; color:#1e293b; text-transform:uppercase; margin-bottom:3px;">MEDIO</div>
+                    <input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('{{ key_evol }}_medio', this.value)" placeholder="nota">
+                </div>
+                <div style="flex:1; text-align:center;">
+                    <div style="font-size:9px; font-weight:900; color:#1e293b; text-transform:uppercase; margin-bottom:3px;">FINAL</div>
+                    <input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('{{ key_evol }}_final', this.value)" placeholder="nota">
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
     
-    <!-- ANÁLISIS DEL EQUIPO -->
-    <div style="margin-top: 25px;">
+</div><!-- /card-modern EQUIPO -->
+</div><!-- /sec-wrapper sec-equipo -->
+
+<!-- ANÁLISIS DEL EQUIPO — card separado -->
+<div class="sec-wrapper" data-for="sec-analisis">
+<div id="sec-analisis" class="card-modern" style="padding: 15px;">
         <div class="team-details-row">
             <div class="team-details-item">
                 <label class="team-details-label">Fallos a Trabajar del Equipo</label>
@@ -366,11 +461,7 @@
                 <div id="teamPhysicalImp" class="team-details-textarea" style="overflow-y: auto; background-color: #f8fafc; min-height: 80px; padding: 12px; font-size: 12px;"></div>
             </div>
         </div>
-    </div>
-    
-    <!-- MEJORES Y PEORES -->
-    <div style="margin-top: 20px;">
-        <div class="team-details-row">
+        <div class="team-details-row" style="margin-top: 16px;">
             <div class="team-details-item">
                 <label class="team-details-label">2 Mejores Jugadores Nuestros</label>
                 <div id="teamBest" class="team-details-textarea" style="overflow-y: auto; background-color: #f8fafc; min-height: 80px; padding: 12px; font-size: 12px;"></div>
@@ -380,9 +471,8 @@
                 <div id="teamWorst" class="team-details-textarea" style="overflow-y: auto; background-color: #f8fafc; min-height: 80px; padding: 12px; font-size: 12px;"></div>
             </div>
         </div>
-    </div>
-    
-</div>
+</div><!-- /card-modern ANALISIS -->
+</div><!-- /sec-wrapper sec-analisis -->
 
 <!-- POPOVER GRÁFICO ARAÑA -->
 <div id="popoverSpiderChart" class="analysis-popover" style="width: 500px; height: 500px;">
@@ -533,12 +623,6 @@
                         ${playerPositionOptions.map(opt => `<option value="${opt}" ${player.posicion === opt ? 'selected' : ''}>${opt}</option>`).join('')}
                     </select>
                 `;
-                const posSecSelectHtml = `
-                    <select class="stat-input" onchange="guardarStatDirecta('${player.nombre}', 'POSICION_SEC', this.value)" style="min-width: 70px; text-align: center;">
-                        <option value="" ${!player.posicion_sec ? 'selected' : ''}>-</option>
-                        ${playerPositionOptions.map(opt => `<option value="${opt}" ${player.posicion_sec === opt ? 'selected' : ''}>${opt}</option>`).join('')}
-                    </select>
-                `;
 
                 // Generar opciones de pierna
                 const piernaSelectHtml = `
@@ -563,7 +647,6 @@
                         </td>
                         <td>${piernaSelectHtml}</td>
                         <td>${positionSelectHtml}</td>
-                        <td>${posSecSelectHtml}</td>
                         <td style="text-align: center;">
                             <button class="analysis-btn" title="Ver análisis de Fortalezas y Debilidades" onclick='toggleAnalysisPopover(event, ${JSON.stringify(player)})'><i class="fas fa-clipboard-list"></i></button>
                         </td>
@@ -582,6 +665,26 @@
         }
     }
 
+    async function cargarSegCoordMiEquipo() {
+        try {
+            const equipo = '{{ equipo }}';
+            const res = await fetch('/api/seguimiento_coord/' + encodeURIComponent(equipo));
+            if (!res.ok) return;
+            const data = await res.json();
+            const cats = data.categorias || {};
+            Object.entries(cats).forEach(function([cat, lista]) {
+                if (!lista || !lista.length) return;
+                const wrapper = document.getElementById('coord-hist-' + cat);
+                if (!wrapper) return;
+                wrapper.style.display = 'block';
+                const listEl = wrapper.querySelector('.coord-hist-list');
+                listEl.innerHTML = lista.slice().reverse().map(function(c) {
+                    return '<div title="' + c.fecha + '" style="padding:2px 0; margin-bottom:3px; font-size:12px; font-weight:600; color:#1e293b;">- ' + (c.texto || '').replace(/</g,'&lt;') + '</div>';
+                }).join('');
+            });
+        } catch(e) { /* silently fail */ }
+    }
+
     // Usamos addEventListener para evitar conflictos con otros scripts de carga
     document.addEventListener('DOMContentLoaded', function() {
         // Al cargar la página, siempre cargamos los jugadores.
@@ -589,6 +692,7 @@
             updateStatsInfoMessage();
             actualizarPromedios();
         });
+        cargarSegCoordMiEquipo();
         // Eliminado: mostrarToastAutoguardado("Selecciona una o más categorías para ver las estadísticas.", false, false, 5000);
     });
 

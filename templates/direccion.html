@@ -542,7 +542,7 @@
         <div class="tab-item" onclick="switchTab(event, 'tab-otros')">INFORMES</div>
         <div class="tab-item" onclick="switchTab(event, 'tab-push')">PUSH</div>
         <div class="tab-item" onclick="switchTab(event, 'tab-horarios-temp')">HORARIOS TEMP.</div>
-        <div class="tab-item" onclick="switchTab(event, 'tab-obj-semanales')">OBJ SEMANALES</div>
+        <div class="tab-item" onclick="switchTab(event, 'tab-obj-semanales')">OBJ FINES DE SEMANA</div>
     </div>
 
     <!-- SUBPESTAÑA: COORDINACIÓN -->
@@ -576,12 +576,9 @@
 
         <div id="coord-sub-individual" class="coord-subvista" style="display:none;">
         <!-- Selector de equipo propio del subtab DESARROLLO INDV -->
-        <div style="margin-bottom:18px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-            <label style="font-size:10px; font-weight:900; color:#444; white-space:nowrap;">SELECCIONAR EQUIPO</label>
-            <select id="selectEquipoIndiv" onchange="const ti=document.getElementById('tituloEquipoIndiv'); if(ti) ti.textContent=this.value||''; asistMatrizCargar(this.value);" style="padding:8px 12px; border-radius:8px; border:1px solid #e2e8f0; background:#f8fafc; font-weight:700; font-size:12px; height:36px; min-width:180px;">
-                <option value="">Seleccionar...</option>
-            </select>
-            <h2 id="tituloEquipoIndiv" style="margin:0; font-size:18px; font-weight:900; color:#E31E24; text-transform:uppercase;"></h2>
+        <div style="margin-bottom:18px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div id="btnsEquipoIndiv" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+            <h2 id="tituloEquipoIndiv" style="margin:0; font-size:16px; font-weight:900; color:#E31E24; text-transform:uppercase;"></h2>
         </div>
         <div class="coordinacion-layout">
             <!-- Calendario Pequeño -->
@@ -682,6 +679,20 @@
                 <div style="color:#94a3b8; font-size:12px; text-align:center; padding:30px;">Selecciona un equipo para ver la matriz de asistencias.</div>
             </div>
         </div>
+
+        <!-- Calendario de Tecnificaciones -->
+        <div class="tecnificaciones-container">
+            <h3 style="font-weight: 900; text-transform: uppercase; color: #333; margin-bottom: 5px;">Tecnificaciones</h3>
+            <div class="calendar-weekdays" style="max-width: none; margin-bottom: 5px;">
+                <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+            </div>
+            <div id="tecGrid" class="tec-grid">
+                <!-- Se genera por JS -->
+            </div>
+            <div style="margin-top: 15px; text-align: center; font-size: 11px; color: #999; font-weight: 800;">
+                * Los cambios en Tecnificaciones se guardan automáticamente al seleccionar las opciones.
+            </div>
+        </div>
         </div>
 
         <!-- Modal configuración de temas por mes/posición -->
@@ -702,6 +713,94 @@
                     <button onclick="document.getElementById('fpConfigModal').style.display='none'" style="padding:8px 18px; font-size:11px; font-weight:700; border-radius:8px; border:1.5px solid #e2e8f0; background:white; color:#475569; cursor:pointer; font-family:inherit;">Cancelar</button>
                     <button onclick="fpConfigGuardar()" style="padding:8px 18px; font-size:11px; font-weight:900; border-radius:8px; border:none; background:#E31E24; color:white; cursor:pointer; font-family:inherit;">Guardar</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- SEGUIMIENTO ENTRENAMIENTOS -->
+        <div class="tecnificaciones-container">
+            <h3 style="font-weight:900; text-transform:uppercase; color:#333; margin-bottom:16px;"><i class="fas fa-calendar-week" style="color:#E31E24;"></i> Seguimiento Entrenamientos</h3>
+            <div id="seguimientoEntrenamientosGrid" style="display:grid; grid-template-columns: repeat(4,1fr); gap:10px;">
+
+                <!-- LUNES -->
+                <div style="background:white; border-radius:10px; border:1px solid #e2e8f0; overflow:hidden;">
+                    <div style="background:#1e293b; color:white; font-size:11px; font-weight:900; text-align:center; padding:8px; letter-spacing:.5px;">LUNES</div>
+                    <div style="padding:6px 8px; display:flex; flex-direction:column; gap:4px;">
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">PRE A</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">PRE B</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">PRE C</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">BEN A</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">BEN B</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">BEN C</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">BEN D</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">BEN E</span>
+                        <div style="border-top:1px solid #e2e8f0; margin:4px 0;"></div>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">INF C</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">INF D</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">CDT E</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">CDT C</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">CDT A</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">JUV C</span>
+                    </div>
+                </div>
+
+                <!-- MARTES -->
+                <div style="background:white; border-radius:10px; border:1px solid #e2e8f0; overflow:hidden;">
+                    <div style="background:#1e293b; color:white; font-size:11px; font-weight:900; text-align:center; padding:8px; letter-spacing:.5px;">MARTES</div>
+                    <div style="padding:6px 8px; display:flex; flex-direction:column; gap:4px;">
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">ALE FEM</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">ALE A F7</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">ALE B F7</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">ALE B F11</span>
+                        <div style="border-top:1px solid #e2e8f0; margin:4px 0;"></div>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">INF B</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">INF A</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">CDT D</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">CDT B</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">JUV B</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">JUV A</span>
+                    </div>
+                </div>
+
+                <!-- MIÉRCOLES -->
+                <div style="background:white; border-radius:10px; border:1px solid #e2e8f0; overflow:hidden;">
+                    <div style="background:#1e293b; color:white; font-size:11px; font-weight:900; text-align:center; padding:8px; letter-spacing:.5px;">MIÉRCOLES</div>
+                    <div style="padding:6px 8px; display:flex; flex-direction:column; gap:4px;">
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">PRE A</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">PRE B</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">PRE C</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">BEN A</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">BEN B</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">BEN C</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">BEN D</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">BEN E</span>
+                        <div style="border-top:1px solid #e2e8f0; margin:4px 0;"></div>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">INF C</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">INF D</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">CDT E</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">CDT C</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">CDT A</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">JUV C</span>
+                    </div>
+                </div>
+
+                <!-- JUEVES -->
+                <div style="background:white; border-radius:10px; border:1px solid #e2e8f0; overflow:hidden;">
+                    <div style="background:#1e293b; color:white; font-size:11px; font-weight:900; text-align:center; padding:8px; letter-spacing:.5px;">JUEVES</div>
+                    <div style="padding:6px 8px; display:flex; flex-direction:column; gap:4px;">
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">ALE FEM</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">ALE A F7</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">ALE B F7</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">ALE B F11</span>
+                        <div style="border-top:1px solid #e2e8f0; margin:4px 0;"></div>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">INF B</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">INF A</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">CDT D</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">CDT B</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">JUV B</span>
+                        <span style="font-size:11px; font-weight:700; color:#1e293b; padding:3px 6px; background:#f8fafc; border-radius:5px;">JUV A</span>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -778,20 +877,6 @@
             <div id="containerConvocatoriasCoord" class="card-coord"></div>
         </div>
 
-        <!-- Calendario de Tecnificaciones -->
-        <div class="tecnificaciones-container">
-            <h3 style="font-weight: 900; text-transform: uppercase; color: #333; margin-bottom: 5px;">Tecnificaciones</h3>
-            <div class="calendar-weekdays" style="max-width: none; margin-bottom: 5px;">
-                <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
-            </div>
-            <div id="tecGrid" class="tec-grid">
-                <!-- Se genera por JS -->
-            </div>
-            <div style="margin-top: 15px; text-align: center; font-size: 11px; color: #999; font-weight: 800;">
-                * Los cambios en Tecnificaciones se guardan automáticamente al seleccionar las opciones.
-            </div>
-        </div>
-
         <!-- Metodología por Equipo -->
         <div class="tecnificaciones-container">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
@@ -807,6 +892,7 @@
             </div>
         </div>
         </div>
+
 
     </div>
 
@@ -1177,7 +1263,7 @@
             <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
                 <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                     <h3 style="margin:0; font-size:14px; font-weight:900; color:#1e293b;">
-                        <i class="fas fa-bullseye" style="color:#E31E24; margin-right:7px;"></i> Objetivos Semanales
+                        <i class="fas fa-bullseye" style="color:#E31E24; margin-right:7px;"></i> Objetivos Fines de Semana
                     </h3>
                     <button class="btn-fin" style="background:#f1f5f9;color:#475569;padding:6px 12px;font-size:9px;" onclick="obsAbrirCriterios()"><i class="fas fa-sliders-h"></i> CRITERIOS DE OBJETIVOS</button>
                 </div>
@@ -1429,6 +1515,52 @@
             <div id="formAudioBadge" style="text-align: center; font-size: 12px; font-weight: 800; padding: 12px; border-radius: 10px; margin-top: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid transparent;">-</div>
         </div>
     </div>
+</div>
+
+<!-- MODAL SEGUIMIENTO COORD ENTRENAMIENTOS -->
+<div id="modalSeguimientoCoord" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:29000; align-items:center; justify-content:center; padding:16px;" onclick="if(event.target===this)cerrarSeguimientoCoord()">
+  <div style="background:white; border-radius:16px; width:100%; max-width:900px; max-height:90vh; overflow:hidden; box-shadow:0 24px 80px rgba(0,0,0,.4); display:flex; flex-direction:column;">
+
+    <!-- Cabecera -->
+    <div style="background:#1e293b; color:white; padding:20px 28px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+      <span style="font-weight:900; font-size:16px; letter-spacing:.5px; text-transform:uppercase;">
+        <i class="fas fa-eye" style="color:#E31E24; margin-right:10px;"></i>
+        <span id="seguimientoCoordTitulo">EQUIPO</span>
+      </span>
+      <span onclick="cerrarSeguimientoCoord()" style="cursor:pointer; font-size:26px; line-height:1; opacity:.6;">&times;</span>
+    </div>
+
+    <!-- Cuerpo scrollable -->
+    <div style="padding:24px 28px; overflow-y:auto; flex:1;">
+
+      <!-- Selector de categoría (pill buttons) -->
+      <div style="margin-bottom:20px;">
+        <div style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px;">Categoría</div>
+        <div style="display:flex; flex-wrap:wrap; gap:8px;" id="segCoordCatTabs">
+          <button onclick="segCoordSelCat('ENTRENAMIENTOS',this)" class="seg-cat-btn" style="padding:9px 18px; border:2px solid #e2e8f0; border-radius:30px; background:white; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.4px; cursor:pointer; color:#64748b; font-family:inherit; transition:.15s;">Entrenamientos</button>
+          <button onclick="segCoordSelCat('PARTIDOS',this)" class="seg-cat-btn" style="padding:9px 18px; border:2px solid #e2e8f0; border-radius:30px; background:white; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.4px; cursor:pointer; color:#64748b; font-family:inherit; transition:.15s;">Partidos</button>
+          <button onclick="segCoordSelCat('TECNICO',this)" class="seg-cat-btn" style="padding:9px 18px; border:2px solid #e2e8f0; border-radius:30px; background:white; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.4px; cursor:pointer; color:#64748b; font-family:inherit; transition:.15s;">Técnico</button>
+          <button onclick="segCoordSelCat('TACTICO',this)" class="seg-cat-btn" style="padding:9px 18px; border:2px solid #e2e8f0; border-radius:30px; background:white; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.4px; cursor:pointer; color:#64748b; font-family:inherit; transition:.15s;">Táctico</button>
+          <button onclick="segCoordSelCat('FISICO',this)" class="seg-cat-btn" style="padding:9px 18px; border:2px solid #e2e8f0; border-radius:30px; background:white; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.4px; cursor:pointer; color:#64748b; font-family:inherit; transition:.15s;">Físico</button>
+          <button onclick="segCoordSelCat('EXTRADEPORTIVO',this)" class="seg-cat-btn" style="padding:9px 18px; border:2px solid #e2e8f0; border-radius:30px; background:white; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.4px; cursor:pointer; color:#64748b; font-family:inherit; transition:.15s;">Extradeportivo</button>
+        </div>
+      </div>
+
+      <!-- Área de escritura -->
+      <div style="background:#f8fafc; border-radius:12px; padding:20px; margin-bottom:24px; border:1.5px solid #e2e8f0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <span style="font-size:13px; font-weight:900; color:#1e293b;" id="seguimientoCoordCatLabel" style="color:#64748b;">— Selecciona una categoría arriba —</span>
+          <span style="font-size:11px; color:#94a3b8; font-weight:700;" id="seguimientoCoordFecha"></span>
+        </div>
+        <textarea id="seguimientoCoordTexto" rows="6" placeholder="Escribe aquí tu observación sobre este equipo..." style="width:100%; border:1.5px solid #e2e8f0; border-radius:10px; padding:14px; font-size:13px; font-family:inherit; resize:vertical; box-sizing:border-box; color:#1e293b; outline:none; line-height:1.6; background:white;"></textarea>
+        <button onclick="guardarSeguimientoCoord()" style="margin-top:14px; background:#E31E24; color:white; border:none; border-radius:10px; padding:12px 32px; font-weight:900; font-size:13px; cursor:pointer; font-family:inherit; letter-spacing:.3px;">GUARDAR</button>
+      </div>
+
+      <!-- Historial -->
+      <div id="seguimientoCoordHistorial"></div>
+    </div>
+
+  </div>
 </div>
 
 <!-- MODAL TAREAS SEMANAL COORDINACIÓN -->
@@ -2939,13 +3071,13 @@
                     ]
                 },
                 {
-                    color: '#0f766e',
+                    color: null,
                     filas: [
                         { lunes: 'MINICHARLA LUN/MART POST PARTIDO', martes: 'MINICHARLA LUN/MART POST PARTIDO', miercoles: '', jueves: '', sd: '' },
                     ]
                 },
                 {
-                    color: '#0f766e',
+                    color: null,
                     filas: [
                         { lunes: 'CHARLAS 15 MIN POST ENTRENOS-SEMANAL', martes: 'CHARLAS 15 MIN POST ENTRENOS-SEMANAL', miercoles: 'CHARLAS 15 MIN POST ENTRENOS-SEMANAL', jueves: 'CHARLAS 15 MIN POST ENTRENOS-SEMANAL', sd: '' },
                     ]
@@ -2976,7 +3108,7 @@
                     ]
                 },
                 {
-                    color: '#0f766e',
+                    color: null,
                     filas: [
                         { lunes: 'CHARLAS POSICIONES FORMACION', martes: 'CHARLAS POSICIONES FORMACION', miercoles: 'CHARLAS POSICIONES FORMACION', jueves: 'CHARLAS POSICIONES FORMACION', sd: '' },
                         { lunes: 'CHARLAS IND POST PARTIDO', martes: 'CHARLAS IND POST PARTIDO', miercoles: 'CHARLAS IND POST PARTIDO', jueves: 'CHARLAS IND POST PARTIDO', sd: '' },
@@ -6193,6 +6325,114 @@
         }
     }, true);
 
+    // --- SEGUIMIENTO ENTRENAMIENTOS COORD ---
+    (function() {
+        var grid = document.getElementById('seguimientoEntrenamientosGrid');
+        if (!grid) return;
+        grid.querySelectorAll('span').forEach(function(sp) {
+            sp.style.cursor = 'pointer';
+            sp.title = 'Clic para añadir observación';
+            sp.addEventListener('click', function() {
+                abrirSeguimientoCoord(this.textContent.trim());
+            });
+        });
+    })();
+
+    var _segCoordEquipo = '';
+    var _segCoordCat    = 'ENTRENAMIENTOS';
+    var _segCoordData   = {};
+
+    var _SEG_CAT_LABELS = {
+        'ENTRENAMIENTOS': 'Entrenamientos',
+        'PARTIDOS':       'Partidos',
+        'TECNICO':        'Técnico',
+        'TACTICO':        'Táctico',
+        'FISICO':         'Físico',
+        'EXTRADEPORTIVO': 'Extradeportivo'
+    };
+
+    function abrirSeguimientoCoord(equipo) {
+        _segCoordEquipo = equipo;
+        _segCoordData   = {};
+        document.getElementById('seguimientoCoordTitulo').textContent = equipo;
+        var hoy = new Date();
+        var dia = String(hoy.getDate()).padStart(2,'0');
+        var mes = String(hoy.getMonth()+1).padStart(2,'0');
+        document.getElementById('seguimientoCoordFecha').textContent = dia + '/' + mes + '/' + hoy.getFullYear();
+        document.getElementById('seguimientoCoordTexto').value = '';
+        document.getElementById('seguimientoCoordHistorial').innerHTML = '<div style="color:#94a3b8;font-size:11px;text-align:center;padding:12px;">Cargando...</div>';
+        var m = document.getElementById('modalSeguimientoCoord');
+        m.style.display = 'flex';
+        // Resetear todos los pills y activar el primero
+        document.querySelectorAll('#segCoordCatTabs .seg-cat-btn').forEach(function(b) {
+            b.style.background = 'white'; b.style.color = '#64748b'; b.style.borderColor = '#e2e8f0';
+        });
+        _segCoordCat = 'ENTRENAMIENTOS';
+        var firstBtn = document.querySelector('#segCoordCatTabs .seg-cat-btn');
+        if (firstBtn) { firstBtn.style.background='#E31E24'; firstBtn.style.color='white'; firstBtn.style.borderColor='#E31E24'; }
+        document.getElementById('seguimientoCoordCatLabel').textContent = 'Entrenamientos';
+        // Cargar datos
+        fetch('/api/seguimiento_coord/' + encodeURIComponent(equipo))
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+                _segCoordData = data.categorias || {};
+                _renderSegHistorial(_segCoordData[_segCoordCat] || []);
+            });
+    }
+
+    function cerrarSeguimientoCoord() {
+        document.getElementById('modalSeguimientoCoord').style.display = 'none';
+    }
+
+    function segCoordSelCat(cat, btn) {
+        _segCoordCat = cat;
+        // Actualizar estilos pill buttons
+        document.querySelectorAll('#segCoordCatTabs .seg-cat-btn').forEach(function(b) {
+            b.style.background    = 'white';
+            b.style.color         = '#64748b';
+            b.style.borderColor   = '#e2e8f0';
+        });
+        btn.style.background  = '#E31E24';
+        btn.style.color       = 'white';
+        btn.style.borderColor = '#E31E24';
+        // Label en el formulario
+        document.getElementById('seguimientoCoordCatLabel').textContent = _SEG_CAT_LABELS[cat] || cat;
+        // Refrescar historial con datos ya cargados
+        _renderSegHistorial(_segCoordData[cat] || []);
+    }
+
+    function _renderSegHistorial(lista) {
+        var el = document.getElementById('seguimientoCoordHistorial');
+        if (!lista || !lista.length) {
+            el.innerHTML = '<div style="color:#94a3b8;font-size:11px;text-align:center;padding:14px;font-style:italic;">Sin observaciones en esta categoría</div>';
+            return;
+        }
+        var html = '<div style="font-size:10px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">Historial · ' + (_SEG_CAT_LABELS[_segCoordCat] || _segCoordCat) + '</div>';
+        lista.slice().reverse().forEach(function(c) {
+            html += '<div style="border-left:3px solid #E31E24;padding:10px 14px;margin-bottom:10px;background:#fafafa;border-radius:0 10px 10px 0;">';
+            html += '<div style="font-size:10px;color:#94a3b8;font-weight:700;margin-bottom:5px;">' + c.fecha + '</div>';
+            html += '<div style="font-size:13px;color:#1e293b;line-height:1.6;white-space:pre-wrap;">' + (c.texto || '').replace(/</g,'&lt;') + '</div>';
+            html += '</div>';
+        });
+        el.innerHTML = html;
+    }
+
+    function guardarSeguimientoCoord() {
+        var texto = (document.getElementById('seguimientoCoordTexto').value || '').trim();
+        if (!texto) return;
+        if (!_segCoordCat) { alert('Selecciona una categoría'); return; }
+        fetch('/api/seguimiento_coord', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({equipo: _segCoordEquipo, categoria: _segCoordCat, texto: texto})
+        }).then(function(r){ return r.json(); })
+          .then(function(data){
+              document.getElementById('seguimientoCoordTexto').value = '';
+              _segCoordData = data.categorias || {};
+              _renderSegHistorial(_segCoordData[_segCoordCat] || []);
+          });
+    }
+
     // --- OBJ SEMANALES ---
     var obsData = null;
     var obsCalAnio = new Date().getFullYear();
@@ -6840,12 +7080,17 @@
                 _fpEquiposF11 = (ecData.equipos || []).filter(e => (e.tipo||'F11') === 'F11').map(e => e.nombre).filter(Boolean);
                 _fpEquiposF7  = (ecData.equipos || []).filter(e =>  e.tipo === 'F7').map(e => e.nombre).filter(Boolean);
             }
-            // Populate selectEquipoIndiv
-            const selIndiv = document.getElementById('selectEquipoIndiv');
-            if (selIndiv && todosEquipos.length) {
-                const current = selIndiv.value;
-                selIndiv.innerHTML = '<option value="">Seleccionar...</option>' +
-                    todosEquipos.map(e => `<option value="${e}" ${e===current?'selected':''}>${e}</option>`).join('');
+            // Populate btnsEquipoIndiv
+            const btnsCont = document.getElementById('btnsEquipoIndiv');
+            if (btnsCont && todosEquipos.length) {
+                btnsCont.innerHTML = todosEquipos.map(e => {
+                    const letra = e.split(' ').pop();
+                    const cat   = e.split(' ').slice(0, -1).join(' ');
+                    return `<button id="btnIndiv_${e.replace(/\s+/g,'_')}" onclick="seleccionarEquipoIndiv('${e.replace(/'/g,"\\'")}')"
+                        style="padding:5px 12px; border-radius:20px; border:1.5px solid #e2e8f0; background:white; color:#475569; font-weight:800; font-size:10px; cursor:pointer; font-family:inherit; letter-spacing:.3px; white-space:nowrap; transition:.15s;">
+                        <span style="color:#94a3b8; font-weight:600;">${cat}</span> <span style="color:#1e293b;">${letra}</span>
+                    </button>`;
+                }).join('');
             }
             // Pre-fetch positions for all configured + saved teams
             const equiposEnSlots = new Set([..._fpGetEquiposActivos()]);
@@ -7624,13 +7869,26 @@
             if (m.target.id === 'coord-sub-individual' && m.target.style.display !== 'none') {
                 if (!_fpMesActivo && !Object.keys(_fpData).length) fpCargar();
                 // Auto-cargar matriz si ya hay equipo seleccionado
-                const selEq = document.getElementById('selectEquipoIndiv');
-                if (selEq && selEq.value) asistMatrizCargar(selEq.value);
+                if (window._equipoIndivActual) asistMatrizCargar(window._equipoIndivActual);
             }
         });
     });
     const _fpTarget = document.getElementById('coord-sub-individual');
     if (_fpTarget) _fpObserver.observe(_fpTarget, {attributes:true, attributeFilter:['style']});
+
+    window._equipoIndivActual = '';
+    function seleccionarEquipoIndiv(equipo) {
+        window._equipoIndivActual = equipo;
+        document.querySelectorAll('[id^="btnIndiv_"]').forEach(b => {
+            const activo = b.id === 'btnIndiv_' + equipo.replace(/\s+/g,'_');
+            b.style.background   = activo ? '#1e293b' : 'white';
+            b.style.borderColor  = activo ? '#1e293b' : '#e2e8f0';
+            b.style.color        = activo ? 'white'   : '#475569';
+        });
+        const ti = document.getElementById('tituloEquipoIndiv');
+        if (ti) ti.textContent = equipo || '';
+        asistMatrizCargar(equipo);
+    }
 
 // ── Matriz de asistencias ─────────────────────────────────────────────────────
 async function asistMatrizCargar(equipo) {

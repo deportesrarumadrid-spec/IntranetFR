@@ -2,6 +2,26 @@
 
 {% block content %}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+    <style>
+    .flatpickr-calendar { font-family: 'Montserrat', sans-serif !important; border-radius: 16px !important; box-shadow: 0 20px 60px rgba(0,0,0,0.18) !important; border: none !important; overflow: hidden; }
+    .flatpickr-months { background: #E31E24 !important; padding: 10px 0 !important; }
+    .flatpickr-month { color: white !important; fill: white !important; }
+    .flatpickr-current-month { font-size: 14px !important; font-weight: 900 !important; color: white !important; }
+    .flatpickr-current-month select, .flatpickr-current-month input.cur-year { color: white !important; font-weight: 900 !important; }
+    .flatpickr-prev-month svg, .flatpickr-next-month svg { fill: white !important; }
+    .flatpickr-prev-month:hover svg, .flatpickr-next-month:hover svg { fill: rgba(255,255,255,0.7) !important; }
+    .flatpickr-weekdays { background: #c8181e !important; }
+    span.flatpickr-weekday { background: #c8181e !important; color: rgba(255,255,255,0.85) !important; font-weight: 900 !important; font-size: 11px !important; }
+    .flatpickr-day { border-radius: 10px !important; font-weight: 700 !important; font-size: 13px !important; }
+    .flatpickr-day.selected, .flatpickr-day.selected:hover { background: #E31E24 !important; border-color: #E31E24 !important; color: white !important; font-weight: 900 !important; border-radius: 10px !important; }
+    .flatpickr-day.today { border-color: #E31E24 !important; color: #E31E24 !important; font-weight: 900 !important; }
+    .flatpickr-day.today:hover { background: #E31E24 !important; color: white !important; }
+    .flatpickr-day:hover { background: #fef2f2 !important; border-color: transparent !important; }
+    .flatpickr-innerContainer { padding: 8px !important; }
+    </style>
     <style>
         :root { --red: #E31E24; --bg: #f4f4f4; --sidebar: #E31E24; --green: #2eb85c; }
         
@@ -101,7 +121,7 @@
         /* Ajuste Editor de Sesión */
         #modalSesionOnline .modal-content { width: 95vw; height: 95vh; max-width: 1200px; padding: 0; display: flex; flex-direction: column; }
         #printableSessionSheet { flex: 1; overflow-y: auto; padding: 20px; background: white; scrollbar-width: thin; }
-        .session-grid-item { border: 1px solid #000; height: 240px; display: flex; flex-direction: column; }
+        .session-grid-item { border: 1px solid #000; height: 260px; display: flex; flex-direction: column; }
 
     /* --- AJUSTES DE FLECHAS Y ALINEACIÓN --- */
         .wrapper-asistencia { 
@@ -232,6 +252,7 @@
 
     <div class="calendario-wrapper">
 
+        <input type="hidden" id="monthSelect" value="{{ mes_actual }}">
         <div style="display: none;">
             <select id="selectEquipoEntrenos" onchange="showLoader(); window.location.href='?mes={{ mes_actual }}&equipo=' + encodeURIComponent(this.value.trim())">
                 <option value="">Seleccionar...</option>
@@ -242,24 +263,38 @@
         </div>
 
         <div class="header-row" style="margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap;">
-            <div style="position: relative; background: #fff; padding: 10px 20px; border-radius: 12px; border: 2px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: inline-flex; align-items: center; gap: 10px; transition: all 0.3s ease;" onmouseover="this.style.borderColor='#E31E24'; this.style.boxShadow='0 6px 20px rgba(227,30,36,0.1)';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.05)';">
-                <i class="far fa-calendar-alt" style="color: #E31E24; font-size: 20px;"></i>
-                <select id="monthSelect" style="border:none; background:transparent; font-size:20px; font-weight:900; outline:none; cursor:pointer; color: #1e293b; appearance: none; padding-right: 25px; font-family: 'Inter', sans-serif;" onchange="showLoader(); window.location.href='?mes=' + this.value + '&equipo=' + encodeURIComponent('{{ equipo_defecto }}'.trim())">
-                    <option value="2026-05" {% if mes_actual == '2026-05' %}selected{% endif %}>MAYO 2026</option>
-                    <option value="2026-06" {% if mes_actual == '2026-06' %}selected{% endif %}>JUNIO 2026</option>
-                    <option value="2026-07" {% if mes_actual == '2026-07' %}selected{% endif %}>JULIO 2026</option>
-                    <option value="2026-08" {% if mes_actual == '2026-08' %}selected{% endif %}>AGOSTO 2026</option>
-                    <option value="2026-09" {% if mes_actual == '2026-09' %}selected{% endif %}>SEPTIEMBRE 2026</option>
-                    <option value="2026-10" {% if mes_actual == '2026-10' %}selected{% endif %}>OCTUBRE 2026</option>
-                    <option value="2026-11" {% if mes_actual == '2026-11' %}selected{% endif %}>NOVIEMBRE 2026</option>
-                    <option value="2026-12" {% if mes_actual == '2026-12' %}selected{% endif %}>DICIEMBRE 2026</option>
-                </select>
-                <i class="fas fa-chevron-down" style="position: absolute; right: 20px; color: #94a3b8; font-size: 14px; pointer-events: none;"></i>
+            <!-- Selector de mes personalizado -->
+            <div style="position:relative; display:inline-block;">
+                <div id="calMesTrigger" onclick="toggleCalMes(event)"
+                    style="background:white;border-radius:12px;padding:10px 20px;cursor:pointer;display:inline-flex;align-items:center;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1.5px solid #e2e8f0;user-select:none;transition:.2s;"
+                    onmouseover="this.style.borderColor='#E31E24'" onmouseout="this.style.borderColor='#e2e8f0'">
+                    <i class="far fa-calendar-alt" style="color:#E31E24;font-size:16px;"></i>
+                    <span style="font-size:16px;font-weight:900;color:#1e293b;letter-spacing:.5px;">
+                        {% set meses_map = {'2025-09':'SEPTIEMBRE','2025-10':'OCTUBRE','2025-11':'NOVIEMBRE','2025-12':'DICIEMBRE','2026-01':'ENERO','2026-02':'FEBRERO','2026-03':'MARZO','2026-04':'ABRIL','2026-05':'MAYO','2026-06':'JUNIO','2026-07':'JULIO','2026-08':'AGOSTO'} %}
+                        {{ meses_map.get(mes_actual, mes_actual) }} <span style="color:#94a3b8;font-size:13px;">{{ mes_actual.split('-')[0] }}</span>
+                    </span>
+                    <i id="calMesArrow" class="fas fa-chevron-down" style="color:#94a3b8;font-size:11px;transition:transform .2s;margin-left:4px;"></i>
+                </div>
+                <div id="calMesDropdown" style="display:none;position:absolute;top:calc(100% + 6px);left:0;min-width:200px;background:white;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.12);border:1.5px solid #f1f5f9;z-index:9999;overflow:hidden;padding:6px;">
+                    {% set opciones = [('2025-09','SEPTIEMBRE'),('2025-10','OCTUBRE'),('2025-11','NOVIEMBRE'),('2025-12','DICIEMBRE'),('2026-01','ENERO'),('2026-02','FEBRERO'),('2026-03','MARZO'),('2026-04','ABRIL'),('2026-05','MAYO'),('2026-06','JUNIO'),('2026-07','JULIO'),('2026-08','AGOSTO')] %}
+                    {% for val, nombre in opciones %}
+                    <div onclick="showLoader(); window.location.href='?mes={{ val }}&equipo={{ equipo_defecto|urlencode }}'"
+                        style="padding:9px 14px;border-radius:8px;cursor:pointer;font-weight:900;font-size:12px;transition:.15s;{% if mes_actual == val %}background:#fff1f2;color:#E31E24;border-left:3px solid #E31E24;{% else %}color:#1e293b;border-left:3px solid transparent;{% endif %}"
+                        onmouseover="if('{{ mes_actual }}'!='{{ val }}') this.style.background='#f8fafc'"
+                        onmouseout="if('{{ mes_actual }}'!='{{ val }}') this.style.background='transparent'">
+                        {{ nombre }} <span style="font-weight:600;color:#94a3b8;font-size:10px;">{{ val.split('-')[0] }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
+            <script>
+            function toggleCalMes(e){ e.stopPropagation(); var dd=document.getElementById('calMesDropdown'),ar=document.getElementById('calMesArrow'),open=dd.style.display==='block'; dd.style.display=open?'none':'block'; ar.style.transform=open?'':'rotate(180deg)'; }
+            document.addEventListener('click',function(e){ var dd=document.getElementById('calMesDropdown'); if(dd&&!document.getElementById('calMesTrigger').contains(e.target)&&!dd.contains(e.target)){ dd.style.display='none'; document.getElementById('calMesArrow').style.transform=''; } });
+            </script>
             
             <div style="display: flex; gap: 10px;">
                 <a href="/static/data/plantilla_entrenamiento.pdf" download class="btn-fin" style="background: #ffffff; color: #E31E24; padding: 0 18px; font-size: 10px; border-radius: 8px; height: 44px; border: 2px solid #E31E24; cursor: pointer; font-weight: 800; text-decoration: none; display: flex; align-items: center; box-sizing: border-box; transition: 0.3s;" onmouseover="this.style.background='#E31E24'; this.style.color='#fff';" onmouseout="this.style.background='#ffffff'; this.style.color='#E31E24';">
-                    <i class="fas fa-file-pdf" style="margin-right: 8px;"></i> PLANTILLA PDF
+                    <i class="fas fa-download" style="margin-right: 8px;"></i> PLANTILLA PDF
                 </a>
                 <button class="btn-fin" onclick="abrirModalSesionOnline()" style="background: #ffffff; color: #E31E24; padding: 0 18px; font-size: 10px; border-radius: 8px; height: 44px; border: 2px solid #E31E24; cursor: pointer; font-weight: 800; box-sizing: border-box; transition: 0.3s;" onmouseover="this.style.background='#E31E24'; this.style.color='#fff';" onmouseout="this.style.background='#ffffff'; this.style.color='#E31E24';">
                     <i class="fas fa-edit" style="margin-right: 8px;"></i> CREAR SESIÓN ONLINE
@@ -360,12 +395,154 @@
     <!-- MODAL SESIÓN ONLINE (PRINTABLE) -->
     <div id="modalSesionOnline" class="modal">
         <style>
+            @page { margin: 0; size: A4 portrait; }
             @media print {
                 body * { visibility: hidden; }
                 #modalSesionOnline, #modalSesionOnline * { visibility: visible; }
-                #modalSesionOnline { position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: white !important; z-index: 99999; }
+                #modalSesionOnline {
+                    position: fixed; left: 0; top: 0;
+                    width: 100vw; height: 100vh;
+                    background: white !important;
+                    z-index: 99999; margin: 0; padding: 0;
+                }
                 .no-print { display: none !important; }
-                #printableSessionSheet { border: none !important; box-shadow: none !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+
+                /* Ocultar botones interactivos */
+                button[onclick*="abrirObjMes"],
+                [onclick*="abrirObjMes"] { display: none !important; }
+                select#sheetEquipoHeader { border-bottom: 1.5px solid #000 !important; }
+
+                /* Hoja principal */
+                #printableSessionSheet {
+                    height: 100vh !important;
+                    max-height: 100vh !important;
+                    overflow: hidden !important;
+                    margin: 0 !important;
+                    padding: 1mm 5mm 3mm !important;
+                    box-sizing: border-box !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                    font-family: 'Montserrat', Arial, sans-serif !important;
+                }
+
+                /* Cabecera */
+                #printableSessionSheet > div:first-child {
+                    flex-shrink: 0 !important;
+                    margin-bottom: 3px !important;
+                    padding-bottom: 4px !important;
+                    border-bottom: 2.5px solid #1e293b !important;
+                }
+                #printableSessionSheet > div:first-child > div {
+                    height: 100px !important;
+                }
+
+                /* Grilla de ejercicios */
+                #printableSessionSheet > div:nth-child(2) {
+                    flex: 1 !important;
+                    min-height: 0 !important;
+                    display: grid !important;
+                    grid-template-columns: 1fr 1fr !important;
+                    grid-template-rows: repeat(3, 1fr) !important;
+                    border: 2px solid #1e293b !important;
+                    border-top: none !important;
+                }
+
+                /* Tarjeta ejercicio */
+                .session-grid-item {
+                    height: auto !important;
+                    min-height: 0 !important;
+                    overflow: hidden !important;
+                    border-color: #1e293b !important;
+                }
+
+                /* Fila título (NOMBRE / DURACIÓN): acento rojo izquierdo */
+                .session-grid-item > div:first-child {
+                    background: #f8f8f8 !important;
+                    border-left: 4px solid #E31E24 !important;
+                    padding-left: 6px !important;
+                    font-size: 10px !important;
+                }
+
+                /* Fila OBJ */
+                .session-grid-item > div:nth-child(2) {
+                    background: #f0f0f0 !important;
+                    font-size: 8.5px !important;
+                    padding: 2px 6px !important;
+                }
+
+                /* Cuerpo: campo arriba, descripción abajo */
+                .session-grid-item > div:last-child {
+                    display: flex !important;
+                    flex-direction: column !important;
+                    grid-template-columns: unset !important;
+                    flex: 1 !important;
+                    min-height: 0 !important;
+                }
+                .session-grid-item .canvas-container {
+                    flex: 3 !important;
+                    min-height: 0 !important;
+                    width: 100% !important;
+                }
+                .session-grid-item textarea {
+                    flex: 1 !important;
+                    border-right: none !important;
+                    border-top: 1px solid #cbd5e1 !important;
+                    min-height: 0 !important;
+                    max-height: 44px !important;
+                    padding: 3px 6px !important;
+                    font-size: 8.5px !important;
+                    color: #334155 !important;
+                }
+
+                /* Slots vacíos: fondo blanco, sin número, líneas borde arriba/abajo */
+                .canvas-container:not(.ejercicio-lleno) {
+                    background: white !important;
+                    border-top: 2px solid #999 !important;
+                    border-bottom: 2px solid #999 !important;
+                }
+                .canvas-container:not(.ejercicio-lleno) > div {
+                    display: none !important;
+                }
+                /* SVG del campo vacío: fondos → blanco, líneas → gris */
+                .canvas-container:not(.ejercicio-lleno) .pizarra-img > rect:nth-child(-n+6) {
+                    fill: white !important;
+                }
+                .canvas-container:not(.ejercicio-lleno) .pizarra-img rect[fill="none"],
+                .canvas-container:not(.ejercicio-lleno) .pizarra-img line {
+                    stroke: #999 !important;
+                }
+                .canvas-container:not(.ejercicio-lleno) .pizarra-img circle[fill="none"] {
+                    stroke: #999 !important;
+                }
+                .canvas-container:not(.ejercicio-lleno) .pizarra-img circle:not([fill="none"]) {
+                    fill: #999 !important;
+                }
+
+                /* Número ejercicio */
+                .session-grid-item > div:first-child span:first-child {
+                    font-size: 11px !important;
+                    font-weight: 900 !important;
+                    color: #E31E24 !important;
+                }
+
+                /* Pie (CORE + ESTIRAMIENTOS) */
+                #printableSessionSheet > div:last-child {
+                    flex-shrink: 0 !important;
+                    background: #1e293b !important;
+                    color: white !important;
+                    font-weight: 900 !important;
+                    font-size: 11px !important;
+                    letter-spacing: 1.5px !important;
+                    border-color: #1e293b !important;
+                }
+                #printableSessionSheet > div:last-child input {
+                    color: white !important;
+                    background: transparent !important;
+                    font-weight: 900 !important;
+                    letter-spacing: 1.5px !important;
+                }
             }
         </style>
         <div class="modal-content" style="width: 1100px; max-width: 98%; max-height: 95vh; border-radius: 15px; padding: 0; overflow: hidden; display: flex; flex-direction: column;">
@@ -437,14 +614,34 @@
                             <span style="font-weight: 900; font-size: 14px;">{{ i }}- <input type="text" placeholder="NOMBRE DEL EJERCICIO" style="border:none; width: 200px; font-weight:900; font-size: 11px; outline:none;"></span>
                             <span style="font-size: 10px; font-weight: 900;">DURACIÓN <input type="text" style="width: 40px; border: none; border-bottom: 1px solid #000; outline: none; text-align: center; font-weight: 800;"> min</span>
                         </div>
-                        <div style="border-bottom: 1px solid #000; padding: 2px 8px; background: #f0f0f0; font-size: 11px; font-weight: 900;">
-                            OBJ: <input type="text" placeholder="escribir objetivos separados por comas" style="width: 85%; border: none; background: transparent; outline: none; font-weight: 700; font-size: 10px;">
+                        <div style="border-bottom: 1px solid #000; padding: 2px 8px; background: #f0f0f0; font-size: 11px; font-weight: 900; display:flex; align-items:center; gap:6px;">
+                            OBJ: <input type="text" placeholder="escribir objetivos separados por comas" style="flex:1; border: none; background: transparent; outline: none; font-weight: 700; font-size: 10px;">
+                            <button type="button" onclick="abrirObjMesBocadillo(this)" style="font-size:9px; font-weight:900; padding:2px 8px; border:1px solid #cbd5e1; border-radius:10px; background:white; cursor:pointer; white-space:nowrap; color:#475569; flex-shrink:0;">elegir obj del mes</button>
                         </div>
-                        <div style="flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 0;">
+                        <div style="flex: 1; display: grid; grid-template-columns: 2fr 3fr; gap: 0;">
                             <textarea style="border: none; border-right: 1px solid #000; padding: 8px; resize: none; font-family: inherit; font-size: 11px; outline: none;" placeholder="Descripción detallada..."></textarea>
-                            <div class="canvas-container" onclick="abrirPizarraModal(this)" style="background: #2e7d32; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer;">
-                                <img src="https://www.web-futbol.com/wp-content/uploads/2021/01/medio-campo-vertical.png" class="pizarra-img" style="opacity: 0.6; width: 100%; height: 100%; object-fit: contain;">
-                                <div style="position: absolute; color: white; font-weight: 900; font-size: 9px; text-transform: uppercase; pointer-events: none; text-shadow: 0 0 3px #000;">CLIC PARA DIBUJAR {{ i }}</div>
+                            <div class="canvas-container" onclick="abrirPizarraModal(this)" style="background:#2e7d32; display:flex; align-items:center; justify-content:center; position:relative; cursor:pointer; overflow:hidden;">
+                                <svg class="pizarra-img" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid slice" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0.75;" xmlns="http://www.w3.org/2000/svg">
+                                    <rect width="400" height="280" fill="#2e7d32"/>
+                                    <rect x="0" y="0"   width="400" height="28" fill="#2a702d"/>
+                                    <rect x="0" y="56"  width="400" height="28" fill="#2a702d"/>
+                                    <rect x="0" y="112" width="400" height="28" fill="#2a702d"/>
+                                    <rect x="0" y="168" width="400" height="28" fill="#2a702d"/>
+                                    <rect x="0" y="224" width="400" height="28" fill="#2a702d"/>
+                                    <rect x="12" y="12" width="376" height="256" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2.5"/>
+                                    <line x1="200" y1="12" x2="200" y2="268" stroke="rgba(255,255,255,0.75)" stroke-width="2"/>
+                                    <circle cx="200" cy="140" r="42" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2"/>
+                                    <circle cx="200" cy="140" r="3" fill="rgba(255,255,255,0.85)"/>
+                                    <rect x="12" y="79" width="78" height="122" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2"/>
+                                    <rect x="12" y="107" width="32" height="66" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2"/>
+                                    <rect x="4" y="122" width="10" height="36" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2"/>
+                                    <circle cx="75" cy="140" r="2.5" fill="rgba(255,255,255,0.85)"/>
+                                    <rect x="310" y="79" width="78" height="122" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2"/>
+                                    <rect x="356" y="107" width="32" height="66" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2"/>
+                                    <rect x="386" y="122" width="10" height="36" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2"/>
+                                    <circle cx="325" cy="140" r="2.5" fill="rgba(255,255,255,0.85)"/>
+                                </svg>
+                                <div style="position:absolute;color:rgba(255,255,255,0.9);font-weight:900;font-size:64px;pointer-events:none;line-height:1;user-select:none;">{{ i }}</div>
                             </div>
                         </div>
                     </div>
@@ -491,9 +688,6 @@
                 <button class="btn-fin" style="background: #28a745; color: white; padding: 12px 35px; border-radius: 8px; font-weight: 900; box-shadow: 0 4px 15px rgba(40,167,69,0.3); border: none; cursor: pointer;" onclick="confirmarAlineacion()">
                     <i class="fas fa-check-circle"></i> CONFIRMAR E INSERTAR
                 </button>
-                <button onclick="anadirJugadorExtra()" style="background: #475569; color: white; border: none; padding: 0 20px; border-radius: 8px; font-weight: 900; font-size: 11px; cursor: pointer; height: 42px; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                    <i class="fas fa-plus-circle"></i> AÑADIR JUGADOR
-                </button>
             </div>
             
             <div style="position: relative; margin-left: 150px;">
@@ -511,16 +705,37 @@
     <style>
         .player-wrapper { position: absolute; z-index: 100; display: flex; align-items: center; justify-content: center; cursor: move; padding: 4px; border-radius: 6px; touch-action: none; }
         .player-wrapper:hover { background: rgba(255,255,255,0.1); }
-        .input-alineacion { 
-            width: 120px; height: 28px; padding: 0; font-size: 13px; font-weight: 900; text-align: center; 
-            border: 1px solid transparent; background: rgba(255,255,255,0.1); color: #fff !important; outline: none; 
-            text-transform: uppercase; border-radius: 4px; text-shadow: 1px 1px 3px #000; cursor: text;
+        .input-alineacion {
+            width: 120px; height: 28px; padding: 0; font-size: 13px; font-weight: 900; text-align: center;
+            border: 1px solid transparent; background: rgba(255,255,255,0.1); color: #fff !important; outline: none;
+            text-transform: uppercase; border-radius: 4px; text-shadow: 1px 1px 3px #000; cursor: move;
+            display: flex; align-items: center; justify-content: center; user-select: none;
         }
+        input.input-alineacion { cursor: text; }
         .input-alineacion::placeholder { color: #fff; opacity: 1; }
         .player-wrapper:hover .input-alineacion { background: rgba(255, 255, 255, 0.3); border-color: rgba(255,255,255,0.5); }
         .resize-handle-corner { position: absolute; bottom: 2px; right: 2px; width: 10px; height: 10px; cursor: nwse-resize; opacity: 0; transition: 0.2s; z-index: 110; background: linear-gradient(135deg, transparent 50%, #cbd5e1 50%); border-radius: 0 0 2px 0; }
         .player-wrapper:hover .resize-handle-corner { opacity: 1; }
+        /* Modal posición */
+        #modalPosicionPicker { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:200000; display:none; align-items:center; justify-content:center; }
+        .pos-picker-btn { padding:10px 18px; border:2px solid #e2e8f0; border-radius:8px; background:white; font-weight:900; font-size:13px; cursor:pointer; transition:.15s; color:#1e293b; }
+        .pos-picker-btn:hover { background:#E31E24; color:white; border-color:#E31E24; }
     </style>
+
+    <!-- Bocadillo objetivos del mes -->
+    <div id="bocadilloObjMes" style="display:none; position:fixed; background:white; border:1px solid #e2e8f0; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,.2); padding:14px 16px; z-index:99999; max-width:320px; min-width:220px; max-height:300px; overflow-y:auto;">
+        <div id="bocadilloObjContent"></div>
+    </div>
+
+    <!-- Modal selección de posición -->
+    <div id="modalPosicionPicker">
+        <div style="background:white; border-radius:16px; padding:28px; min-width:300px; box-shadow:0 20px 60px rgba(0,0,0,.4);">
+            <div style="font-weight:900; font-size:14px; margin-bottom:6px; color:#1e293b; text-transform:uppercase; letter-spacing:1px;">Posición del jugador</div>
+            <div id="posPickerNombre" style="font-size:12px; color:#64748b; margin-bottom:16px; font-weight:700;"></div>
+            <div id="posPickerBtns" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;"></div>
+            <button onclick="window._posPickerResolve && window._posPickerResolve(null); document.getElementById('modalPosicionPicker').style.display='none';" style="width:100%; padding:10px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc; font-weight:700; cursor:pointer; color:#64748b; font-family:inherit;">Omitir</button>
+        </div>
+    </div>
 
     <script>
         const JUGADORES_EQUIPO = {{ jugadores_equipo|tojson|safe if jugadores_equipo else '[]' }};
@@ -534,9 +749,10 @@
             const area = document.getElementById('areaCapturaAlineacion');
             const input = wrapper.querySelector('.input-alineacion');
             const resizer = wrapper.querySelector('.resize-handle-corner');
-            
+
             let isDragging = false, isResizing = false;
             let startX, startY, initialLeft, initialTop, initialScale, hasMoved = false;
+            let wasSidebar = false;
 
             wrapper.onpointerdown = (e) => {
                 if (e.target === resizer) {
@@ -550,10 +766,18 @@
 
                 isDragging = true;
                 hasMoved = false;
+                // Detectar sidebar: style.left es '-150px' (negativo) o '%' negativo
+                wasSidebar = parseFloat(wrapper.style.left) < 0;
                 startX = e.clientX;
                 startY = e.clientY;
                 const rect = area.getBoundingClientRect();
-                initialLeft = (wrapper.offsetLeft / rect.width) * 100;
+                // Calcular initialLeft en % correctamente tanto para 'px' como para '%'
+                let rawLeft = wrapper.style.left;
+                if (rawLeft.endsWith('px')) {
+                    initialLeft = (parseFloat(rawLeft) / rect.width) * 100;
+                } else {
+                    initialLeft = parseFloat(rawLeft) || 0;
+                }
                 initialTop = (wrapper.offsetTop / rect.height) * 100;
                 wrapper.setPointerCapture(e.pointerId);
             };
@@ -563,7 +787,7 @@
                 const rect = area.getBoundingClientRect();
                 const dx = ((e.clientX - startX) / rect.width) * 100;
                 const dy = ((e.clientY - startY) / rect.height) * 100;
-                if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) hasMoved = true;
+                if (Math.abs(dx) > 0.3 || Math.abs(dy) > 0.3) hasMoved = true;
                 wrapper.style.left = (initialLeft + dx) + '%';
                 wrapper.style.top = (initialTop + dy) + '%';
             };
@@ -577,11 +801,20 @@
                 wrapper.style.transform = `scale(${newScale})`;
             };
 
-            wrapper.onpointerup = (e) => { 
-                if (isDragging && !hasMoved && e.target === input) {
+            wrapper.onpointerup = async (e) => {
+                if (isDragging && !hasMoved && e.target === input && wrapper.dataset.isExtra === '1') {
                     input.focus();
                 }
-                isDragging = false; 
+                if (isDragging && hasMoved) {
+                    // Detectar posición final usando parseFloat(style.left)
+                    const isNowSidebar = parseFloat(wrapper.style.left) < 0;
+                    if (wasSidebar && !isNowSidebar) {
+                        await pedirPosicionSiNecesario(wrapper);
+                    } else if (!wasSidebar && isNowSidebar) {
+                        resetarJugadorASidebar(wrapper);
+                    }
+                }
+                isDragging = false;
             };
 
             resizer.onpointerup = () => { isResizing = false; };
@@ -596,20 +829,31 @@
             };
         }
 
-        function createPlayerWrapper(idx, x, y, scale = 1, name = "", isBaja = false) {
+        function createPlayerWrapper(idx, x, y, scale = 1, name = "", isBaja = false, isExtra = false) {
             const wrapper = document.createElement('div');
             wrapper.className = 'player-wrapper';
             wrapper.style.left = x;
             wrapper.style.top = y;
             wrapper.style.transform = `scale(${scale})`;
             wrapper.dataset.scale = scale;
-            
-            const bajaStyle = isBaja ? 'color: #dc3545; text-decoration: line-through;' : '';
-            wrapper.innerHTML = `
-                <input type="text" class="input-alineacion" placeholder="JUGADOR ${idx + 1}" value="${name}" style="${bajaStyle}">
-                <div class="resize-handle-corner"></div>
-            `;
-            
+            wrapper.dataset.name = name;
+            wrapper.dataset.isExtra = isExtra ? '1' : '0';
+            wrapper.dataset.originalIdx = idx;
+
+            const bajaStyle = isBaja ? 'text-decoration:line-through;opacity:.6;' : '';
+            if (isExtra) {
+                wrapper.innerHTML = `
+                    <input type="text" class="input-alineacion" placeholder="JUGADOR ${idx + 1}" value="${name}" style="${bajaStyle}">
+                    <div class="resize-handle-corner"></div>
+                `;
+            } else {
+                const label = name || ('JUGADOR ' + (idx + 1));
+                wrapper.innerHTML = `
+                    <span class="input-alineacion" style="${bajaStyle}">${label}</span>
+                    <div class="resize-handle-corner"></div>
+                `;
+            }
+
             attachDragAndScale(wrapper);
             return wrapper;
         }
@@ -619,7 +863,7 @@
             const idx = container.querySelectorAll('.player-wrapper').length;
             const x = "-150px";
             const y = (5 + (idx * 3.8)) + "%";
-            container.appendChild(createPlayerWrapper(idx, x, y, 1, ""));
+            container.appendChild(createPlayerWrapper(idx, x, y, 1, "", false, true));
         }
 
         function seleccionarImagenFormacion(imgName) {
@@ -636,7 +880,7 @@
             img.src = '';
             container.innerHTML = "";
 
-            img.onload = function() {
+            img.onload = async function() {
                 const ratio = img.naturalHeight / img.naturalWidth;
                 let displayHeight = window.innerHeight * 0.7;
                 let displayWidth = displayHeight / ratio;
@@ -651,13 +895,29 @@
                 const saved = localStorage.getItem(key);
                 const coords = saved ? JSON.parse(saved) : null;
                 
-                const numPlayers = coords ? Math.max(25, coords.length) : 25;
+                // Cargar lista de asistencias para tener solo jugadores activos
+                let jugadoresActivos = JUGADORES_EQUIPO;
+                try {
+                    const resAs = await fetch(`/api/asistencias_matrix?equipo=${encodeURIComponent(equipo)}`);
+                    if (resAs.ok) {
+                        const dataAs = await resAs.json();
+                        if (dataAs.jugadores && dataAs.jugadores.length) {
+                            jugadoresActivos = dataAs.jugadores.map(n => ({ nombre: n, es_baja: false }));
+                        }
+                    }
+                } catch(e) {}
+
+                // Solo jugadores reales (sin relleno hasta 25)
+                const numPlayers = coords
+                    ? Math.max(jugadoresActivos.length, coords.filter(c => c && c.name && c.name.trim()).length)
+                    : jugadoresActivos.length;
+
                 for(let i=0; i < numPlayers; i++) {
                     let x, y, scale = 1, name = "";
                     let isBaja = false;
-                    const defaultPlayerObj = JUGADORES_EQUIPO[i] || null;
+                    const defaultPlayerObj = jugadoresActivos[i] || null;
                     let defaultName = "";
-                    
+
                     if (defaultPlayerObj) {
                         if (typeof defaultPlayerObj === 'object') {
                             defaultName = defaultPlayerObj.nombre || "";
@@ -674,18 +934,69 @@
                         name = defaultName;
                     }
 
-                    const playerObjByName = JUGADORES_EQUIPO.find(p => p && p.nombre === name);
+                    // Saltar slots vacíos sin nombre real
+                    if (!name.trim()) continue;
+
+                    const playerObjByName = jugadoresActivos.find(p => p && p.nombre === name);
                     if (playerObjByName && playerObjByName.es_baja) {
                         isBaja = true;
                     } else if (!playerObjByName && defaultPlayerObj && typeof defaultPlayerObj === 'object' && name === defaultName) {
                         isBaja = defaultPlayerObj.es_baja || false;
                     }
 
-                    container.appendChild(createPlayerWrapper(i, x, y, scale, name, isBaja));
+                    const isExtra = (coords && coords[i] && coords[i].isExtra) || (i >= jugadoresActivos.length);
+                    container.appendChild(createPlayerWrapper(i, x, y, scale, name, isBaja, isExtra));
                 }
             };
             img.src = '/static/img/formaciones/' + imgName;
             modal.style.display = 'flex';
+        }
+
+        function getPositionesEquipo(equipo) {
+            const eq = (equipo || '').toUpperCase();
+            if (/F11/.test(eq) || /INFANTIL|CADETE|JUVENIL/.test(eq))
+                return ['PORT','LAT D','LAT I','DEF C','MC','PIVOTE','MP','EXT D','EXT I','DEL'];
+            // F7: Benjamín, Alevín F7, Prebenjamín
+            if (/BENJAMIN|BENJ|ALEVIN|ALEVÍN|PREBENJAMIN|PREBENJAMÍN/.test(eq))
+                return ['PORT','DEF D','DEF I','MC','EXT D','EXT I','DEL'];
+            return ['PORT','LAT D','LAT I','DEF C','MC','PIVOTE','MP','EXT D','EXT I','DEL'];
+        }
+
+        function mostrarPosicionPicker(equipo, nombre) {
+            return new Promise(resolve => {
+                window._posPickerResolve = resolve;
+                document.getElementById('posPickerNombre').textContent = nombre;
+                const btns = document.getElementById('posPickerBtns');
+                btns.innerHTML = getPositionesEquipo(equipo).map(p =>
+                    `<button class="pos-picker-btn" onclick="window._posPickerResolve('${p}');document.getElementById('modalPosicionPicker').style.display='none';">${p}</button>`
+                ).join('');
+                document.getElementById('modalPosicionPicker').style.display = 'flex';
+            });
+        }
+
+        async function pedirPosicionSiNecesario(wrapper) {
+            const name = wrapper.dataset.name || '';
+            if (!name || wrapper.dataset.isExtra === '1') return;
+            const equipo = document.getElementById('sheetEquipoHeader').value.trim()
+                        || document.getElementById('selectEquipoEntrenos').value.trim();
+            // Mostrar el picker siempre; intenta guardar en GPS si la API responde
+            const pos = await mostrarPosicionPicker(equipo, name);
+            if (pos) {
+                fetch('/api/gps/info_jugadores', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({equipo, jugador: name, posicion: pos})
+                }).catch(() => {});
+            }
+        }
+
+        function resetarJugadorASidebar(wrapper) {
+            // Volver al slot original del jugador (evita superposición)
+            const idx = parseInt(wrapper.dataset.originalIdx || '0');
+            wrapper.style.left = '-150px';
+            wrapper.style.top = (5 + idx * 3.8) + '%';
+            wrapper.dataset.scale = '1';
+            wrapper.style.transform = 'scale(1)';
         }
 
         async function confirmarAlineacion() {
@@ -695,12 +1006,14 @@
             // 1. Guardar automáticamente las posiciones en el navegador
             const positions = [];
             document.querySelectorAll('.player-wrapper').forEach(wrap => {
-                const inp = wrap.querySelector('.input-alineacion');
+                const inp = wrap.querySelector('input.input-alineacion');
+                const name = wrap.dataset.isExtra === '1' ? (inp ? inp.value : '') : (wrap.dataset.name || '');
                 positions.push({
                     x: wrap.style.left,
                     y: wrap.style.top,
                     scale: wrap.dataset.scale || "1",
-                    name: inp ? inp.value : ""
+                    name: name,
+                    isExtra: wrap.dataset.isExtra === '1'
                 });
             });
             const key = `custom_formation_${equipo}_${currentFormationImgName}`;
@@ -767,33 +1080,59 @@
     <!-- MODAL PIZARRA TÁCTICA (EDITOR UNIFICADO) -->
     <div id="modalPizarra" class="modal">
         <div class="modal-content">
-            <div style="padding: 25px 40px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fff;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <h3 style="margin: 0; font-weight: 900; color: #333; letter-spacing: -0.5px; font-size: 1.5rem;">Editor de Dibujo Táctico:</h3>
-                    <input type="text" id="nombreEjercicioPizarra" placeholder="Título..." style="border: none; border-bottom: 2px solid #eee; font-weight: 800; font-size: 1.1rem; padding: 5px 10px; outline: none; width: 300px; color: var(--red);">
+            <!-- Header estilo tarjeta ejercicio -->
+            <div style="background:#fff; border-bottom:2px solid #000;">
+                <!-- Fila 1: Nombre + Duración + Acciones -->
+                <div style="display:flex; align-items:stretch; border-bottom:1px solid #000;">
+                    <div style="flex:1; display:flex; align-items:center; padding:3px 10px; gap:10px; min-width:0;">
+                        <span style="font-weight:900; font-size:13px; white-space:nowrap; color:#1e293b;">NOMBRE</span>
+                        <input type="text" id="nombreEjercicioPizarra" placeholder="Nombre del ejercicio..."
+                            style="flex:1; border:none; font-weight:900; font-size:13px; padding:2px 6px; outline:none; color:#1e293b; min-width:0;">
+                        <span style="font-size:10px; font-weight:900; white-space:nowrap; color:#1e293b;">DURACIÓN</span>
+                        <input type="text" id="duracionEjercicioPizarra" placeholder="—"
+                            style="border:none; border-bottom:1px solid #000; font-weight:800; font-size:12px; padding:2px 4px; outline:none; width:36px; color:#1e293b; text-align:center;">
+                        <span style="font-size:10px; font-weight:900; color:#1e293b;">min</span>
+                    </div>
+                    <!-- Acciones -->
+                    <div style="display:flex; gap:6px; align-items:center; padding:4px 10px; border-left:1px solid #e2e8f0; flex-shrink:0;">
+                        <div style="display:flex; gap:2px; background:#e2e8f0; border-radius:10px; padding:2px;">
+                            <button onclick="setCampo('f11')" id="btnCampoF11"
+                                style="display:flex; flex-direction:column; align-items:center; gap:1px; padding:4px 9px; border-radius:8px; border:none; cursor:pointer; background:#1e293b; color:white; font-size:7px; font-weight:900; line-height:1;">
+                                <svg width="20" height="25" viewBox="0 0 22 28" fill="none"><rect x="1" y="1" width="20" height="26" rx="1.5" fill="#2d6a27" stroke="white" stroke-width="1.2"/><line x1="1" y1="26" x2="21" y2="26" stroke="white" stroke-width="2"/><rect x="5" y="18" width="12" height="9" fill="none" stroke="white" stroke-width="0.9"/><rect x="8" y="23" width="6" height="4" fill="none" stroke="white" stroke-width="0.9"/><circle cx="11" cy="21" r="0.9" fill="white"/><path d="M6.5,18 A5,5 0 0,0 15.5,18" fill="none" stroke="white" stroke-width="0.8"/><circle cx="11" cy="5" r="4" fill="none" stroke="white" stroke-width="0.8"/><circle cx="11" cy="5" r="0.8" fill="white"/></svg>
+                                ½ F11
+                            </button>
+                            <button onclick="setCampo('f7')" id="btnCampoF7"
+                                style="display:flex; flex-direction:column; align-items:center; gap:1px; padding:4px 9px; border-radius:8px; border:none; cursor:pointer; background:transparent; color:#64748b; font-size:7px; font-weight:900; line-height:1;">
+                                <svg width="20" height="25" viewBox="0 0 22 28" fill="none"><rect x="1" y="1" width="20" height="26" rx="1.5" fill="#2d6a27" stroke="white" stroke-width="1.2"/><line x1="1" y1="14" x2="21" y2="14" stroke="white" stroke-width="0.8"/><circle cx="11" cy="14" r="4" fill="none" stroke="white" stroke-width="0.8"/><circle cx="11" cy="14" r="0.8" fill="white"/><rect x="4" y="1" width="14" height="7" fill="none" stroke="white" stroke-width="0.9"/><rect x="7.5" y="0.2" width="7" height="2.5" fill="none" stroke="white" stroke-width="0.8"/><rect x="4" y="20" width="14" height="7" fill="none" stroke="white" stroke-width="0.9"/><rect x="7.5" y="25.3" width="7" height="2.5" fill="none" stroke="white" stroke-width="0.8"/></svg>
+                                F7
+                            </button>
+                        </div>
+                        <button id="btnGuardarPizarra" onclick="confirmarDibujo()" style="background:#10b981; color:white; padding:7px 16px; border-radius:10px; font-weight:900; border:none; cursor:pointer; font-size:10px; white-space:nowrap;"><i class="fas fa-check"></i> INSERTAR</button>
+                        <button onclick="document.getElementById('modalPizarra').style.display='none'" style="background:#f1f5f9; color:#64748b; width:32px; height:32px; border-radius:50%; font-weight:900; border:1px solid #e2e8f0; cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">&times;</button>
+                    </div>
                 </div>
-                <div style="display: flex; gap: 15px;">
-                    <button id="btnGuardarPizarra" class="btn-fin" style="background: #10b981; color: white; padding: 12px 25px; border-radius: 14px; font-weight: 900; border: none; cursor: pointer; transition: 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="confirmarDibujo()"><i class="fas fa-check"></i> INSERTAR EN SESIÓN</button>
-                    <button class="btn-fin" style="background: #f1f5f9; color: #64748b; padding: 12px 25px; border-radius: 14px; font-weight: 900; border: 1px solid #e2e8f0; cursor: pointer;" onclick="document.getElementById('modalPizarra').style.display='none'"><i class="fas fa-times"></i> CERRAR</button>
+                <!-- Fila 2: OBJ -->
+                <div style="display:flex; align-items:center; padding:3px 10px; background:#f0f0f0; gap:6px;">
+                    <span style="font-size:11px; font-weight:900; color:#1e293b; white-space:nowrap; flex-shrink:0;">OBJ:</span>
+                    <button type="button" onclick="abrirObjMesBocadillo(this)"
+                        style="font-size:9px; font-weight:900; padding:2px 8px; border:1px solid #cbd5e1; border-radius:10px; background:white; cursor:pointer; white-space:nowrap; color:#475569; flex-shrink:0;">elegir obj del mes</button>
+                    <input type="text" id="objEjercicioPizarra" placeholder="escribir objetivos separados por comas"
+                        style="flex:1; border:none; background:transparent; font-weight:700; font-size:10px; padding:0 4px; outline:none; color:#1e293b; min-width:0;">
                 </div>
             </div>
             
-            <div style="padding: 30px; display: grid; grid-template-columns: 300px 1fr 240px; gap: 25px; flex: 1; overflow: hidden;">
+            <div style="padding: 10px 14px; display: grid; grid-template-columns: 210px 1fr 210px; gap: 12px; flex: 1; overflow: hidden;">
                 <!-- Izquierda: Notas adicionales (Opcional) -->
                 <div style="background: white; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-                    <label style="font-size: 10px; font-weight: 900; color: #999; text-transform: uppercase; letter-spacing: 1px;">Anotaciones del Dibujo</label>
-                    <textarea id="descEjercicioPizarra" style="flex: 1; border: 1px solid #eee; border-radius: 12px; padding: 15px; font-family: inherit; font-size: 13px; font-weight: 600; color: #555; resize: none; background: #fafafa; outline: none;" placeholder="Detalles específicos para este gráfico..."></textarea>
+                    <label style="font-size: 10px; font-weight: 900; color: #999; text-transform: uppercase; letter-spacing: 1px;">Descripción detallada</label>
+                    <textarea id="descEjercicioPizarra" style="flex: 1; border: 1px solid #eee; border-radius: 12px; padding: 15px; font-family: inherit; font-size: 13px; font-weight: 600; color: #555; resize: none; background: #fafafa; outline: none;" placeholder="Descripción detallada..."></textarea>
                 </div>
 
                 <!-- Centro: Campo -->
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <div style="display: flex; gap: 10px; align-items: center; justify-content: center; background: #fff; padding: 5px; border-radius: 10px; border: 1px solid #eee;">
-                        <div style="font-size: 10px; color: #999; font-weight: 800; flex: 1; text-align: center;">
-                        <i class="fas fa-mouse-pointer"></i> RUEDA DEL RATÓN PARA TAMAÑO | <strong style="color: var(--red);"><i class="fas fa-hand-pointer"></i> DOBLE CLIC PARA ELIMINAR</strong>
-                        </div>
-                    </div>
+                <div style="display: flex; flex-direction: column; flex: 1; position: relative;">
                     <div id="pizarraDropArea" class="pizarra-container" style="height: 100%; width: 100%;">
                         <canvas id="mainCanvasPizarra" class="pizarra-canvas"></canvas>
+                        <!-- ½ F11 elements -->
                         <div class="field-lines"></div>
                         <div class="field-half-line"></div>
                         <div class="field-center-circle"></div>
@@ -802,6 +1141,28 @@
                         <div class="field-goal-area"></div>
                         <div class="field-penalty-spot"></div>
                         <div class="field-goal-net"></div>
+                        <!-- F7 overlay (campo completo horizontal, proporciones reales 60x40m) -->
+                        <div id="f7FieldOverlay" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;">
+                            <!-- borde exterior -->
+                            <div style="position:absolute; top:0; left:0; width:100%; height:100%; border:3px solid rgba(255,255,255,0.7);"></div>
+                            <!-- línea central vertical -->
+                            <div style="position:absolute; top:0; left:50%; width:2px; height:100%; background:rgba(255,255,255,0.7);"></div>
+                            <!-- círculo central (radio 7m / 40m ancho = 35% alto) -->
+                            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:160px; height:160px; border:2px solid rgba(255,255,255,0.7); border-radius:50%;"></div>
+                            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:7px; height:7px; background:rgba(255,255,255,0.85); border-radius:50%;"></div>
+                            <!-- punto de penalti IZQ (11m / 60m = 18%) -->
+                            <div style="position:absolute; top:50%; left:18%; transform:translate(-50%,-50%); width:7px; height:7px; background:rgba(255,255,255,0.85); border-radius:50%;"></div>
+                            <!-- área penalti IZQ (14m/60m=23% prof · 30m/40m=75% alto) -->
+                            <div style="position:absolute; top:50%; left:0; transform:translateY(-50%); width:23%; height:75%; border:2px solid rgba(255,255,255,0.7); border-left:none;"></div>
+                            <!-- portería IZQ (5m/40m=12.5% alto) -->
+                            <div style="position:absolute; top:50%; left:0; transform:translateY(-50%); width:11px; height:12.5%; border:3px solid rgba(255,255,255,0.9); border-left:none; background:rgba(255,255,255,0.15);"></div>
+                            <!-- punto de penalti DER -->
+                            <div style="position:absolute; top:50%; left:82%; transform:translate(-50%,-50%); width:7px; height:7px; background:rgba(255,255,255,0.85); border-radius:50%;"></div>
+                            <!-- área penalti DER -->
+                            <div style="position:absolute; top:50%; right:0; transform:translateY(-50%); width:23%; height:75%; border:2px solid rgba(255,255,255,0.7); border-right:none;"></div>
+                            <!-- portería DER -->
+                            <div style="position:absolute; top:50%; right:0; transform:translateY(-50%); width:11px; height:12.5%; border:3px solid rgba(255,255,255,0.9); border-right:none; background:rgba(255,255,255,0.15);"></div>
+                        </div>
                     </div>
                 </div>
                 
@@ -810,8 +1171,8 @@
                     <label style="font-size: 8px; font-weight: 900; color: var(--red); text-transform: uppercase;">Material</label>
                     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%;">
                         <div class="herramienta-pizarra" draggable="true" ondragstart="dragItem(event, 'ball')"><i class="fas fa-futbol" style="color: #333;"></i></div>
-                        <div id="prevCono" class="herramienta-pizarra" draggable="true" ondragstart="dragItem(event, 'cone')">
-                            <div style="width: 18px; height: 6px; background: #ff0000; border-radius: 10px 10px 3px 3px;"></div>
+                        <div id="prevCono" class="herramienta-pizarra" draggable="true" ondragstart="dragItem(event, 'cone')" style="display:flex;align-items:flex-end;justify-content:center;">
+                            <div style="width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:18px solid #ff0000;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.3));"></div>
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1px;">
                             <div onclick="cambiarColorCono('#ff0000')" style="width: 7px; height: 7px; background: red; cursor: pointer; border-radius: 50%;"></div>
@@ -1022,6 +1383,83 @@
             document.getElementById('photoMenu').style.display = 'flex';
         }
 
+        // --- BOCADILLO OBJ DEL MES ---
+        const _MESES_ABR = {1:'ENE',2:'FEB',3:'MAR',4:'ABR',5:'MAY',6:'JUN',7:'JUL',8:'AGO',9:'SEP',10:'OCT',11:'NOV',12:'DIC'};
+        const _CAT_MAPEO = [
+            ['ALEVIN F11','ALEVIN F11'],['ALEVÍN F11','ALEVIN F11'],
+            ['ALEVIN F7','ALEVIN F7'],['ALEVÍN F7','ALEVIN F7'],
+            ['PREBENJAMIN','PREBENJAMIN'],['PREBENJAMÍN','PREBENJAMIN'],
+            ['BENJAMIN','BENJAMIN'],['BENJAMÍN','BENJAMIN'],
+            ['INFANTIL','INFANTIL'],['CADETE','CADETE'],['JUVENIL','JUVENIL'],
+            ['CHUPETIN','CHUPETIN'],['CHUPETÍN','CHUPETIN']
+        ];
+
+        async function abrirObjMesBocadillo(btn) {
+            const equipo = (document.getElementById('sheetEquipoHeader').value || document.getElementById('selectEquipoEntrenos').value || '').trim();
+            const fechaStr = document.getElementById('sheetFecha').value;
+            const monthNum = fechaStr ? parseInt(fechaStr.split('-')[1]) : new Date().getMonth() + 1;
+            const mesAbr = _MESES_ABR[monthNum] || '';
+
+            const eqUp = equipo.toUpperCase();
+            let cat = '';
+            for (const [k, v] of _CAT_MAPEO) {
+                if (eqUp.includes(k.toUpperCase())) { cat = v; break; }
+            }
+            if (!cat) cat = eqUp.split(' ')[0]; // fallback primer token
+
+            const bocadillo = document.getElementById('bocadilloObjMes');
+            const content = document.getElementById('bocadilloObjContent');
+            content.innerHTML = '<div style="color:#94a3b8;font-size:11px;">Cargando...</div>';
+
+            const rect = btn.getBoundingClientRect();
+            bocadillo.style.display = 'block';
+            bocadillo.style.top = (rect.bottom + 6) + 'px';
+            bocadillo.style.left = Math.min(rect.left, window.innerWidth - 340) + 'px';
+            bocadillo._inputRef = btn.closest('div').querySelector('input[type="text"]');
+
+            try {
+                const res = await fetch(`/api/metodologia?categoria=${encodeURIComponent(cat)}`);
+                const data = await res.json();
+                const tecnico = (data.tecnico || []).map(r => (r[mesAbr] || '').trim()).filter(Boolean);
+                const tactico = (data.tactico || []).map(r => (r[mesAbr] || '').trim()).filter(Boolean);
+
+                if (!tecnico.length && !tactico.length) {
+                    content.innerHTML = `<div style="color:#94a3b8;font-size:11px;text-align:center;padding:6px 0;">Sin objetivos para <b>${mesAbr}</b></div>`;
+                    return;
+                }
+                let html = `<div style="font-size:9px;font-weight:900;color:#64748b;margin-bottom:8px;text-transform:uppercase;">${cat} · ${mesAbr}</div>`;
+                const item = (obj, color) => `<div onclick="insertarObjMes(this)" data-obj="${obj.replace(/"/g,'&quot;')}" style="cursor:pointer;padding:5px 8px;border-radius:6px;font-size:11px;font-weight:600;color:#1e293b;margin-bottom:3px;border:1px solid #f1f5f9;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='white'">${obj}</div>`;
+                if (tecnico.length) {
+                    html += `<div style="font-size:9px;font-weight:900;color:#E31E24;margin-bottom:4px;">TÉCNICO</div>`;
+                    tecnico.forEach(o => { html += item(o, '#E31E24'); });
+                }
+                if (tactico.length) {
+                    html += `<div style="font-size:9px;font-weight:900;color:#2563eb;margin:8px 0 4px;">TÁCTICO</div>`;
+                    tactico.forEach(o => { html += item(o, '#2563eb'); });
+                }
+                content.innerHTML = html;
+            } catch(e) {
+                content.innerHTML = '<div style="color:#dc3545;font-size:11px;">Error al cargar</div>';
+            }
+        }
+
+        function insertarObjMes(el) {
+            const boc = document.getElementById('bocadilloObjMes');
+            const input = boc._inputRef;
+            if (!input) return;
+            const actual = input.value.trim();
+            input.value = actual ? actual + ', ' + el.dataset.obj : el.dataset.obj;
+            boc.style.display = 'none';
+        }
+
+        document.addEventListener('click', function(e) {
+            const boc = document.getElementById('bocadilloObjMes');
+            if (boc && !boc.contains(e.target) && !e.target.closest('[onclick*="abrirObjMesBocadillo"]')) {
+                boc.style.display = 'none';
+            }
+        });
+        // --- FIN BOCADILLO ---
+
         function cerrarModalSesionOnline() {
             document.getElementById('modalSesionOnline').style.display = 'none';
             const btnCrono = document.querySelector('.btn-cronograma-fixed');
@@ -1069,6 +1507,28 @@
             }
         }
 
+        let _campoModo = 'f11';
+        function setCampo(modo) {
+            _campoModo = modo;
+            const pizarra = document.getElementById('pizarraDropArea');
+            const btnF11 = document.getElementById('btnCampoF11');
+            const btnF7  = document.getElementById('btnCampoF7');
+            const f7overlay = document.getElementById('f7FieldOverlay');
+            const halfElems = ['.field-half-line','.field-center-circle','.field-penalty-area',
+                               '.field-penalty-arc','.field-goal-area','.field-penalty-spot','.field-goal-net'];
+            if (modo === 'f7') {
+                halfElems.forEach(sel => { const el = pizarra.querySelector(sel); if (el) el.style.display='none'; });
+                if (f7overlay) f7overlay.style.display='block';
+                if (btnF7)  { btnF7.style.background='#1e293b';  btnF7.style.color='white'; }
+                if (btnF11) { btnF11.style.background='transparent'; btnF11.style.color='#64748b'; }
+            } else {
+                halfElems.forEach(sel => { const el = pizarra.querySelector(sel); if (el) el.style.display=''; });
+                if (f7overlay) f7overlay.style.display='none';
+                if (btnF11) { btnF11.style.background='#1e293b'; btnF11.style.color='white'; }
+                if (btnF7)  { btnF7.style.background='transparent'; btnF7.style.color='#64748b'; }
+            }
+        }
+
         let targetCanvasContainer = null;
         let canvas, ctx;
         
@@ -1104,15 +1564,17 @@
             
             // Cargar datos actuales del slot de la sesión (si es un slot de ejercicio)
             const parentSlot = container.closest('.session-grid-item');
+            const objInp  = document.getElementById('objEjercicioPizarra');
+            const durInp  = document.getElementById('duracionEjercicioPizarra');
             if (parentSlot) {
-                const inputTitulo = parentSlot.querySelector('input[type="text"]');
-                nameInp.value = inputTitulo ? inputTitulo.value : "";
-                
+                const inputs = parentSlot.querySelectorAll('input[type="text"]');
+                nameInp.value = inputs[0] ? inputs[0].value : "";
+                durInp.value  = inputs[1] ? inputs[1].value : "";
+                objInp.value  = inputs[2] ? inputs[2].value : "";
                 const textareaDesc = container.parentElement.querySelector('textarea');
                 descArea.value = textareaDesc ? textareaDesc.value : "";
             } else {
-                nameInp.value = "";
-                // Cargar notas generales si es el board del encabezado
+                nameInp.value = ""; durInp.value = ""; objInp.value = "";
                 const mainNotes = container.parentElement.querySelector('textarea');
                 descArea.value = mainNotes ? mainNotes.value : "";
             }
@@ -1254,10 +1716,10 @@
             el.className = 'item-pizarra';
             el.style.left = (x - 15) + 'px';
             el.style.top = (y - 15) + 'px';
-            
+
             let html = '';
             if(type === 'ball') html = '<i class="fas fa-futbol" style="font-size:24px;"></i>';
-            else if(type === 'cone') html = '<i class="fas fa-triangle-exclamation" style="font-size:24px; color:#ff9800;"></i>';
+            else if(type === 'cone') html = '<div style="width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-bottom:28px solid ' + conoColorActivo + ';filter:drop-shadow(0 2px 4px rgba(0,0,0,0.35));"></div>';
             else if(type.startsWith('player')) {
                 const color = type.split('-')[1];
                 html = `<div style="width:25px; height:25px; background:${color}; border-radius:50%; border:2px solid white; box-shadow:0 2px 4px rgba(0,0,0,0.3);"></div>`;
@@ -1355,16 +1817,16 @@
 
             // 1. Sincronizar textos de vuelta al editor de sesión
             const parentSlot = targetCanvasContainer.closest('.session-grid-item');
+            const objInp2 = document.getElementById('objEjercicioPizarra');
+            const durInp2 = document.getElementById('duracionEjercicioPizarra');
             if (parentSlot) {
-                // Sincronizar Título
-                const inputTitulo = parentSlot.querySelector('input[type="text"]');
-                if (inputTitulo) inputTitulo.value = nameInp.value;
-                
-                // Sincronizar Descripción Detallada
+                const inputs = parentSlot.querySelectorAll('input[type="text"]');
+                if (inputs[0]) inputs[0].value = nameInp.value;
+                if (inputs[1]) inputs[1].value = durInp2.value;
+                if (inputs[2]) inputs[2].value = objInp2.value;
                 const textareaDesc = targetCanvasContainer.parentElement.querySelector('textarea');
                 if (textareaDesc) textareaDesc.value = descArea.value;
             } else {
-                // Sincronizar Notas de Sesión (Board de Cabecera)
                 const mainNotes = targetCanvasContainer.parentElement.querySelector('textarea');
                 if (mainNotes) mainNotes.value = descArea.value;
             }
@@ -1394,10 +1856,12 @@
                     targetCanvasContainer.appendChild(overlay);
                 }
                 overlay.src = data;
-                
-                // Ocultar el texto de ayuda del slot
-                const placeholder = targetCanvasContainer.querySelector('div:not(.drawn-overlay)');
-                if(placeholder) placeholder.style.display = 'none';
+
+                // Fondo verde cuando hay ejercicio, ocultar SVG y marcar slot
+                targetCanvasContainer.style.background = '#2e7d32';
+                targetCanvasContainer.classList.add('ejercicio-lleno');
+                const fieldSvg = targetCanvasContainer.querySelector('.pizarra-img');
+                if (fieldSvg) fieldSvg.style.display = 'none';
                 
                 document.getElementById('modalPizarra').style.display = 'none';
             } catch (e) {
@@ -1713,6 +2177,16 @@ window.addEventListener('load', function() {
         aplicarResaltadoAutomatico();
     } catch(e) { console.error("Error en inicialización:", e); }
     if (typeof hideLoader === 'function') hideLoader();
+
+    // Flatpickr en el campo de fecha de sesión
+    if (typeof flatpickr !== 'undefined') {
+        flatpickr('#sheetFecha', {
+            locale: 'es',
+            dateFormat: 'Y-m-d',
+            allowInput: true,
+            disableMobile: true,
+        });
+    }
 });
 
 function marcarColumnaSi(colIndex) {
