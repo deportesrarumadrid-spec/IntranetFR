@@ -142,9 +142,8 @@ def get_friendly_concepto(concepto):
     }
     c_clean = str(concepto).strip().upper().replace('Ó', 'O').replace('Í', 'I')
     lookup = c_clean.replace('STAFF-', '') if c_clean.startswith('STAFF-') else c_clean
-    prefix = "Staff-" if c_clean.startswith('STAFF-') else ""
     if lookup in meses_map:
-        return f"{prefix}{meses_map[lookup]}"
+        return meses_map[lookup]
     return str(concepto)
 
 
@@ -372,7 +371,7 @@ def api_presupuesto():
             if not datos.get('descripcion'):
                 friendly = get_friendly_concepto(datos.get('concepto'))
                 datos['descripcion'] = f"Pago Staff {friendly}: {datos.get('nombre')}"
-            datos['departamento'] = "Administración"
+            datos['departamento'] = "Sueldos"
 
         # REGISTRO MAESTRO EN PESTAÑA FINANCIERO (Homólogo)
         try:
@@ -424,19 +423,53 @@ def api_presupuesto():
             print(f"Error buscando duplicado en FINANCIERO: {e}")
 
         if idx_fin_existente != -1:
-            # Actualización robusta usando índices normalizados
-            updates = []
-            mapping = {'FECHA': datos.get('fecha'), 'DESCRIPCION': datos.get('descripcion'), 'IMPORTE': datos.get('importe'), 'ESPERADO': datos.get('esperado', 0)}
-            for key, val in mapping.items():
-                if key in headers_fin_norm:
-                    col_idx = headers_fin_norm.index(key) + 1
-                    updates.append({'range': f"'FINANCIERO'!{rowcol_to_a1(idx_fin_existente, col_idx)}", 'values': [[val]]})
-            
-            if updates:
-                sheet_fin.spreadsheet.values_batch_update({'valueInputOption': 'USER_ENTERED', 'data': updates})
-            
-            idx_asi_col = headers_fin_norm.index('N_ASIENTO') if 'N_ASIENTO' in headers_fin_norm else 1
-            return jsonify({"status": "success", "asiento": all_fin[idx_fin_existente-1][idx_asi_col]})
+            old_row = all_fin[idx_fin_existente - 1]
+            idx_imp_col = headers_fin_norm.index('IMPORTE') if 'IMPORTE' in headers_fin_norm else -1
+            idx_desc_col = headers_fin_norm.index('DESCRIPCION') if 'DESCRIPCION' in headers_fin_norm else -1
+            idx_asi_col = next((headers_fin_norm.index(v) for v in ['N_ASIENTO', 'Nº_ASIENTO', 'ASIENTO'] if v in headers_fin_norm), -1)
+            try:
+                old_importe = float(str(old_row[idx_imp_col]).replace(',', '.')) if idx_imp_col != -1 and len(old_row) > idx_imp_col and old_row[idx_imp_col] else 0
+            except:
+                old_importe = 0
+            nuevo_importe = float(datos.get('importe', 0))
+            # Comparar valores absolutos: FINANCIERO puede tener el importe como positivo (entradas antiguas) o negativo (nuevo criterio)
+            usar_compensacion = pilar == "Pagos Staff" and abs(abs(nuevo_importe) - abs(old_importe)) > 0.01
+
+            if not usar_compensacion:
+                # Actualización robusta in-place (misma cantidad o no es staff)
+                updates = []
+                mapping = {'FECHA': datos.get('fecha'), 'DESCRIPCION': datos.get('descripcion'), 'IMPORTE': datos.get('importe'), 'ESPERADO': datos.get('esperado', 0)}
+                for key, val in mapping.items():
+                    if key in headers_fin_norm:
+                        col_idx = headers_fin_norm.index(key) + 1
+                        updates.append({'range': f"'FINANCIERO'!{rowcol_to_a1(idx_fin_existente, col_idx)}", 'values': [[val]]})
+                if updates:
+                    sheet_fin.spreadsheet.values_batch_update({'valueInputOption': 'USER_ENTERED', 'data': updates})
+                idx_asi_col2 = headers_fin_norm.index('N_ASIENTO') if 'N_ASIENTO' in headers_fin_norm else 1
+                return jsonify({"status": "success", "asiento": all_fin[idx_fin_existente-1][idx_asi_col2]})
+            else:
+                # Asientos compensatorios: mantener original, añadir anulación + nuevo
+                old_desc = old_row[idx_desc_col] if idx_desc_col != -1 and len(old_row) > idx_desc_col else datos.get('descripcion', '')
+                old_num_asiento = old_row[idx_asi_col] if idx_asi_col != -1 and len(old_row) > idx_asi_col else ""
+                max_asi = 0
+                for row in all_fin[1:]:
+                    if idx_asi_col != -1 and len(row) > idx_asi_col and row[idx_asi_col]:
+                        try:
+                            val_limpio = str(row[idx_asi_col]).strip().replace('#', '').split('_')[0]
+                            if val_limpio.isdigit():
+                                max_asi = max(max_asi, int(val_limpio))
+                        except: continue
+                rev_num = max_asi + 1
+                rev_mapeo = {
+                    "FECHA": datos.get('fecha'), "N_ASIENTO": rev_num,
+                    "DEPARTAMENTO": datos.get('departamento'), "PILAR": pilar,
+                    "DESCRIPCION": f"Anulación: {old_desc} (#{old_num_asiento})" if old_num_asiento else f"Anulación: {old_desc}", "IMPORTE": -old_importe,
+                    "NOMBRE": datos.get('nombre', ''), "EQUIPO": datos.get('equipo', ''),
+                    "CONCEPTO": datos.get('concepto', ''), "ESPERADO": 0, "FACTURA": ''
+                }
+                sheet_fin.append_row([rev_mapeo.get(h, "") for h in headers_fin_norm])
+                datos['n_asiento'] = rev_num + 1
+                # Fall through to append the new corrected entry below
 
         # Intentamos usar el número de asiento proporcionado (de la carga masiva o manual)
         num_asiento = datos.get('n_asiento')
@@ -467,13 +500,21 @@ def api_presupuesto():
             else:
                 num_asiento = num_str # Mantener como string (incluye los que llevan sufijo "_N")
 
+        # Los pagos a staff son un gasto (dinero que sale) → importe negativo en FINANCIERO
+        importe_fin = datos.get('importe')
+        if pilar == "Pagos Staff":
+            try:
+                importe_fin = -abs(float(importe_fin or 0))
+            except:
+                pass
+
         mapeo_fila = {
             "FECHA": datos.get('fecha'),
             "N_ASIENTO": num_asiento,
             "DEPARTAMENTO": datos.get('departamento'),
             "PILAR": pilar,
             "DESCRIPCION": datos.get('descripcion') or f"Asiento {num_asiento}",
-            "IMPORTE": datos.get('importe'),
+            "IMPORTE": importe_fin,
             "NOMBRE": datos.get('nombre', ''),
             "EQUIPO": datos.get('equipo', ''),
             "CONCEPTO": datos.get('concepto', ''),
@@ -1081,6 +1122,8 @@ def api_config_financiera():
             formas_pago = []
             cuotas_mes = {}
             extra_names = {"EXTRA": "EXTRA", "EXTRA2": "EXTRA 2", "STAFF_OTROS": "OTROS"}
+            staff_sueldos = {}
+            staff_extras_count = 1
 
             for row in all_configs:
                 if len(row) >= 2:
@@ -1098,6 +1141,12 @@ def api_config_financiera():
                     elif key == "EXTRA_NAMES":
                         try: extra_names = json.loads(value)
                         except json.JSONDecodeError: pass
+                    elif key == "STAFF_SUELDOS":
+                        try: staff_sueldos = json.loads(value)
+                        except json.JSONDecodeError: pass
+                    elif key == "STAFF_EXTRAS_COUNT":
+                        try: staff_extras_count = int(value)
+                        except: pass
             
             # Valores por defecto si no se encuentran en la hoja
             if not formas_pago:
@@ -1107,7 +1156,7 @@ def api_config_financiera():
                     {"nombre": "Transferencia", "total": 490, "modalidad": "mensual", "cuota": 49, "meses": 10, "tipo": "Transferencia"}
                 ]
 
-            return jsonify({"inscripciones": inscripciones, "formas_pago": formas_pago, "cuotas_mes": cuotas_mes, "extra_names": extra_names})
+            return jsonify({"inscripciones": inscripciones, "formas_pago": formas_pago, "cuotas_mes": cuotas_mes, "extra_names": extra_names, "staff_sueldos": staff_sueldos, "staff_extras_count": staff_extras_count})
         
         elif request.method == 'POST':
             data = request.json
@@ -1116,11 +1165,55 @@ def api_config_financiera():
                 ['INSCRIPCIONES_EQUIPO', json.dumps(data.get('inscripciones', {}))],
                 ['FORMAS_PAGO', json.dumps(data.get('formas_pago', []))],
                 ['CUOTAS_MES', json.dumps(data.get('cuotas_mes', {}))],
-                ['EXTRA_NAMES', json.dumps(data.get('extra_names', {}))]
+                ['EXTRA_NAMES', json.dumps(data.get('extra_names', {}))],
+                ['STAFF_SUELDOS', json.dumps(data.get('staff_sueldos', {}))],
+                ['STAFF_EXTRAS_COUNT', str(data.get('staff_extras_count', 1))]
             ], value_input_option='RAW')
             return jsonify({"status": "success"})
     except Exception as e:
         print(f"Error api_config_financiera: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@financiero_bp.route('/api/sync_entrenadores_staff', methods=['POST'])
+def api_sync_entrenadores_staff():
+    from app import client, NOMBRE_EXCEL
+    data = request.json
+    try:
+        sheet = client.open(NOMBRE_EXCEL).worksheet("STAFF")
+        all_v = sheet.get_all_values()
+        if not all_v:
+            headers = ["CARGO", "NOMBRE", "TELEFONO", "EQUIPO", "DIAS ENTRENAMIENTO"]
+            sheet.append_row(headers)
+            all_v = [headers]
+        headers_norm = normalizar_cabeceras(all_v[0])
+        try:
+            idx_nombre = headers_norm.index('NOMBRE')
+        except ValueError:
+            idx_nombre = 1
+        nombres_existentes = set()
+        for row in all_v[1:]:
+            if len(row) > idx_nombre and row[idx_nombre].strip():
+                nombres_existentes.add(row[idx_nombre].strip().lower())
+        equipos = data.get('equipos', [])
+        added = []
+        for eq in equipos:
+            equipo_nombre = eq.get('nombre', '').strip()
+            for ent in eq.get('entrenadores', []):
+                ent_clean = (ent or '').strip()
+                if not ent_clean or ent_clean.lower() in nombres_existentes:
+                    continue
+                fila = [""] * max(len(headers_norm), 5)
+                mapping = {'CARGO': 'Entrenador', 'NOMBRE': ent_clean, 'EQUIPO': equipo_nombre,
+                           'TELEFONO': '', 'DIAS_ENTRENAMIENTO': ','.join(eq.get('dias', []))}
+                for i, h in enumerate(headers_norm):
+                    if h in mapping:
+                        fila[i] = mapping[h]
+                sheet.append_row(fila)
+                nombres_existentes.add(ent_clean.lower())
+                added.append(ent_clean)
+        return jsonify({"status": "success", "added": added})
+    except Exception as e:
+        print(f"Error api_sync_entrenadores_staff: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @financiero_bp.route('/api/bulk_update_jugadores', methods=['POST'])
@@ -1289,3 +1382,510 @@ def api_carga_masiva_presupuesto():
     except Exception as e:
         print(f"Error fatal en carga_masiva: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ─────────────────────────────────────────────
+#  STAFF RESUMEN MES
+# ─────────────────────────────────────────────
+@financiero_bp.route('/api/staff_resumen_mes')
+def api_staff_resumen_mes():
+    import os, json as _json, glob as _glob, calendar as _cal
+    from app import client, NOMBRE_EXCEL
+    from datetime import datetime as _dt
+    equipo = request.args.get('equipo', '').strip()
+    mes = request.args.get('mes', '').strip().zfill(2)  # "01"-"12"
+    nombre = request.args.get('nombre', '').strip().lower()
+    if not equipo or not mes:
+        return jsonify({"error": "equipo y mes requeridos"}), 400
+
+    # Deducir año de la temporada actual (Sep-Ago)
+    hoy = _dt.now()
+    mes_int = int(mes)
+    base_anio = hoy.year if hoy.month >= 9 else hoy.year - 1
+    anio = base_anio if mes_int >= 9 else base_anio + 1
+
+    resultado = {
+        "dias_warning": 0,
+        "sesiones_no_subidas": 0,
+        "formularios_pendientes": 0,
+        "balones_perdidos": 0,
+        "faltas": 0,
+        "suplencias": 0,
+    }
+
+    try:
+        equipo_norm = equipo.strip().lower()
+        sh = client.open(NOMBRE_EXCEL)
+
+        # 1. ASISTENCIAS: días con datos incompletos o sin registrar
+        try:
+            def _nt(s):  # quitar tildes y pasar a minúsculas
+                for a, b in [('á','a'),('é','e'),('í','i'),('ó','o'),('ú','u'),('ü','u'),
+                              ('Á','a'),('É','e'),('Í','i'),('Ó','o'),('Ú','u')]:
+                    s = s.replace(a, b)
+                return s.strip().lower()
+            # Días de entrenamiento desde config
+            _DIA_MAP = {'lunes':0,'martes':1,'miercoles':2,'jueves':3,'viernes':4,'sabado':5,'domingo':6}
+            dias_semana = []
+            try:
+                with open(os.path.join('static', 'data', 'equipos_config.json'), 'r', encoding='utf-8') as _fp:
+                    for _eq in _json.load(_fp).get('equipos', []):
+                        if _nt(_eq.get('nombre','')) == _nt(equipo):
+                            dias_semana = [_DIA_MAP.get(_nt(d), -1) for d in _eq.get('dias', [])]
+                            dias_semana = [d for d in dias_semana if d >= 0]
+                            break
+            except: pass
+
+            fechas_entreno = set()
+            _nm = _cal.monthrange(anio, mes_int)[1]
+            for _d in range(1, _nm + 1):
+                if _cal.weekday(anio, mes_int, _d) in dias_semana:
+                    fechas_entreno.add(f"{_d:02d}/{mes_int:02d}/{anio}")
+
+            ws_asis = client.open(NOMBRE_EXCEL).worksheet("ASISTENCIAS")
+            all_asis = ws_asis.get_all_values()
+            datos = {}  # fecha → [(estado, valoracion)]
+            for row in (all_asis[1:] if all_asis else []):
+                if len(row) < 3 or row[1].strip().lower() != equipo_norm: continue
+                partes = row[0].strip().split('/')
+                if len(partes) < 3: continue
+                try:
+                    fd, fm, fy = int(partes[0]), int(partes[1]), int(partes[2])
+                    if fy < 100: fy += 2000
+                except: continue
+                if fm != mes_int or fy != anio: continue
+                fecha = f"{fd:02d}/{fm:02d}/{fy}"
+                estado = row[4].strip() if len(row) > 4 else ''
+                val    = row[5].strip() if len(row) > 5 else ''
+                datos.setdefault(fecha, []).append((estado, val))
+
+            def _vacio(v): return not v or v.strip() == '-'
+            dias_warning = 0
+            fechas_base = fechas_entreno if fechas_entreno else set(datos.keys())
+            for fecha in fechas_base:
+                if fecha not in datos:
+                    dias_warning += 1
+                else:
+                    if any(_vacio(e) or (e.upper() == 'SI' and _vacio(v)) for e, v in datos[fecha]):
+                        dias_warning += 1
+            resultado['dias_warning'] = dias_warning
+        except Exception as e:
+            print(f"staff_resumen_mes ASISTENCIAS: {e}")
+
+        # 2. Sesiones no subidas = días totales del mes – sesiones subidas
+        try:
+            equipo_folder = equipo.upper().replace(' ', '_')
+            sesiones_dir = os.path.join('static', 'data', 'sesiones', equipo_folder)
+            sesiones_subidas = 0
+            if os.path.exists(sesiones_dir):
+                for f in os.listdir(sesiones_dir):
+                    if not f.endswith('.json'): continue
+                    try:
+                        with open(os.path.join(sesiones_dir, f), 'r', encoding='utf-8') as fp:
+                            meta = _json.load(fp)
+                        fecha_ses = meta.get('fecha', '')
+                        partes_ses = fecha_ses.split('/')
+                        if len(partes_ses) >= 3 and partes_ses[1].zfill(2) == mes:
+                            try:
+                                if int(partes_ses[2]) == anio:
+                                    sesiones_subidas += 1
+                            except: pass
+                        elif len(partes_ses) == 2 and partes_ses[1].zfill(2) == mes:
+                            sesiones_subidas += 1
+                    except: pass
+            total_dias_mes = _cal.monthrange(anio, mes_int)[1]
+            resultado['sesiones_no_subidas'] = max(0, total_dias_mes - sesiones_subidas)
+        except Exception as e:
+            print(f"staff_resumen_mes sesiones: {e}")
+
+        # 3. Formularios pendientes = sábados del mes – formularios enviados
+        try:
+            _nm2 = _cal.monthrange(anio, mes_int)[1]
+            saturdays = sum(1 for _d in range(1, _nm2 + 1) if _cal.weekday(anio, mes_int, _d) == 5)
+            resultado['formularios_pendientes'] = saturdays  # default si falla gspread
+            ws_form = client.open(NOMBRE_EXCEL).worksheet('FORMULARIO_PARTIDOS')
+            all_form = ws_form.get_all_values()
+            count_enviados = 0
+            if all_form and len(all_form) > 1:
+                hdrs = [h.strip().upper().replace(' ', '') for h in all_form[0]]
+                idx_eq = next((i for i, h in enumerate(hdrs) if 'EQUIPO' in h), 1)
+                idx_fe = next((i for i, h in enumerate(hdrs) if 'MARCA' in h or 'FECHA' in h), 0)
+                for row in all_form[1:]:
+                    if len(row) <= max(idx_eq, idx_fe): continue
+                    if row[idx_eq].strip().lower() != equipo_norm: continue  # match exacto
+                    fecha_str = row[idx_fe].strip()
+                    if not fecha_str: continue
+                    pf = fecha_str.split()[0].split('/')  # "DD/MM/YYYY HH:MM:SS" → ["DD","MM","YYYY"]
+                    try:
+                        if len(pf) >= 3 and int(pf[1]) == mes_int and int(pf[2]) == anio:
+                            count_enviados += 1
+                    except: pass
+            resultado['formularios_pendientes'] = max(0, saturdays - count_enviados)
+        except Exception as e:
+            print(f"staff_resumen_mes formularios: {e}")
+
+        # 4. Balones perdidos (JSON en static/data/)
+        try:
+            balones_perdidos = 0
+            patron = os.path.join('static', 'data', f'balones_{equipo}_*.json')
+            for bpath in _glob.glob(patron):
+                try:
+                    with open(bpath, 'r', encoding='utf-8') as fp:
+                        bdata = _json.load(fp)
+                    for _k, vals in bdata.items():
+                        ini_list = vals.get('inicio', [])
+                        fin_list = vals.get('final', [])
+                        if not ini_list or not fin_list: continue
+                        ts = ini_list[-1].get('timestamp', '')
+                        try:
+                            ts_mes = ts.split('/')[1].zfill(2) if '/' in ts else ''
+                        except: ts_mes = ''
+                        if ts_mes != mes: continue
+                        try:
+                            q_ini = int(ini_list[-1].get('cantidad', 0))
+                            q_fin = int(fin_list[-1].get('cantidad', 0))
+                            if q_ini > q_fin:
+                                balones_perdidos += q_ini - q_fin
+                        except: pass
+                except: pass
+            resultado['balones_perdidos'] = balones_perdidos
+        except Exception as e:
+            print(f"staff_resumen_mes balones: {e}")
+
+        # 5. Faltas y suplencias del entrenador (ASISTENCIAS_STAFF)
+        if nombre:
+            try:
+                ws_staff_asis = sh.worksheet("ASISTENCIAS_STAFF")
+                all_sa = ws_staff_asis.get_all_values()
+                faltas = 0
+                suplencias = 0
+                for row in (all_sa[1:] if all_sa else []):
+                    if len(row) < 4: continue
+                    if row[1].strip().lower() != equipo.strip().lower(): continue
+                    if row[2].strip().lower() != nombre: continue
+                    partes_sa = row[0].strip().split('/')
+                    if len(partes_sa) < 2 or partes_sa[1].zfill(2) != mes: continue
+                    estado_sa = row[3].strip().upper()
+                    if estado_sa in ('FALTA', 'FALTA_SUPLIDA'):
+                        faltas += 1
+                    elif estado_sa == 'SUPLENCIA':
+                        suplencias += 1
+                resultado['faltas'] = faltas
+                resultado['suplencias'] = suplencias
+            except Exception as e:
+                print(f"staff_resumen_mes ASISTENCIAS_STAFF: {e}")
+
+        return jsonify(resultado)
+
+    except Exception as e:
+        print(f"Error staff_resumen_mes: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ─────────────────────────────────────────────
+#  MULTAS CONFIG
+# ─────────────────────────────────────────────
+_MULTAS_CONFIG_PATH = os.path.join('static', 'data', 'multas_config.json')
+_MULTAS_DEFAULT = {
+    "perdida_balon": 10,
+    "falta": 5,
+    "suplencia": 10,
+    "penalizacion_asistencias": 5,
+    "umbral_asistencias": 2,
+    "penalizacion_entrenamientos": 5,
+    "umbral_entrenamientos": 2,
+    "penalizacion_formularios": 2,
+    "umbral_formularios": 2,
+}
+
+@financiero_bp.route('/api/multas_config', methods=['GET', 'POST'])
+def api_multas_config():
+    import os, json as _json
+    if request.method == 'GET':
+        cfg = dict(_MULTAS_DEFAULT)
+        if os.path.exists(_MULTAS_CONFIG_PATH):
+            try:
+                with open(_MULTAS_CONFIG_PATH, 'r', encoding='utf-8') as f:
+                    cfg.update(_json.load(f))
+            except: pass
+        return jsonify(cfg)
+    data = request.get_json() or {}
+    os.makedirs(os.path.dirname(_MULTAS_CONFIG_PATH), exist_ok=True)
+    with open(_MULTAS_CONFIG_PATH, 'w', encoding='utf-8') as f:
+        import json as _json2; _json2.dump(data, f)
+    return jsonify({"status": "success"})
+
+
+# ─────────────────────────────────────────────
+#  ASISTENCIAS STAFF
+# ─────────────────────────────────────────────
+_ASIS_STAFF_HEADERS = ["FECHA", "EQUIPO", "NOMBRE", "ESTADO", "DETALLE"]
+
+def _get_asis_staff_sheet():
+    from app import client, NOMBRE_EXCEL
+    sh = client.open(NOMBRE_EXCEL)
+    try:
+        return sh.worksheet("ASISTENCIAS_STAFF")
+    except gspread.exceptions.WorksheetNotFound:
+        ws = sh.add_worksheet(title="ASISTENCIAS_STAFF", rows="2000", cols="6")
+        ws.append_row(_ASIS_STAFF_HEADERS)
+        return ws
+
+def _asis_staff_upsert(ws, all_v, fecha, equipo, nombre, estado, detalle):
+    for i, row in enumerate(all_v[1:], start=2):
+        if (len(row) > 2 and
+                row[0].strip() == fecha and
+                row[1].strip().lower() == equipo.lower() and
+                row[2].strip().lower() == nombre.lower()):
+            ws.update(f'A{i}', [[fecha, equipo, nombre, estado, detalle]])
+            return
+    ws.append_row([fecha, equipo, nombre, estado, detalle])
+
+@financiero_bp.route('/api/asistencias_staff', methods=['GET'])
+def api_asistencias_staff_get():
+    equipo = request.args.get('equipo', '').strip()
+    mes = request.args.get('mes', '').strip().zfill(2)
+    try:
+        ws = _get_asis_staff_sheet()
+        all_v = ws.get_all_values()
+        result = []
+        equipo_norm = equipo.lower()
+        for row in (all_v[1:] if all_v else []):
+            if not any(c.strip() for c in row): continue
+            if len(row) < 3: continue
+            if row[1].strip().lower() != equipo_norm: continue
+            partes = row[0].strip().split('/')
+            if len(partes) < 2 or partes[1].zfill(2) != mes: continue
+            result.append({
+                'FECHA': row[0].strip(),
+                'EQUIPO': row[1].strip() if len(row) > 1 else '',
+                'NOMBRE': row[2].strip() if len(row) > 2 else '',
+                'ESTADO': row[3].strip() if len(row) > 3 else '',
+                'DETALLE': row[4].strip() if len(row) > 4 else '',
+            })
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@financiero_bp.route('/api/asistencias_staff/guardar', methods=['POST'])
+def api_asistencias_staff_guardar():
+    data = request.get_json() or {}
+    fecha = data.get('fecha', '').strip()
+    equipo = data.get('equipo', '').strip()
+    nombre = data.get('nombre', '').strip()
+    estado = data.get('estado', 'SI').strip().upper()
+    detalle = data.get('detalle', '').strip()
+    try:
+        ws = _get_asis_staff_sheet()
+        all_v = ws.get_all_values()
+        _asis_staff_upsert(ws, all_v, fecha, equipo, nombre, estado, detalle)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@financiero_bp.route('/api/staff_lista', methods=['GET'])
+def api_staff_lista():
+    """Devuelve la lista de staff (nombre, equipo, cargo) para el modal de asistencias."""
+    from app import client, NOMBRE_EXCEL
+    try:
+        sh = client.open(NOMBRE_EXCEL)
+        ws = sh.worksheet("STAFF")
+        all_v = ws.get_all_values()
+        if not all_v or len(all_v) < 2:
+            return jsonify([])
+        headers = [h.strip().upper() for h in all_v[0]]
+        result = []
+        for row in all_v[1:]:
+            if not any(c.strip() for c in row): continue
+            obj = {}
+            for i, h in enumerate(headers):
+                obj[h] = row[i].strip() if i < len(row) else ''
+            result.append(obj)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@financiero_bp.route('/api/asistencias_staff/suplencia', methods=['POST'])
+def api_asistencias_staff_suplencia():
+    data = request.get_json() or {}
+    fecha = data.get('fecha', '').strip()
+    equipo = data.get('equipo', '').strip()
+    suplente = data.get('suplente', '').strip()   # quien hace la suplencia
+    suplido = data.get('suplido', '').strip()     # quien recibe (faltó)
+    try:
+        ws = _get_asis_staff_sheet()
+        all_v = ws.get_all_values()
+        _asis_staff_upsert(ws, all_v, fecha, equipo, suplente, 'SUPLENCIA', f'Suplencia a: {suplido}')
+        all_v2 = ws.get_all_values()
+        _asis_staff_upsert(ws, all_v2, fecha, equipo, suplido, 'FALTA_SUPLIDA', f'Suplencia de: {suplente}')
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ─────────────────────────────────────────────
+#  SUBVENCIONES
+# ─────────────────────────────────────────────
+SUBVENCIONES_HEADERS = ["ID", "NOMBRE", "DESCRIPCION", "FECHA_APERTURA", "PLAZO_MAXIMO", "FECHA_PRESENTADA", "IMPORTE", "COBRADO", "FECHA_COBRO", "ADJUNTOS"]
+
+def _get_subvenciones_sheet():
+    from app import client, NOMBRE_EXCEL
+    try:
+        sh = client.open(NOMBRE_EXCEL).worksheet("SUBVENCIONES")
+    except gspread.exceptions.WorksheetNotFound:
+        sh = client.open(NOMBRE_EXCEL).add_worksheet(title="SUBVENCIONES", rows="200", cols="12")
+        sh.append_row(SUBVENCIONES_HEADERS)
+        return sh
+    # Migración: añadir columna FECHA_APERTURA si no existe
+    try:
+        all_v = sh.get_all_values()
+        if all_v:
+            headers_actual = [h.strip().upper() for h in all_v[0]]
+            if 'FECHA_APERTURA' not in headers_actual:
+                sh.update_cell(1, len(headers_actual) + 1, 'FECHA_APERTURA')
+    except Exception:
+        pass
+    return sh
+
+def _subvenciones_dir():
+    base = os.path.join(os.path.dirname(__file__), 'static', 'data', 'subvenciones')
+    os.makedirs(base, exist_ok=True)
+    return base
+
+@financiero_bp.route('/api/subvenciones', methods=['GET'])
+def api_subvenciones_get():
+    try:
+        sh = _get_subvenciones_sheet()
+        rows = sh.get_all_values()
+        if not rows or len(rows) < 2:
+            return jsonify([])
+        headers = [h.strip().upper() for h in rows[0]]
+        result = []
+        for row in rows[1:]:
+            if not any(str(c).strip() for c in row):
+                continue
+            obj = {}
+            for i, h in enumerate(headers):
+                obj[h] = row[i] if i < len(row) else ""
+            result.append(obj)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@financiero_bp.route('/api/subvenciones/guardar', methods=['POST'])
+def api_subvenciones_guardar():
+    try:
+        data = request.get_json()
+        sh = _get_subvenciones_sheet()
+        all_v = sh.get_all_values()
+        headers = [h.strip().upper() for h in all_v[0]] if all_v else SUBVENCIONES_HEADERS
+
+        sid = str(data.get('ID', '')).strip()
+
+        # Buscar fila existente
+        idx_existente = -1
+        if sid:
+            for i, row in enumerate(all_v[1:], start=2):
+                if row and str(row[0]).strip() == sid:
+                    idx_existente = i
+                    break
+
+        # Si es nuevo, generar ID
+        if not sid or idx_existente == -1:
+            max_id = 0
+            for row in all_v[1:]:
+                try:
+                    val = int(str(row[0]).strip())
+                    max_id = max(max_id, val)
+                except: pass
+            sid = str(max_id + 1)
+            data['ID'] = sid
+
+        nueva_fila = [data.get(h, '') for h in headers]
+
+        if idx_existente != -1:
+            sh.update(f'A{idx_existente}', [nueva_fila])
+        else:
+            sh.append_row(nueva_fila)
+
+        return jsonify({"status": "success", "ID": sid})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@financiero_bp.route('/api/subvenciones/eliminar', methods=['POST'])
+def api_subvenciones_eliminar():
+    try:
+        data = request.get_json()
+        sid = str(data.get('ID', '')).strip()
+        sh = _get_subvenciones_sheet()
+        all_v = sh.get_all_values()
+        for i, row in enumerate(all_v[1:], start=2):
+            if row and str(row[0]).strip() == sid:
+                sh.delete_rows(i)
+                return jsonify({"status": "success"})
+        return jsonify({"status": "not_found"}), 404
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@financiero_bp.route('/api/subvenciones/adjunto', methods=['POST'])
+def api_subvenciones_adjunto():
+    try:
+        import base64, mimetypes
+        data = request.get_json()
+        sid = str(data.get('ID', '')).strip()
+        nombre_archivo = data.get('nombre', 'adjunto')
+        contenido_b64 = data.get('contenido', '')
+
+        safe_name = re.sub(r'[^a-zA-Z0-9._\-]', '_', nombre_archivo)
+        fname = f"{sid}_{safe_name}"
+        fpath = os.path.join(_subvenciones_dir(), fname)
+
+        with open(fpath, 'wb') as f:
+            f.write(base64.b64decode(contenido_b64))
+
+        # Actualizar columna ADJUNTOS en la hoja
+        sh = _get_subvenciones_sheet()
+        all_v = sh.get_all_values()
+        headers = [h.strip().upper() for h in all_v[0]] if all_v else SUBVENCIONES_HEADERS
+        idx_adj = headers.index('ADJUNTOS') if 'ADJUNTOS' in headers else -1
+
+        for i, row in enumerate(all_v[1:], start=2):
+            if row and str(row[0]).strip() == sid:
+                existing = row[idx_adj] if idx_adj != -1 and idx_adj < len(row) else ''
+                adjuntos_list = [a for a in existing.split(',') if a.strip()]
+                if fname not in adjuntos_list:
+                    adjuntos_list.append(fname)
+                sh.update_cell(i, idx_adj + 1, ','.join(adjuntos_list))
+                break
+
+        return jsonify({"status": "success", "archivo": fname})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@financiero_bp.route('/api/subvenciones/adjunto/<path:fname>', methods=['DELETE'])
+def api_subvenciones_adjunto_delete(fname):
+    try:
+        data = request.get_json() or {}
+        sid = str(data.get('ID', '')).strip()
+        fpath = os.path.join(_subvenciones_dir(), fname)
+        if os.path.exists(fpath):
+            os.remove(fpath)
+        if sid:
+            sh = _get_subvenciones_sheet()
+            all_v = sh.get_all_values()
+            headers = [h.strip().upper() for h in all_v[0]] if all_v else SUBVENCIONES_HEADERS
+            idx_adj = headers.index('ADJUNTOS') if 'ADJUNTOS' in headers else -1
+            for i, row in enumerate(all_v[1:], start=2):
+                if row and str(row[0]).strip() == sid:
+                    existing = row[idx_adj] if idx_adj != -1 and idx_adj < len(row) else ''
+                    adjuntos_list = [a for a in existing.split(',') if a.strip() and a != fname]
+                    sh.update_cell(i, idx_adj + 1, ','.join(adjuntos_list))
+                    break
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@financiero_bp.route('/static/data/subvenciones/<path:fname>', methods=['GET'])
+def api_subvenciones_archivo(fname):
+    from flask import send_from_directory
+    return send_from_directory(_subvenciones_dir(), fname)

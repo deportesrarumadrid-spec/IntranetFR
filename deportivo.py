@@ -303,7 +303,7 @@ def deportivo():
                            semanas=semanas,
                            archivos_subidos=len(archivos_reales),
                            fotos_subidas=fotos_subidas,
-                           dias_transcurridos=hoy.day if es_mes_actual else (30 if (anio < hoy.year or (anio == hoy.year and mes < hoy.month)) else 0),
+                           dias_transcurridos=hoy.day if es_mes_actual else (32 if (anio < hoy.year or (anio == hoy.year and mes < hoy.month)) else 0),
                            equipos=equipos,
                            equipo_defecto=equipo_activo,
                            jugadores_equipo=jugadores_equipo,

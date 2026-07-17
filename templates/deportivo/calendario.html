@@ -86,33 +86,100 @@
         .btn-foto.has-file { background: var(--green); }
 
         /* Visor de Foto a Pantalla Completa Moderno */
-        #viewPhotoModal .modal-content { 
-            width: 98vw !important; height: 95vh !important; max-width: none !important; 
-            position: relative; padding: 0; background: #000;
-            display: flex; align-items: center; justify-content: center;
+        #viewPhotoModal .modal-content {
+            width: auto !important; max-width: 98vw !important; height: 95vh !important;
+            position: relative; padding: 0; background: transparent;
+            display: flex !important; flex-direction: row !important; align-items: stretch !important;
             border-radius: 20px; overflow: hidden;
         }
-        #viewPhotoModal img { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: contain; 
+        #viewPhotoModal img {
+            flex: none !important;
+            width: auto !important;
+            height: 100% !important;
+            max-width: calc(98vw - 230px) !important;
+            display: block;
             box-shadow: 0 0 50px rgba(0,0,0,0.5);
         }
-        
-        /* Ocultar elementos heredados que no queremos en el visor gigante */
-        #viewPhotoModal .modal-btn, 
-        #viewPhotoModal h3, 
-        #viewPhotoModal div[style*="display: flex"]:not(.close-view) { display: none !important; }
-
-        .close-view { 
-            position: absolute; top: 20px; right: 20px; 
-            cursor: pointer; font-size: 30px; font-weight: 900; 
-            color: white; background: rgba(255,255,255,0.2);
-            width: 50px; height: 50px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            z-index: 1000; transition: 0.3s;
+        #visorObjPanel {
+            flex: 0 0 230px;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            overflow-y: auto;
+            border-left: 3px solid #2eb85c;
+            scrollbar-width: thin;
+            scrollbar-color: #2eb85c #e2e8f0;
         }
-        .close-view:hover { background: var(--red); transform: rotate(90deg); }
+        #visorObjPanel .vop-header {
+            padding: 20px 14px 12px;
+            background: linear-gradient(135deg, #1a3a1a 0%, #2e5c2e 100%);
+            border-bottom: 2px solid #2eb85c;
+            flex-shrink: 0;
+        }
+        #visorObjPanel .vop-titulo {
+            font-size: 9px; font-weight: 900; color: #2eb85c;
+            letter-spacing: 4px; text-transform: uppercase; margin-bottom: 3px;
+        }
+        #visorObjPanel .vop-sub {
+            font-size: 10px; color: rgba(255,255,255,0.6); font-weight: 600;
+        }
+        #visorObjPanel .vop-body { padding: 10px 10px 20px; flex: 1; }
+        #visorObjPanel .vop-cat {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 8px; font-weight: 900; color: #94a3b8;
+            text-transform: uppercase; letter-spacing: 2px;
+            margin: 12px 0 6px; padding-bottom: 5px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        #visorObjPanel .vop-cat-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+        #visorObjPanel .vop-btn {
+            width: 100%; text-align: left;
+            padding: 8px 10px; margin-bottom: 4px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px; cursor: pointer;
+            color: #475569; font-size: 10px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            transition: all 0.15s ease;
+            display: flex; align-items: center; gap: 8px;
+            font-family: 'Montserrat', sans-serif;
+        }
+        #visorObjPanel .vop-btn:hover {
+            background: #f0fdf4;
+            border-color: #86efac;
+            color: #166534;
+        }
+        #visorObjPanel .vop-btn.vop-active {
+            background: #f0fdf4;
+            border-color: #2eb85c;
+            color: #166534;
+            font-weight: 900;
+        }
+        #visorObjPanel .vop-count {
+            margin-left: auto; font-size: 10px; font-weight: 900;
+            color: #166534; background: #dcfce7;
+            padding: 2px 7px; border-radius: 8px; flex-shrink: 0;
+            cursor: pointer; border: 1px solid #86efac;
+            transition: all 0.15s;
+        }
+        #visorObjPanel .vop-count:hover { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
+
+        /* Ocultar elementos heredados que no queremos en el visor gigante */
+        #viewPhotoModal .modal-btn,
+        #viewPhotoModal h3,
+        #viewPhotoModal div[style*="display: flex"]:not(.close-view):not(#visorObjPanel) { display: none !important; }
+
+        .close-view {
+            position: absolute; top: 10px; right: 10px;
+            cursor: pointer; font-size: 18px; font-weight: 900;
+            color: white; background: #E31E24;
+            width: 34px; height: 34px; border-radius: 50%; border: none;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1001; transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(227,30,36,0.3); line-height: 1;
+        }
+        .close-view:hover { transform: scale(1.1); box-shadow: 0 6px 16px rgba(227,30,36,0.5); }
     
         /* Estilo Pizarra Táctica */
         .canvas-container { position: relative; background: #2e7d32; border: 2px solid white; border-radius: 4px; cursor: crosshair; overflow: hidden; }
@@ -706,14 +773,14 @@
         .player-wrapper { position: absolute; z-index: 100; display: flex; align-items: center; justify-content: center; cursor: move; padding: 4px; border-radius: 6px; touch-action: none; }
         .player-wrapper:hover { background: rgba(255,255,255,0.1); }
         .input-alineacion {
-            width: 120px; height: 28px; padding: 0; font-size: 13px; font-weight: 900; text-align: center;
-            border: 1px solid transparent; background: rgba(255,255,255,0.1); color: #fff !important; outline: none;
-            text-transform: uppercase; border-radius: 4px; text-shadow: 1px 1px 3px #000; cursor: move;
+            width: 120px; height: 44px; padding: 0; font-size: 22px; font-weight: 900; text-align: center;
+            border: 1px solid transparent; background: transparent; color: #fff !important; outline: none;
+            text-transform: uppercase; border-radius: 4px; text-shadow: 1px 1px 4px rgba(0,0,0,0.9); cursor: move;
             display: flex; align-items: center; justify-content: center; user-select: none;
         }
         input.input-alineacion { cursor: text; }
         .input-alineacion::placeholder { color: #fff; opacity: 1; }
-        .player-wrapper:hover .input-alineacion { background: rgba(255, 255, 255, 0.3); border-color: rgba(255,255,255,0.5); }
+        .player-wrapper:hover .input-alineacion { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.3); }
         .resize-handle-corner { position: absolute; bottom: 2px; right: 2px; width: 10px; height: 10px; cursor: nwse-resize; opacity: 0; transition: 0.2s; z-index: 110; background: linear-gradient(135deg, transparent 50%, #cbd5e1 50%); border-radius: 0 0 2px 0; }
         .player-wrapper:hover .resize-handle-corner { opacity: 1; }
         /* Modal posición */
@@ -810,6 +877,8 @@
                     const isNowSidebar = parseFloat(wrapper.style.left) < 0;
                     if (wasSidebar && !isNowSidebar) {
                         await pedirPosicionSiNecesario(wrapper);
+                        wrapper.dataset.scale = '2.5';
+                        wrapper.style.transform = 'scale(2.5)';
                     } else if (!wasSidebar && isNowSidebar) {
                         resetarJugadorASidebar(wrapper);
                     }
@@ -862,7 +931,7 @@
             const container = document.getElementById('inputsOverlay');
             const idx = container.querySelectorAll('.player-wrapper').length;
             const x = "-150px";
-            const y = (5 + (idx * 3.8)) + "%";
+            const y = (1 + (idx * 10)) + "%";
             container.appendChild(createPlayerWrapper(idx, x, y, 1, "", false, true));
         }
 
@@ -927,11 +996,15 @@
                     }
 
                     if (coords && coords[i]) {
-                        x = coords[i].x; y = coords[i].y; scale = coords[i].scale || 1;
+                        x = coords[i].x; y = coords[i].y;
+                        const _s = parseFloat(coords[i].scale);
+                        const isSavedSidebar = parseFloat(x) < 0;
+                        scale = isSavedSidebar ? 1 : ((_s && _s > 1) ? _s : 2.5);
                         name = (coords[i].name && coords[i].name.trim() !== "") ? coords[i].name : defaultName;
                     } else {
-                        x = "-150px"; y = (5 + (i * 3.8)) + '%';
+                        x = "-150px"; y = (1 + (i * 10)) + '%';
                         name = defaultName;
+                        scale = 1;
                     }
 
                     // Saltar slots vacíos sin nombre real
@@ -1985,6 +2058,11 @@
                 return;
             }
 
+            const header = document.createElement('div');
+            header.style = 'width:100%; grid-column:1/-1; font-size:11px; font-weight:900; color:#64748b; text-transform:uppercase; letter-spacing:2px; padding:4px 2px 8px; border-bottom:2px solid #f1f5f9; margin-bottom:4px;';
+            header.textContent = `Todas las sesiones: ${filtradas.length}`;
+            container.appendChild(header);
+
             filtradas.forEach(s => {
                 const div = document.createElement('div');
                 div.style = `
@@ -2187,6 +2265,74 @@ window.addEventListener('load', function() {
             disableMobile: true,
         });
     }
+
+    // Panel de objetivos del mes en el visor de foto
+    const _tactico = ({{ objetivos.tactico | tojson }} || "").split(',').map(s => s.trim()).filter(Boolean);
+    const _tecnico = ({{ objetivos.tecnico | tojson }} || "").split(',').map(s => s.trim()).filter(Boolean);
+    const _modalContent = document.querySelector('#viewPhotoModal .modal-content');
+    if (_modalContent && (_tactico.length || _tecnico.length)) {
+        const panel = document.createElement('div');
+        panel.id = 'visorObjPanel';
+        _modalContent.appendChild(panel);
+    }
+
+    function _renderVisorObj() {
+        const panel = document.getElementById('visorObjPanel');
+        if (!panel) return;
+        const dia = currentDay;
+        const getCount = (o) => itemsCompletados.filter(it => it.split('-').slice(1).join('-') === o).length;
+        let html = `<div class="vop-header">
+            <div class="vop-titulo">OBJ DEL MES</div>
+            <div class="vop-sub">Día ${dia} · toca para marcar</div>
+        </div><div class="vop-body">`;
+        if (_tactico.length) {
+            html += `<div class="vop-cat"><div class="vop-cat-dot" style="background:#2eb85c"></div>TÁCTICO</div>`;
+            _tactico.forEach(o => {
+                const cnt = getCount(o);
+                html += `<button class="vop-btn${cnt>0?' vop-active':''}" data-obj="${o}" data-tipo="tac">
+                    <span>${o}</span>
+                    ${cnt>0?`<span class="vop-count" data-remove="1">${cnt}×</span>`:''}
+                </button>`;
+            });
+        }
+        if (_tecnico.length) {
+            html += `<div class="vop-cat"><div class="vop-cat-dot" style="background:#2eb85c"></div>TÉCNICO</div>`;
+            _tecnico.forEach(o => {
+                const cnt = getCount(o);
+                html += `<button class="vop-btn${cnt>0?' vop-active':''}" data-obj="${o}" data-tipo="tec">
+                    <span>${o}</span>
+                    ${cnt>0?`<span class="vop-count" data-remove="1">${cnt}×</span>`:''}
+                </button>`;
+            });
+        }
+        html += '</div>';
+        panel.innerHTML = html;
+        panel.querySelectorAll('.vop-btn').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const o = btn.dataset.obj;
+                const id = currentDay + '-' + o;
+                if (e.target.dataset && e.target.dataset.remove === '1') {
+                    // Clic en el contador: quitar uno
+                    const idx = itemsCompletados.lastIndexOf(id);
+                    if (idx > -1) itemsCompletados.splice(idx, 1);
+                } else {
+                    // Clic en el botón: sumar uno
+                    itemsCompletados.push(id);
+                }
+                updateStats();
+                saveAll();
+                _renderVisorObj();
+            });
+        });
+    }
+
+    // Sobrescribir viewPhoto para actualizar panel
+    const _origVP = window.viewPhoto;
+    window.viewPhoto = function(dia) {
+        _origVP(dia);
+        setTimeout(_renderVisorObj, 50);
+    };
 });
 
 function marcarColumnaSi(colIndex) {

@@ -65,10 +65,12 @@
     }
     #selectEquipoFin:hover { border-color: #cbd5e1; background-color: #f8fafc; }
 
-    /* Loader Escudo Girando */
-    #loaderGlobal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); backdrop-filter: blur(4px); z-index: 9999; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 15px; }
-    .escudo-girando { width: 80px; height: 80px; animation: spin-escudo 2s linear infinite; }
-    @keyframes spin-escudo { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    /* Loader Escudo */
+    #loaderGlobal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.88); backdrop-filter: blur(4px); z-index: 9999; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 15px; }
+    #loaderGlobal .loader-wrap { position: relative; display: flex; align-items: center; justify-content: center; width: 130px; height: 130px; }
+    #loaderGlobal .loader-ring { position: absolute; top: 0; left: 0; width: 130px; height: 130px; border: 4px solid rgba(227,30,36,0.12); border-top: 4px solid #E31E24; border-radius: 50%; animation: spin-ring 1s linear infinite; }
+    @keyframes spin-ring { to { transform: rotate(360deg); } }
+    .escudo-girando { width: 80px; height: auto; }
 
     /* Estados Ropa */
     .ropa-estado-pedida { background-color: #0d6efd !important; color: white !important; }
@@ -232,10 +234,11 @@
 
 <div style="padding: 10px;">
     <div class="tabs-container">
-        <div class="tab-item active" data-tab="tab-presupuesto" onclick="switchTab(event, 'tab-presupuesto')">PRESUPUESTOS</div>
+        <div class="tab-item active" data-tab="tab-presupuesto" onclick="switchTab(event, 'tab-presupuesto')">CONTABILIDAD</div>
         <div class="tab-item" data-tab="tab-jugadores" onclick="switchTab(event, 'tab-jugadores')">PAGO JUGADORES</div>
         <div class="tab-item" data-tab="tab-staff" onclick="switchTab(event, 'tab-staff')">PAGO STAFF</div>
         <div class="tab-item" data-tab="tab-datos-jugadores" onclick="switchTab(event, 'tab-datos-jugadores')">DATOS JUGADORES</div>
+        <div class="tab-item" data-tab="tab-subvenciones" onclick="switchTab(event, 'tab-subvenciones')">SUBVENCIONES</div>
     </div>
 
     <!-- SECCIÓN: PRESUPUESTO -->
@@ -269,13 +272,19 @@
             <h3><i class="fas fa-plus-circle" style="color: #E31E24;"></i> Registrar Nuevo Asiento Manual</h3>
             <div class="form-asiento">
                 <input type="date" id="asientoFecha">
-                <select id="asientoDepto">
-                    <option value="">Departamento...</option>
-                    <option value="Deportivo">Deportivo</option>
-                    <option value="Administración">Administración</option>
-                    <option value="Eventos">Eventos</option>
+                <select id="asientoDepto" onchange="actualizarPilares('asientoDepto','asientoPilar')">
+                    <option value="" disabled selected hidden>Departamento...</option>
+                    <option value="BANCO">BANCO</option>
+                    <option value="COLEGIO">COLEGIO</option>
+                    <option value="COMPETICIONES">COMPETICIONES</option>
+                    <option value="OTROS">OTROS</option>
+                    <option value="GESTORIA">GESTORIA</option>
+                    <option value="HACIENDA">HACIENDA</option>
+                    <option value="ROPA">ROPA</option>
+                    <option value="SUELDOS">SUELDOS</option>
+                    <option value="INGRESOS">INGRESOS</option>
                 </select>
-                <input type="text" id="asientoPilar" placeholder="Pilar">
+                <select id="asientoPilar"></select>
                 <input type="text" id="asientoDesc" placeholder="Descripción">
                 <input type="number" id="asientoImporte" placeholder="Importe €" oninput="onCambioImporteAsiento()">
                 <button class="btn-fin" style="background: #E31E24; color: white;" onclick="guardarAsientoManual(this)">Guardar asiento</button>
@@ -338,9 +347,15 @@
             <input type="text" id="filtroDesc" placeholder="Buscar descripción..." oninput="aplicarFiltros()" style="flex: 1;">
             <select id="filtroDepto" onchange="aplicarFiltros()">
                 <option value="">Todos los Deptos...</option>
-                <option value="Deportivo">Deportivo</option>
-                <option value="Administración">Administración</option>
-                <option value="Eventos">Eventos</option>
+                <option value="BANCO">BANCO</option>
+                <option value="COLEGIO">COLEGIO</option>
+                <option value="COMPETICIONES">COMPETICIONES</option>
+                <option value="OTROS">OTROS</option>
+                <option value="GESTORIA">GESTORIA</option>
+                <option value="HACIENDA">HACIENDA</option>
+                <option value="ROPA">ROPA</option>
+                <option value="SUELDOS">SUELDOS</option>
+                <option value="INGRESOS">INGRESOS</option>
             </select>
             <input type="text" id="filtroPilar" placeholder="Pilar..." oninput="aplicarFiltros()">
         </div>
@@ -641,9 +656,14 @@
         <div class="fin-card">
             <div class="fin-header">
                 <h2><i class="fas fa-user-tie" style="color: #E31E24; margin-right: 10px;"></i> Pagos Staff</h2>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <button class="btn-fin" style="background:#1e293b; color:white; border-radius:10px;" onclick="abrirConfigMultas()">
+                        <i class="fas fa-gavel"></i> MULTAS
+                    </button>
                     <button class="btn-fin" style="background: #E31E24; color: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(227,30,36,0.2);" onclick="abrirModalAnadirStaff()">
                         <i class="fas fa-user-plus"></i> AÑADIR STAFF
                     </button>
+                </div>
             </div>
             <div style="overflow-x: auto;">
                 <table class="fin-table">
@@ -652,13 +672,14 @@
                             <th class="col-financiera">CARGO</th>
                             <th>EQUIPO</th>
                             <th>NOMBRE</th>
+                            <th class="col-financiera" style="min-width:50px; text-align:center; font-size:9px; color:#16a34a; font-weight:800; padding:10px 5px;" title="Sueldo mensual esperado">€/MES</th>
                                 {% for mes, label in [('01','ENE'),('02','FEB'),('03','MAR'),('04','ABR'),('05','MAY'),('06','JUN'),('07','JUL'),('08','AGO'),('09','SEP'),('10','OCT'),('11','NOV'),('12','DIC')] %}
                                 <th class="col-financiera">{{ label }}</th>
                                 {% endfor %}
-                                <th class="col-financiera" style="min-width: 60px; padding: 10px 5px; background: #eceef2; border-bottom: 2px solid #dee2e6;">
-                                    <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                                <th class="col-financiera" style="min-width: 60px; padding: 10px 5px; background: #eceef2; border-bottom: 2px solid #dee2e6; cursor:pointer;" onclick="abrirCtxMenuOtros(event,'STAFF_OTROS',null)">
+                                    <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events:none;">
                                         <span id="labelStaffOtros" style="font-size: 9px; color: #475569; font-weight: 800;">OTROS</span>
-                                        <i class="fas fa-pencil-alt" style="cursor: pointer; color: #E31E24; font-size: 11px;" onclick="renombrarExtra('STAFF_OTROS')"></i>
+                                        <i class="fas fa-ellipsis-h" style="color:#94a3b8; font-size:10px;"></i>
                                     </div>
                                 </th>
                         <!-- ANCLAJE CABECERAS ROPA STAFF -->
@@ -677,6 +698,9 @@
                             <td class="col-financiera" style="font-weight: 800;">{{ s.CARGO }}</td>
                             <td>{{ s.EQUIPO }}</td>
                             <td>{{ s.NOMBRE }} <i class="fas fa-pencil-alt" style="cursor:pointer; color:#ccc; font-size: 10px; margin-left: 5px;" onclick="abrirModalEditarStaff(event, this)"></i></td>
+                            <td class="col-financiera" style="text-align:center; cursor:pointer; padding:8px 4px;" onclick="editarSueldoStaff(this)" title="Editar sueldo mensual">
+                                <span class="staff-sueldo-badge" style="font-size:10px; font-weight:800; color:#16a34a;">—</span>
+                            </td>
                             {% for mes in ['01','02','03','04','05','06','07','08','09','10','11','12'] %}
                                 <td class="pago-cell col-financiera" onclick="seleccionarPagoStaff(event, this, 'Staff-{{ mes }}')">-</td>
                             {% endfor %}
@@ -690,6 +714,120 @@
             </div>
         </div>
     </div>
+
+<!-- ═══════════ PESTAÑA SUBVENCIONES ═══════════ -->
+<div id="tab-subvenciones" class="tab-content">
+    <div class="fin-card">
+        <div class="fin-header">
+            <h2><i class="fas fa-hand-holding-usd" style="color:#E31E24; margin-right:10px;"></i> Subvenciones</h2>
+            <button class="btn-fin" style="background:#E31E24; color:white; border-radius:10px;" onclick="abrirModalSubvencion(null)">
+                <i class="fas fa-plus"></i> AÑADIR SUBVENCIÓN
+            </button>
+        </div>
+        <div id="bannerSubvenciones" style="display:none; margin-top:10px;"></div>
+        <div style="overflow-x:auto; margin-top:10px;">
+            <table class="fin-table" id="tablaSubvenciones">
+                <thead>
+                    <tr>
+                        <th style="min-width:160px;">NOMBRE</th>
+                        <th style="min-width:200px;">DESCRIPCIÓN</th>
+                        <th style="min-width:110px;">FECHA APERTURA</th>
+                        <th style="min-width:110px;">PLAZO MÁX.</th>
+                        <th style="min-width:110px;">PRESENTADA</th>
+                        <th style="min-width:90px; text-align:right;">IMPORTE</th>
+                        <th style="min-width:80px; text-align:center;">COBRADO</th>
+                        <th style="min-width:110px;">FECHA COBRO</th>
+                        <th style="min-width:120px;">ADJUNTOS</th>
+                        <th style="min-width:80px; text-align:center;">ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody id="bodySubvenciones">
+                    <tr><td colspan="10" style="text-align:center; color:#aaa; padding:30px; font-size:12px;">Cargando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL SUBVENCIÓN -->
+<div id="modalSubvencion" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.45); z-index:40000; overflow-y:auto;">
+    <div style="background:#fff; border-radius:16px; padding:28px; width:540px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.25); position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 id="tituloModalSubv" style="font-size:14px; font-weight:900; color:#1e293b; margin:0;">NUEVA SUBVENCIÓN</h3>
+            <span onclick="cerrarModalSubvencion()" style="cursor:pointer; font-size:20px; color:#999; line-height:1; flex-shrink:0;">&times;</span>
+        </div>
+        <input type="hidden" id="subvId">
+        <input type="hidden" id="subvOldNombre">
+        <input type="hidden" id="subvOldApertura">
+        <div style="display:grid; gap:14px;">
+            <div>
+                <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:4px;">Nombre de la subvención *</label>
+                <input id="subvNombre" type="text" style="width:100%; padding:10px 12px; border-radius:8px; border:1.5px solid #e2e8f0; font-size:13px; font-weight:700; box-sizing:border-box;" placeholder="Nombre de la subvención">
+            </div>
+            <div>
+                <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:4px;">Descripción</label>
+                <textarea id="subvDescripcion" rows="3" style="width:100%; padding:10px 12px; border-radius:8px; border:1.5px solid #e2e8f0; font-size:13px; font-family:inherit; resize:vertical; box-sizing:border-box;" placeholder="Descripción, organismo convocante, bases..."></textarea>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div>
+                    <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:4px;">Fecha apertura</label>
+                    <input id="subvApertura" type="date" style="width:100%; padding:10px 12px; border-radius:8px; border:1.5px solid #e2e8f0; font-size:13px; box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:4px;">Plazo máximo</label>
+                    <input id="subvPlazo" type="date" style="width:100%; padding:10px 12px; border-radius:8px; border:1.5px solid #e2e8f0; font-size:13px; box-sizing:border-box;">
+                </div>
+            </div>
+            <div>
+                <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:4px;">Fecha presentada</label>
+                <input id="subvPresentada" type="date" style="width:100%; padding:10px 12px; border-radius:8px; border:1.5px solid #e2e8f0; font-size:13px; box-sizing:border-box;">
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div>
+                    <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:4px;">Importe (€)</label>
+                    <input id="subvImporte" type="number" step="0.01" style="width:100%; padding:10px 12px; border-radius:8px; border:1.5px solid #e2e8f0; font-size:13px; font-weight:700; box-sizing:border-box;" placeholder="0.00">
+                </div>
+                <div>
+                    <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:4px;">¿Cobrado?</label>
+                    <select id="subvCobrado" onchange="toggleFechaCobro()" style="width:100%; padding:10px 12px; border-radius:8px; border:1.5px solid #e2e8f0; font-size:13px; font-weight:700; background:#fff; box-sizing:border-box;">
+                        <option value="No">No</option>
+                        <option value="Si">Sí</option>
+                    </select>
+                </div>
+            </div>
+            <div id="filaFechaCobro" style="display:none;">
+                <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:4px;">Fecha de cobro</label>
+                <input id="subvFechaCobro" type="date" style="width:100%; padding:10px 12px; border-radius:8px; border:1.5px solid #e2e8f0; font-size:13px; box-sizing:border-box;">
+            </div>
+            <!-- Adjuntos -->
+            <div>
+                <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:6px;">Adjuntos</label>
+                <div id="listaAdjuntosModal" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
+                <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:8px; padding:10px 14px; font-size:12px; font-weight:700; color:#64748b; width:100%; box-sizing:border-box;">
+                    <i class="fas fa-paperclip" style="color:#E31E24;"></i> Adjuntar archivo
+                    <input type="file" id="subvAdjuntoInput" multiple style="display:none;" onchange="subirAdjuntosSubvencion(this)">
+                </label>
+            </div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:22px;">
+            <button class="btn-fin" style="flex:1; background:#f1f5f9; color:#475569;" onclick="cerrarModalSubvencion()">CANCELAR</button>
+            <button class="btn-fin" style="flex:2; background:#E31E24; color:white;" onclick="guardarSubvencion()">GUARDAR</button>
+        </div>
+    </div>
+</div>
+
+<!-- MENÚ CONTEXTUAL COLUMNAS OTROS -->
+<div id="ctxMenuOtros" style="display:none; position:fixed; background:white; border:1px solid #e2e8f0; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.15); z-index:50000; min-width:180px; padding:6px 0; font-family:inherit;">
+    <div onclick="ctxOtrosAnadir()" style="padding:10px 16px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:10px; color:#16a34a;" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background=''">
+        <i class="fas fa-plus-circle"></i> Añadir nueva columna
+    </div>
+    <div onclick="ctxOtrosRenombrar()" style="padding:10px 16px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:10px; color:#1e293b;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+        <i class="fas fa-pencil-alt" style="color:#E31E24;"></i> Cambiar nombre
+    </div>
+    <div id="ctxMenuOtrosEliminar" onclick="ctxOtrosEliminar()" style="padding:10px 16px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:10px; color:#dc2626;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background=''">
+        <i class="fas fa-trash-alt"></i> Eliminar columna
+    </div>
+</div>
 
 <!-- BOCADILLO (POPOVER) ADJUNTAR FACTURA / SIN FACTURA -->
 <div id="popoverFactura" style="display:none; position:fixed; background:white; border:1px solid #cbd5e1; border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,0.2); z-index:30000; width:260px; padding:16px;">
@@ -998,15 +1136,22 @@
             <div id="groupDeptoPilar">
                 <div style="margin-bottom: 15px;">
                     <label style="font-size: 9px; font-weight: 800; color: #999; display: block; margin-bottom: 4px;">DEPARTAMENTO</label>
-                    <select id="editAsiDepto" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;">
-                        <option value="Deportivo">Deportivo</option>
-                        <option value="Administración">Administración</option>
-                        <option value="Eventos">Eventos</option>
+                    <select id="editAsiDepto" onchange="actualizarPilares('editAsiDepto','editAsiPilar')" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;">
+                        <option value="" disabled selected hidden>Departamento...</option>
+                        <option value="BANCO">BANCO</option>
+                        <option value="COLEGIO">COLEGIO</option>
+                        <option value="COMPETICIONES">COMPETICIONES</option>
+                        <option value="OTROS">OTROS</option>
+                        <option value="GESTORIA">GESTORIA</option>
+                        <option value="HACIENDA">HACIENDA</option>
+                        <option value="ROPA">ROPA</option>
+                        <option value="SUELDOS">SUELDOS</option>
+                        <option value="INGRESOS">INGRESOS</option>
                     </select>
                 </div>
                 <div>
                     <label style="font-size: 9px; font-weight: 800; color: #999; display: block; margin-bottom: 4px;">PILAR</label>
-                    <input type="text" id="editAsiPilar" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;">
+                    <select id="editAsiPilar" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;"></select>
                 </div>
             </div>
             <div>
@@ -1062,7 +1207,10 @@
 
 <!-- LOADER GLOBAL ESCUDO -->
 <div id="loaderGlobal">
-    <img src="/static/escudo.png" class="escudo-girando" alt="Club Escudo">
+    <div class="loader-wrap">
+        <div class="loader-ring"></div>
+        <img src="/static/ESCUDO%20SIN%20FONDO.png" class="escudo-girando" alt="Club Escudo">
+    </div>
     <div style="font-weight: 900; color: #333; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Sincronizando datos...</div>
 </div>
 
@@ -1072,6 +1220,28 @@ function hideLoader() { document.getElementById('loaderGlobal').style.display = 
 
 let celdasSeleccionadas = [];
 let celdaActiva = null;
+let _ajusteAplicado = false;
+let _esperadoOriginalBar = 0;
+let _staffAjusteSugerido = 0;
+
+function toggleAjuste() {
+    const btn = document.getElementById('btnAjuste');
+    const espInput = document.getElementById('pagoEsperadoBar');
+    _ajusteAplicado = !_ajusteAplicado;
+    if (_ajusteAplicado) {
+        _esperadoOriginalBar = parseFloat(espInput.value) || 0;
+        const nuevo = Math.round((_esperadoOriginalBar + _staffAjusteSugerido) * 100) / 100;
+        espInput.value = nuevo;
+        btn.style.background = '#22c55e';
+        btn.style.borderColor = '#22c55e';
+        btn.style.color = 'white';
+    } else {
+        espInput.value = _esperadoOriginalBar;
+        btn.style.background = 'transparent';
+        btn.style.borderColor = '#94a3b8';
+        btn.style.color = '#94a3b8';
+    }
+}
 let celdasRopaSeleccionadas = [];
 const jugadoresRaw = {{ jugadores | tojson }};
 const staffRaw = {{ staff | tojson }};
@@ -1080,6 +1250,8 @@ let configuracionesPago = [];
 let configInscripciones = {};
 let configCuotasMes = {};
 let extraNames = { "STAFF_OTROS": "OTROS" };
+let staffSueldos = {};
+let staffExtrasCount = 1;
 let bulkConceptoActivo = '';
 let asientoSeleccionado = null;
 let isSaving = false;
@@ -3012,6 +3184,7 @@ function abrirEdicionCompletaAsiento() {
     const groupDP = document.getElementById('groupDeptoPilar');
     groupDP.style.display = 'block';
     document.getElementById('editAsiDepto').value = data.DEPARTAMENTO || '';
+    actualizarPilares('editAsiDepto', 'editAsiPilar');
     document.getElementById('editAsiPilar').value = data.PILAR || '';
 
     // FUERZA BRUTA PARA DESBLOQUEAR: Eliminamos disabled y readOnly de todos los campos
@@ -4068,8 +4241,16 @@ function abrirEstadisticas() {
         }
     });
     const mesesSorted = Array.from(mesesSet).sort().reverse();
-    
-    let optionsHtml = '<option value="all" selected>TODO EL TIEMPO</option>';
+
+    // Temporada activa: ago-dic de año Y → Y/(Y+1); ene-jul de año Y → (Y-1)/Y
+    const _hoy = new Date();
+    const _mes = _hoy.getMonth() + 1;
+    const _año = _hoy.getFullYear();
+    const _tmpLabel = _mes >= 8
+        ? `TEMP. ${String(_año).slice(-2)}/${String(_año+1).slice(-2)}`
+        : `TEMP. ${String(_año-1).slice(-2)}/${String(_año).slice(-2)}`;
+
+    let optionsHtml = `<option value="all" selected>${_tmpLabel}</option>`;
     mesesSorted.forEach(m => {
         const [año, mes] = m.split('-');
         const nombreMes = new Date(año, mes - 1).toLocaleString('es-ES', { month: 'long' }).toUpperCase();
@@ -4078,7 +4259,7 @@ function abrirEstadisticas() {
     selectMeses.innerHTML = optionsHtml;
 
     modal.style.display = 'flex';
-    renderStats(); // Renderiza las estadísticas al abrir el modal
+    cargarPresupuestoObjetivo().then(() => renderStats());
 }
 
 function renderStats() {
@@ -4086,7 +4267,7 @@ function renderStats() {
     const selectedValue = selector.value; // Valor seleccionado (ej. "all" o "2026-05")
     
     let datos = presupuestoData; // Usamos la caché de datos del presupuesto
-    // Filtramos los datos si no se ha seleccionado "TODO EL TIEMPO"
+    // Filtramos los datos si no se ha seleccionado la temporada completa
     if (selectedValue !== 'all') {
         datos = presupuestoData.filter(a => {
             if (!a.FECHA) return false;
@@ -4112,22 +4293,32 @@ function renderStats() {
     document.getElementById('totalBalanceTxt').innerText = balance.toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' €';
     document.getElementById('totalBalanceTxt').style.color = balance >= 0 ? '#28a745' : '#dc3545'; // Color dinámico para el balance
 
-    const buildTableRows = (lista, total, color) => {
+    const buildTableRows = (lista, total, color, esBeneficio) => {
+        // Agrupar por DEPARTAMENTO
         const agrupar = {};
-        lista.forEach(a => { 
-            const pilar = a.PILAR || "OTROS";
-            agrupar[pilar] = (agrupar[pilar] || 0) + Math.abs(parseFloat(a.IMPORTE)); 
+        lista.forEach(a => {
+            const d = (a.DEPARTAMENTO || 'OTROS').toUpperCase().trim();
+            agrupar[d] = (agrupar[d] || 0) + Math.abs(parseFloat(a.IMPORTE));
         });
+
+        // Orden: para gastos usar ORDEN_DPTOS, para ingresos usar ORDEN_INGRESOS + extras
+        const ordenBase = esBeneficio ? ['INGRESOS'] : ORDEN_DPTOS;
+        const extras = Object.keys(agrupar).filter(d => !ordenBase.includes(d));
+        const todos = [...ordenBase, ...extras];
+
         if (total === 0) return '<tr><td colspan="4" style="text-align:center; padding:20px; color:#999;">Sin datos</td></tr>';
-        return Object.entries(agrupar).map(([pilar, monto]) => {
-            const perc = ((monto / total) * 100).toFixed(1);
+
+        return todos.map(dpto => {
+            const monto = agrupar[dpto] || 0;
+            const perc = total > 0 ? ((monto / total) * 100).toFixed(1) : '0.0';
+            const colorTexto = monto === 0 ? '#cbd5e1' : 'inherit';
             return `
-                <tr style="border-bottom: 1px solid #eee;">
-                    <td style="padding: 10px 0; font-weight: 800; font-size: 11px; width: 25%;">${pilar}</td>
-                    <td style="padding: 10px 5px; font-weight: 800; font-size: 11px; width: 20%;">${monto.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€</td>
-                    <td style="padding: 10px 5px; font-weight: 800; font-size: 11px; color:#666; width: 15%;">${perc}%</td>
-                    <td style="padding: 10px 0;">
-                        <div class="stats-bar-container" style="margin:0;"><div class="stats-bar-fill" style="width:${perc}%; background:${color};"></div></div>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 8px 0; font-weight: 800; font-size: 11px; width: 28%; color:${colorTexto};">${dpto}</td>
+                    <td style="padding: 8px 5px; font-weight: 800; font-size: 11px; width: 22%; color:${colorTexto};">${monto > 0 ? monto.toLocaleString('es-ES',{minimumFractionDigits:2})+'€' : '-'}</td>
+                    <td style="padding: 8px 5px; font-weight: 700; font-size: 11px; color:${monto===0?'#cbd5e1':'#666'}; width: 12%;">${monto > 0 ? perc+'%' : '-'}</td>
+                    <td style="padding: 8px 0;">
+                        ${monto > 0 ? `<div class="stats-bar-container" style="margin:0;"><div class="stats-bar-fill" style="width:${perc}%; background:${color};"></div></div>` : ''}
                     </td>
                 </tr>`;
         }).join('');
@@ -4135,7 +4326,353 @@ function renderStats() {
 
     document.getElementById('statsGasto').innerHTML = buildTableRows(gastos, totalGasto, '#dc3545');
     document.getElementById('statsBeneficio').innerHTML = buildTableRows(beneficios, totalBeneficio, '#28a745');
-    // Las tarjetas de resumen ya se actualizan en la parte superior
+
+    renderTablaPresupuesto(presupuestoData);
+}
+
+// ── TABLA PRESUPUESTO ──────────────────────────────────────────────────────────
+
+let _presupObj = { ingresos_estimados: 0, departamentos: {} };
+
+const ORDEN_DPTOS = ['BANCO','COLEGIO','COMPETICIONES','GESTORIA','HACIENDA','ROPA','SUELDOS','OTROS'];
+const ORDEN_INGRESOS = ['INGRESOS'];
+
+// Datos históricos fijos temporada 25/26 (fuente: Excel pivot)
+const DATOS_REALES_2526 = {
+    departamentos: {
+        'BANCO':         { total: -3545.96, pilares: { 'COMISIONES': -79.46, 'DEVOLUCIONES': -3466.5 } },
+        'COLEGIO':       { total: -60855.44, pilares: {} },
+        'COMPETICIONES': { total: -51900.96, pilares: { 'GASTO': -50924.46, 'SANCIONES': -976.5 } },
+        'GESTORIA':      { total: -1789.56,  pilares: {} },
+        'HACIENDA':      { total: -11952.58, pilares: {} },
+        'MARKETING':     { total: -372.71,   pilares: {} },
+        'ROPA':          { total: -22949.62, pilares: {} },
+        'SUELDOS':       { total: -105133,   pilares: {} },
+        'OTROS':         { total: -7416.85,  pilares: {
+            'CAPTACION':         -251.65,
+            'FIESTA':             74.5,
+            'MANTENIMIENTO':     -255.31,
+            'MARKETING':         -458.37,
+            'MAT. DEPORTIVO':   -2787.72,
+            'OBRA':               -72.23,
+            'OTROS':            -3238.11,
+            'VINILO/SERIGRAFIA': -427.96,
+        }},
+    },
+    ingresos: {
+        'CUOTAS':     303195.71,
+        'LOTERIA':      4176,
+        'CURSOS':       3040,
+        'INTERESES':    5670,
+        'OTROS':          16,
+    }
+};
+
+async function cargarPresupuestoObjetivo() {
+    try {
+        const r = await fetch('/api/presupuesto_objetivo');
+        _presupObj = await r.json();
+    } catch(e) { _presupObj = { ingresos_estimados: 0, departamentos: {} }; }
+    document.getElementById('ingresosEstimadosInput').value = _presupObj.ingresos_estimados || 0;
+    const lblR = document.getElementById('lblTemporadaReal');
+    const lblP = document.getElementById('lblTemporadaPresup');
+    if (lblR) lblR.textContent = _presupObj.temporada_real || '25/26';
+    if (lblP) lblP.textContent = _presupObj.temporada_presup || '26/27';
+}
+
+function recalcPresupuesto() {
+    const ing = parseFloat(document.getElementById('ingresosEstimadosInput').value) || 0;
+    const fmt0 = n => { const abs = Math.round(Math.abs(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'); return (n < 0 ? '-' : '') + abs; };
+
+    // Dptos sin pilares — importe/presup directo
+    document.querySelectorAll('[data-importe-auto]').forEach(td => {
+        const peso = parseFloat(td.dataset.importeAuto) || 0;
+        td.textContent = fmt0(peso / 100 * ing);
+    });
+    document.querySelectorAll('[data-presup-auto]').forEach(td => {
+        const peso = parseFloat(td.dataset.presupAuto) || 0;
+        td.textContent = fmt0(peso / 100 * ing);
+    });
+
+    // Pilares — importe/presup de cada pilar
+    document.querySelectorAll('[data-importe-auto-pilar]').forEach(td => {
+        const key = td.dataset.importeAutoPilar; // "DPTO|PILAR"
+        const span = document.querySelector(`[data-campo-presup="${key}|peso_2627"]`);
+        const peso = span ? parseFloat(span.textContent.replace(',','.')) || 0 : 0;
+        td.textContent = fmt0(peso / 100 * ing);
+    });
+    document.querySelectorAll('[data-presup-auto-pilar]').forEach(td => {
+        const key = td.dataset.presupAutoPilar;
+        const span = document.querySelector(`[data-campo-presup="${key}|peso_ajustado"]`);
+        const peso = span ? parseFloat(span.textContent.replace(',','.')) || 0 : 0;
+        td.textContent = fmt0(peso / 100 * ing);
+    });
+
+    // Dptos con pilares — suma de pilares
+    document.querySelectorAll('[data-importe-auto-dpto]').forEach(td => {
+        const dpto = td.dataset.importeAutoDpto;
+        let suma = 0;
+        document.querySelectorAll(`[data-campo-presup^="${dpto}|"][data-campo-presup$="|peso_2627"]`).forEach(sp => {
+            suma += parseFloat(sp.textContent.replace(',','.')) || 0;
+        });
+        td.textContent = fmt0(suma / 100 * ing);
+        // Actualizar también el % mostrado en la celda anterior
+        const tdPeso = td.previousElementSibling;
+        if (tdPeso) tdPeso.textContent = suma.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' %';
+    });
+    document.querySelectorAll('[data-presup-auto-dpto]').forEach(td => {
+        const dpto = td.dataset.presupAutoDpto;
+        let suma = 0;
+        document.querySelectorAll(`[data-campo-presup^="${dpto}|"][data-campo-presup$="|peso_ajustado"]`).forEach(sp => {
+            suma += parseFloat(sp.textContent.replace(',','.')) || 0;
+        });
+        td.textContent = fmt0(suma / 100 * ing);
+        const tdPeso = td.previousElementSibling;
+        if (tdPeso) tdPeso.textContent = suma.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' %';
+    });
+}
+
+async function guardarPresupuesto() {
+    const ing = parseFloat(document.getElementById('ingresosEstimadosInput').value) || 0;
+    _presupObj.ingresos_estimados = ing;
+    // Leer celdas editables GASTOS
+    document.querySelectorAll('[data-campo-presup]').forEach(el => {
+        const [dpto, pilar, campo] = el.dataset.campoPresup.split('|');
+        if (!_presupObj.departamentos[dpto]) _presupObj.departamentos[dpto] = { peso_2627: 0, peso_ajustado: 0, pilares: {} };
+        if (pilar) {
+            if (!_presupObj.departamentos[dpto].pilares) _presupObj.departamentos[dpto].pilares = {};
+            if (!_presupObj.departamentos[dpto].pilares[pilar]) _presupObj.departamentos[dpto].pilares[pilar] = {};
+            _presupObj.departamentos[dpto].pilares[pilar][campo] = parseFloat(el.textContent.replace(',','.')) || 0;
+        } else {
+            _presupObj.departamentos[dpto][campo] = parseFloat(el.textContent.replace(',','.')) || 0;
+        }
+    });
+    // Leer celdas editables INGRESOS 26/27
+    if (!_presupObj.ingresos_2627) _presupObj.ingresos_2627 = {};
+    document.querySelectorAll('[data-campo-ing2627]').forEach(el => {
+        const pilar = el.dataset.campoIng2627;
+        _presupObj.ingresos_2627[pilar] = parseFloat(el.textContent.replace(/\./g,'').replace(',','.')) || 0;
+    });
+    await fetch('/api/presupuesto_objetivo', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(_presupObj) });
+    const btn = document.querySelector('[onclick="guardarPresupuesto()"]');
+    const orig = btn.textContent;
+    btn.textContent = '✓ GUARDADO'; btn.style.background = '#28a745';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = '#E31E24'; }, 1500);
+}
+
+function renderTablaPresupuesto(datos) {
+    const ing = parseFloat(document.getElementById('ingresosEstimadosInput').value) || 0;
+    const tbody = document.getElementById('tbodyPresupuesto');
+    if (!tbody) return;
+
+    // Datos fijos históricos 25/26 (no calculados del live)
+    const reales = Object.fromEntries(
+        Object.entries(DATOS_REALES_2526.departamentos).map(([d, v]) => [d, { total: v.total, pilares: { ...v.pilares } }])
+    );
+    const ingReales = { ...DATOS_REALES_2526.ingresos };
+    const totalIngReal = Object.values(ingReales).reduce((s, v) => s + v, 0);
+
+    // Estilos
+    const S = {
+        dpto: 'padding:7px 12px; font-weight:600; font-size:11px; color:#0f172a; border-bottom:1px solid #e2e8f0;',
+        dptoNum: 'text-align:right; padding:7px 8px; font-weight:400; font-size:11px; border-bottom:1px solid #e2e8f0;',
+        dptoP: 'text-align:right; padding:7px 8px; font-size:10px; color:#64748b; border-bottom:1px solid #e2e8f0; font-weight:400;',
+        pilar: 'padding:5px 12px 5px 28px; font-size:10px; color:#475569; border-bottom:1px solid #f1f5f9; font-weight:400;',
+        pilarNum: 'text-align:right; padding:5px 8px; font-size:10px; border-bottom:1px solid #f1f5f9; font-weight:400;',
+        c1: 'text-align:right; padding:7px 8px; background:#fffbeb; border-bottom:1px solid #fde68a; font-weight:400;',
+        c2: 'text-align:right; padding:7px 8px; background:#fef3c7; border-bottom:1px solid #fcd34d; font-weight:400;',
+        c1p: 'text-align:right; padding:5px 8px; background:#fffbeb; border-bottom:1px solid #f1f5f9; font-weight:400;',
+        c2p: 'text-align:right; padding:5px 8px; background:#fef3c7; border-bottom:1px solid #f1f5f9; font-weight:400;',
+        edit1: 'display:inline-block; min-width:46px; background:transparent; border:none; padding:1px 4px; outline:none; cursor:text; color:#92400e; font-weight:400; font-size:10px;',
+        edit2: 'display:inline-block; min-width:46px; background:transparent; border:none; padding:1px 4px; outline:none; cursor:text; color:#78350f; font-weight:400; font-size:10px;',
+    };
+
+    // Formato con separador de miles (punto) y decimales (coma) — estilo español
+    const fmt = (n, dec=2) => {
+        const parts = Math.abs(n).toFixed(dec).split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return (n < 0 ? '-' : '') + parts.join(',');
+    };
+    const fmt0 = (n) => {
+        const abs = Math.round(Math.abs(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return (n < 0 ? '-' : '') + abs;
+    };
+
+    let html = '';
+    let totalRealGasto = 0, totalPeso = 0, totalPesoAj = 0;
+
+    // ── GASTOS: siempre todos los dptos del orden + extras en datos ──
+    const extras = Object.keys(reales).filter(d => !ORDEN_DPTOS.includes(d) && !ORDEN_INGRESOS.includes(d));
+    const dptos = [...ORDEN_DPTOS, ...extras];
+
+    dptos.forEach((dpto, idx) => {
+        const rD = reales[dpto] || { total: 0, pilares: {} };
+        const oD = (_presupObj.departamentos || {})[dpto] || {};
+        const pilaresBase = DPTOS_PILARES[dpto] || [];
+        const pilaresExtra = Object.keys(rD.pilares).filter(p => !pilaresBase.includes(p));
+        const pilares = [...pilaresBase, ...pilaresExtra];
+        const tienePilares = pilares.length > 0;
+
+        const pctR = totalIngReal > 0 ? Math.abs(rD.total) / totalIngReal * 100 : 0;
+        const bg = idx % 2 === 0 ? '#f8fafc' : '#ffffff';
+
+        // Si tiene pilares: % y presup a nivel pilar, dpto = suma
+        // Si no tiene pilares: % editable directo en dpto
+        let pesoDpto = 0, pesoAjDpto = 0, impDpto = 0, presDpto = 0;
+
+        if (tienePilares) {
+            pilares.forEach(pilar => {
+                const oP = (oD.pilares || {})[pilar] || {};
+                pesoDpto   += oP.peso_2627    || 0;
+                pesoAjDpto += oP.peso_ajustado || 0;
+            });
+            impDpto  = ing * pesoDpto   / 100;
+            presDpto = ing * pesoAjDpto / 100;
+        } else {
+            pesoDpto   = oD.peso_2627    || 0;
+            pesoAjDpto = oD.peso_ajustado || 0;
+            impDpto    = ing * pesoDpto   / 100;
+            presDpto   = ing * pesoAjDpto / 100;
+        }
+
+        totalRealGasto += rD.total;
+        totalPeso   += pesoDpto;
+        totalPesoAj += pesoAjDpto;
+
+        // Fila DEPARTAMENTO
+        html += `<tr style="background:${bg}; border-top:1px solid #e2e8f0;">
+            <td style="${S.dpto}">${dpto}</td>
+            <td style="${S.dptoNum} color:${rD.total < 0 ? '#dc2626' : (rD.total > 0 ? '#16a34a' : '#94a3b8')};">${rD.total !== 0 ? fmt(rD.total)+'€' : '-'}</td>
+            <td style="${S.dptoP}">${rD.total !== 0 ? pctR.toFixed(2)+'%' : '-'}</td>`;
+
+        if (tienePilares) {
+            // Departamento muestra la suma de sus pilares (no editable)
+            html += `
+            <td style="${S.c1} color:#92400e;">${fmt(pesoDpto)} %</td>
+            <td style="${S.c1} color:#92400e;" data-importe-auto-dpto="${dpto}">${fmt0(impDpto)}</td>
+            <td style="${S.c2} color:#78350f;">${fmt(pesoAjDpto)} %</td>
+            <td style="${S.c2} color:#78350f;" data-presup-auto-dpto="${dpto}">${fmt0(presDpto)}</td>`;
+        } else {
+            // Sin pilares: editable directo
+            html += `
+            <td style="${S.c1}"><span contenteditable="true" style="${S.edit1}" data-campo-presup="${dpto}||peso_2627">${fmt(pesoDpto)}</span> %</td>
+            <td style="${S.c1}" data-importe-auto="${pesoDpto}">${fmt0(impDpto)}</td>
+            <td style="${S.c2}"><span contenteditable="true" style="${S.edit2}" data-campo-presup="${dpto}||peso_ajustado">${fmt(pesoAjDpto)}</span> %</td>
+            <td style="${S.c2}" data-presup-auto="${pesoAjDpto}">${fmt0(presDpto)}</td>`;
+        }
+        html += `</tr>`;
+
+        // Filas PILARES — siempre con % e importe editables
+        pilares.forEach(pilar => {
+            const rP = rD.pilares[pilar] || 0;
+            const oP = (oD.pilares || {})[pilar] || {};
+            const pp1 = oP.peso_2627    !== undefined ? oP.peso_2627    : 0;
+            const pp2 = oP.peso_ajustado !== undefined ? oP.peso_ajustado : 0;
+            const ppImp  = ing * pp1 / 100;
+            const ppPres = ing * pp2 / 100;
+            html += `<tr style="background:${bg};">
+                <td style="${S.pilar}">↳ ${pilar}</td>
+                <td style="${S.pilarNum} color:${rP < 0 ? '#dc2626' : (rP > 0 ? '#16a34a' : '#94a3b8')};">${rP !== 0 ? fmt(rP)+'€' : '-'}</td>
+                <td style="${S.pilarNum} color:#94a3b8;">-</td>
+                <td style="${S.c1p}"><span contenteditable="true" style="${S.edit1}" data-campo-presup="${dpto}|${pilar}|peso_2627">${fmt(pp1)}</span> %</td>
+                <td style="${S.c1p}" data-importe-auto-pilar="${dpto}|${pilar}">${fmt0(ppImp)}</td>
+                <td style="${S.c2p}"><span contenteditable="true" style="${S.edit2}" data-campo-presup="${dpto}|${pilar}|peso_ajustado">${fmt(pp2)}</span> %</td>
+                <td style="${S.c2p}" data-presup-auto-pilar="${dpto}|${pilar}">${fmt0(ppPres)}</td>
+            </tr>`;
+        });
+    });
+
+    // TOTAL GASTOS
+    html += `<tr style="background:#0f172a;">
+        <td style="padding:8px 12px; font-weight:600; font-size:11px; color:#e2e8f0; letter-spacing:.5px;">TOTAL GASTOS</td>
+        <td style="text-align:right; padding:8px; font-weight:400; color:#fca5a5;">${fmt(totalRealGasto)}€</td>
+        <td></td>
+        <td style="text-align:right; padding:8px; font-weight:400; color:#fde68a; background:#1e293b;">${fmt(totalPeso)}%</td>
+        <td style="text-align:right; padding:8px; font-weight:400; color:#fde68a; background:#1e293b;">${fmt0(ing*totalPeso/100)}</td>
+        <td style="text-align:right; padding:8px; font-weight:400; color:#fde68a; background:#292524;">${fmt(totalPesoAj)}%</td>
+        <td style="text-align:right; padding:8px; font-weight:400; color:#fde68a; background:#292524;">${fmt0(ing*totalPesoAj/100)}</td>
+    </tr>`;
+
+
+    tbody.innerHTML = html;
+
+    // ── TABLA INGRESOS (panel derecho) ──
+    const tbodyIng = document.getElementById('tbodyIngresos');
+    if (tbodyIng) {
+        const totalIngRealFmt = fmt(totalIngReal);
+        const ing2627Obj = _presupObj.ingresos_2627 || {};
+        const editIngStyle = 'display:inline-block; min-width:60px; background:transparent; border:none; padding:1px 4px; outline:none; cursor:text; color:#065f46; font-weight:400; font-size:10px; text-align:right;';
+        let htmlIng = '';
+        let totalIng2627 = 0;
+
+        // Pilares
+        const pilaresIngDef = DPTOS_PILARES['INGRESOS'] || [];
+        const pilaresIngExtra = Object.keys(ingReales).filter(p => !pilaresIngDef.includes(p));
+        const todosPilares = [...pilaresIngDef, ...pilaresIngExtra];
+
+        // Fila cabecera INGRESOS total — el input 26/27 va aquí
+        todosPilares.forEach(p => { totalIng2627 += ing2627Obj[p] || 0; });
+        htmlIng += `<tr style="background:#f0fdf4; border-top:1px solid #86efac;">
+            <td style="padding:7px 12px; font-weight:600; font-size:11px; color:#14532d; border-bottom:1px solid #bbf7d0;">INGRESOS</td>
+            <td style="text-align:right; padding:7px 8px; font-weight:400; color:#16a34a; border-bottom:1px solid #bbf7d0; border-left:1px solid #86efac;">${totalIngReal > 0 ? totalIngRealFmt+'€' : '-'}</td>
+            <td style="text-align:center; padding:4px 6px; border-bottom:1px solid #bbf7d0; border-left:2px solid #34d399;">
+                <input id="ingresosEstimadosTabla" type="number"
+                    style="width:80px; padding:3px 5px; border-radius:5px; border:2px solid #16a34a; background:#dcfce7; font-size:11px; text-align:center; color:#14532d; font-weight:400;"
+                    value="${ing || 0}"
+                    oninput="document.getElementById('ingresosEstimadosInput').value=this.value; recalcPresupuesto();"> €
+            </td>
+        </tr>`;
+
+        todosPilares.forEach(pilar => {
+            const rP = ingReales[pilar] || 0;
+            const p2627 = ing2627Obj[pilar] || 0;
+            htmlIng += `<tr style="background:#f0fdf4;">
+                <td style="padding:5px 12px 5px 22px; font-size:10px; color:#166534; border-bottom:1px solid #dcfce7;">↳ ${pilar}</td>
+                <td style="text-align:right; padding:5px 8px; font-size:10px; color:#16a34a; border-bottom:1px solid #dcfce7; border-left:1px solid #86efac;">${rP > 0 ? fmt(rP)+'€' : '-'}</td>
+                <td style="text-align:right; padding:5px 8px; font-size:10px; border-bottom:1px solid #dcfce7; border-left:2px solid #34d399;">
+                    <span contenteditable="true" style="${editIngStyle}" data-campo-ing2627="${pilar}">${p2627 > 0 ? fmt(p2627) : '0,00'}</span> €
+                </td>
+            </tr>`;
+        });
+
+        htmlIng += `<tr style="background:#14532d;">
+            <td style="padding:8px 12px; font-weight:600; font-size:11px; color:#dcfce7;">TOTAL INGRESOS</td>
+            <td style="text-align:right; padding:8px; font-weight:400; color:#bbf7d0; border-left:1px solid #166534;">${totalIngReal > 0 ? totalIngRealFmt+'€' : '0,00€'}</td>
+            <td id="totalIng2627Td" style="text-align:right; padding:8px; font-weight:400; color:#a7f3d0; border-left:2px solid #34d399;">${totalIng2627 > 0 ? fmt(totalIng2627)+'€' : '0,00€'}</td>
+        </tr>`;
+
+        tbodyIng.innerHTML = htmlIng;
+
+        // Recalc total 26/27 al editar
+        tbodyIng.querySelectorAll('[data-campo-ing2627]').forEach(span => {
+            span.addEventListener('blur', () => {
+                let tot = 0;
+                tbodyIng.querySelectorAll('[data-campo-ing2627]').forEach(s => { tot += parseFloat(s.textContent.replace(/\./g,'').replace(',','.')) || 0; });
+                const td = document.getElementById('totalIng2627Td');
+                if (td) td.textContent = fmt(tot) + '€';
+                const hdr = tbodyIng.closest('table').querySelector('thead tr:last-child th:last-child');
+            });
+            span.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); span.blur(); } });
+        });
+    }
+
+    // Eventos blur en spans editables
+    tbody.querySelectorAll('[data-campo-presup]').forEach(span => {
+        span.addEventListener('blur', () => {
+            const parts = span.dataset.campoPresup.split('|');
+            const [dpto, pilar, campo] = parts;
+            if (!pilar && campo === 'peso_2627') {
+                const tdNext = span.closest('td').nextElementSibling;
+                if (tdNext) tdNext.dataset.importeAuto = parseFloat(span.textContent.replace(',','.')) || 0;
+            }
+            if (!pilar && campo === 'peso_ajustado') {
+                const tdNext = span.closest('td').nextElementSibling;
+                if (tdNext) tdNext.dataset.presupAuto = parseFloat(span.textContent.replace(',','.')) || 0;
+            }
+            recalcPresupuesto();
+        });
+        span.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); span.blur(); } });
+    });
 }
 
 let prefixExtraActivo = 'S-EXTRA-';
@@ -4156,6 +4693,7 @@ function seleccionarPago(e, el, item) {
          const nombre = el.closest('tr').cells[1].innerText;
          const asientoId = el.dataset.asientoId || "N/A";
          const pagado = el.dataset.importe || "0";
+         const pagadoAbs = Math.abs(parseFloat(pagado) || 0);
          const esperado = el.dataset.esperado || "0";
          const fecha = el.dataset.fecha || "N/A";
          el.dataset.concepto = item;
@@ -4166,13 +4704,25 @@ function seleccionarPago(e, el, item) {
                  <div style="display:flex; justify-content:space-between;"><strong>CONCEPTO:</strong> <span>${item}</span></div>
                  <div style="display:flex; justify-content:space-between;"><strong>FECHA REGISTRO:</strong> <span>${fecha}</span></div>
                  <div style="margin-top:5px; padding-top:5px; border-top:1px solid #eee; display:flex; justify-content:space-between;">
-                    <strong>ESTADO ACTUAL:</strong> 
-                    <span style="color:${parseFloat(pagado)>=parseFloat(esperado)?'#28a745':'#fd7e14'}; font-weight:900;">${pagado}€ / ${esperado}€</span>
+                    <strong>ESTADO ACTUAL:</strong>
+                    <span style="color:${pagadoAbs>=parseFloat(esperado)?'#28a745':'#fd7e14'}; font-weight:900;">${pagadoAbs}€ / ${esperado}€</span>
                  </div>
                  <strong>Nº ASIENTO:</strong> #${asientoId}<br>
              </div>
          `;
-         document.getElementById('modPagoImporte').value = pagado;
+         document.getElementById('modPagoImporte').value = pagadoAbs;
+         // Panel resumen equipo (solo staff con mes)
+         const _esFila = el.closest('tr');
+         const _esStaffPanel = _esFila && _esFila.classList.contains('fila-staff');
+         const _mesMatch = item && item.match(/^Staff-(\d{2})$/);
+         if (_esStaffPanel && _mesMatch) {
+             const _equipo = _esFila.dataset.equipo || '';
+             const _nombre = _esFila.dataset.nombre || '';
+             const _mes = _mesMatch[1];
+             cargarResumenEquipoPanel(_equipo, _mes, _nombre);
+         } else {
+             document.getElementById('panelResumenEquipo').style.display = 'none';
+         }
          document.getElementById('modalModificarPago').style.display = 'flex';
          return;
     }
@@ -4200,13 +4750,31 @@ function seleccionarPago(e, el, item) {
 function actualizarBarraPagos() {
     const barra = document.getElementById('barraAccionPagos');
     const count = celdasSeleccionadas.length;
-    
+
     if (count === 0) {
         barra.style.display = 'none';
+        const _ps = document.getElementById('panelStaffResBarra');
+        if (_ps) _ps.style.display = 'none';
+        const _wa = document.getElementById('wrapAjuste');
+        if (_wa) _wa.style.display = 'none';
+        _ajusteAplicado = false;
         return;
     }
 
-    document.getElementById('txtSeleccionados').innerText = `${count} SELECCIONADO${count > 1 ? 'S' : ''}`;
+    // Para staff individual: mostrar nombre y mes; para el resto: count + detalle
+    const _unicaStaff = count === 1 && celdasSeleccionadas[0].closest('tr').classList.contains('fila-staff');
+    if (_unicaStaff) {
+        const _fStaff = celdasSeleccionadas[0].closest('tr');
+        document.getElementById('txtSeleccionados').innerText = (_fStaff.dataset.nombre || '').toUpperCase();
+        const _itemStaff = celdasSeleccionadas[0].dataset.tempItem || celdasSeleccionadas[0].dataset.concepto || '';
+        const _mMatch = _itemStaff.match(/^Staff-(\d{2})$/);
+        const _mesLbl = _mMatch ? (_MESES_LABEL[parseInt(_mMatch[1],10)-1] || _mMatch[1]) : _itemStaff;
+        document.getElementById('detalleSeleccion').innerText = (_mesLbl || '').toUpperCase();
+    } else {
+        document.getElementById('txtSeleccionados').innerText = `${count} SELECCIONADO${count > 1 ? 'S' : ''}`;
+        const _waNS = document.getElementById('wrapAjuste');
+        if (_waNS) _waNS.style.display = 'none';
+    }
     
     let totalEsperado = 0;
     const agrupado = {};
@@ -4246,11 +4814,18 @@ function actualizarBarraPagos() {
         }
         totalEsperado += esperadoIndividual;
     });
-    const resumen = Object.entries(agrupado).map(([key, items]) => `${key} - ${items.join(', ')}`).join(' | ');
-    document.getElementById('detalleSeleccion').innerText = "REGISTRO PARA: " + resumen;
+    if (!_unicaStaff) {
+        const resumen = Object.entries(agrupado).map(([key, items]) => `${key} - ${items.join(', ')}`).join(' | ');
+        document.getElementById('detalleSeleccion').innerText = "REGISTRO PARA: " + resumen;
+    }
 
     document.getElementById('pagoEsperadoBar').value = totalEsperado;
     document.getElementById('pagoImporteBar').value = totalEsperado;
+    // Resetear tick de ajuste al cambiar selección
+    _ajusteAplicado = false;
+    _esperadoOriginalBar = totalEsperado;
+    const _btnA = document.getElementById('btnAjuste');
+    if (_btnA) { _btnA.style.background='transparent'; _btnA.style.borderColor='#94a3b8'; _btnA.style.color='#94a3b8'; }
     barra.style.display = 'flex';
 }
 
@@ -4260,8 +4835,19 @@ document.addEventListener('keydown', function(evt) {
     }
 });
 
+document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    cerrarModalsFin();
+    ['popoverFactura', 'popoverAsignarJugador'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+});
+
 function cerrarModalsFin() {
     document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+    const _psr = document.getElementById('panelStaffResBarra');
+    if (_psr) _psr.style.display = 'none';
     celdasSeleccionadas.forEach(c => {
         c.classList.remove('selected-cell');
         delete c.dataset.tempItem;
@@ -4348,10 +4934,12 @@ async function confirmarPago(btn) {
                 saldoARepartir -= pagoAsignado;
             }
 
+            const _yaHabiaImporte = currentRowIsStaff && Math.abs(parseFloat(cell.dataset.importe || 0)) > 0.01;
             const asiento = {
-                fecha: fechaHoy, departamento: "Administración", pilar: pilar,
+                fecha: fechaHoy, departamento: currentRowIsStaff ? "Sueldos" : "Administración", pilar: pilar,
                 descripcion: `${prefixDesc} ${labelConcepto}: ${nombre}`, importe: pagoAsignado,
-                equipo, nombre, tipo_pago: tipo, forma_pago: forma, concepto: item, esperado: esperadoIndividual
+                equipo, nombre, tipo_pago: tipo, forma_pago: forma, concepto: item, esperado: esperadoIndividual,
+                force_compensar: _yaHabiaImporte
             };
             const resPago = await fetch('/api/presupuesto', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(asiento) });
             if (resPago.ok) {
@@ -4374,10 +4962,80 @@ async function confirmarPago(btn) {
 
 function seleccionarPagoStaff(e, el, item) {
     if (item === 'S-EXTRA') {
-        abrirModalExtraDetalle(el, 'S-EXTRA-');
+        abrirModalExtraDetalle(el, 'S-EXTRA-', 'STAFF_OTROS');
         return;
     }
-    seleccionarPago(e, el, item); 
+    const dyMatch = item.match(/^S-EXTRA-(\d+)$/);
+    if (dyMatch) {
+        const n = parseInt(dyMatch[1]);
+        abrirModalExtraDetalle(el, `S-EXTRA${n}-`, `STAFF_OTROS_${n}`);
+        return;
+    }
+    // Para cualquier mes Staff-XX, mostrar panel de estadísticas encima de la barra
+    const staffMesMatch = item && item.match(/^Staff-(\d{2})$/);
+    if (staffMesMatch) {
+        const fila = el.closest('tr');
+        if (fila) {
+            mostrarResumenStaffBarra(
+                fila.dataset.equipo || '',
+                staffMesMatch[1],
+                fila.dataset.nombre || ''
+            );
+        }
+    }
+    seleccionarPago(e, el, item);
+}
+
+async function mostrarResumenStaffBarra(equipo, mes, nombre) {
+    const panel = document.getElementById('panelStaffResBarra');
+    if (!panel) return;
+    panel.style.display = 'block';
+    document.getElementById('staffResBarraTitulo').textContent = `${nombre} · ${_MESES_LABEL[parseInt(mes,10)-1]||mes}`;
+    document.getElementById('staffResBarraItems').innerHTML = '<span style="color:#94a3b8;font-size:11px;padding:8px 0;">Cargando...</span>';
+    document.getElementById('staffResBarraAjuste').style.display = 'none';
+    try {
+        const [rRes, cRes] = await Promise.all([
+            fetch(`/api/staff_resumen_mes?equipo=${encodeURIComponent(equipo)}&mes=${mes}&nombre=${encodeURIComponent(nombre)}`),
+            fetch('/api/multas_config')
+        ]);
+        const s = await rRes.json();
+        const cfg = await cRes.json();
+        const dedBalon  = (s.balones_perdidos||0) * (cfg.perdida_balon||10);
+        const dedFalta  = (s.faltas||0) * (cfg.falta||5);
+        const bonSup    = (s.suplencias||0) * (cfg.suplencia||10);
+        const penAsist  = (s.dias_warning||0) > (cfg.umbral_asistencias||2) ? -(cfg.penalizacion_asistencias||5) : 0;
+        const penEntren = (s.sesiones_no_subidas||0) > (cfg.umbral_entrenamientos||2) ? -(cfg.penalizacion_entrenamientos||5) : 0;
+        const penForm   = (s.formularios_pendientes||0) > 0 ? -(cfg.penalizacion_formularios||2) : 0;
+        const ajuste = -dedBalon - dedFalta + bonSup + penAsist + penEntren + penForm;
+        const stats = [
+            { label: 'Asist. sin hacer',       val: s.dias_warning||0,            icon: '⚠️', color: (s.dias_warning||0)>(cfg.umbral_asistencias||2)?'#f87171':'#fbbf24' },
+            { label: 'Entrenos no subidos',    val: s.sesiones_no_subidas||0,     icon: '📤', color: (s.sesiones_no_subidas||0)>(cfg.umbral_entrenamientos||2)?'#f87171':'#94a3b8' },
+            { label: 'Finde sin subir',        val: s.formularios_pendientes||0,  icon: '📋', color: (s.formularios_pendientes||0)>0?'#f87171':'#86efac' },
+            { label: 'Balones perd.', val: s.balones_perdidos||0,        icon: '⚽', color: (s.balones_perdidos||0)>0?'#f87171':'#94a3b8' },
+            { label: 'Faltas',        val: s.faltas||0,                  icon: '❌', color: (s.faltas||0)>0?'#f87171':'#94a3b8' },
+            { label: 'Suplencias',    val: s.suplencias||0,              icon: '🔄', color: (s.suplencias||0)>0?'#86efac':'#94a3b8' },
+        ];
+        document.getElementById('staffResBarraItems').innerHTML = stats.map(item => `
+            <div style="background:rgba(255,255,255,0.07);border-radius:8px;padding:5px 10px;text-align:center;min-width:68px;">
+                <div style="font-size:9px;color:#94a3b8;font-weight:700;text-transform:uppercase;white-space:nowrap;">${item.icon} ${item.label}</div>
+                <div style="font-size:19px;font-weight:400;color:${item.color};line-height:1.2;">${item.val}</div>
+            </div>
+        `).join('');
+        const ajusteEl = document.getElementById('staffResBarraAjuste');
+        const ajusteValEl = document.getElementById('staffResBarraAjusteVal');
+        ajusteEl.style.display = 'block';
+        ajusteValEl.textContent = (ajuste >= 0 ? '+' : '') + ajuste + '€';
+        ajusteValEl.style.color = ajuste >= 0 ? '#86efac' : '#f87171';
+        // Guardar ajuste y mostrar botón tick en la barra
+        _staffAjusteSugerido = ajuste;
+        _ajusteAplicado = false;
+        const _wa = document.getElementById('wrapAjuste');
+        const _ba = document.getElementById('btnAjuste');
+        if (_wa) _wa.style.display = 'flex';
+        if (_ba) { _ba.style.background='transparent'; _ba.style.borderColor='#94a3b8'; _ba.style.color='#94a3b8'; }
+    } catch(err) {
+        document.getElementById('staffResBarraItems').innerHTML = '<span style="color:#f87171;font-size:11px;">Error al cargar datos.</span>';
+    }
 }
 
 async function eliminarPago(btn) {
@@ -4446,13 +5104,18 @@ async function actualizarPago(btn) {
     const isStaffPayment = celdaActiva.closest('tr').classList.contains('fila-staff');
     let datos = {};
     if (isStaffPayment) {
-        datos = { 
-            nombre: celdaActiva.closest('tr').dataset.nombre, 
-            concepto: celdaActiva.dataset.concepto, 
-            importe: nuevoImporte, 
-            pilar: "Pagos Staff", 
-            fecha: new Date().toLocaleDateString('es-ES'), 
-            esperado: parseFloat(celdaActiva.dataset.esperado) || 0 
+        const _sNombre = celdaActiva.closest('tr').dataset.nombre;
+        const _sConcepto = celdaActiva.dataset.concepto;
+        const _sLabel = getLabelConcepto(_sConcepto, 'Varios', true);
+        datos = {
+            nombre: _sNombre,
+            concepto: _sConcepto,
+            importe: nuevoImporte,
+            pilar: "Pagos Staff",
+            fecha: new Date().toLocaleDateString('es-ES'),
+            esperado: parseFloat(celdaActiva.dataset.esperado) || 0,
+            descripcion: `Pago Staff ${_sLabel}: ${_sNombre}`,
+            force_compensar: true
         };
     } else {
         datos = { 
@@ -4602,8 +5265,29 @@ function seleccionarConceptoDesdeGrid(celda, evt) {
         : '';
 }
 
+const DPTOS_PILARES = {
+    'BANCO':        ['COMISIONES', 'DEVOLUCIONES'],
+    'COLEGIO':      [],
+    'COMPETICIONES':['GASTO', 'SANCIONES'],
+    'OTROS':        ['MARKETING', 'MANTENIMIENTO', 'CAPTACION', 'FIESTA', 'MAT. DEPORTIVO', 'OBRA', 'OFICINA', 'VINILO/SERIGRAFIA', 'OTROS'],
+    'GESTORIA':     [],
+    'HACIENDA':     [],
+    'ROPA':         [],
+    'SUELDOS':      [],
+    'INGRESOS':     ['CUOTAS', 'LOTERIA', 'RENDIMIENTOS', 'PATROCINIOS', 'OTROS']
+};
+
+function actualizarPilares(deptoId, pilarId) {
+    const depto = document.getElementById(deptoId).value;
+    const sel = document.getElementById(pilarId);
+    const pilares = DPTOS_PILARES[depto] || [];
+    sel.innerHTML = '<option value="" disabled selected hidden>Pilar...</option>' + pilares.map(p => `<option value="${p}">${p}</option>`).join('');
+}
+
 function limpiarFormularioAsientoManual() {
-    ['asientoFecha', 'asientoPilar', 'asientoDesc', 'asientoImporte'].forEach(id => document.getElementById(id).value = "");
+    ['asientoFecha', 'asientoDesc', 'asientoImporte'].forEach(id => document.getElementById(id).value = "");
+    document.getElementById('asientoDepto').value = '';
+    actualizarPilares('asientoDepto', 'asientoPilar');
     document.getElementById('asientoEquipoAsoc').value = "";
     document.getElementById('asientoJugadorAsoc').innerHTML = '<option value="">Jugador...</option>';
     document.getElementById('asientoConceptoAsoc').value = "";
@@ -4774,7 +5458,7 @@ function celdaFacturaHtml(a, importe, real_id) {
     if (importe >= 0) {
         if (a.NOMBRE && a.EQUIPO) return `<i class="fas fa-circle-check" style="color:#16a34a;" title="Asignado a ${a.NOMBRE} (${a.EQUIPO})"></i>${iconoR}`;
         if (a.ASIGNACION === 'NO_ASIGNAR') return `<span style="font-size:9px; color:#999; font-weight:700;">SIN ASIGNAR</span>${iconoR}`;
-        return `<i class="fas fa-user" style="color:#b45309; cursor:pointer;" title="Asignar a jugador o marcar sin asignar" onclick="abrirPopoverAsignarJugador(event, '${nAsiento}', ${importe})"></i>${iconoR}`;
+        return `<i class="fas fa-exclamation-triangle" style="color:#dc2626; cursor:pointer;" title="Asignar a jugador o marcar sin asignar" onclick="abrirPopoverAsignarJugador(event, '${nAsiento}', ${importe})"></i>${iconoR}`;
     }
     if (factura === 'SIN_FACTURA') return `<span style="font-size:9px; color:#999; font-weight:700;">SIN FRA.</span>${iconoR}`;
     if (factura) return `<a href="/static/facturas/${encodeURIComponent(factura)}" target="_blank" title="Ver factura"><i class="fas fa-file-pdf" style="color:#16a34a;"></i></a>${iconoR}`;
@@ -4950,7 +5634,22 @@ function actualizarContadorFacturasFaltantes() {
 
 function toggleDetalleFacturasFaltantes() {
     const panel = document.getElementById('panelDetalleFacturasFaltantes');
-    panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
+    const btn = document.getElementById('btnFacturasFaltantes');
+    const abierto = panel.style.display !== 'none';
+    panel.style.display = abierto ? 'none' : 'block';
+    if (abierto) {
+        btn.style.background = '#fff';
+        btn.style.borderColor = '#fca5a5';
+        btn.style.color = '#dc2626';
+        btn.style.boxShadow = 'none';
+        btn.style.fontWeight = '700';
+    } else {
+        btn.style.background = '#dc2626';
+        btn.style.borderColor = '#dc2626';
+        btn.style.color = '#fff';
+        btn.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.25)';
+        btn.style.fontWeight = '900';
+    }
 }
 
 function actualizarContadorCobrosPendientes() {
@@ -4977,7 +5676,7 @@ function actualizarContadorCobrosPendientes() {
             <span><b>${formatearFechaUnificada(a.FECHA)}</b> · ${a.DEPARTAMENTO || '-'} / ${a.PILAR || '-'} — ${a.DESCRIPCION || '-'}</span>
             <span style="display:flex; align-items:center; gap:10px;">
                 <span style="color:#16a34a; font-weight:800;">${importe.toLocaleString('es-ES', {minimumFractionDigits:2})}€</span>
-                <i class="fas fa-user-plus" style="color:#b45309; cursor:pointer;" title="Asignar a jugador o marcar sin asignar" onclick="abrirPopoverAsignarJugador(event, '${nAsiento}', ${importe})"></i>
+                <i class="fas fa-exclamation-triangle" style="color:#dc2626; cursor:pointer;" title="Asignar a jugador o marcar sin asignar" onclick="abrirPopoverAsignarJugador(event, '${nAsiento}', ${importe})"></i>
             </span>
         </div>`;
     }).join('');
@@ -5284,14 +5983,33 @@ function cargarPagosEnTabla() {
     // 1. Limpiar y establecer importes esperados por defecto
     // Primero reseteamos las filas de Staff para que no queden importes fantasma al borrar
     document.querySelectorAll('.fila-staff').forEach(fila => {
-        fila.querySelectorAll('.pago-cell').forEach(cell => {
+        const nombre = fila.dataset.nombre || '';
+        const esperadoMes = parseFloat(staffSueldos[nombre]) || 0;
+        fila.querySelectorAll('.pago-cell').forEach((cell, idx) => {
             if (cell.classList.contains('celda-ropa-dinamica')) return;
             const esExtra = cell.classList.contains('pago-extra-bg');
-            cell.className = esExtra ? 'pago-cell col-financiera pago-extra-bg' : 'pago-cell col-financiera';
-            cell.innerText = '-';
+            const dyClass = cell.classList.contains('td-staff-extra-dyn') ? ' td-staff-extra-dyn' : '';
+            cell.className = esExtra ? `pago-cell col-financiera pago-extra-bg${dyClass}` : 'pago-cell col-financiera';
             delete cell.dataset.asientoId;
             delete cell.dataset.importe;
+            cell.style.color = '';
+            if (!esExtra && idx < 12) {
+                cell.dataset.concepto = `Staff-${String(idx + 1).padStart(2, '0')}`;
+                if (esperadoMes > 0) {
+                    cell.dataset.esperado = esperadoMes;
+                    cell.innerText = `${esperadoMes}€`;
+                    cell.style.color = '#ccc';
+                } else {
+                    cell.dataset.esperado = 0;
+                    cell.innerText = '-';
+                }
+            } else {
+                cell.dataset.esperado = 0;
+                cell.innerText = '-';
+            }
         });
+        const badge = fila.querySelector('.staff-sueldo-badge');
+        if (badge) badge.textContent = esperadoMes > 0 ? `${esperadoMes}€` : '—';
     });
 
     // Meses de la temporada en orden de visualización (columnas 1..12 = ENE..DIC)
@@ -5420,10 +6138,18 @@ function cargarPagosEnTabla() {
                     let cell = null;
                     
                     if (esStaff) {
-                        if (item.startsWith('S-EXTRA')) cell = celdas[12];
-                        else {
-                            const m = parseInt(item.replace('Staff-', ''));
-                            if (!isNaN(m)) cell = celdas[m - 1];
+                        if (item === 'S-EXTRA') {
+                            cell = celdas[12];
+                        } else {
+                            const extraMatch = item.match(/^S-EXTRA(\d+)-/);
+                            if (extraMatch) {
+                                cell = celdas[11 + parseInt(extraMatch[1])];
+                            } else if (item.startsWith('S-EXTRA-')) {
+                                cell = celdas[12]; // S-EXTRA-NombreConcepto legacy
+                            } else {
+                                const m = parseInt(item.replace('Staff-', ''));
+                                if (!isNaN(m)) cell = celdas[m - 1];
+                            }
                         }
                     } else {
                         if (item === 'Inscripción') cell = celdas[0];
@@ -5473,28 +6199,31 @@ function cargarPagosEnTabla() {
                             cell.dataset.sumPagado = sP;
                             cell.dataset.sumEsperado = sE;
                             cell.dataset.importe = sP;
-                            
+                            const sPdisp = esStaff ? Math.abs(sP) : sP;
+
                             let asteriskHTML = "";
                             if (cell.dataset.splitDescriptions) {
                                 const tooltipText = cell.dataset.splitDescriptions.replace(/"/g, '&quot;');
                                 asteriskHTML = ` <span style="color: #ffeb3b; font-weight: bold; cursor: help; font-size: 14px;" title="${tooltipText}">*</span>`;
                                 cell.setAttribute('title', cell.dataset.splitDescriptions);
                             }
-                            
-                            cell.innerHTML = `<span class="paid-amount-large">${Math.round(sP)}€</span><span style="font-size: 8px; opacity: 0.7;"> / ${Math.round(sE)}€</span>${asteriskHTML}`;
-                            cell.classList.add(sP >= sE && sE > 0 ? 'pago-verde' : 'pago-naranja');
+
+                            cell.innerHTML = `<span class="paid-amount-large">${Math.round(sPdisp)}€</span><span style="font-size: 8px; opacity: 0.7;"> / ${Math.round(sE)}€</span>${asteriskHTML}`;
+                            cell.classList.add(sPdisp >= sE && sE > 0 ? 'pago-verde' : 'pago-naranja');
                             cell.style.color = '';
                         } else {
-                            const p = Math.round(actualPagado);
+                            // Para staff, los importes en FINANCIERO son negativos (gasto); mostrar valor absoluto en la tabla
+                            const pRaw = esStaff ? Math.abs(actualPagado) : actualPagado;
+                            const p = Math.round(pRaw);
                             const e = Math.round(valEsperadoCelda);
-                            
+
                             let asteriskHTML = "";
                             if (cell.dataset.splitDescriptions) {
                                 const tooltipText = cell.dataset.splitDescriptions.replace(/"/g, '&quot;');
                                 asteriskHTML = ` <span style="color: #ffeb3b; font-weight: bold; cursor: help; font-size: 14px;" title="${tooltipText}">*</span>`;
                                 cell.setAttribute('title', cell.dataset.splitDescriptions);
                             }
-                            
+
                             cell.innerHTML = `<span class="paid-amount-large">${p}€</span><span style="font-size: 8px; opacity: 0.7;"> / ${e}€</span>${asteriskHTML}`;
                             cell.classList.remove('pago-verde', 'pago-naranja', 'pago-exceso');
                             cell.classList.add(p >= e ? 'pago-verde' : 'pago-naranja');
@@ -5658,7 +6387,25 @@ async function guardarNuevoStaff(btn) {
             body: JSON.stringify(datos)
         });
         if (res.ok) {
-            alert("Miembro del Staff añadido correctamente");
+            if (datos.cargo === 'Entrenador' && datos.equipo) {
+                try {
+                    const cfgRes = await fetch('/api/equipos_config');
+                    const cfgData = await cfgRes.json();
+                    const eq = (cfgData.equipos || []).find(e => e.nombre && e.nombre.toLowerCase() === datos.equipo.toLowerCase());
+                    if (eq) {
+                        const slots = eq.entrenadores || ['', '', ''];
+                        const yaExiste = slots.some(s => s && s.toLowerCase() === datos.nombre.toLowerCase());
+                        if (!yaExiste) {
+                            const slotIdx = slots.findIndex(s => !s || !s.trim());
+                            if (slotIdx !== -1) {
+                                slots[slotIdx] = datos.nombre;
+                                eq.entrenadores = slots;
+                                await fetch('/api/equipos_config', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(cfgData) });
+                            }
+                        }
+                    }
+                } catch(e) { console.warn('sync config equipos:', e); }
+            }
             location.reload();
         } else {
             alert("Error al añadir miembro del Staff");
@@ -5927,7 +6674,10 @@ async function cargarConfiguraciones() {
         configuracionesPago = data.formas_pago || {};
         configCuotasMes = data.cuotas_mes || {};
         if (data.extra_names) extraNames = data.extra_names;
-        
+        if (data.staff_sueldos) staffSueldos = data.staff_sueldos || {};
+        if (data.staff_extras_count) staffExtrasCount = parseInt(data.staff_extras_count) || 1;
+        initExtraStaffCols();
+
         // Initialize gridFormas (decoupled payment forms list)
         if (configuracionesPago && configuracionesPago.formas) {
             gridFormas = configuracionesPago.formas;
@@ -5999,7 +6749,9 @@ async function guardarConfiguracionesFinancieras() {
         inscripciones: configInscripciones,
         formas_pago: configuracionesPago,
         cuotas_mes: configCuotasMes,
-        extra_names: extraNames
+        extra_names: extraNames,
+        staff_sueldos: staffSueldos,
+        staff_extras_count: staffExtrasCount
     };
     await fetch('/api/config_financiera', {
         method: 'POST',
@@ -6010,7 +6762,133 @@ async function guardarConfiguracionesFinancieras() {
 
 function actualizarLabelsExtra() {
     if (document.getElementById('labelStaffOtros')) document.getElementById('labelStaffOtros').innerText = extraNames.STAFF_OTROS || 'OTROS';
+    for (let i = 2; i <= staffExtrasCount; i++) {
+        const el = document.getElementById(`labelStaffOtros_${i}`);
+        if (el) el.innerText = extraNames[`STAFF_OTROS_${i}`] || `OTROS ${i}`;
+    }
+    document.querySelectorAll('.fila-staff').forEach(fila => {
+        const badge = fila.querySelector('.staff-sueldo-badge');
+        if (badge) badge.textContent = staffSueldos[fila.dataset.nombre] ? `${staffSueldos[fila.dataset.nombre]}€` : '—';
+    });
 }
+
+function editarSueldoStaff(td) {
+    const row = td.closest('tr');
+    const nombre = row.dataset.nombre;
+    const actual = staffSueldos[nombre] != null ? staffSueldos[nombre] : '';
+    const nuevoVal = prompt(`Sueldo mensual de ${nombre} (€):`, actual);
+    if (nuevoVal === null) return;
+    const trimmed = nuevoVal.trim();
+    if (trimmed === '') {
+        delete staffSueldos[nombre];
+        td.querySelector('.staff-sueldo-badge').textContent = '—';
+    } else {
+        const num = parseFloat(trimmed.replace(',', '.'));
+        if (isNaN(num)) return alert('Introduce un número válido');
+        staffSueldos[nombre] = num;
+        td.querySelector('.staff-sueldo-badge').textContent = `${num}€`;
+    }
+    cargarPagosEnTabla();
+    guardarConfiguracionesFinancieras();
+}
+
+function initExtraStaffCols() {
+    document.querySelectorAll('.th-staff-extra-dyn').forEach(el => el.remove());
+    document.querySelectorAll('.td-staff-extra-dyn').forEach(el => el.remove());
+    for (let n = 2; n <= staffExtrasCount; n++) _addExtraStaffCol(n);
+}
+
+function _addExtraStaffCol(n) {
+    const key = `STAFF_OTROS_${n}`;
+    const label = extraNames[key] || `OTROS ${n}`;
+    const concept = `S-EXTRA-${n}`;
+    const thAnchor = document.getElementById('thBtnRopaStaff');
+    if (thAnchor) {
+        const th = document.createElement('th');
+        th.className = 'col-financiera th-staff-extra-dyn';
+        th.style.cssText = 'min-width:60px; padding:10px 5px; background:#eceef2; border-bottom:2px solid #dee2e6;';
+        th.style.cursor = 'pointer';
+        th.onclick = (e) => abrirCtxMenuOtros(e, key, n);
+        th.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; gap:4px; pointer-events:none;">
+            <span id="labelStaffOtros_${n}" style="font-size:9px; color:#475569; font-weight:800;">${label}</span>
+            <i class="fas fa-ellipsis-h" style="color:#94a3b8; font-size:10px;"></i>
+        </div>`;
+        thAnchor.parentElement.insertBefore(th, thAnchor);
+    }
+    document.querySelectorAll('.fila-staff').forEach(fila => {
+        const anchorTd = fila.querySelector('.col-anchor-ropa.col-ropa-btn-staff');
+        const td = document.createElement('td');
+        td.className = 'pago-cell col-financiera pago-extra-bg td-staff-extra-dyn';
+        td.dataset.concepto = concept;
+        td.innerText = '-';
+        td.onclick = function(e) { seleccionarPagoStaff(e, this, concept); };
+        if (anchorTd) fila.insertBefore(td, anchorTd);
+        else fila.appendChild(td);
+    });
+}
+
+async function agregarColumnaExtra() {
+    staffExtrasCount++;
+    const key = `STAFF_OTROS_${staffExtrasCount}`;
+    extraNames[key] = `OTROS ${staffExtrasCount}`;
+    _addExtraStaffCol(staffExtrasCount);
+    actualizarLabelsExtra();
+    await guardarConfiguracionesFinancieras();
+}
+
+// ── Menú contextual columnas OTROS ──
+let _ctxOtrosKey = null; // key activa del menú ('STAFF_OTROS', 'STAFF_OTROS_2', ...)
+let _ctxOtrosN = null;   // número de columna extra dinámica (null = primera)
+
+function abrirCtxMenuOtros(e, key, nDyn) {
+    e.preventDefault();
+    e.stopPropagation();
+    _ctxOtrosKey = key;
+    _ctxOtrosN = nDyn;
+    const elimBtn = document.getElementById('ctxMenuOtrosEliminar');
+    if (elimBtn) elimBtn.style.display = nDyn ? '' : 'none'; // solo dinámicas se pueden eliminar
+    const menu = document.getElementById('ctxMenuOtros');
+    menu.style.display = 'block';
+    let x = e.clientX, y = e.clientY;
+    if (x + 190 > window.innerWidth) x = window.innerWidth - 195;
+    if (y + 120 > window.innerHeight) y = window.innerHeight - 125;
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+}
+
+function cerrarCtxMenuOtros() {
+    document.getElementById('ctxMenuOtros').style.display = 'none';
+}
+
+function ctxOtrosAnadir() {
+    cerrarCtxMenuOtros();
+    agregarColumnaExtra();
+}
+
+function ctxOtrosRenombrar() {
+    cerrarCtxMenuOtros();
+    renombrarExtra(_ctxOtrosKey);
+}
+
+async function ctxOtrosEliminar() {
+    cerrarCtxMenuOtros();
+    if (!_ctxOtrosN || !confirm(`¿Eliminar la columna "${extraNames[_ctxOtrosKey] || _ctxOtrosKey}"?`)) return;
+    // Eliminar cabecera y celdas de esa columna
+    document.querySelectorAll(`.th-staff-extra-dyn, .td-staff-extra-dyn`).forEach(el => {
+        const id = el.id || '';
+        if (el.tagName === 'TH' && el.querySelector(`#labelStaffOtros_${_ctxOtrosN}`)) el.remove();
+        else if (el.tagName === 'TD' && el.dataset.concepto === `S-EXTRA-${_ctxOtrosN}`) el.remove();
+    });
+    // Limpiar config
+    delete extraNames[_ctxOtrosKey];
+    staffExtrasCount = Math.max(1, staffExtrasCount - 1);
+    // Re-numerar si hace falta
+    await guardarConfiguracionesFinancieras();
+}
+
+document.addEventListener('click', e => {
+    if (!document.getElementById('ctxMenuOtros').contains(e.target)) cerrarCtxMenuOtros();
+});
 
 async function renombrarExtra(key) {
     const nuevoNombre = prompt(`Introduce el nuevo nombre para la columna ${key}:`, extraNames[key]);
@@ -6611,68 +7489,560 @@ async function guardarSeleccionadosRevision() {
         actualizarContadorRevision();
     }
 }
+
+// ══════════════════════════════════════════
+//  SUBVENCIONES
+// ══════════════════════════════════════════
+let subvencionesData = [];
+let adjuntosModalTemp = []; // adjuntos ya subidos en la sesión del modal actual
+
+const MESES_ES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+
+async function cargarSubvenciones() {
+    try {
+        const res = await fetch('/api/subvenciones');
+        subvencionesData = await res.json();
+        renderTablaSubvenciones();
+        actualizarBannerSubvenciones();
+    } catch(e) {
+        console.error('Error cargando subvenciones', e);
+    }
+}
+
+function actualizarBannerSubvenciones() {
+    const banner = document.getElementById('bannerSubvenciones');
+    if (!banner) return;
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    const en30 = new Date(hoy.getTime() + 30 * 86400000);
+    const proximas = subvencionesData.filter(s => {
+        if (!s.FECHA_APERTURA || (s.COBRADO || 'No').trim() === 'Si') return false;
+        const raw = s.FECHA_APERTURA;
+        const [y,m,d] = (raw.includes('/') ? raw.split('/').reverse() : raw.split('-')).map(Number);
+        const fecha = new Date(y, m-1, d);
+        return fecha >= hoy && fecha <= en30;
+    });
+    if (!proximas.length) { banner.style.display = 'none'; return; }
+    banner.style.display = 'block';
+    banner.innerHTML = `<div style="background:#fef3c7; border:1.5px solid #f59e0b; border-radius:10px; padding:12px 16px;">
+        <div style="font-size:12px; font-weight:900; color:#92400e; margin-bottom:6px;"><i class="fas fa-exclamation-triangle" style="margin-right:6px; color:#f59e0b;"></i> SUBVENCIONES CON APERTURA EN LOS PRÓXIMOS 30 DÍAS</div>
+        ${proximas.map(s => `<div style="font-size:11px; color:#78350f; margin-top:4px;">• <strong>${s.NOMBRE}</strong> — Apertura: <strong>${formatFechaDisplay(s.FECHA_APERTURA)}</strong></div>`).join('')}
+    </div>`;
+}
+
+function renderTablaSubvenciones() {
+    const tbody = document.getElementById('bodySubvenciones');
+    if (!tbody) return;
+    if (!subvencionesData.length) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; color:#aaa; padding:30px; font-size:12px;">No hay subvenciones registradas.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = subvencionesData.map(s => {
+        const cobrado = (s.COBRADO || 'No').trim();
+        const cobradoBadge = cobrado === 'Si'
+            ? `<span style="background:#dcfce7; color:#16a34a; border-radius:6px; padding:2px 8px; font-size:10px; font-weight:800;">✓ SÍ</span>`
+            : `<span style="background:#fef2f2; color:#dc2626; border-radius:6px; padding:2px 8px; font-size:10px; font-weight:800;">✗ NO</span>`;
+
+        const apertura = formatFechaDisplay(s.FECHA_APERTURA);
+        const plazo = formatFechaDisplay(s.PLAZO_MAXIMO);
+        const presentada = formatFechaDisplay(s.FECHA_PRESENTADA);
+        const fechaCobro = cobrado === 'Si' ? formatFechaDisplay(s.FECHA_COBRO) : '—';
+        const importe = s.IMPORTE ? parseFloat(s.IMPORTE).toLocaleString('es-ES', {minimumFractionDigits:2}) + ' €' : '—';
+
+        const adjuntosHtml = (s.ADJUNTOS || '').split(',').filter(a => a.trim()).map(a => {
+            const nombre = a.replace(/^\d+_/, '');
+            return `<a href="/static/data/subvenciones/${a.trim()}" target="_blank" style="font-size:10px; color:#E31E24; font-weight:700; text-decoration:none; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:110px;" title="${nombre}">
+                <i class="fas fa-paperclip"></i> ${nombre}</a>`;
+        }).join('') || '<span style="color:#ccc; font-size:10px;">—</span>';
+
+        const hoy = new Date(); hoy.setHours(0,0,0,0);
+        let plazoStyle = '';
+        if (s.PLAZO_MAXIMO && cobrado !== 'Si') {
+            const [y,m,d] = (s.PLAZO_MAXIMO.includes('/') ? s.PLAZO_MAXIMO.split('/').reverse() : s.PLAZO_MAXIMO.split('-'));
+            const plazoDate = new Date(y, m-1, d);
+            const diff = (plazoDate - hoy) / 86400000;
+            if (diff < 0) plazoStyle = 'color:#dc2626; font-weight:800;';
+            else if (diff <= 7) plazoStyle = 'color:#f59e0b; font-weight:800;';
+        }
+        let aperturaStyle = '';
+        if (s.FECHA_APERTURA && cobrado !== 'Si') {
+            const [ay,am,ad] = (s.FECHA_APERTURA.includes('/') ? s.FECHA_APERTURA.split('/').reverse() : s.FECHA_APERTURA.split('-')).map(Number);
+            const apDate = new Date(ay, am-1, ad);
+            const diffAp = (apDate - hoy) / 86400000;
+            if (diffAp < 0) aperturaStyle = 'color:#dc2626; font-weight:800;';
+            else if (diffAp <= 30) aperturaStyle = 'color:#f59e0b; font-weight:800;';
+        }
+
+        return `<tr>
+            <td style="font-weight:800; font-size:12px;">${s.NOMBRE || '—'}</td>
+            <td style="font-size:11px; color:#64748b; max-width:200px;">${(s.DESCRIPCION || '—').substring(0,80)}${s.DESCRIPCION && s.DESCRIPCION.length > 80 ? '…' : ''}</td>
+            <td style="font-size:11px; ${aperturaStyle}">${apertura}</td>
+            <td style="font-size:11px; ${plazoStyle}">${plazo}</td>
+            <td style="font-size:11px;">${presentada}</td>
+            <td style="text-align:right; font-weight:800; font-size:12px;">${importe}</td>
+            <td style="text-align:center;">${cobradoBadge}</td>
+            <td style="font-size:11px;">${fechaCobro}</td>
+            <td>${adjuntosHtml}</td>
+            <td style="text-align:center; white-space:nowrap;">
+                <i class="fas fa-pencil-alt" style="color:#64748b; cursor:pointer; margin-right:8px;" onclick="abrirModalSubvencion(${JSON.stringify(s).replace(/"/g,'&quot;')})"></i>
+                <i class="fas fa-trash-alt" style="color:#dc2626; cursor:pointer;" onclick="eliminarSubvencion('${s.ID}')"></i>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function formatFechaDisplay(val) {
+    if (!val) return '—';
+    if (val.includes('-') && val.length === 10) {
+        const [y,m,d] = val.split('-');
+        return `${d}/${m}/${y}`;
+    }
+    return val;
+}
+
+function toggleFechaCobro() {
+    const v = document.getElementById('subvCobrado').value;
+    document.getElementById('filaFechaCobro').style.display = v === 'Si' ? 'block' : 'none';
+}
+
+function abrirModalSubvencion(datos) {
+    adjuntosModalTemp = [];
+    document.getElementById('subvId').value = datos ? (datos.ID || '') : '';
+    document.getElementById('subvOldNombre').value = datos ? (datos.NOMBRE || '') : '';
+    document.getElementById('subvOldApertura').value = datos ? isoDate(datos.FECHA_APERTURA) : '';
+    document.getElementById('subvNombre').value = datos ? (datos.NOMBRE || '') : '';
+    document.getElementById('subvDescripcion').value = datos ? (datos.DESCRIPCION || '') : '';
+    document.getElementById('subvApertura').value = datos ? isoDate(datos.FECHA_APERTURA) : '';
+    document.getElementById('subvPlazo').value = datos ? isoDate(datos.PLAZO_MAXIMO) : '';
+    document.getElementById('subvPresentada').value = datos ? isoDate(datos.FECHA_PRESENTADA) : '';
+    document.getElementById('subvImporte').value = datos ? (datos.IMPORTE || '') : '';
+    document.getElementById('subvCobrado').value = datos ? (datos.COBRADO || 'No') : 'No';
+    document.getElementById('subvFechaCobro').value = datos ? isoDate(datos.FECHA_COBRO) : '';
+    document.getElementById('tituloModalSubv').innerText = datos ? 'EDITAR SUBVENCIÓN' : 'NUEVA SUBVENCIÓN';
+    toggleFechaCobro();
+
+    // Mostrar adjuntos existentes
+    const lista = document.getElementById('listaAdjuntosModal');
+    const adjuntos = datos && datos.ADJUNTOS ? datos.ADJUNTOS.split(',').filter(a => a.trim()) : [];
+    lista.innerHTML = adjuntos.map(a => {
+        const nombre = a.replace(/^\d+_/, '');
+        return `<div style="display:flex; align-items:center; justify-content:space-between; background:#f8fafc; border-radius:6px; padding:6px 10px; font-size:11px; font-weight:700;">
+            <a href="/static/data/subvenciones/${a.trim()}" target="_blank" style="color:#E31E24; text-decoration:none;"><i class="fas fa-paperclip"></i> ${nombre}</a>
+            <i class="fas fa-times" style="color:#dc2626; cursor:pointer;" onclick="borrarAdjuntoSubvencion('${a.trim()}', this)"></i>
+        </div>`;
+    }).join('');
+
+    document.getElementById('modalSubvencion').style.display = 'block';
+}
+
+function isoDate(val) {
+    if (!val) return '';
+    if (val.includes('/')) {
+        const p = val.split('/');
+        if (p.length === 3) return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+    }
+    return val;
+}
+
+function cerrarModalSubvencion() {
+    document.getElementById('modalSubvencion').style.display = 'none';
+}
+
+async function guardarSubvencion() {
+    const nombre = document.getElementById('subvNombre').value.trim();
+    if (!nombre) return alert('El nombre es obligatorio');
+    const cobrado = document.getElementById('subvCobrado').value;
+    const newApertura = document.getElementById('subvApertura').value;
+    const oldNombreSync = document.getElementById('subvOldNombre').value;
+    const oldAperturaSync = document.getElementById('subvOldApertura').value;
+    const payload = {
+        ID: document.getElementById('subvId').value,
+        NOMBRE: nombre,
+        DESCRIPCION: document.getElementById('subvDescripcion').value.trim(),
+        FECHA_APERTURA: newApertura,
+        PLAZO_MAXIMO: document.getElementById('subvPlazo').value,
+        FECHA_PRESENTADA: document.getElementById('subvPresentada').value,
+        IMPORTE: document.getElementById('subvImporte').value,
+        COBRADO: cobrado,
+        FECHA_COBRO: cobrado === 'Si' ? document.getElementById('subvFechaCobro').value : '',
+        ADJUNTOS: ''
+    };
+    try {
+        const res = await fetch('/api/subvenciones/guardar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const data = await res.json();
+        if (data.status === 'success') {
+            for (const adj of adjuntosModalTemp) {
+                await fetch('/api/subvenciones/adjunto', {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ ID: data.ID, nombre: adj.nombre, contenido: adj.contenido })
+                });
+            }
+            adjuntosModalTemp = [];
+            cerrarModalSubvencion();
+            // Sincronizar cronograma de Raúl y Rubén si hay fecha apertura
+            if (newApertura) {
+                await sincronizarCronoSubvencion(nombre, newApertura, oldNombreSync, oldAperturaSync);
+            }
+            await cargarSubvenciones();
+        } else { alert('Error: ' + data.message); }
+    } catch(e) { alert('Error de conexión'); }
+}
+
+async function _crono_save(persona, mes, tarea) {
+    try {
+        await fetch('/api/cronograma_save', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ persona, fecha: mes, tarea, vista: 'ANUAL', categoria: 'SUBVENCIONES', estado: 'PENDIENTE' })
+        });
+    } catch(e) {}
+}
+
+async function _crono_delete(persona, mes, tarea) {
+    try {
+        await fetch('/api/cronograma_delete', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ user: persona, fecha: mes, tarea, vista: 'ANUAL' })
+        });
+    } catch(e) {}
+}
+
+async function sincronizarCronoSubvencion(nombre, apertura, oldNombre, oldApertura) {
+    const mesIdx = parseInt(apertura.split('-')[1]) - 1;
+    const mesApertura = MESES_ES[mesIdx];
+    const mesRecordatorio = MESES_ES[(mesIdx + 11) % 12];
+    const tareaAp = `Subvención: ${nombre}`;
+    const tareaRec = `Recordatorio: Subvención ${nombre}`;
+
+    // Limpiar tareas antiguas si cambiaron nombre o fecha
+    if (oldApertura && (oldNombre !== nombre || oldApertura !== apertura)) {
+        const oldIdx = parseInt(oldApertura.split('-')[1]) - 1;
+        const oldMesAp = MESES_ES[oldIdx];
+        const oldMesRec = MESES_ES[(oldIdx + 11) % 12];
+        for (const p of ['Raul', 'Ruben']) {
+            await _crono_delete(p, oldMesAp, `Subvención: ${oldNombre}`);
+            await _crono_delete(p, oldMesRec, `Recordatorio: Subvención ${oldNombre}`);
+        }
+    }
+
+    // Recrear (delete+create para evitar duplicados)
+    for (const p of ['Raul', 'Ruben']) {
+        await _crono_delete(p, mesApertura, tareaAp);
+        await _crono_delete(p, mesRecordatorio, tareaRec);
+        await _crono_save(p, mesApertura, tareaAp);
+        await _crono_save(p, mesRecordatorio, tareaRec);
+    }
+}
+
+async function eliminarSubvencion(id) {
+    if (!confirm('¿Eliminar esta subvención?')) return;
+    await fetch('/api/subvenciones/eliminar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ID: id}) });
+    await cargarSubvenciones();
+}
+
+function subirAdjuntosSubvencion(input) {
+    const sid = document.getElementById('subvId').value;
+    const lista = document.getElementById('listaAdjuntosModal');
+    Array.from(input.files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            const contenido = e.target.result.split(',')[1]; // base64
+            if (sid) {
+                // Ya existe la subvención, subir directamente
+                const res = await fetch('/api/subvenciones/adjunto', {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ ID: sid, nombre: file.name, contenido })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    const nombre = file.name;
+                    lista.innerHTML += `<div style="display:flex; align-items:center; justify-content:space-between; background:#f8fafc; border-radius:6px; padding:6px 10px; font-size:11px; font-weight:700;">
+                        <a href="/static/data/subvenciones/${data.archivo}" target="_blank" style="color:#E31E24; text-decoration:none;"><i class="fas fa-paperclip"></i> ${nombre}</a>
+                        <i class="fas fa-times" style="color:#dc2626; cursor:pointer;" onclick="borrarAdjuntoSubvencion('${data.archivo}', this)"></i>
+                    </div>`;
+                }
+            } else {
+                // Nueva subvención aún sin ID: guardar temporalmente
+                adjuntosModalTemp.push({ nombre: file.name, contenido });
+                lista.innerHTML += `<div style="display:flex; align-items:center; justify-content:space-between; background:#fffbeb; border-radius:6px; padding:6px 10px; font-size:11px; font-weight:700;">
+                    <span style="color:#92400e;"><i class="fas fa-paperclip"></i> ${file.name} (pendiente de guardar)</span>
+                </div>`;
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+    input.value = '';
+}
+
+async function borrarAdjuntoSubvencion(fname, iconEl) {
+    if (!confirm('¿Eliminar este adjunto?')) return;
+    const sid = document.getElementById('subvId').value;
+    await fetch(`/api/subvenciones/adjunto/${fname}`, {
+        method:'DELETE', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ ID: sid })
+    });
+    iconEl.closest('div').remove();
+}
+
+// Cargar subvenciones al abrir la pestaña
+document.addEventListener('DOMContentLoaded', () => {
+    const tabSubv = document.querySelector('[data-tab="tab-subvenciones"]');
+    if (tabSubv) tabSubv.addEventListener('click', () => { if (!subvencionesData.length) cargarSubvenciones(); });
+});
+
+// ═══════════════════════════════════════════════════
+//  MULTAS CONFIG
+// ═══════════════════════════════════════════════════
+async function abrirConfigMultas() {
+    try {
+        const res = await fetch('/api/multas_config');
+        const cfg = await res.json();
+        document.getElementById('mlt_perdida_balon').value = cfg.perdida_balon ?? 10;
+        document.getElementById('mlt_falta').value = cfg.falta ?? 5;
+        document.getElementById('mlt_suplencia').value = cfg.suplencia ?? 10;
+        document.getElementById('mlt_pen_asistencias').value = cfg.penalizacion_asistencias ?? 5;
+        document.getElementById('mlt_umbral_asistencias').value = cfg.umbral_asistencias ?? 2;
+        document.getElementById('mlt_pen_entrenamientos').value = cfg.penalizacion_entrenamientos ?? 5;
+        document.getElementById('mlt_umbral_entrenamientos').value = cfg.umbral_entrenamientos ?? 2;
+        document.getElementById('mlt_pen_formularios').value = cfg.penalizacion_formularios ?? 2;
+        document.getElementById('mlt_umbral_formularios').value = cfg.umbral_formularios ?? 2;
+    } catch(e) {
+        document.getElementById('mlt_perdida_balon').value = 10;
+        document.getElementById('mlt_falta').value = 5;
+        document.getElementById('mlt_suplencia').value = 10;
+        document.getElementById('mlt_pen_asistencias').value = 5;
+        document.getElementById('mlt_umbral_asistencias').value = 2;
+        document.getElementById('mlt_pen_entrenamientos').value = 5;
+        document.getElementById('mlt_umbral_entrenamientos').value = 2;
+        document.getElementById('mlt_pen_formularios').value = 2;
+        document.getElementById('mlt_umbral_formularios').value = 2;
+    }
+    document.getElementById('modalMultasConfig').style.display = 'block';
+}
+
+async function guardarConfigMultas() {
+    const cfg = {
+        perdida_balon: parseFloat(document.getElementById('mlt_perdida_balon').value) || 0,
+        falta: parseFloat(document.getElementById('mlt_falta').value) || 0,
+        suplencia: parseFloat(document.getElementById('mlt_suplencia').value) || 0,
+        penalizacion_asistencias: parseFloat(document.getElementById('mlt_pen_asistencias').value) || 0,
+        umbral_asistencias: parseInt(document.getElementById('mlt_umbral_asistencias').value) || 2,
+        penalizacion_entrenamientos: parseFloat(document.getElementById('mlt_pen_entrenamientos').value) || 0,
+        umbral_entrenamientos: parseInt(document.getElementById('mlt_umbral_entrenamientos').value) || 2,
+        penalizacion_formularios: parseFloat(document.getElementById('mlt_pen_formularios').value) || 0,
+        umbral_formularios: parseInt(document.getElementById('mlt_umbral_formularios').value) || 2,
+    };
+    await fetch('/api/multas_config', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(cfg) });
+    document.getElementById('modalMultasConfig').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════
+//  PANEL RESUMEN EQUIPO (modal de pago staff)
+// ═══════════════════════════════════════════════════
+const _MESES_LABEL = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+
+async function cargarResumenEquipoPanel(equipo, mes, nombre) {
+    const panel = document.getElementById('panelResumenEquipo');
+    const cont = document.getElementById('panelResumenContenido');
+    const tit = document.getElementById('panelResumenTitulo');
+    if (!panel) return;
+    panel.style.display = 'block';
+    tit.textContent = `RESUMEN ${(equipo||'').toUpperCase()} — ${_MESES_LABEL[parseInt(mes)-1]||mes}`;
+    cont.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:10px;grid-column:1/-1;padding:10px;">Cargando...</div>';
+    try {
+        const [rRes, cRes] = await Promise.all([
+            fetch(`/api/staff_resumen_mes?equipo=${encodeURIComponent(equipo)}&mes=${mes}&nombre=${encodeURIComponent(nombre||'')}`),
+            fetch('/api/multas_config')
+        ]);
+        const s = await rRes.json();
+        const cfg = await cRes.json();
+
+        // Calcular ajuste sugerido
+        const dedBalon   = (s.balones_perdidos||0) * (cfg.perdida_balon||10);
+        const dedFalta   = (s.faltas||0) * (cfg.falta||5);
+        const bonSup     = (s.suplencias||0) * (cfg.suplencia||10);
+        const penAsist   = (s.dias_warning||0) > (cfg.umbral_asistencias||2) ? -(cfg.penalizacion_asistencias||5) : 0;
+        const penEntren  = (s.sesiones_no_subidas||0) > (cfg.umbral_entrenamientos||2) ? -(cfg.penalizacion_entrenamientos||5) : 0;
+        const penForm    = (s.formularios_pendientes||0) > 0 ? -(cfg.penalizacion_formularios||2) : 0;
+        const total = -dedBalon - dedFalta + bonSup + penAsist + penEntren + penForm;
+        const totalColor = total >= 0 ? '#16a34a' : '#dc2626';
+
+        const items = [
+            {icon:'⚠️', label:'Días con warning',    val: s.dias_warning||0,           col: (s.dias_warning||0)>(cfg.umbral_asistencias||2)?'#dc2626':'#f59e0b'},
+            {icon:'📤', label:'Sesiones no subidas',  val: s.sesiones_no_subidas||0,    col: (s.sesiones_no_subidas||0)>(cfg.umbral_entrenamientos||2)?'#dc2626':'#1e293b'},
+            {icon:'📋', label:'Formularios pend.',    val: s.formularios_pendientes||0, col: (s.formularios_pendientes||0)>0?'#dc2626':'#16a34a'},
+            {icon:'⚽', label:'Balones perdidos',     val: s.balones_perdidos||0,       col:(s.balones_perdidos||0)>0?'#dc2626':'#1e293b'},
+            {icon:'❌', label:'Faltas',               val: s.faltas||0,                 col:(s.faltas||0)>0?'#dc2626':'#1e293b'},
+            {icon:'🔄', label:'Suplencias',           val: s.suplencias||0,             col:'#16a34a'},
+        ];
+
+        const desglose = [
+            dedBalon > 0 ? `⚽ ${s.balones_perdidos} balón×${cfg.perdida_balon}€ = -${dedBalon}€` : null,
+            dedFalta > 0 ? `❌ ${s.faltas} falta×${cfg.falta}€ = -${dedFalta}€` : null,
+            bonSup > 0 ? `🔄 ${s.suplencias} suplencia×${cfg.suplencia}€ = +${bonSup}€` : null,
+            penAsist !== 0 ? `⚠️ Warning (>${cfg.umbral_asistencias} días) = ${penAsist}€` : null,
+            penEntren !== 0 ? `📤 No subidas (>${cfg.umbral_entrenamientos}) = ${penEntren}€` : null,
+            penForm !== 0 ? `📋 Form. pendientes = ${penForm}€` : null,
+        ].filter(Boolean);
+
+        cont.innerHTML = `
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; grid-column:1/-1;">
+                ${items.map(it=>`
+                    <div style="background:#f8fafc;border-radius:8px;padding:8px 10px;border:1px solid #e2e8f0;">
+                        <div style="font-size:10px;color:#64748b;margin-bottom:2px;">${it.icon} ${it.label}</div>
+                        <div style="font-size:16px;font-weight:900;color:${it.col};">${it.val}</div>
+                    </div>
+                `).join('')}
+                <div style="grid-column:1/-1; background:${total>=0?'#dcfce7':'#fef2f2'}; border-radius:10px; padding:12px 14px; border:2px solid ${totalColor}; display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                    <div>
+                        <div style="font-size:10px;font-weight:900;color:#64748b;margin-bottom:4px;">AJUSTE SUGERIDO</div>
+                        ${desglose.map(d=>`<div style="font-size:9px;color:#64748b;">${d}</div>`).join('')}
+                    </div>
+                    <div style="font-size:22px;font-weight:900;color:${totalColor};">${total>=0?'+':''}${total}€</div>
+                </div>
+            </div>`;
+    } catch(e) {
+        cont.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#dc2626;font-size:10px;padding:10px;">Error cargando datos</div>';
+    }
+}
 </script>
 
 <!-- MODAL ESTADÍSTICAS MEJORADO -->
 <div id="modalEstadisticas" class="modal">
-    <div class="modal-content" style="width: 900px; max-width: 95%; max-height: 90vh; overflow-y: auto; background: #f8f9fa; padding: 0; border-radius: 20px;">
+    <div class="modal-content" style="width: 1900px; max-width: 99%; max-height: 95vh; overflow-y: auto; background: #f8f9fa; padding: 0; border-radius: 20px;">
         <!-- Cabecera Profesional -->
-        <div style="background: white; padding: 25px; border-bottom: 1px solid #eee; border-radius: 20px 20px 0 0; display: flex; justify-content: space-between; align-items: center;">
+        <div style="background: white; padding: 20px 25px; border-bottom: 1px solid #eee; border-radius: 20px 20px 0 0; display: flex; align-items: center; gap: 12px; position: relative;">
+            <i class="fas fa-chart-pie" style="color: #E31E24; font-size: 20px;"></i>
             <div>
-                <h3 style="margin: 0; font-size: 20px; font-weight: 900; color: #333;"><i class="fas fa-chart-pie" style="color: #E31E24; margin-right: 10px;"></i> CUADRO DE MANDO FINANCIERO</h3>
-                <p style="font-size: 12px; color: #999; margin-top: 5px;">Análisis detallado de ingresos y gastos por pilar estratégico.</p>
+                <h3 style="margin: 0; font-size: 18px; font-weight: 900; color: #333;">CUADRO DE MANDO FINANCIERO</h3>
+                <p style="font-size: 11px; color: #999; margin: 2px 0 0;">Análisis detallado de ingresos y gastos por pilar estratégico.</p>
             </div>
-            <div style="text-align: right;">
-                <label style="display: block; font-size: 10px; font-weight: 900; color: #bbb; margin-bottom: 5px; text-transform: uppercase;">Periodo de Análisis</label>
-                <select id="selectorMesesStats" onchange="renderStats()" style="padding: 10px 15px; border-radius: 8px; border: 2px solid #eee; font-weight: 800; font-family: inherit; font-size: 13px; min-width: 200px; cursor: pointer; outline: none; transition: 0.3s; background: #fff;">
-                </select>
-            </div>
+            <span onclick="document.getElementById('modalEstadisticas').style.display='none'" style="position: absolute; top: 14px; right: 18px; font-size: 22px; color: #94a3b8; cursor: pointer; line-height: 1; font-weight: 400;">&times;</span>
         </div>
 
-        <div style="padding: 25px; display: flex; flex-direction: column; gap: 20px;">
-            <!-- Resumen de Tarjetas -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
-                <div style="background: white; padding: 20px; border-radius: 15px; border: 1px solid #eee; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-                    <p style="font-size: 10px; font-weight: 900; color: #999; margin: 0; text-transform: uppercase;">Total Ingresos</p>
-                    <div id="totalBeneficioTxt" style="font-size: 22px; font-weight: 900; color: #28a745; margin-top: 5px;">0.00 €</div>
+        <div style="padding: 25px; display: flex; flex-direction: row; gap: 20px; align-items: flex-start;">
+
+            <!-- IZQUIERDA: contenido existente -->
+            <div style="display: flex; flex-direction: column; gap: 20px; min-width: 500px; flex: 0 0 500px;">
+                <!-- Selector periodo -->
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%;">
+                    <label style="font-size:10px; font-weight:900; color:#bbb; text-transform:uppercase; white-space:nowrap;">Periodo de Análisis</label>
+                    <select id="selectorMesesStats" onchange="renderStats()" style="padding:8px 14px; border-radius:8px; border:2px solid #eee; font-weight:800; font-family:inherit; font-size:13px; flex:1; cursor:pointer; outline:none; background:#fff;">
+                    </select>
                 </div>
-                <div style="background: white; padding: 20px; border-radius: 15px; border: 1px solid #eee; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-                    <p style="font-size: 10px; font-weight: 900; color: #999; margin: 0; text-transform: uppercase;">Total Gastos</p>
-                    <div id="totalGastoTxt" style="font-size: 22px; font-weight: 900; color: #dc3545; margin-top: 5px;">0.00 €</div>
+                <!-- Resumen de Tarjetas -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                    <div style="background: white; padding: 16px; border-radius: 15px; border: 1px solid #eee; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                        <p style="font-size: 10px; font-weight: 900; color: #999; margin: 0; text-transform: uppercase;">Total Ingresos</p>
+                        <div id="totalBeneficioTxt" style="font-size: 20px; font-weight: 900; color: #28a745; margin-top: 5px;">0.00 €</div>
+                    </div>
+                    <div style="background: white; padding: 16px; border-radius: 15px; border: 1px solid #eee; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                        <p style="font-size: 10px; font-weight: 900; color: #999; margin: 0; text-transform: uppercase;">Total Gastos</p>
+                        <div id="totalGastoTxt" style="font-size: 20px; font-weight: 900; color: #dc3545; margin-top: 5px;">0.00 €</div>
+                    </div>
+                    <div style="background: white; padding: 16px; border-radius: 15px; border: 2px solid #000; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                        <p style="font-size: 10px; font-weight: 900; color: #999; margin: 0; text-transform: uppercase;">Balance Neto</p>
+                        <div id="totalBalanceTxt" style="font-size: 20px; font-weight: 900; color: #333; margin-top: 5px;">0.00 €</div>
+                    </div>
                 </div>
-                <div style="background: white; padding: 20px; border-radius: 15px; border: 1px solid #eee; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-                    <p style="font-size: 10px; font-weight: 900; color: #999; margin: 0; text-transform: uppercase;">Balance Neto</p>
-                    <div id="totalBalanceTxt" style="font-size: 22px; font-weight: 900; color: #333; margin-top: 5px;">0.00 €</div>
+
+                <!-- Tablas de Desglose -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div style="background: white; padding: 20px; border-radius: 15px; border: 1px solid #eee;">
+                        <h4 style="color: #dc3545; font-size: 12px; font-weight: 900; text-transform: uppercase; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-arrow-down"></i> Distribución de Gastos
+                        </h4>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tbody id="statsGasto"></tbody>
+                        </table>
+                    </div>
+                    <div style="background: white; padding: 20px; border-radius: 15px; border: 1px solid #eee;">
+                        <h4 style="color: #28a745; font-size: 12px; font-weight: 900; text-transform: uppercase; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-arrow-up"></i> Distribución de Beneficios
+                        </h4>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tbody id="statsBeneficio"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            <!-- Tablas de Desglose -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
-                <!-- GASTOS -->
-                <div style="background: white; padding: 25px; border-radius: 15px; border: 1px solid #eee;">
-                    <h4 style="color: #dc3545; font-size: 13px; font-weight: 900; text-transform: uppercase; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
-                        <i class="fas fa-arrow-down"></i> Distribución de Gastos
-                    </h4>
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <tbody id="statsGasto"></tbody>
-                    </table>
+            <!-- DERECHA: Tabla Presupuesto -->
+            <div style="flex: 1; background: white; border-radius: 15px; border: 1px solid #eee; overflow: hidden; display: flex; flex-direction: column;">
+                <!-- Header panel -->
+                <div style="background: #1e293b; padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; flex-shrink:0;">
+                    <span style="font-size: 13px; font-weight: 900; color: white; letter-spacing: 1px;">PRESUPUESTO PARTIDAS</span>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input id="ingresosEstimadosInput" type="number" value="0" style="display:none;"
+                            oninput="const t=document.getElementById('ingresosEstimadosTabla'); if(t) t.value=this.value; recalcPresupuesto();">
+                        <button onclick="guardarPresupuesto()" style="padding: 5px 12px; background: #E31E24; color: white; border: none; border-radius: 6px; font-size: 10px; font-weight: 900; cursor: pointer;">GUARDAR</button>
+                    </div>
                 </div>
-                
-                <!-- BENEFICIOS -->
-                <div style="background: white; padding: 25px; border-radius: 15px; border: 1px solid #eee;">
-                    <h4 style="color: #28a745; font-size: 13px; font-weight: 900; text-transform: uppercase; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
-                        <i class="fas fa-arrow-up"></i> Distribución de Beneficios
-                    </h4>
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <tbody id="statsBeneficio"></tbody>
-                    </table>
+                <!-- Dos tablas en fila -->
+                <div style="display: flex; flex: 1; overflow: hidden;">
+                    <!-- GASTOS -->
+                    <div style="flex: 2; overflow-x: auto; overflow-y: auto;">
+                        <table id="tablaPresupuesto" style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid #e2e8f0;">
+                                    <th style="background:#f1f5f9;"></th>
+                                    <th colspan="2" style="text-align:center; padding:6px 8px; font-size:10px; font-weight:900; color:#475569; background:#f1f5f9; border-left:2px solid #cbd5e1; white-space:nowrap; letter-spacing:.5px;">
+                                        TEMP. <span id="lblTemporadaReal" contenteditable="true" style="outline:none; border-bottom:1px dashed #94a3b8; cursor:text; min-width:30px; display:inline-block;" onblur="if(_presupObj){_presupObj.temporada_real=this.textContent.trim();}">25/26</span>
+                                    </th>
+                                    <th colspan="4" style="text-align:center; padding:6px 8px; font-size:10px; font-weight:900; color:#92400e; background:#fffbeb; border-left:2px solid #fcd34d; white-space:nowrap; letter-spacing:.5px;">
+                                        TEMP. <span id="lblTemporadaPresup" contenteditable="true" style="outline:none; border-bottom:1px dashed #d97706; cursor:text; min-width:30px; display:inline-block;" onblur="if(_presupObj){_presupObj.temporada_presup=this.textContent.trim();}">26/27</span> - GASTOS
+                                    </th>
+                                </tr>
+                                <tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0;">
+                                    <th style="text-align:left; padding:7px 12px; font-size:10px; font-weight:900; color:#64748b; white-space:nowrap;">DEPARTAMENTO / PILAR</th>
+                                    <th style="text-align:right; padding:7px 8px; font-size:10px; font-weight:900; color:#64748b; white-space:nowrap; border-left:2px solid #cbd5e1;">SUMA REAL</th>
+                                    <th style="text-align:right; padding:7px 8px; font-size:10px; font-weight:900; color:#64748b; white-space:nowrap;">SOBRE INGRESOS ORDINARIOS</th>
+                                    <th style="text-align:right; padding:7px 8px; font-size:10px; font-weight:900; color:#e8a000; white-space:nowrap; background:#fffbeb; border-left:2px solid #fcd34d;">PESO %</th>
+                                    <th style="text-align:right; padding:7px 8px; font-size:10px; font-weight:900; color:#e8a000; white-space:nowrap; background:#fffbeb;">IMPORTE</th>
+                                    <th style="text-align:right; padding:7px 8px; font-size:10px; font-weight:900; color:#c27700; white-space:nowrap; background:#fef3c7;">PESO AJUST. %</th>
+                                    <th style="text-align:right; padding:7px 8px; font-size:10px; font-weight:900; color:#c27700; white-space:nowrap; background:#fef3c7;">PRESUP. PARTIDAS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyPresupuesto"></tbody>
+                        </table>
+                    </div>
+                    <!-- INGRESOS -->
+                    <div style="flex: 0 0 420px; border-left: 3px solid #86efac; overflow-y: auto; background:#f0fdf4;">
+                        <table id="tablaIngresos" style="width:100%; border-collapse:collapse; font-size:11px;">
+                            <thead>
+                                <tr style="border-bottom:1px solid #bbf7d0;">
+                                    <th style="background:#dcfce7;"></th>
+                                    <th style="text-align:center; padding:6px 8px; font-size:10px; font-weight:900; color:#14532d; background:#dcfce7; white-space:nowrap; letter-spacing:.5px; border-left:1px solid #86efac;">TEMP. 25/26</th>
+                                    <th style="text-align:center; padding:6px 8px; font-size:10px; font-weight:900; color:#065f46; background:#a7f3d0; white-space:nowrap; letter-spacing:.5px; border-left:2px solid #34d399;">TEMP. 26/27</th>
+                                </tr>
+                                <tr style="background:#f0fdf4; border-bottom:2px solid #86efac;">
+                                    <th style="text-align:left; padding:7px 12px; font-size:10px; font-weight:900; color:#14532d; white-space:nowrap;">PILAR</th>
+                                    <th style="text-align:right; padding:7px 8px; font-size:10px; font-weight:900; color:#14532d; white-space:nowrap; border-left:1px solid #86efac;">SUMA REAL</th>
+                                    <th style="text-align:right; padding:7px 8px; font-size:10px; font-weight:900; color:#065f46; white-space:nowrap; border-left:2px solid #34d399;">PRESUP. INGRESOS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyIngresos"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
+
         </div>
 
-        <!-- Pie de Modal -->
-        <div style="padding: 20px 25px; background: white; border-top: 1px solid #eee; text-align: right; border-radius: 0 0 20px 20px;">
-            <button class="btn-fin" style="background: #333; color: white; padding: 12px 30px;" onclick="document.getElementById('modalEstadisticas').style.display='none'">CERRAR ANÁLISIS</button>
+    </div>
+</div>
+
+<!-- PANEL RESUMEN STAFF (aparece encima de la barra al seleccionar un mes de entrenador) -->
+<div id="panelStaffResBarra" style="display:none; position:fixed; bottom:107px; left:50%; transform:translateX(-50%); background:#0f172a; border-radius:14px 14px 0 0; padding:11px 20px 13px; box-shadow:0 -6px 24px rgba(0,0,0,0.45); z-index:9997; min-width:760px; max-width:92vw; border-bottom:2px solid #1e3a5f;">
+    <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
+        <div style="min-width:130px;">
+            <div style="font-size:9px;font-weight:900;color:#38bdf8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px;"><i class="fas fa-chart-bar"></i> RESUMEN STAFF</div>
+            <div id="staffResBarraTitulo" style="font-size:11px;font-weight:900;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;">—</div>
+        </div>
+        <div id="staffResBarraItems" style="display:flex;gap:7px;flex-wrap:wrap;flex:1;">
+            <span style="color:#94a3b8;font-size:11px;padding:8px;">—</span>
+        </div>
+        <div id="staffResBarraAjuste" style="text-align:center;border-left:1px solid rgba(255,255,255,0.12);padding-left:16px;display:none;">
+            <div style="font-size:9px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">AJUSTE SUGERIDO</div>
+            <div id="staffResBarraAjusteVal" style="font-size:22px;font-weight:900;color:white;line-height:1.2;">—</div>
         </div>
     </div>
 </div>
@@ -6686,6 +8056,12 @@ async function guardarSeleccionadosRevision() {
     <div class="action-bar-divider"></div>
     <div style="display: flex; align-items: center; gap: 14px;">
         <div><label>PAGADO (€)</label><input type="number" id="pagoImporteBar" value="" placeholder="-" style="border-color: #28a745;" onkeyup="if(event.key === 'Enter') confirmarPago()"></div>
+        <div id="wrapAjuste" style="display:none; flex-direction:column; align-items:center; gap:2px;">
+            <button id="btnAjuste" onclick="toggleAjuste()"
+                    title="Aplicar ajuste sugerido al importe esperado"
+                    style="width:36px;height:36px;border-radius:8px;background:transparent;border:2px solid #94a3b8;color:#94a3b8;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:0.2s;font-weight:900;">✓</button>
+            <span style="font-size:8px;color:#94a3b8;font-weight:700;white-space:nowrap;">AJUSTE</span>
+        </div>
         <div><label>ESPERADO (€)</label><input type="number" id="pagoEsperadoBar" value="50" style="border-color: #38bdf8;"></div>
     </div>
     <div class="action-bar-divider"></div>
@@ -6813,10 +8189,62 @@ async function guardarSeleccionadosRevision() {
     </div>
 </div>
 
+<!-- MODAL CONFIGURACIÓN MULTAS STAFF -->
+<div id="modalMultasConfig" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:50000; overflow-y:auto;">
+    <div style="background:#fff; border-radius:16px; padding:28px; width:480px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="font-size:14px; font-weight:900; color:#1e293b; margin:0;"><i class="fas fa-gavel" style="color:#E31E24; margin-right:8px;"></i> CONFIGURACIÓN DE MULTAS / BONIFICACIONES</h3>
+            <span onclick="document.getElementById('modalMultasConfig').style.display='none'" style="cursor:pointer; font-size:20px; color:#999;">&times;</span>
+        </div>
+        <div style="display:grid; gap:12px;">
+            <div style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid #e2e8f0; padding-bottom:6px;">PENALIZACIONES (€ que se RESTAN)</div>
+            <div style="display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center;">
+                <label style="font-size:12px; font-weight:700; color:#1e293b;">⚽ Pérdida de balón (por balón)</label>
+                <div style="display:flex;align-items:center;gap:4px;"><input id="mlt_perdida_balon" type="number" min="0" step="1" style="width:60px; padding:8px; border-radius:8px; border:1.5px solid #e2e8f0; font-size:13px; font-weight:800; text-align:center;"><span style="font-size:14px;font-weight:900;color:#64748b;">€</span></div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center;">
+                <label style="font-size:12px; font-weight:700; color:#1e293b;">❌ Falta del entrenador (por falta)</label>
+                <div style="display:flex;align-items:center;gap:4px;"><input id="mlt_falta" type="number" min="0" step="1" style="width:60px; padding:8px; border-radius:8px; border:1.5px solid #e2e8f0; font-size:13px; font-weight:800; text-align:center;"><span style="font-size:14px;font-weight:900;color:#64748b;">€</span></div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center;">
+                <label style="font-size:12px; font-weight:700; color:#1e293b;">⚠️ Más de <input id="mlt_umbral_asistencias" type="number" min="0" max="30" style="width:40px; border:none; border-bottom:1.5px solid #94a3b8; font-weight:900; font-size:12px; text-align:center;"> días sin notas/asistencias</label>
+                <div style="display:flex;align-items:center;gap:4px;"><input id="mlt_pen_asistencias" type="number" min="0" step="1" style="width:60px; padding:8px; border-radius:8px; border:1.5px solid #e2e8f0; font-size:13px; font-weight:800; text-align:center;"><span style="font-size:14px;font-weight:900;color:#64748b;">€</span></div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center;">
+                <label style="font-size:12px; font-weight:700; color:#1e293b;">📤 Más de <input id="mlt_umbral_entrenamientos" type="number" min="0" max="30" style="width:40px; border:none; border-bottom:1.5px solid #94a3b8; font-weight:900; font-size:12px; text-align:center;"> entrenamientos sin subir</label>
+                <div style="display:flex;align-items:center;gap:4px;"><input id="mlt_pen_entrenamientos" type="number" min="0" step="1" style="width:60px; padding:8px; border-radius:8px; border:1.5px solid #e2e8f0; font-size:13px; font-weight:800; text-align:center;"><span style="font-size:14px;font-weight:900;color:#64748b;">€</span></div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center;">
+                <label style="font-size:12px; font-weight:700; color:#1e293b;">📋 Menos de <input id="mlt_umbral_formularios" type="number" min="0" max="30" style="width:40px; border:none; border-bottom:1.5px solid #94a3b8; font-weight:900; font-size:12px; text-align:center;"> formularios subidos</label>
+                <div style="display:flex;align-items:center;gap:4px;"><input id="mlt_pen_formularios" type="number" min="0" step="1" style="width:60px; padding:8px; border-radius:8px; border:1.5px solid #e2e8f0; font-size:13px; font-weight:800; text-align:center;"><span style="font-size:14px;font-weight:900;color:#64748b;">€</span></div>
+            </div>
+            <div style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid #e2e8f0; padding-bottom:6px; margin-top:6px;">BONIFICACIONES (€ que se SUMAN)</div>
+            <div style="display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center;">
+                <label style="font-size:12px; font-weight:700; color:#16a34a;">🔄 Suplencia realizada (por suplencia)</label>
+                <div style="display:flex;align-items:center;gap:4px;"><input id="mlt_suplencia" type="number" min="0" step="1" style="width:60px; padding:8px; border-radius:8px; border:1.5px solid #dcfce7; font-size:13px; font-weight:800; text-align:center; color:#16a34a;"><span style="font-size:14px;font-weight:900;color:#16a34a;">€</span></div>
+            </div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:22px;">
+            <button class="btn-fin" style="flex:1; background:#f1f5f9; color:#475569;" onclick="document.getElementById('modalMultasConfig').style.display='none'">CANCELAR</button>
+            <button class="btn-fin" style="flex:2; background:#E31E24; color:white;" onclick="guardarConfigMultas()">GUARDAR CONFIGURACIÓN</button>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL MODIFICAR PAGO -->
 <div id="modalModificarPago" class="modal">
-    <div class="modal-content" style="width: 350px;">
+    <div class="modal-content" style="width: 390px; max-width: 95vw;">
         <h3 style="font-size: 14px; margin-bottom: 20px; border-bottom: 2px solid #E31E24; padding-bottom: 10px;">AVISO DE MODIFICACIÓN</h3>
+        <!-- Panel resumen equipo (solo para staff) -->
+        <div id="panelResumenEquipo" style="display:none; margin-bottom:14px;">
+            <div style="font-size:10px; font-weight:900; color:#475569; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                <i class="fas fa-chart-bar" style="color:#E31E24;"></i>
+                <span id="panelResumenTitulo">RESUMEN EQUIPO — MES</span>
+            </div>
+            <div id="panelResumenContenido" style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                <div style="text-align:center; color:#94a3b8; font-size:10px; grid-column:1/-1; padding:10px;">Cargando...</div>
+            </div>
+        </div>
         <div id="infoPagoAnterior" style="font-size: 11px; background: #fafafa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #eee;">
             <!-- Se llena dinámicamente -->
         </div>
@@ -6922,11 +8350,11 @@ async function guardarSeleccionadosRevision() {
 </div>
 
 <script>
-function abrirModalExtraDetalle(el, prefix = 'S-EXTRA-') {
+function abrirModalExtraDetalle(el, prefix = 'S-EXTRA-', labelKey = 'STAFF_OTROS') {
     prefixExtraActivo = prefix;
     celdaActiva = el;
     const nombre = el.closest('tr').cells[1].innerText;
-    let label = extraNames.STAFF_OTROS;
+    let label = extraNames[labelKey] || extraNames.STAFF_OTROS;
 
     document.getElementById('tituloExtra').innerText = `${label}: ${nombre}`;
     const container = document.getElementById('containerRowsExtra');
@@ -8352,6 +9780,9 @@ const observerModals = new MutationObserver(() => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+    actualizarPilares('asientoDepto', 'asientoPilar');
+    actualizarPilares('editAsiDepto', 'editAsiPilar');
+
     document.querySelectorAll('.modal').forEach(m => {
         observerModals.observe(m, { attributes: true, attributeFilter: ['style'] });
     });

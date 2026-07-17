@@ -533,6 +533,9 @@
     }
     .fila-horario:hover .btn-borrar-fila-horario { opacity: 1 !important; }
     .fila-alquiler-horario td { background: #fef9c3 !important; }
+    #tablaBalones input[type=number]::-webkit-outer-spin-button,
+    #tablaBalones input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    #tablaBalones input[type=number] { -moz-appearance: textfield; }
 </style>
 
 <div style="padding: 10px;">
@@ -561,7 +564,9 @@
             </div>
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
                 <button id="btnTareasMetodologia" onclick="abrirTareasSemanal('metodologia')" style="padding:0 10px;font-size:9px;height:24px;border-radius:5px;border:1.5px solid #0f766e;background:#f0fdf4;color:#0f766e;font-weight:900;cursor:pointer;letter-spacing:.3px;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-list-check"></i> TAREAS SEMANAL — METODOLOGÍA</button>
+                <button id="btnEjerciciosMetodologia" onclick="abrirModalEjercicios()" style="padding:0 10px;font-size:9px;height:24px;border-radius:5px;border:1.5px solid #1e293b;background:#1e293b;color:white;font-weight:900;cursor:pointer;letter-spacing:.3px;display:inline-flex;align-items:center;gap:4px;"><i class="fas fa-dumbbell"></i> PROGRAMAR EJERCICIOS SEMANALES</button>
                 <button id="btnTareasIndividual" onclick="abrirTareasSemanal('individual')" style="display:none;padding:0 10px;font-size:9px;height:24px;border-radius:5px;border:1.5px solid #0f766e;background:#f0fdf4;color:#0f766e;font-weight:900;cursor:pointer;letter-spacing:.3px;align-items:center;gap:4px;"><i class="fas fa-list-check"></i> TAREAS SEMANAL — DESARROLLO INDV</button>
+                <button id="btnEjerciciosIndividual" onclick="abrirModalEjercicios()" style="display:none;padding:0 10px;font-size:9px;height:24px;border-radius:5px;border:1.5px solid #1e293b;background:#1e293b;color:white;font-weight:900;cursor:pointer;letter-spacing:.3px;align-items:center;gap:4px;"><i class="fas fa-dumbbell"></i> PROGRAMAR EJERCICIOS SEMANALES</button>
             </div>
             <div style="display:flex; gap:14px; align-items:center; margin-top:14px; flex-wrap:wrap;">
             <div style="flex: 1; max-width: 250px; display: none;" id="containerBusquedaJug">
@@ -901,7 +906,7 @@
         <div class="tabs-container" style="margin-bottom: 20px; background: #f8fafc; border: 1px solid #e2e8f0;">
             <div class="tab-item active" onclick="switchSubTab(event, 'subtab-gestion-estrategica')" style="font-size: 11px;">GESTIÓN ESTRATÉGICA</div>
             <div class="tab-item" onclick="switchSubTab(event, 'subtab-kpis')" style="font-size: 11px;">KPIs</div>
-            <div class="tab-item" onclick="switchSubTab(event, 'subtab-horarios')" style="font-size: 11px;">HORARIOS</div>
+            <div class="tab-item" onclick="switchSubTab(event, 'subtab-horarios')" style="font-size: 11px;">HORARIOS FINDE</div>
             <div class="tab-item" onclick="switchSubTab(event, 'subtab-base-datos'); bdCargar();" style="font-size: 11px;">BASE DE DATOS</div>
         </div>
         
@@ -917,10 +922,6 @@
                 </button>
                 <button class="btn-premium" onclick="abrirModalObjetivos()">
                     PROGRAMAR OBJETIVOS MENSUALES
-                </button>
-                <button class="btn-modern-dark" onclick="abrirModalEjercicios()" style="margin-top: 15px; width: 100%;">
-                    <i class="fas fa-dumbbell"></i>
-                    PROGRAMAR EJERCICIOS SEMANALES
                 </button>
             </div>
             <div class="card-coord" style="background: #f8f9fa; border: 2px dashed #ddd; display: flex; align-items: center; justify-content: center; color: #bbb; font-weight: 800; text-transform: uppercase; font-size: 11px;">
@@ -1220,7 +1221,65 @@
                 <div style="text-align: center; padding: 30px; color: #999;"><i class="fas fa-spinner fa-spin"></i> Cargando informe...</div>
             </div>
         </div>
+
+    <!-- ══════════════ RECUENTO BALONES ══════════════ -->
+    <div class="card-coord" style="padding: 22px; margin-top: 18px;" id="seccionRecuentoBalones">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:18px;">
+            <h3 style="margin:0; font-size:14px; font-weight:900; color:#1e293b;">
+                <i class="fas fa-futbol" style="color:#E31E24; margin-right:6px;"></i> RECUENTO BALONES
+            </h3>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button onclick="rbAnadirJaula()" style="padding:6px 14px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; color:#1e293b;">+ JAULA</button>
+                <button onclick="rbAnadirFecha()" style="padding:6px 14px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; color:#1e293b;">+ FECHA</button>
+                <button onclick="rbGuardar()" style="padding:6px 14px; background:#E31E24; border:none; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; color:white;">GUARDAR</button>
+            </div>
+        </div>
+
+        <div style="overflow-x:auto;">
+            <table id="tablaBalones" style="border-collapse:collapse; font-size:11px; min-width:500px; width:100%;">
+                <thead id="tbHeadBalones"></thead>
+                <tbody id="tbBodyBalones"></tbody>
+            </table>
+        </div>
     </div>
+
+    <!-- Modal selección equipos para jaula -->
+    <div id="modalRbEquipos" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+        <div style="background:white; border-radius:20px; width:380px; max-height:85vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 60px rgba(0,0,0,0.25);">
+            <!-- Header -->
+            <div style="background:#0f172a; padding:18px 22px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-size:13px; font-weight:800; color:white; letter-spacing:.5px;">SELECCIONAR EQUIPOS</div>
+                    <div style="font-size:10px; color:#94a3b8; margin-top:2px;">Ctrl + clic para seleccionar varios</div>
+                </div>
+                <span onclick="document.getElementById('modalRbEquipos').style.display='none'" style="cursor:pointer; font-size:22px; color:#64748b; line-height:1;">&times;</span>
+            </div>
+            <!-- Lista -->
+            <div style="flex:1; overflow-y:auto; padding:12px;">
+                <select id="rbSelectEquipos" multiple style="width:100%; min-height:220px; border:1px solid #e2e8f0; border-radius:10px; padding:8px; font-size:12px; font-family:inherit; outline:none; background:#f8fafc;"></select>
+            </div>
+            <!-- Footer -->
+            <div style="padding:14px 22px; border-top:1px solid #f1f5f9;">
+                <button onclick="rbConfirmarEquipos()" style="width:100%; padding:11px; background:#E31E24; color:white; border:none; border-radius:10px; font-weight:800; cursor:pointer; font-size:12px; letter-spacing:.5px;">CONFIRMAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal análisis entre fechas -->
+    <div id="modalRbAnalisis" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+        <div style="background:white; border-radius:20px; width:900px; max-width:96vw; max-height:88vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 60px rgba(0,0,0,0.3);">
+            <div style="background:#0f172a; padding:16px 22px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+                <div>
+                    <div style="font-size:13px; font-weight:800; color:white; letter-spacing:.5px;">ANÁLISIS DE BALONES</div>
+                    <div id="rbAnalisisTitulo" style="font-size:11px; color:#7dd3fc; margin-top:2px;"></div>
+                </div>
+                <span onclick="document.getElementById('modalRbAnalisis').style.display='none'" style="cursor:pointer; font-size:22px; color:#64748b; line-height:1;">&times;</span>
+            </div>
+            <div id="rbAnalisisCont" style="flex:1; overflow-y:auto; padding:18px;"></div>
+        </div>
+    </div>
+
+    </div><!-- cierre tab-otros -->
 
     <div id="tab-push" class="tab-content">
         <div class="card-coord" style="padding: 22px; max-width: 480px;">
@@ -3041,8 +3100,12 @@
         // Mostrar solo el botón de tareas semanal del tab activo
         var bMet = document.getElementById('btnTareasMetodologia');
         var bInd = document.getElementById('btnTareasIndividual');
+        var bEjMet = document.getElementById('btnEjerciciosMetodologia');
+        var bEjInd = document.getElementById('btnEjerciciosIndividual');
         if (bMet) bMet.style.display = sub === 'metodologia' ? 'inline-flex' : 'none';
         if (bInd) bInd.style.display = sub === 'individual'  ? 'inline-flex' : 'none';
+        if (bEjMet) bEjMet.style.display = sub === 'metodologia' ? 'inline-flex' : 'none';
+        if (bEjInd) bEjInd.style.display = sub === 'individual'  ? 'inline-flex' : 'none';
     }
 
     // ── TAREAS SEMANALES COORDINACIÓN ─────────────────────────────────────────
@@ -7986,6 +8049,299 @@ async function asistMatrizCargar(equipo) {
         cont.innerHTML = `<div style="color:#dc2626;font-size:12px;padding:20px;">Error: ${e.message}</div>`;
     }
 }
+
+// ══════════════ RECUENTO BALONES ══════════════
+(function() {
+    const LS_KEY = 'recuento_balones_v1';
+    let rbData = { jaulas: [], fechas: [] };
+    let rbJaulaActiva = null;
+
+    function rbCargar() {
+        try { rbData = JSON.parse(localStorage.getItem(LS_KEY)) || { jaulas: [], fechas: [] }; } catch(e) {}
+        if (!rbData.jaulas || !rbData.jaulas.length)
+            rbData.jaulas = Array.from({length: 11}, (_, i) => ({ num: i + 1, equipos: [] }));
+        if (!rbData.fechas || !rbData.fechas.length)
+            rbData.fechas = ['', '', '', '', '', ''];
+        rbRender();
+    }
+
+    function rbLeerDOM() {
+        rbData.jaulas.forEach((j, ji) => {
+            j.conteos = j.conteos || {};
+            rbData.fechas.forEach((f, fi) => {
+                const inp = document.getElementById(`rb_${ji}_${fi}`);
+                if (inp) j.conteos[f] = inp.value || '';
+            });
+        });
+    }
+
+    function rbAutoSave() {
+        rbLeerDOM();
+        localStorage.setItem(LS_KEY, JSON.stringify(rbData));
+    }
+
+    function rbGuardar() {
+        rbAutoSave();
+        const btn = document.querySelector('[onclick="rbGuardar()"]');
+        if (btn) { const t = btn.textContent; btn.textContent = '✓'; btn.style.background = '#16a34a'; setTimeout(() => { btn.textContent = t; btn.style.background = '#E31E24'; }, 1000); }
+    }
+
+    function rbRender() {
+        const thead = document.getElementById('tbHeadBalones');
+        const tbody = document.getElementById('tbBodyBalones');
+        if (!thead || !tbody) return;
+
+        const tdBase = 'padding:6px 8px; border:1px solid #e2e8f0; vertical-align:middle;';
+        const thFecha = 'background:#1e3a5f; min-width:130px; padding:0; border:none; border-right:1px solid #1e4a7f;';
+        const thAnalisis = 'background:#0f172a; width:28px; min-width:28px; padding:0; border:none; border-right:1px solid #1e4a7f;';
+        const tdAnalisis = `${tdBase} width:28px; min-width:28px; text-align:center; background:#f8fafc; padding:0;`;
+
+        // Construir columnas: [fecha0, análisis0-1, fecha1, análisis1-2, fecha2, ...]
+        const colsFecha = rbData.fechas.map((f, fi) => {
+            const hasAnalisis = fi > 0 && rbData.fechas[fi-1] && f; // hay fecha anterior y actual
+            const analisisBtn = fi > 0 ? `<th style="${thAnalisis}">
+                <button onclick="rbAbrirAnalisis(${fi-1}, ${fi})"
+                    title="Análisis entre fechas"
+                    style="background:none; border:none; cursor:pointer; color:#475569; font-size:11px; padding:4px 2px; display:block; width:100%;">↔</button>
+            </th>` : '';
+            return analisisBtn + `<th style="${thFecha}">
+                <div style="display:flex; align-items:center; justify-content:center; gap:5px; padding:8px 6px;">
+                    <i class="fas fa-calendar-alt" style="font-size:9px; color:#7dd3fc;"></i>
+                    <input type="date" value="${f}" onchange="rbCambiarFecha(${fi}, this.value)"
+                        style="border:none; background:transparent; color:white; font-size:10px; font-weight:700; cursor:pointer; width:98px; outline:none;">
+                    <span onclick="rbQuitarFecha(${fi})" style="cursor:pointer; color:#64748b; font-size:13px; line-height:1;">&times;</span>
+                </div>
+            </th>`;
+        }).join('');
+
+        thead.innerHTML = `<tr>
+            <th style="background:#0f172a; color:white; text-align:center; width:50px; min-width:50px; max-width:50px; padding:10px 6px; font-size:10px; font-weight:800; letter-spacing:.5px; border:none;">JAULA</th>
+            <th style="background:#1e293b; color:#94a3b8; text-align:left; min-width:180px; padding:10px 14px; font-size:10px; font-weight:700; border:none; border-right:2px solid #334155;">EQUIPOS</th>
+            ${colsFecha}
+        </tr>`;
+
+        tbody.innerHTML = rbData.jaulas.map((j, ji) => {
+            const celdas = rbData.fechas.map((f, fi) => {
+                const val = (j.conteos && j.conteos[f]) || '';
+                const tieneEquipos = j.equipos && j.equipos.length > 0;
+                const f_ant = rbData.fechas[fi - 1];
+                const anaBtn = fi > 0 ? `<td style="${tdAnalisis} padding:0;">
+                    ${tieneEquipos && f_ant && f
+                        ? `<button onclick="rbAbrirAnalisis(${fi-1}, ${fi}, ${ji})" title="Análisis jaula ${j.num}"
+                            style="background:none; border:none; cursor:pointer; color:#3b82f6; font-size:12px; padding:4px 2px; display:block; width:100%; line-height:1;">↔</button>`
+                        : `<span style="display:block; width:100%; text-align:center; color:#cbd5e1; font-size:10px;">·</span>`}
+                </td>` : '';
+                return anaBtn + `<td style="${tdBase} text-align:center;">
+                    <input id="rb_${ji}_${fi}" type="number" min="0"
+                        value="${val}" placeholder="-"
+                        style="width:68px; text-align:center; border:1px solid #e2e8f0; border-radius:6px; padding:4px 5px; font-size:12px; font-weight:600; background:${val ? '#f0fdf4' : 'white'}; color:#1e293b; -moz-appearance:textfield; appearance:textfield;"
+                        oninput="this.style.background=this.value?'#f0fdf4':'white'; rbAutoSave();"
+                        onkeydown="if(event.key==='Enter'){event.preventDefault();var n=document.getElementById('rb_${ji+1}_${fi}');if(n)n.focus();}">
+                </td>`;
+            }).join('');
+            return `<tr style="background:${ji % 2 === 0 ? '#f8fafc' : 'white'};">
+                <td style="${tdBase} font-weight:700; font-size:12px; color:#1e293b; text-align:center; background:#f1f5f9; width:50px; min-width:50px; max-width:50px;">${j.num}</td>
+                <td style="${tdBase}">
+                    <div style="display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
+                        ${(j.equipos || []).map(eq => `<span style="background:#e0f2fe; color:#0369a1; font-size:9px; padding:2px 6px; border-radius:10px; white-space:nowrap;">${eq}</span>`).join('')}
+                        <span onclick="rbAbrirEquipos(${ji})" style="cursor:pointer; font-size:9px; color:#111; font-weight:700; padding:2px 7px; border:1px solid #000; border-radius:10px; white-space:nowrap;">+ EQUIPOS</span>
+                    </div>
+                </td>
+                ${celdas}
+            </tr>`;
+        }).join('');
+
+        // Exponer rbAutoSave globalmente para los oninput
+        window.rbAutoSave = rbAutoSave;
+    }
+
+    window.rbAnadirJaula = function() {
+        rbAutoSave();
+        const maxNum = rbData.jaulas.reduce((m, j) => Math.max(m, j.num), 0);
+        rbData.jaulas.push({ num: maxNum + 1, equipos: [], conteos: {} });
+        rbRender();
+    };
+
+    window.rbAnadirFecha = function() {
+        rbAutoSave();
+        rbData.fechas.push('');
+        rbRender();
+    };
+
+    window.rbCambiarFecha = function(fi, val) {
+        rbAutoSave();
+        const vieja = rbData.fechas[fi];
+        rbData.fechas[fi] = val;
+        rbData.jaulas.forEach(j => {
+            if (j.conteos && vieja in j.conteos) { j.conteos[val] = j.conteos[vieja]; delete j.conteos[vieja]; }
+        });
+        rbAutoSave();
+    };
+
+    window.rbQuitarFecha = function(fi) {
+        rbAutoSave();
+        const f = rbData.fechas[fi];
+        rbData.fechas.splice(fi, 1);
+        rbData.jaulas.forEach(j => { if (j.conteos) delete j.conteos[f]; });
+        rbRender();
+    };
+
+    // ── Análisis entre dos fechas (ji = índice de jaula específica) ──
+    window.rbAbrirAnalisis = async function(fi1, fi2, ji) {
+        const f1 = rbData.fechas[fi1];
+        const f2 = rbData.fechas[fi2];
+        if (!f1 || !f2) return alert('Las dos fechas deben estar rellenas para ver el análisis.');
+
+        const modal = document.getElementById('modalRbAnalisis');
+        const cont  = document.getElementById('rbAnalisisCont');
+        const jaula = rbData.jaulas[ji];
+        document.getElementById('rbAnalisisTitulo').textContent =
+            `JAULA ${jaula.num}  ·  ${f1.split('-').reverse().join('/')} → ${f2.split('-').reverse().join('/')}`;
+        modal.style.display = 'flex';
+        cont.innerHTML = '<div style="text-align:center; padding:30px; color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+
+        // Solo los equipos de esta jaula
+        const todosEquipos = jaula.equipos || [];
+        if (!todosEquipos.length) { cont.innerHTML = '<p style="color:#94a3b8; padding:20px; text-align:center;">No hay equipos asignados a ninguna jaula.</p>'; return; }
+
+        try {
+            const res = await fetch(`/api/recuento_balones_analisis?fecha1=${f1}&fecha2=${f2}&equipos=${encodeURIComponent(todosEquipos.join(','))}`);
+            const registros = await res.json();
+
+            let html = '';
+            // Solo mostrar la jaula seleccionada
+            [rbData.jaulas[ji]].forEach((jaula) => {
+                if (!jaula || !jaula.equipos || !jaula.equipos.length) return;
+                const c1 = parseInt((jaula.conteos || {})[f1]) || null;
+                const c2 = parseInt((jaula.conteos || {})[f2]) || null;
+                const diff = (c1 !== null && c2 !== null) ? c2 - c1 : null;
+
+                html += `<div style="margin-bottom:18px; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden;">
+                    <div style="background:#0f172a; color:white; padding:8px 14px; display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-weight:700; font-size:12px;">JAULA ${jaula.num}</span>
+                        <span style="font-size:11px; color:#94a3b8;">${jaula.equipos.join(' · ')}</span>
+                        ${diff !== null ? `<span style="font-size:12px; font-weight:700; color:${diff < 0 ? '#fca5a5' : diff > 0 ? '#86efac' : '#94a3b8'};">${diff > 0 ? '+' : ''}${diff} balones</span>` : ''}
+                    </div>
+                    <table style="width:100%; border-collapse:collapse; font-size:11px;">
+                        <thead><tr style="background:#f8fafc;">
+                            <th style="padding:6px 10px; text-align:left; color:#64748b; font-weight:700; border-bottom:1px solid #e2e8f0;">EQUIPO</th>
+                            <th style="padding:6px 10px; text-align:center; color:#64748b; font-weight:700; border-bottom:1px solid #e2e8f0;">FECHA</th>
+                            <th style="padding:6px 10px; text-align:center; color:#64748b; font-weight:700; border-bottom:1px solid #e2e8f0;">HORA</th>
+                            <th style="padding:6px 10px; text-align:center; color:#64748b; font-weight:700; border-bottom:1px solid #e2e8f0;">TIPO</th>
+                            <th style="padding:6px 10px; text-align:center; color:#64748b; font-weight:700; border-bottom:1px solid #e2e8f0;">Nº BALONES</th>
+                            <th style="padding:6px 10px; text-align:center; color:#64748b; font-weight:700; border-bottom:1px solid #e2e8f0;">DIFERENCIA</th>
+                        </tr></thead>
+                        <tbody>`;
+
+                // Filtrar registros de esta jaula (equipos asignados)
+                const regsJaula = registros.filter(r => jaula.equipos.includes(r.equipo));
+
+                // Agrupar por equipo+fecha para calcular diferencia I→F
+                const sesiones = {};
+                regsJaula.forEach(r => {
+                    const key = `${r.equipo}|${r.fecha}|${r.timestamp.split(' ')[0]}`;
+                    if (!sesiones[key]) sesiones[key] = { equipo: r.equipo, fecha: r.fecha, inicio: null, final: null, tsI: '', tsF: '' };
+                    if (r.tipo === 'inicio') { sesiones[key].inicio = r.cantidad; sesiones[key].tsI = r.timestamp; }
+                    if (r.tipo === 'final')  { sesiones[key].final  = r.cantidad; sesiones[key].tsF = r.timestamp; }
+                });
+
+                const sesArr = Object.values(sesiones).sort((a, b) => (a.tsI || a.tsF).localeCompare(b.tsI || b.tsF));
+
+                // Calcular pérdidas por equipo para el resumen
+                const perdidosPorEquipo = {};
+                sesArr.forEach(s => {
+                    if (s.inicio !== null && s.final !== null) {
+                        const dif = parseInt(s.final) - parseInt(s.inicio);
+                        if (dif < 0) perdidosPorEquipo[s.equipo] = (perdidosPorEquipo[s.equipo] || 0) + Math.abs(dif);
+                    }
+                });
+                const totalPerdidos = Object.values(perdidosPorEquipo).reduce((a, b) => a + b, 0);
+
+                if (!sesArr.length) {
+                    html += `<tr><td colspan="6" style="padding:12px; text-align:center; color:#94a3b8; font-style:italic;">Sin registros I/F entre estas fechas</td></tr>`;
+                } else {
+                    sesArr.forEach((s, idx) => {
+                        const dif = (s.inicio !== null && s.final !== null) ? parseInt(s.final) - parseInt(s.inicio) : null;
+                        const hora = (s.tsI || s.tsF).split(' ')[1] || '-';
+                        html += `<tr style="background:${idx % 2 === 0 ? 'white' : '#f8fafc'}; ${dif !== null && dif < 0 ? 'background:#fff1f2;' : ''}">
+                            <td style="padding:6px 10px; font-weight:600; color:#1e293b;">${s.equipo}</td>
+                            <td style="padding:6px 10px; text-align:center; color:#475569;">${s.fecha}</td>
+                            <td style="padding:6px 10px; text-align:center; color:#475569;">${hora}</td>
+                            <td style="padding:6px 10px; text-align:center;">
+                                <span style="font-size:9px; padding:2px 6px; border-radius:8px; background:#dbeafe; color:#1e40af; font-weight:700;">I: ${s.inicio ?? '-'}</span>
+                                <span style="font-size:9px; padding:2px 6px; border-radius:8px; background:#dcfce7; color:#166534; font-weight:700; margin-left:3px;">F: ${s.final ?? '-'}</span>
+                            </td>
+                            <td style="padding:6px 10px; text-align:center; font-weight:700;">${s.inicio ?? '-'} → ${s.final ?? '-'}</td>
+                            <td style="padding:6px 10px; text-align:center; font-weight:700; color:${dif === null ? '#94a3b8' : dif < 0 ? '#dc2626' : dif > 0 ? '#16a34a' : '#94a3b8'};">
+                                ${dif === null ? '-' : (dif > 0 ? '+' : '') + dif + (dif < 0 ? ' ⚠️' : '')}
+                            </td>
+                        </tr>`;
+                    });
+                }
+
+                const resumenHtml = sesArr.length > 0
+                    ? totalPerdidos > 0
+                        ? `<div style="margin:10px 14px 2px; padding:9px 12px; background:#fff1f2; border-radius:8px; border-left:3px solid #dc2626; font-size:11px; font-weight:700; color:#dc2626;">
+                            ⚠️ RESUMEN: ${totalPerdidos} balon${totalPerdidos !== 1 ? 'es' : ''} perdido${totalPerdidos !== 1 ? 's' : ''}
+                            (${Object.entries(perdidosPorEquipo).map(([eq, n]) => `${n} ${eq}`).join(' y ')})
+                           </div>`
+                        : `<div style="margin:10px 14px 2px; padding:9px 12px; background:#f0fdf4; border-radius:8px; border-left:3px solid #16a34a; font-size:11px; font-weight:700; color:#16a34a;">
+                            ✅ Sin pérdidas de balones entre estas fechas
+                           </div>`
+                    : '';
+
+                html += `</tbody></table>
+                    ${resumenHtml}
+                    <div style="padding:8px 14px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; gap:20px; font-size:10px; color:#64748b;">
+                        <span>Recuento ${f1.split('-').reverse().join('/')}: <strong>${c1 ?? '—'}</strong></span>
+                        <span>Recuento ${f2.split('-').reverse().join('/')}: <strong>${c2 ?? '—'}</strong></span>
+                        ${diff !== null ? `<span style="font-weight:700; color:${diff < 0 ? '#dc2626' : '#16a34a'};">Variación: ${diff > 0 ? '+' : ''}${diff}</span>` : ''}
+                    </div>
+                </div>`;
+            });
+
+            cont.innerHTML = html || '<p style="color:#94a3b8; padding:20px; text-align:center;">No hay jaulas con equipos asignados.</p>';
+        } catch(e) {
+            cont.innerHTML = `<p style="color:#dc2626; padding:20px;">Error al cargar datos: ${e.message}</p>`;
+        }
+    };
+
+    window.rbAbrirEquipos = function(ji) {
+        rbJaulaActiva = ji;
+        const sel = document.getElementById('rbSelectEquipos');
+        sel.innerHTML = '';
+        // Usar equiposList del template
+        const lista = typeof equiposList !== 'undefined' && equiposList.length ? equiposList : [];
+        lista.forEach(eq => {
+            const opt = document.createElement('option');
+            opt.value = eq; opt.textContent = eq;
+            if ((rbData.jaulas[ji].equipos || []).includes(eq)) opt.selected = true;
+            sel.appendChild(opt);
+        });
+        document.getElementById('modalRbEquipos').style.display = 'flex';
+    };
+
+    window.rbConfirmarEquipos = function() {
+        const sel = document.getElementById('rbSelectEquipos');
+        rbData.jaulas[rbJaulaActiva].equipos = Array.from(sel.selectedOptions).map(o => o.value);
+        document.getElementById('modalRbEquipos').style.display = 'none';
+        rbRender();
+    };
+
+    window.rbGuardar = rbGuardar;
+
+    // Inicializar cuando se active el tab INFORMES
+    const _origSwitch = window.switchTab;
+    window.switchTab = function(e, id) {
+        if (_origSwitch) _origSwitch(e, id);
+        if (id === 'tab-otros') setTimeout(rbCargar, 50);
+    };
+    // También cargar si el tab ya está activo al llegar
+    document.addEventListener('DOMContentLoaded', () => {
+        const tabOtros = document.getElementById('tab-otros');
+        if (tabOtros && tabOtros.style.display !== 'none') rbCargar();
+    });
+})();
 
 </script>
 {% endblock %}

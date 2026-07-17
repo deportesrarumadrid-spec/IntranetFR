@@ -726,6 +726,65 @@ def api_control_balones():
         json.dump(current_data, f)
     return jsonify({"status": "success"})
 
+@app.route('/api/recuento_balones_analisis')
+def api_recuento_balones_analisis():
+    from datetime import datetime as dt2, timedelta
+    fecha1_str = request.args.get('fecha1', '')  # YYYY-MM-DD
+    fecha2_str = request.args.get('fecha2', '')  # YYYY-MM-DD
+    equipos_str = request.args.get('equipos', '')
+    if not fecha1_str or not fecha2_str:
+        return jsonify([])
+    equipos = [e.strip() for e in equipos_str.split(',') if e.strip()]
+    try:
+        f1 = dt2.strptime(fecha1_str, '%Y-%m-%d')
+        f2 = dt2.strptime(fecha2_str, '%Y-%m-%d')
+    except Exception:
+        return jsonify([])
+    # Recopilar meses como número simple (igual que el nombre de archivo: balones_EQUIPO_5.json)
+    meses = set()
+    cur = f1.replace(day=1)
+    while cur <= f2:
+        meses.add(str(cur.month))
+        cur = (cur.replace(day=28) + timedelta(days=4)).replace(day=1)
+    meses.add(str(f2.month))
+    registros = []
+    for equipo in equipos:
+        for mes in sorted(meses, key=int):
+            path = os.path.join(DATA_FOLDER, f'balones_{equipo}_{mes}.json')
+            if not os.path.exists(path):
+                continue
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            for dia_str, dia_data in data.items():
+                for tipo in ['inicio', 'final']:
+                    lista = dia_data.get(tipo, [])
+                    if not isinstance(lista, list):
+                        lista = [lista]
+                    for reg in lista:
+                        ts = reg.get('timestamp', '')
+                        try:
+                            try:
+                                ts_dt = dt2.strptime(ts, '%d/%m/%Y %H:%M')
+                            except ValueError:
+                                ts_dt = dt2.strptime(ts, '%d/%m/%Y %H:%M:%S')
+                        except Exception:
+                            continue
+                        fecha_dia = ts_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+                        if not (f1 < fecha_dia < f2):
+                            continue
+                        registros.append({
+                            'equipo': equipo,
+                            'fecha': ts_dt.strftime('%d/%m/%Y'),
+                            'tipo': tipo,
+                            'cantidad': reg.get('cantidad'),
+                            'timestamp': ts,
+                            '_ts_sort': ts_dt.isoformat()
+                        })
+    registros.sort(key=lambda r: r['_ts_sort'])
+    for r in registros:
+        del r['_ts_sort']
+    return jsonify(registros)
+
 from flask import request, jsonify
 
 # ... (tus otras rutas)
@@ -790,6 +849,7 @@ def obtener_asistencias():
                 registros.append({
                     "nombre": fila[2].strip() if len(fila) > 2 else "",
                     "dia": dia_extraido,
+                    "mes": mes_extraido,
                     "estado": fila[4] if len(fila) > 4 else "",
                     "valoracion": fila[5] if len(fila) > 5 else "-",
                     "motivo": fila[6] if len(fila) > 6 else "",
@@ -2004,6 +2064,24 @@ def api_equipos_config():
             return jsonify(json.load(f))
     except Exception:
         return jsonify({"temporada": "", "equipos": []})
+
+
+PRESUPUESTO_OBJETIVO_FILE = 'static/data/presupuesto_objetivo.json'
+
+@app.route('/api/presupuesto_objetivo', methods=['GET', 'POST'])
+def api_presupuesto_objetivo():
+    if not session.get('usuario'): return jsonify({"status": "error"}), 401
+    if request.method == 'POST':
+        data = request.json or {}
+        os.makedirs(os.path.dirname(PRESUPUESTO_OBJETIVO_FILE), exist_ok=True)
+        with open(PRESUPUESTO_OBJETIVO_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return jsonify({"status": "ok"})
+    try:
+        with open(PRESUPUESTO_OBJETIVO_FILE, 'r', encoding='utf-8') as f:
+            return jsonify(json.load(f))
+    except Exception:
+        return jsonify({"ingresos_estimados": 0, "departamentos": {}})
 
 
 @app.route('/api/historico_jugadores')
