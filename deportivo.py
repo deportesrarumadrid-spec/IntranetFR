@@ -245,13 +245,21 @@ def deportivo():
             'ejercicios': ejes_fijos
         })
 
-    # 3. Fotos subidas (vinculadas al equipo, no al usuario que las sube)
+    # 3. Fotos subidas (vinculadas al equipo y mes/año exactos)
     clave_equipo_fotos = sanitizar_equipo_archivo(equipo_activo)
+    archivos_reales = []
+    fotos_subidas = []
+    mes_str2  = f"{mes:02d}"
+    anio_str2 = str(anio)
+    prefijo_eq = f"entreno_{clave_equipo_fotos}_"
     if os.path.exists(UPLOAD_FOLDER):
-        archivos_reales = [f for f in os.listdir(UPLOAD_FOLDER) if f.startswith(f"entreno_{clave_equipo_fotos}_")]
-    else:
-        archivos_reales = []
-    fotos_subidas = [f.split('_')[-1].split('.')[0] for f in archivos_reales]
+        for _f in os.listdir(UPLOAD_FOLDER):
+            if not _f.startswith(prefijo_eq): continue
+            rest = _f[len(prefijo_eq):].rsplit('.', 1)[0]  # "DD-MM-YYYY"
+            p = rest.split('-')
+            if len(p) == 3 and p[1] == mes_str2 and p[2] == anio_str2:
+                archivos_reales.append(_f)
+                fotos_subidas.append(str(int(p[0])))
 
     # Cargar jugadores para el equipo activo
     jugadores_equipo = []
@@ -633,7 +641,14 @@ def api_revision_objetivos():
         if os.path.exists(UPLOAD_FOLDER):
             clave_equipo = sanitizar_equipo_archivo(equipo)
             prefijo = f"entreno_{clave_equipo}_"
-            fotos_subidas = [f[len(prefijo):].split('.')[0] for f in os.listdir(UPLOAD_FOLDER) if f.startswith(prefijo)]
+            mes_s  = f"{mes:02d}"
+            anio_s = str(anio)
+            for _f in os.listdir(UPLOAD_FOLDER):
+                if not _f.startswith(prefijo): continue
+                rest = _f[len(prefijo):].rsplit('.', 1)[0]
+                p = rest.split('-')
+                if len(p) == 3 and p[1] == mes_s and p[2] == anio_s:
+                    fotos_subidas.append(str(int(p[0])))
     except Exception as e:
         print(f"Error listando fotos para revisión de objetivos: {e}")
 
@@ -1093,19 +1108,20 @@ def api_kpis_deportivos():
         # Fallback for current month from UPLOAD_FOLDER
         cur_year = int(datetime.now().strftime('%Y'))
         cur_month = int(datetime.now().strftime('%m'))
-        usuario_sesion = session.get('usuario', 'admin')
+        cur_mes_s  = f"{cur_month:02d}"
+        cur_anio_s = str(cur_year)
+        equipo_kpi = sanitizar_equipo_archivo(session.get('equipo_defecto', ''))
         dias_con_archivo = set()
         upload_folder = current_app.config.get('UPLOAD_FOLDER', os.path.join(os.getcwd(), 'static', 'uploads'))
-        if os.path.exists(upload_folder):
+        if os.path.exists(upload_folder) and equipo_kpi:
+            prefijo_kpi = f"entreno_{equipo_kpi}_"
             for filename in os.listdir(upload_folder):
-                if filename.startswith(f"entreno_{usuario_sesion}_"):
-                    parts = filename.split('_')
-                    if len(parts) >= 3:
-                        try:
-                            dia_num = int(parts[-1].split('.')[0])
-                            dias_con_archivo.add(dia_num)
-                        except ValueError:
-                            pass
+                if not filename.startswith(prefijo_kpi): continue
+                rest = filename[len(prefijo_kpi):].rsplit('.', 1)[0]
+                p = rest.split('-')
+                if len(p) == 3 and p[1] == cur_mes_s and p[2] == cur_anio_s:
+                    try: dias_con_archivo.add(int(p[0]))
+                    except ValueError: pass
         uploads_count = len(dias_con_archivo)
         
         for (eq, ano, mes) in kpis:
@@ -2316,6 +2332,215 @@ def api_descargar_escudos():
         "descargados": descargados,
         "fallidos": fallidos,
         "total": len(shield_urls)
+    })
+
+
+# --- INFORME MENSUAL ---
+
+def _nt_dep(s):
+    for a, b in [('á','a'),('é','e'),('í','i'),('ó','o'),('ú','u'),('ü','u'),
+                 ('Á','a'),('É','e'),('Í','i'),('Ó','o'),('Ú','u')]:
+        s = s.replace(a, b)
+    return s.strip().lower()
+
+_DIA_MAP_DEP = {'lunes':0,'martes':1,'miercoles':2,'jueves':3,'viernes':4,'sabado':5,'domingo':6}
+
+
+@deportivo_bp.route('/api/informe_mensual', methods=['GET'])
+def api_informe_mensual():
+    if not session.get('usuario'):
+        return jsonify({"status": "error"}), 401
+
+    import calendar as _cal_mod
+    import glob as _glob_mod
+    from datetime import date as _date
+
+    mes_str = request.args.get('mes', '')
+    try:
+        anio, mes_int = int(mes_str[:4]), int(mes_str[5:7])
+    except Exception:
+        hoy = _date.today()
+        anio, mes_int = hoy.year, hoy.month
+
+    nm = _cal_mod.monthrange(anio, mes_int)[1]
+    saturdays = sum(1 for d in range(1, nm + 1) if _cal_mod.weekday(anio, mes_int, d) == 5)
+
+    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'equipos_config.json')
+    equipos_data = []
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            equipos_data = json.load(f).get('equipos', [])
+    except Exception:
+        pass
+
+    client = current_app.gs_client
+    NOMBRE_EXCEL = current_app.gs_name
+
+    # ASISTENCIAS
+    datos_asis = {}
+    try:
+        ws_asis = client.open(NOMBRE_EXCEL).worksheet("ASISTENCIAS")
+        all_asis = ws_asis.get_all_values()
+        for row in (all_asis[1:] if all_asis else []):
+            if len(row) < 5: continue
+            eq_n = _nt_dep(row[1])
+            p = row[0].strip().split('/')
+            if len(p) < 3: continue
+            try:
+                fd, fm, fy = int(p[0]), int(p[1]), int(p[2])
+            except Exception: continue
+            if fm != mes_int or fy != anio: continue
+            estado = row[4].strip() if len(row) > 4 else ''
+            val    = row[5].strip() if len(row) > 5 else ''
+            datos_asis.setdefault(eq_n, {}).setdefault(f"{fd:02d}/{fm:02d}/{fy}", []).append((estado, val))
+    except Exception: pass
+
+    # FORMULARIO_PARTIDOS
+    forms_eq = {}
+    try:
+        ws_form = client.open(NOMBRE_EXCEL).worksheet('FORMULARIO_PARTIDOS')
+        all_form = ws_form.get_all_values()
+        if all_form and len(all_form) > 1:
+            hdrs = [h.strip().upper().replace(' ', '') for h in all_form[0]]
+            idx_eq = next((i for i, h in enumerate(hdrs) if 'EQUIPO' in h), 1)
+            idx_fe = next((i for i, h in enumerate(hdrs) if 'MARCA' in h or 'TEMPORAL' in h), 0)
+            for row in all_form[1:]:
+                if len(row) <= max(idx_eq, idx_fe): continue
+                pf = row[idx_fe].strip().split()[0].split('/') if row[idx_fe].strip() else []
+                try:
+                    if len(pf) >= 3 and int(pf[1]) == mes_int and int(pf[2]) == anio:
+                        k = row[idx_eq].strip().upper()
+                        forms_eq[k] = forms_eq.get(k, 0) + 1
+                except Exception: pass
+    except Exception: pass
+
+    # INFORMES_SEMANALES (audios)
+    audios_eq = {}
+    try:
+        ws_inf = _get_or_crear_sheet_informes_semanales()
+        for row in (ws_inf.get_all_values()[1:] or []):
+            if len(row) < 3: continue
+            p = row[0].strip().split('/')
+            try:
+                if int(p[1]) == mes_int and int(p[2]) == anio and row[2].strip().upper() == 'SI':
+                    k = row[1].strip().upper()
+                    audios_eq[k] = audios_eq.get(k, 0) + 1
+            except Exception: pass
+    except Exception: pass
+
+    # OBJ CUMPLIDOS
+    obj_eq = {}
+    try:
+        from competicion_scraper import construir_obj_semanales
+        for p in construir_obj_semanales():
+            if p.get('cumplido') is None: continue
+            fp = (p.get('fecha') or '').split('-')
+            try:
+                if int(fp[1]) != mes_int or int(fp[2]) != anio: continue
+            except Exception: continue
+            cat   = (p.get('categoria') or '').strip().upper()
+            letra = (p.get('letra') or '').strip().upper()
+            key   = f"{cat} {letra}".strip() if letra else cat
+            s = obj_eq.setdefault(key, {'cumplidos': 0, 'total': 0})
+            s['total'] += 1
+            if p.get('cumplido') is True:
+                s['cumplidos'] += 1
+    except Exception: pass
+
+    def _vacio(v): return not v or v.strip() == '-'
+
+    result = []
+    for eq in equipos_data:
+        nombre = eq['nombre']
+        eq_n   = _nt_dep(nombre)
+        eq_up  = nombre.upper()
+
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+        # Días laborables del mes (lo que muestra el calendario: Lun-Vie)
+        total_entrenos = sum(1 for d in range(1, nm + 1) if _cal_mod.weekday(anio, mes_int, d) < 5)
+
+        # Días configurados del equipo (para asistencias)
+        dias_semana = [_DIA_MAP_DEP.get(_nt_dep(d), -1) for d in eq.get('dias', [])]
+        dias_semana = [d for d in dias_semana if d >= 0]
+        fechas_entreno = [f"{d:02d}/{mes_int:02d}/{anio}" for d in range(1, nm + 1)
+                          if _cal_mod.weekday(anio, mes_int, d) in dias_semana]
+
+        datos_eq = datos_asis.get(eq_n, {})
+        asist_hechas = sum(
+            1 for f in fechas_entreno
+            if f in datos_eq and not any(_vacio(e) or (e.upper() == 'SI' and _vacio(v)) for e, v in datos_eq[f])
+        )
+
+        equipo_folder  = eq_up.replace(' ', '_')
+        upload_folder  = current_app.config.get('UPLOAD_FOLDER', os.path.join(BASE_DIR, 'static', 'uploads'))
+        mes_s2  = f"{mes_int:02d}"
+        anio_s2 = str(anio)
+        prefijo_up = f"entreno_{equipo_folder}_"
+
+        # Contar desde UPLOAD_FOLDER (misma fuente que el calendario, formato DD-MM-YYYY)
+        dias_subidos = set()
+        if os.path.exists(upload_folder):
+            for _uf in os.listdir(upload_folder):
+                if not _uf.startswith(prefijo_up): continue
+                rest = _uf[len(prefijo_up):].rsplit('.', 1)[0]  # "DD-MM-YYYY"
+                p = rest.split('-')
+                if len(p) == 3 and p[1] == mes_s2 and p[2] == anio_s2:
+                    dias_subidos.add(p[0])
+
+        # Contar también desde sesiones/ (sesiones creadas online con Sesion_DD-MM-YYYY.jpg)
+        sesiones_dir = os.path.join(BASE_DIR, 'static', 'data', 'sesiones', equipo_folder)
+        if os.path.exists(sesiones_dir):
+            for fname in os.listdir(sesiones_dir):
+                try:
+                    base = fname.rsplit('.', 1)[0]  # "Sesion_DD-MM-YYYY"
+                    partes = base.replace('Sesion_', '').split('-')
+                    if len(partes) >= 3:
+                        fd, fm, fy = int(partes[0]), int(partes[1]), int(partes[2])
+                        if fm == mes_int and fy == anio:
+                            dias_subidos.add(f"{fd:02d}")
+                except Exception:
+                    pass
+
+        sesiones_subidas = len(dias_subidos)
+
+        balones = 0
+        for bpath in _glob_mod.glob(os.path.join(BASE_DIR, 'static', 'data', f'balones_{nombre}_*.json')):
+            try:
+                with open(bpath, 'r', encoding='utf-8') as fp:
+                    bdata = json.load(fp)
+                for _, vals in bdata.items():
+                    ini = vals.get('inicio', [])
+                    fin = vals.get('final', [])
+                    if not ini or not fin: continue
+                    ts = ini[-1].get('timestamp', '')
+                    try:
+                        if int(ts.split('/')[1]) != mes_int: continue
+                    except Exception: continue
+                    try:
+                        q = int(ini[-1].get('cantidad', 0)) - int(fin[-1].get('cantidad', 0))
+                        if q > 0: balones += q
+                    except Exception: pass
+            except Exception: pass
+
+        obj_stats = obj_eq.get(eq_up, {'cumplidos': 0, 'total': 0})
+
+        result.append({
+            'nombre':        nombre,
+            'asistencias':   {'hechas': asist_hechas,    'total': len(fechas_entreno)},
+            'entrenamientos':{'subidos': sesiones_subidas,'total': total_entrenos},
+            'formularios':   {'hechos': forms_eq.get(eq_up, 0), 'total': saturdays},
+            'audios':        {'enviados': audios_eq.get(eq_up, 0), 'total': saturdays},
+            'balones':       balones,
+            'obj':           obj_stats,
+        })
+
+    mes_label = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'][mes_int - 1]
+    return jsonify({
+        'status': 'ok',
+        'equipos': result,
+        'mes_label': f"{mes_label} {anio}",
+        'mes_iso': f"{anio}-{mes_int:02d}",
     })
 
 

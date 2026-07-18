@@ -630,7 +630,8 @@
                             </th>
                             <th>NOMBRE JUGADOR</th>
                             <th>COLEGIO</th>
-                            <th>DOMICILIO / CP</th>
+                            <th>DOMICILIO</th>
+                            <th>CP</th>
                             <th>EMAIL / TELÉFONO</th>
                             <th>PADRE / MADRE</th>
                             <th>FORMA PAGO</th>
@@ -3592,10 +3593,16 @@ async function procesarFichaConIA(input) {
     const formData = new FormData();
     formData.append('file', input.files[0]);
 
+    const loaderEl = document.getElementById('loaderGlobal');
+    const loaderTxt = loaderEl ? loaderEl.querySelector('div[style]') : null;
+    const textoOrig = loaderTxt ? loaderTxt.textContent : '';
+    if (loaderTxt) loaderTxt.textContent = 'Analizando ficha con IA...';
+    showLoader();
+
     try {
         const res = await fetch('/api/jugadores_datos/upload', { method: 'POST', body: formData });
         const result = await res.json().catch(() => ({ status: 'error', message: 'Error de respuesta del servidor' }));
-        
+
         if (result.status === 'success') {
             mostrarRevisionFicha(result.data);
         } else {
@@ -3605,6 +3612,8 @@ async function procesarFichaConIA(input) {
         console.error(e);
         alert("Error crítico al conectar con el servicio de IA");
     } finally {
+        hideLoader();
+        if (loaderTxt) loaderTxt.textContent = textoOrig;
         input.value = '';
     }
 }
@@ -3634,10 +3643,25 @@ function mostrarRevisionFicha(datos) {
                     <h4 style="font-size: 11px; color: #b45309; margin-bottom: 8px; border-left: 3px solid #f59e0b; padding-left: 8px;">${titulo}</h4>
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">`;
         campos.forEach(key => {
-            html += `<div>
-                        <label style="font-size:8px; font-weight:900; color:#999; display:block; margin-bottom:2px;">${key.replace('_', ' ')}</label>
-                        <input type="text" class="input-rev-ficha" data-key="${key}" value="${datos[key] || ''}" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:6px; font-size:11px; font-weight:700;">
-                     </div>`;
+            if (key === 'JUGADOR_DOMICILIO_CP') {
+                const vDom = datos[key] || '';
+                const mDom = vDom.match(/^(.*?)\s*(\d{5})\s*$/);
+                const domPart = mDom ? mDom[1].trim() : vDom;
+                const cpPart  = mDom ? mDom[2] : '';
+                html += `<div>
+                            <label style="font-size:8px; font-weight:900; color:#999; display:block; margin-bottom:2px;">DOMICILIO</label>
+                            <input type="text" class="input-rev-ficha" data-key="_DOMICILIO_PART" value="${domPart}" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:6px; font-size:11px; font-weight:700;">
+                         </div>
+                         <div>
+                            <label style="font-size:8px; font-weight:900; color:#999; display:block; margin-bottom:2px;">CÓDIGO POSTAL</label>
+                            <input type="text" class="input-rev-ficha" data-key="_CP_PART" value="${cpPart}" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:6px; font-size:11px; font-weight:700;" maxlength="5">
+                         </div>`;
+            } else {
+                html += `<div>
+                            <label style="font-size:8px; font-weight:900; color:#999; display:block; margin-bottom:2px;">${key.replace(/_/g, ' ')}</label>
+                            <input type="text" class="input-rev-ficha" data-key="${key}" value="${datos[key] || ''}" style="width:100%; padding:6px; border:1px solid #ddd; border-radius:6px; font-size:11px; font-weight:700;">
+                         </div>`;
+            }
         });
         html += `</div></div>`;
     }
@@ -3655,7 +3679,14 @@ async function confirmarFichaDefinitiva(btn) {
     const inputs = document.querySelectorAll('.input-rev-ficha');
     const datos = {};
     inputs.forEach(inp => datos[inp.dataset.key] = inp.value);
-    
+
+    // Recombinar DOMICILIO y CP en el campo original
+    if ('_DOMICILIO_PART' in datos || '_CP_PART' in datos) {
+        datos['JUGADOR_DOMICILIO_CP'] = ((datos['_DOMICILIO_PART'] || '') + ' ' + (datos['_CP_PART'] || '')).trim();
+        delete datos['_DOMICILIO_PART'];
+        delete datos['_CP_PART'];
+    }
+
     // Recuperamos la URL original del archivo subido
     datos.ARCHIVO_URL = document.getElementById('zonaRevisionFicha').dataset.archivoUrl || '';
 
@@ -3953,7 +3984,7 @@ function renderTablaDatosJugadores(data) {
                     <div style="font-size:10px; color:#666;">DNI: ${j.AUTORIZA_JUGADOR_DNI || '-'} | Nac: ${j.JUGADOR_FECHA_NACIMIENTO || '-'}</div>
                 </td>
                 <td style="font-size:10px;">${j.JUGADOR_COLEGIO || '-'}</td>
-                <td style="font-size:10px;">${j.JUGADOR_DOMICILIO_CP || '-'}</td>
+                ${(() => { const v=j.JUGADOR_DOMICILIO_CP||''; const m=v.match(/^(.*?)\s*(\d{5})\s*$/); return m?`<td style="font-size:10px;">${m[1].trim()||'-'}</td><td style="font-size:10px;font-weight:700;">${m[2]}</td>`:`<td style="font-size:10px;">${v||'-'}</td><td style="font-size:10px;">-</td>`; })()}
                 <td>
                     <div style="font-size:11px; font-weight:700;">${j.JUGADOR_TELEFONO_MOVIL || '-'}</div>
                     <div style="font-size:10px; color:#1e40af;">${j.JUGADOR_EMAIL || '-'}</div>

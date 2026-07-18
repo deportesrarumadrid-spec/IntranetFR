@@ -542,7 +542,6 @@
     <div class="tabs-container">
         <div class="tab-item active" onclick="switchTab(event, 'tab-coordinacion')">COORDINACIÓN</div>
         <div class="tab-item" onclick="switchTab(event, 'tab-d-deportiva')">D. DEPORTIVA</div>
-        <div class="tab-item" onclick="switchTab(event, 'tab-otros')">INFORMES</div>
         <div class="tab-item" onclick="switchTab(event, 'tab-push')">PUSH</div>
         <div class="tab-item" onclick="switchTab(event, 'tab-horarios-temp')">HORARIOS TEMP.</div>
         <div class="tab-item" onclick="switchTab(event, 'tab-obj-semanales')">OBJ FINES DE SEMANA</div>
@@ -588,6 +587,9 @@
         <div class="coordinacion-layout">
             <!-- Calendario Pequeño -->
             <div class="card-coord">
+                <button class="btn-modern-dark" style="background:#E31E24; margin-bottom: 12px; width: 100%;" onclick="abrirModalInformesSemanales()">
+                    <i class="fas fa-newspaper"></i> INFORME FINDE WHATSAPP
+                </button>
                 <button class="btn-modern-dark" style="background:#0f766e; margin-bottom: 12px; width: 100%;" onclick="abrirModalRevisionObjetivos()">
                     <i class="fas fa-check-double"></i> REVISIÓN OBJETIVOS
                 </button>
@@ -908,6 +910,7 @@
             <div class="tab-item" onclick="switchSubTab(event, 'subtab-kpis')" style="font-size: 11px;">KPIs</div>
             <div class="tab-item" onclick="switchSubTab(event, 'subtab-horarios')" style="font-size: 11px;">HORARIOS FINDE</div>
             <div class="tab-item" onclick="switchSubTab(event, 'subtab-base-datos'); bdCargar();" style="font-size: 11px;">BASE DE DATOS</div>
+            <div class="tab-item" onclick="switchSubTab(event, 'subtab-informes'); setTimeout(rbCargar,50); setTimeout(isCargar,80); setTimeout(imCargar,110);" style="font-size: 11px;">INFORMES</div>
         </div>
         
         <div id="subtab-gestion-estrategica" class="subtab-content active" style="display: grid; grid-template-columns: 1fr 350px; gap: 20px;">
@@ -1098,7 +1101,6 @@
             <!-- Tabla de jugadores -->
             <div id="bdTablaWrap"></div>
         </div>
-    </div>
 
     <!-- MODAL VER FICHA HISTÓRICA -->
     <div id="bdFichaModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:99999; overflow:auto; padding:20px;">
@@ -1116,7 +1118,7 @@
         </div>
     </div>
 
-    <div id="tab-otros" class="tab-content">
+        <div id="subtab-informes" class="subtab-content" style="display:none;">
 
         <!-- DESCARGAR CLASIFICACIONES -->
         <div class="card-coord" style="padding:0; margin-bottom: 16px; overflow:hidden;">
@@ -1279,11 +1281,14 @@
         </div>
     </div>
 
-    <!-- INFORMES SEMANALES -->
-    <div class="card-coord" style="padding:22px; margin-top:18px; max-width:50%; min-width:360px;">
+    <!-- FILA: INFORME FINDE + INFORME MENSUAL -->
+    <div style="display:flex; gap:16px; margin-top:18px; align-items:flex-start; flex-wrap:wrap;">
+
+    <!-- INFORME FINDE WHATSAPP -->
+    <div class="card-coord" style="padding:22px; flex:0 0 auto; min-width:340px; width:calc(50% - 8px);">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
             <h3 style="margin:0;font-size:14px;font-weight:900;color:#1e293b;">
-                <i class="fas fa-newspaper" style="color:#E31E24;margin-right:7px;"></i> INFORMES SEMANALES
+                <i class="fas fa-newspaper" style="color:#E31E24;margin-right:7px;"></i> INFORME FINDE WHATSAPP
             </h3>
             <div style="display:flex;gap:8px;">
                 <button onclick="descargarObjImagen('obsTablaRight','resultados_cumplimiento')"
@@ -1296,7 +1301,7 @@
                         <span style="font-size:8px;font-weight:600;color:#94a3b8;white-space:nowrap;">Obj. fin de semana</span>
                     </span>
                 </button>
-                <button onclick="descargarObjImagen('isTabla','informe_semanal')"
+                <button onclick="descargarObjImagen('isTabla','informe_finde_whatsapp')"
                         style="display:flex;align-items:center;gap:6px;background:white;border:1.5px solid #e2e8f0;border-radius:10px;padding:7px 13px;cursor:pointer;transition:all 0.15s;box-shadow:0 1px 3px rgba(0,0,0,0.06);"
                         onmouseover="this.style.borderColor='#94a3b8';this.style.boxShadow='0 2px 6px rgba(0,0,0,0.1)'"
                         onmouseout="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.06)'">
@@ -1335,9 +1340,71 @@
                 </tbody>
             </table>
         </div>
-    </div>
+    </div><!-- cierre card INFORME FINDE -->
 
-    </div><!-- cierre tab-otros -->
+    <!-- INFORME MENSUAL -->
+    <div class="card-coord" style="padding:22px; flex:1; min-width:400px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+            <h3 style="margin:0;font-size:14px;font-weight:900;color:#1e293b;">
+                <i class="fas fa-calendar-alt" style="color:#E31E24;margin-right:7px;"></i> INFORME MENSUAL
+            </h3>
+            <button onclick="descargarObjImagen('imTabla','informe_mensual')"
+                    style="display:flex;align-items:center;gap:5px;background:white;border:1.5px solid #e2e8f0;border-radius:10px;padding:6px 12px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.06);"
+                    onmouseover="this.style.borderColor='#94a3b8'" onmouseout="this.style.borderColor='#e2e8f0'">
+                <i class="fas fa-download" style="color:#64748b;font-size:10px;"></i>
+                <span style="font-size:9px;font-weight:900;color:#1e293b;">IMAGEN</span>
+            </button>
+        </div>
+        <!-- Selector de año -->
+        <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px;">
+            <button onclick="imNavAño(-1)" style="background:none;border:none;color:#64748b;font-size:14px;font-weight:900;cursor:pointer;padding:2px 8px;">‹</button>
+            <span id="imLabelAño" style="font-size:12px;font-weight:900;color:#1e293b;min-width:44px;text-align:center;"></span>
+            <button onclick="imNavAño(1)" style="background:none;border:none;color:#64748b;font-size:14px;font-weight:900;cursor:pointer;padding:2px 8px;">›</button>
+        </div>
+        <!-- Botones de mes -->
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-bottom:14px;" id="imMesesGrid">
+            <button id="imMes-1"  onclick="imSelMes(1)"  class="im-mes-btn">Ene</button>
+            <button id="imMes-2"  onclick="imSelMes(2)"  class="im-mes-btn">Feb</button>
+            <button id="imMes-3"  onclick="imSelMes(3)"  class="im-mes-btn">Mar</button>
+            <button id="imMes-4"  onclick="imSelMes(4)"  class="im-mes-btn">Abr</button>
+            <button id="imMes-5"  onclick="imSelMes(5)"  class="im-mes-btn">May</button>
+            <button id="imMes-6"  onclick="imSelMes(6)"  class="im-mes-btn">Jun</button>
+            <button id="imMes-7"  onclick="imSelMes(7)"  class="im-mes-btn">Jul</button>
+            <button id="imMes-8"  onclick="imSelMes(8)"  class="im-mes-btn">Ago</button>
+            <button id="imMes-9"  onclick="imSelMes(9)"  class="im-mes-btn">Sep</button>
+            <button id="imMes-10" onclick="imSelMes(10)" class="im-mes-btn">Oct</button>
+            <button id="imMes-11" onclick="imSelMes(11)" class="im-mes-btn">Nov</button>
+            <button id="imMes-12" onclick="imSelMes(12)" class="im-mes-btn">Dic</button>
+        </div>
+        <style>
+            .im-mes-btn { background:#f1f5f9; border:1.5px solid #e2e8f0; border-radius:7px; padding:5px 2px; font-size:9px; font-weight:700; color:#64748b; cursor:pointer; transition:all 0.12s; }
+            .im-mes-btn:hover { background:#e2e8f0; }
+            .im-mes-btn.im-mes-activo { background:#E31E24; color:white; border-color:#E31E24; }
+        </style>
+        <div style="overflow-x:auto;">
+            <table id="imTabla" style="border-collapse:collapse;font-size:10px;width:100%;">
+                <thead>
+                    <tr style="background:#f1f5f9;">
+                        <th style="padding:7px 12px;text-align:left;border:1px solid #cbd5e1;color:#475569;font-weight:800;font-size:9px;text-transform:uppercase;min-width:120px;">Equipo</th>
+                        <th style="padding:7px 8px;text-align:center;border:1px solid #cbd5e1;color:#475569;font-weight:800;font-size:8px;text-transform:uppercase;line-height:1.3;white-space:nowrap;">Asistencias</th>
+                        <th style="padding:7px 8px;text-align:center;border:1px solid #cbd5e1;color:#475569;font-weight:800;font-size:8px;text-transform:uppercase;line-height:1.3;white-space:nowrap;">Entrenos</th>
+                        <th style="padding:7px 8px;text-align:center;border:1px solid #cbd5e1;color:#475569;font-weight:800;font-size:8px;text-transform:uppercase;line-height:1.3;white-space:nowrap;">Formularios</th>
+                        <th style="padding:7px 8px;text-align:center;border:1px solid #cbd5e1;color:#475569;font-weight:800;font-size:8px;text-transform:uppercase;line-height:1.3;white-space:nowrap;">Audios</th>
+                        <th style="padding:7px 8px;text-align:center;border:1px solid #cbd5e1;color:#475569;font-weight:800;font-size:8px;text-transform:uppercase;line-height:1.3;white-space:nowrap;">Balones</th>
+                        <th style="padding:7px 8px;text-align:center;border:1px solid #cbd5e1;color:#475569;font-weight:800;font-size:8px;text-transform:uppercase;line-height:1.3;white-space:nowrap;">Obj</th>
+                    </tr>
+                </thead>
+                <tbody id="imTablaBody">
+                    <tr><td colspan="7" style="padding:20px;text-align:center;color:#94a3b8;border:1px solid #cbd5e1;"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div><!-- cierre card INFORME MENSUAL -->
+
+    </div><!-- cierre fila flex finde+mensual -->
+
+        </div><!-- cierre subtab-informes -->
+    </div><!-- cierre tab-d-deportiva -->
 
     <div id="tab-push" class="tab-content">
         <div class="card-coord" style="padding: 22px; max-width: 480px;">
@@ -3131,7 +3198,7 @@
                 renderFullCalendar();
                 renderTecCalendar();
             }
-            if (tabId === 'tab-otros') {
+            if (tabId === 'tab-d-deportiva') {
                 cargarInformeColoresExistente();
             }
             if (tabId === 'tab-push') {
@@ -4756,7 +4823,8 @@
             ['Nombre', [d.JUGADOR_NOMBRE, d.JUGADOR_APELLIDOS].filter(Boolean).join(' ')],
             ['F. Nacimiento', d.JUGADOR_FECHA_NACIMIENTO],
             ['Colegio', d.JUGADOR_COLEGIO],
-            ['Domicilio / CP', d.JUGADOR_DOMICILIO_CP],
+            ['Domicilio', (d.JUGADOR_DOMICILIO_CP||'').replace(/\s*\d{5}\s*$/,'').trim() || null],
+            ['CP', (d.JUGADOR_DOMICILIO_CP||'').match(/\d{5}/)?.[0] || null],
             ['Teléfono', d.JUGADOR_TELEFONO_MOVIL],
             ['Email', d.JUGADOR_EMAIL],
             ['Padre', d.FAMILIA_NOMBRE_PADRE],
@@ -8391,21 +8459,158 @@ async function asistMatrizCargar(equipo) {
 
     window.rbGuardar = rbGuardar;
 
-    // Inicializar cuando se active el tab INFORMES
-    const _origSwitch = window.switchTab;
-    window.switchTab = function(e, id) {
-        if (_origSwitch) _origSwitch(e, id);
-        if (id === 'tab-otros') { setTimeout(rbCargar, 50); setTimeout(isCargar, 80); }
+    // Inicializar cuando se active el subtab INFORMES
+    const _origSubSwitch = window.switchSubTab;
+    window.switchSubTab = function(evt, id) {
+        if (_origSubSwitch) _origSubSwitch(evt, id);
+        if (id === 'subtab-informes') { setTimeout(rbCargar, 50); setTimeout(isCargar, 80); setTimeout(imCargar, 110); }
     };
-    // También cargar si el tab ya está activo al llegar
-    document.addEventListener('DOMContentLoaded', () => {
-        const tabOtros = document.getElementById('tab-otros');
-        if (tabOtros && tabOtros.style.display !== 'none') rbCargar();
+})();
+
+// ═══════════════════════════════════════════════════════
+//  MODAL INFORME FINDE WHATSAPP (desde Coor. Desarrollo Indv.)
+// ═══════════════════════════════════════════════════════
+(function() {
+    const MESES = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+    let _mFindeIso = null;
+
+    function _toIso(d) {
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+    function _lbl(d) {
+        const sun = new Date(d); sun.setDate(sun.getDate()+1);
+        return `S ${d.getDate()} ${MESES[d.getMonth()]} — D ${sun.getDate()} ${MESES[sun.getMonth()]} ${sun.getFullYear()}`;
+    }
+    function _lblCorto(d) { return `${d.getDate()} ${MESES[d.getMonth()]}`; }
+
+    function _actualizarNav() {
+        const sat  = new Date(_mFindeIso + 'T00:00:00');
+        const prev = new Date(sat); prev.setDate(prev.getDate()-7);
+        const next = new Date(sat); next.setDate(next.getDate()+7);
+        const a = document.getElementById('isMLabelAnterior');
+        const c = document.getElementById('isMLabelActual');
+        const s = document.getElementById('isMLabelSiguiente');
+        if (a) a.textContent = '‹ ' + _lblCorto(prev);
+        if (c) c.textContent = _lbl(sat);
+        if (s) s.textContent = _lblCorto(next) + ' ›';
+    }
+
+    async function _cargar() {
+        _actualizarNav();
+        const body = document.getElementById('isModalTablaBody');
+        if (!body) return;
+        body.innerHTML = '<tr><td colspan="3" style="padding:20px;text-align:center;color:#94a3b8;border:1px solid #cbd5e1;"><i class="fas fa-spinner fa-spin"></i></td></tr>';
+        try {
+            const r = await fetch(`/api/informes_semanales?finde=${_mFindeIso}`);
+            const data = await r.json();
+            if (data.status !== 'ok') throw new Error(data.message || 'Error');
+            _renderModal(data.equipos, _mFindeIso);
+        } catch(e) {
+            body.innerHTML = `<tr><td colspan="3" style="padding:16px;text-align:center;color:#ef4444;font-size:11px;border:1px solid #cbd5e1;">${e.message}</td></tr>`;
+        }
+    }
+
+    const _TD  = 'padding:5px 10px;border:1px solid #cbd5e1;';
+    const _TDG = 'padding:5px 10px;border:1px solid #cbd5e1;text-decoration:line-through;color:#94a3b8;background:#f8fafc;';
+
+    function _renderModal(equipos, findeIso) {
+        const body = document.getElementById('isModalTablaBody');
+        if (!body) return;
+        if (!equipos || !equipos.length) {
+            body.innerHTML = '<tr><td colspan="3" style="padding:16px;text-align:center;color:#94a3b8;border:1px solid #cbd5e1;">Sin datos</td></tr>';
+            return;
+        }
+        const badge = window._isBadge || function(v,t){ return v?'SÍ':'NO'; };
+        body.innerHTML = equipos.map(eq => {
+            const g = !eq.tiene_partido;
+            const td = g ? _TDG : _TD;
+            const enc = encodeURIComponent(eq.nombre);
+            return `<tr data-equipo="${enc}" data-finde="${findeIso}">
+                <td style="${td}font-weight:700;color:${g?'#94a3b8':'#1e293b'};">${eq.nombre}</td>
+                <td style="${td}text-align:center;">${g?'—':badge(eq.formulario,'auto')}</td>
+                <td style="${td}text-align:center;" class="ism-audio-cell">${g?'—':badge(eq.audio,'manual')}</td>
+            </tr>`;
+        }).join('');
+
+        body._ismHandler && body.removeEventListener('click', body._ismHandler);
+        body._ismHandler = async function(e) {
+            const btn = e.target.closest('.is-audio-btn');
+            if (!btn) return;
+            const tr  = btn.closest('tr[data-equipo]');
+            if (!tr) return;
+            const equipo = decodeURIComponent(tr.dataset.equipo);
+            const finde  = tr.dataset.finde;
+            const valor  = btn.dataset.v;
+            btn.style.opacity = '0.5';
+            try {
+                const r = await fetch('/api/informes_semanales/audio', {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({finde, equipo: equipo.toUpperCase(), valor})
+                });
+                const d = await r.json();
+                if (d.status === 'ok') {
+                    const cell = tr.querySelector('.ism-audio-cell');
+                    const badge2 = window._isBadge || function(){return '';};
+                    if (cell) cell.innerHTML = badge2(valor, 'manual');
+                }
+            } catch(ex) {}
+            btn.style.opacity = '1';
+        };
+        body.addEventListener('click', body._ismHandler);
+    }
+
+    window.abrirModalInformesSemanales = function() {
+        _mFindeIso = (window._isGetFindeIso && window._isGetFindeIso()) || _toIso(new Date());
+        const modal = document.getElementById('modalInformesSemanales');
+        if (modal) { modal.style.display = 'flex'; _cargar(); }
+    };
+
+    window.cerrarModalInformesSemanales = function() {
+        const modal = document.getElementById('modalInformesSemanales');
+        if (modal) modal.style.display = 'none';
+    };
+
+    window.isModalNavegar = function(delta) {
+        const d = new Date(_mFindeIso + 'T00:00:00');
+        d.setDate(d.getDate() + delta * 7);
+        _mFindeIso = _toIso(d);
+        _cargar();
+    };
+
+    window.isModalTodoSi = async function() {
+        const body = document.getElementById('isModalTablaBody');
+        if (!body) return;
+        const filas = body.querySelectorAll('tr[data-equipo]');
+        const badge = window._isBadge || function(){return '';};
+        const promesas = [];
+        filas.forEach(tr => {
+            const cell = tr.querySelector('.ism-audio-cell');
+            if (!cell) return;
+            const btnSi = cell.querySelector('.is-audio-btn[data-v="SI"]');
+            if (btnSi && btnSi.style.background === 'rgb(22, 163, 74)') return;
+            const equipo = decodeURIComponent(tr.dataset.equipo);
+            const finde  = tr.dataset.finde;
+            promesas.push(
+                fetch('/api/informes_semanales/audio', {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({finde, equipo: equipo.toUpperCase(), valor:'SI'})
+                }).then(r=>r.json()).then(d=>{
+                    if (d.status === 'ok' && cell) cell.innerHTML = badge('SI','manual');
+                })
+            );
+        });
+        await Promise.all(promesas);
+    };
+
+    // Cerrar al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        const modal = document.getElementById('modalInformesSemanales');
+        if (modal && e.target === modal) cerrarModalInformesSemanales();
     });
 })();
 
 // ═══════════════════════════════════════════════════════
-//  INFORMES SEMANALES
+//  INFORME FINDE WHATSAPP
 // ═══════════════════════════════════════════════════════
 (function() {
     const DIAS_S = ['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
@@ -8442,6 +8647,9 @@ async function asistMatrizCargar(equipo) {
         const sat = _getSaturdayOf(new Date());
         _isFindeIso = _toIso(sat);
     }
+
+    window._isGetFindeIso = () => _isFindeIso;
+    window._isBadge = _badge;
 
     window.isTodoSi = async function() {
         const body = document.getElementById('isTablaBody');
@@ -8569,5 +8777,154 @@ async function asistMatrizCargar(equipo) {
     }
 })();
 
+// === INFORME MENSUAL ===
+(function() {
+    let _imAño = null;
+    let _imMes = null; // 1-12
+
+    function _init() {
+        if (_imAño !== null) return;
+        const hoy = new Date();
+        _imAño = hoy.getFullYear();
+        _imMes = hoy.getMonth() + 1;
+    }
+
+    function _iso() {
+        return `${_imAño}-${String(_imMes).padStart(2,'0')}`;
+    }
+
+    function _actualizarUI() {
+        const elAño = document.getElementById('imLabelAño');
+        if (elAño) elAño.textContent = _imAño;
+        for (let m = 1; m <= 12; m++) {
+            const btn = document.getElementById('imMes-' + m);
+            if (!btn) continue;
+            if (m === _imMes) btn.classList.add('im-mes-activo');
+            else btn.classList.remove('im-mes-activo');
+        }
+    }
+
+    function _fracBadge(hecho, total, esBalon) {
+        if (esBalon) {
+            return `<span style="color:#1e293b;font-weight:400;font-size:12px;">${hecho}</span>`;
+        }
+        if (total === 0) return '<span style="color:#94a3b8;font-size:12px;">—</span>';
+        return `<span style="color:#1e293b;font-weight:400;font-size:12px;">${hecho}/${total}</span>`;
+    }
+
+    function _objBadge(obj) {
+        if (!obj || obj.total === 0) return '<span style="color:#94a3b8;font-size:12px;">—</span>';
+        const noCumplidos = obj.total - obj.cumplidos;
+        return `<span style="color:#16a34a;font-size:12px;font-weight:600;">✓${obj.cumplidos}</span><span style="color:#cbd5e1;margin:0 3px;font-size:10px;">·</span><span style="color:#ef4444;font-size:12px;font-weight:600;">✗${noCumplidos}</span>`;
+    }
+
+    function _renderTablaM(equipos) {
+        const body = document.getElementById('imTablaBody');
+        if (!body) return;
+        if (!equipos || !equipos.length) {
+            body.innerHTML = '<tr><td colspan="7" style="padding:16px;text-align:center;color:#94a3b8;font-size:11px;border:1px solid #cbd5e1;">Sin datos</td></tr>';
+            return;
+        }
+        const _TD = 'padding:6px 8px;border:1px solid #cbd5e1;text-align:center;';
+        const _TDL = 'padding:6px 12px;border:1px solid #cbd5e1;';
+        body.innerHTML = equipos.map(eq => `<tr>
+            <td style="${_TDL}font-weight:700;color:#1e293b;font-size:10px;">${eq.nombre}</td>
+            <td style="${_TD}">${_fracBadge(eq.asistencias.hechas, eq.asistencias.total, false)}</td>
+            <td style="${_TD}">${_fracBadge(eq.entrenamientos.subidos, eq.entrenamientos.total, false)}</td>
+            <td style="${_TD}">${_fracBadge(eq.formularios.hechos, eq.formularios.total, false)}</td>
+            <td style="${_TD}">${_fracBadge(eq.audios.enviados, eq.audios.total, false)}</td>
+            <td style="${_TD}">${_fracBadge(eq.balones, 0, true)}</td>
+            <td style="${_TD}">${_objBadge(eq.obj)}</td>
+        </tr>`).join('');
+    }
+
+    window.imCargar = async function() {
+        _init();
+        _actualizarUI();
+        const body = document.getElementById('imTablaBody');
+        if (!body) return;
+        body.innerHTML = '<tr><td colspan="7" style="padding:30px;text-align:center;color:#94a3b8;border:1px solid #cbd5e1;"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>';
+        try {
+            const r = await fetch(`/api/informe_mensual?mes=${_iso()}`);
+            const data = await r.json();
+            if (data.status !== 'ok') throw new Error(data.message || 'Error');
+            _renderTablaM(data.equipos);
+        } catch(e) {
+            body.innerHTML = `<tr><td colspan="7" style="padding:20px;text-align:center;color:#ef4444;font-size:11px;border:1px solid #cbd5e1;">${e.message}</td></tr>`;
+        }
+    };
+
+    window.imNavAño = function(delta) {
+        _init();
+        _imAño += delta;
+        imCargar();
+    };
+
+    window.imSelMes = function(mes) {
+        _init();
+        _imMes = mes;
+        imCargar();
+    };
+})();
+
 </script>
+
+<!-- Modal INFORME FINDE WHATSAPP — fuera de las pestañas para que position:fixed funcione siempre -->
+<div id="modalInformesSemanales" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+    <div style="background:white; border-radius:18px; width:500px; max-width:96vw; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 60px rgba(0,0,0,0.3);">
+        <div style="background:#0f172a; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+            <div style="font-size:13px; font-weight:800; color:white; letter-spacing:.4px;">
+                <i class="fas fa-newspaper" style="color:#E31E24; margin-right:8px;"></i> INFORME FINDE WHATSAPP
+            </div>
+            <span onclick="cerrarModalInformesSemanales()" style="cursor:pointer; font-size:22px; color:#64748b; line-height:1;">&times;</span>
+        </div>
+        <div style="padding:14px 20px 0; display:flex; justify-content:center;">
+            <div style="display:flex; align-items:center; gap:1px; background:#f1f5f9; border-radius:14px; padding:4px;">
+                <button onclick="isModalNavegar(-1)" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='transparent'"
+                        style="background:transparent;color:#64748b;border:none;border-radius:10px;font-size:11px;font-weight:700;padding:8px 14px;cursor:pointer;transition:0.15s;" id="isMLabelAnterior"></button>
+                <span id="isMLabelActual" style="font-size:11px;font-weight:900;color:#1e293b;padding:8px 16px;background:white;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,0.1);white-space:nowrap;"></span>
+                <button onclick="isModalNavegar(1)" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='transparent'"
+                        style="background:transparent;color:#64748b;border:none;border-radius:10px;font-size:11px;font-weight:700;padding:8px 14px;cursor:pointer;transition:0.15s;" id="isMLabelSiguiente"></button>
+            </div>
+        </div>
+        <div style="flex:1; overflow-y:auto; padding:16px 20px;">
+            <table id="isModalTabla" style="border-collapse:collapse; font-size:11px; width:auto;">
+                <thead>
+                    <tr style="background:#f1f5f9;">
+                        <th style="padding:6px 12px; text-align:left; border:1px solid #cbd5e1; color:#475569; font-weight:800; font-size:9px; text-transform:uppercase; min-width:130px;">Equipo</th>
+                        <th style="padding:6px 12px; text-align:center; border:1px solid #cbd5e1; color:#475569; font-weight:800; font-size:9px; text-transform:uppercase; width:90px; line-height:1.3;">Formulario<br>Partido</th>
+                        <th style="padding:6px 12px; text-align:center; border:1px solid #cbd5e1; color:#475569; font-weight:800; font-size:9px; text-transform:uppercase; width:90px; line-height:1.3;">
+                            Audio<br>Enviado
+                            <button onclick="isModalTodoSi()" style="display:block;margin:4px auto 0;background:#16a34a;color:white;border:none;border-radius:4px;padding:2px 7px;font-size:7px;font-weight:800;cursor:pointer;white-space:nowrap;">TODO SÍ</button>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="isModalTablaBody">
+                    <tr><td colspan="3" style="padding:20px; text-align:center; color:#94a3b8; border:1px solid #cbd5e1;"><i class="fas fa-spinner fa-spin"></i></td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div style="padding:12px 20px; border-top:1px solid #f1f5f9; display:flex; justify-content:flex-end; gap:8px; flex-shrink:0;">
+            <button onclick="descargarObjImagen('obsTablaRight','resultados_cumplimiento')"
+                    style="display:flex;align-items:center;gap:6px;background:white;border:1.5px solid #e2e8f0;border-radius:10px;padding:7px 13px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.06);"
+                    onmouseover="this.style.borderColor='#94a3b8'" onmouseout="this.style.borderColor='#e2e8f0'">
+                <i class="fas fa-download" style="color:#64748b;font-size:10px;"></i>
+                <span style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;">
+                    <span style="font-size:9px;font-weight:900;color:#1e293b;">RESULTADOS</span>
+                    <span style="font-size:8px;color:#94a3b8;">Obj. fin de semana</span>
+                </span>
+            </button>
+            <button onclick="descargarObjImagen('isModalTabla','informe_finde_whatsapp')"
+                    style="display:flex;align-items:center;gap:6px;background:white;border:1.5px solid #e2e8f0;border-radius:10px;padding:7px 13px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.06);"
+                    onmouseover="this.style.borderColor='#94a3b8'" onmouseout="this.style.borderColor='#e2e8f0'">
+                <i class="fas fa-download" style="color:#64748b;font-size:10px;"></i>
+                <span style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;">
+                    <span style="font-size:9px;font-weight:900;color:#1e293b;">INFORME</span>
+                    <span style="font-size:8px;color:#94a3b8;">Semanal</span>
+                </span>
+            </button>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

@@ -437,6 +437,7 @@
                     {% endif %}
                 {% endfor %}
 
+                {% if semana[5] or semana[6] %}
                 <div class="weekend" data-sab="{{ semana[5].numero if semana[5] }}" data-dom="{{ semana[6].numero if semana[6] }}">
     <div class="hoy-label" style="display:none;">HOY</div>
     <div class="we-names">
@@ -445,6 +446,9 @@
     </div>
     <a href="https://forms.gle/sozVzJKkktKiRYzX8" target="_blank" class="btn-form">FORMULARIO PARTIDO</a>
 </div>
+                {% else %}
+                <div class="weekend" style="visibility:hidden;"></div>
+                {% endif %}
             {% endfor %}
         </div>
 
@@ -2146,7 +2150,9 @@ function sanitizarEquipoArchivo(equipo) {
 function viewPhoto(dia) {
     currentDay = dia;
     const claveEquipo = sanitizarEquipoArchivo('{{ equipo_defecto }}');
-    document.getElementById('imgPreview').src = `/static/uploads/entreno_${claveEquipo}_${dia}.jpg?t=` + new Date().getTime();
+    const _ma = "{{ mes_actual }}".split('-'); // ['YYYY','MM']
+    const _dd = String(dia).padStart(2, '0');
+    document.getElementById('imgPreview').src = `/static/uploads/entreno_${claveEquipo}_${_dd}-${_ma[1]}-${_ma[0]}.jpg?t=` + new Date().getTime();
     document.getElementById('viewPhotoModal').style.display = 'flex';
 }
 
@@ -2176,14 +2182,17 @@ function viewPhoto(dia) {
         }
 
         function uploadImage(base64) {
+            const _ma = "{{ mes_actual }}".split('-'); // ['YYYY','MM']
+            const _dd = String(currentDay).padStart(2, '0');
+            const fechaCompleta = `${_dd}/${_ma[1]}/${_ma[0]}`; // DD/MM/YYYY
             fetch('/upload_foto', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ usuario: usuario, equipo: '{{ equipo_defecto }}', dia: currentDay, image: base64 })
-            }).then(() => {
-                alert("Archivo subido!");
-                location.reload();
-            });
+                body: JSON.stringify({ usuario: usuario, equipo: '{{ equipo_defecto }}', dia: currentDay, fecha: fechaCompleta, image: base64 })
+            }).then(r => r.json()).then(d => {
+                if (d.status === 'success') { location.reload(); }
+                else { alert("Error al subir. Inténtalo de nuevo."); }
+            }).catch(() => alert("Error de conexión al subir."));
         }
 
         function saveAll() {

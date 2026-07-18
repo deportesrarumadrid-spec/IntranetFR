@@ -110,13 +110,6 @@ def upload_ficha_ia():
             f.write(file_content)
         file_url = f"/static/uploads/{filename}"
 
-        # --- INTENTO 1: MÉTODO TRADICIONAL (Alternativa a la IA) ---
-        datos_extraidos = extraer_datos_pdf_tradicional(file_content, mime_type)
-        if datos_extraidos and any(v for v in datos_extraidos.values() if v):
-            datos_extraidos['ARCHIVO_URL'] = file_url
-            print("INFO: Datos extraídos con éxito mediante pdfplumber (sin IA)")
-            return jsonify({"status": "success", "data": datos_extraidos, "metodo": "tradicional"})
-        
         # --- SOLUCIÓN DEFINITIVA: SELECCIÓN DINÁMICA ---
         # Consultamos a la API qué modelos exactos tienes habilitados para evitar el 404
         try:
@@ -151,52 +144,60 @@ def upload_ficha_ia():
                 print(f"Aviso: No se pudieron extraer metadatos AcroForm: {e_meta}")
 
         prompt = f"""
-        Actúa como un sistema experto en procesamiento de documentos PDF y mapeo de metadatos AcroForm. 
-        Tu objetivo es realizar una extracción de FALLA CERO combinando la visión multimodal con los metadatos técnicos proporcionados.
+        Eres un experto en extracción de datos de formularios de inscripción deportiva escaneados o en PDF.
 
-        CONTEXTO TÉCNICO (DICCIONARIO DEL PDF):
-        {json.dumps(metadatos_formulario, indent=2) if metadatos_formulario else "No se detectaron campos de metadatos digitales."}
+        ESTRUCTURA DEL FORMULARIO:
+        Este documento es la HOJA DATOS de la Escuela de Fútbol Club Fuentelarreyna (temporada 2025-2026).
+        El formulario tiene DOS secciones principales en la PÁGINA 1:
+        - Bloque de datos del JUGADOR (parte superior): las etiquetas están impresas y los valores rellenados a mano o escritos debajo/al lado.
+        - Bloque SEPA (parte inferior): datos bancarios para domiciliación.
+        La PÁGINA 2 es la hoja de autorizaciones con nombre del tutor, DNI y firma.
 
-        INSTRUCCIONES DE PRIORIDAD ABSOLUTA:
-        1. **Prioridad Metadatos**: Si un campo existe en el "CONTEXTO TÉCNICO", usa ese valor como fuente de verdad primaria.
-        2. **Mapeo de Nombres**: Relaciona los 'Field Names' técnicos con las llaves JSON solicitadas basándote en la semántica.
-        3. **Tratamiento de Checkboxes**: Usa los valores del contexto técnico para determinar si una opción está marcada (SI/NO). No te bases solo en la visión si el metadato está disponible.
-        4. **Limpieza de Ruido**: Ignora todo el texto estático, avisos legales y encabezados. Devuelve exclusivamente los datos del usuario.
-        5. **Firma**: Si en la imagen se observa un trazo manuscrito en el recuadro de firma correspondiente, devuelve "SI", de lo contrario "NO".
+        ADVERTENCIA CRÍTICA — DISTINCIÓN ETIQUETA vs VALOR:
+        El formulario imprime las etiquetas en una fila (ej: "Nombre:", "Apellidos:", "Colegio:") y los valores
+        rellenados aparecen debajo o a continuación. NUNCA confundas el texto de la etiqueta con el valor.
+        Por ejemplo: si ves "Nombre: Apellidos: Colegio: _______" en una línea y en la siguiente
+        "ADRIÁN  HERNÁNDEZ FERNÁNDEZ  VALDELUZ", el nombre es ADRIÁN, los apellidos son HERNÁNDEZ FERNÁNDEZ
+        y el colegio es VALDELUZ.
 
-        CAMPOS A EXTRAER Y SUS LLAVES EXACTAS:
-        1. **DATOS JUGADOR**: 
-           - **JUGADOR_NOMBRE**: Nombre de pila del jugador.
-           - **JUGADOR_APELLIDOS**: Apellidos del jugador.
-           - **JUGADOR_COLEGIO**: Nombre del colegio del jugador.
-           - **JUGADOR_FECHA_NACIMIENTO**: Fecha de nacimiento del jugador.
-           - **JUGADOR_EQUIPO_LETRA**: Nombre del equipo y/o categoría con su letra (ej. "BENJAMIN A", "INFANTIL B").
-           - **JUGADOR_DOMICILIO_CP**: Domicilio y código postal completo.
-           - **JUGADOR_TELEFONO_MOVIL**: Teléfonos fijo y/o móvil proporcionados.
-           - **JUGADOR_EMAIL**: E-mail de contacto.
-        2. **DATOS FAMILIARES**:
-           - **FAMILIA_NOMBRE_PADRE**: Nombre completo del padre.
-           - **FAMILIA_NOMBRE_MADRE**: Nombre completo de la madre.
-        3. **FORMA DE PAGO / SEPA**:
-           - **PAGO_MODALIDAD**: Identifica cuál casilla está marcada: "PAGO EN OFICINA" o "PAGO DOMICILIADO".
-           - **SEPA_NOMBRE_DEUDOR**: Nombre del titular de la cuenta bancaria.
-           - **SEPA_DIRECCION_DEUDOR**: Dirección completa del titular.
-           - **SEPA_SWIFT_BIC**: Código Swift/BIC.
-           - **SEPA_IBAN**: IBAN completo (debe empezar por ES).
-           - **SEPA_TIPO_PAGO**: Identifica cuál casilla de SEPA está marcada: "PAGO RECURRENTE TRES PAGOS" o "PAGO UNICO".
-        4. **AUTORIZACIONES (PÁGINA 2)**:
-           - **AUTORIZA_TUTOR_NOMBRE**: Nombre de pila y apellidos del padre/madre/tutor legal que firma la autorización.
-           - **AUTORIZA_JUGADOR_NOMBRE**: Nombre del jugador que se está autorizando.
-           - **AUTORIZA_JUGADOR_DNI**: DNI del padre/madre/tutor que firma la autorización.
-        5. **FIRMAS Y CIERRE**:
-           - **CIERRE_FECHA_LOCALIDAD**: Fecha y Localidad del documento.
-           - **CIERRE_FIRMA_TUTOR**: "SI" o "NO" según si se detecta firma en los recuadros de firma del deudor/tutor.
+        METADATOS AcroForm DETECTADOS EN EL PDF (fuente de verdad prioritaria si existen):
+        {json.dumps(metadatos_formulario, indent=2) if metadatos_formulario else "No se detectaron campos de formulario digital."}
 
-        REGLAS DE SALIDA OBLIGATORIAS:
-        - Devuelve EXCLUSIVAMENTE el objeto JSON plano sin bloques de código markdown.
-        - Usa estas llaves exactas: {', '.join(COLUMNAS_DATOS_JUGADORES[:-1])}
-        - Si un campo está vacío, pon "".
-        - No inventes datos que no estén en el documento.
+        INSTRUCCIONES:
+        1. Si hay metadatos AcroForm, úsalos como fuente primaria para los campos correspondientes.
+        2. Para los checkboxes: determina cuál opción está marcada visualmente (casilla tachada/rellena) o por metadato.
+        3. Para PAGO_MODALIDAD: puede ser "PAGO EN OFICINA" o "PAGO DOMICILIADO".
+        4. Para SEPA_TIPO_PAGO: puede ser "PAGO RECURRENTE TRES PAGOS" o "PAGO UNICO".
+        5. JUGADOR_DOMICILIO_CP: incluye la calle/número y el código postal juntos (ej: "FINISTERRE 8 10º B 28029").
+        6. JUGADOR_TELEFONO_MOVIL: incluye todos los teléfonos separados por " / " (fijo y móvil).
+        7. CIERRE_FIRMA_TUTOR: "SI" si hay firma manuscrita o sello digital, "NO" si el recuadro está vacío.
+        8. Ignora completamente el texto de las etiquetas, avisos legales, encabezados y líneas de puntos.
+
+        CAMPOS A EXTRAER (llaves JSON exactas):
+        - JUGADOR_NOMBRE: solo el nombre de pila del jugador (ej: "ADRIÁN")
+        - JUGADOR_APELLIDOS: apellidos del jugador (ej: "HERNÁNDEZ FERNÁNDEZ")
+        - JUGADOR_COLEGIO: colegio del jugador
+        - JUGADOR_FECHA_NACIMIENTO: fecha en formato DD/MM/AAAA
+        - JUGADOR_EQUIPO_LETRA: equipo y letra (ej: "ALEVÍN F7 A")
+        - JUGADOR_DOMICILIO_CP: domicilio completo con código postal
+        - JUGADOR_TELEFONO_MOVIL: teléfonos de contacto
+        - JUGADOR_EMAIL: email de contacto
+        - FAMILIA_NOMBRE_PADRE: nombre completo del padre
+        - FAMILIA_NOMBRE_MADRE: nombre completo de la madre
+        - PAGO_MODALIDAD: "PAGO EN OFICINA" o "PAGO DOMICILIADO"
+        - SEPA_NOMBRE_DEUDOR: nombre del titular bancario
+        - SEPA_DIRECCION_DEUDOR: dirección del titular bancario
+        - SEPA_SWIFT_BIC: código BIC/SWIFT
+        - SEPA_IBAN: IBAN completo (empieza por ES)
+        - SEPA_TIPO_PAGO: "PAGO RECURRENTE TRES PAGOS" o "PAGO UNICO"
+        - AUTORIZA_TUTOR_NOMBRE: nombre completo del tutor que autoriza (página 2)
+        - AUTORIZA_JUGADOR_NOMBRE: nombre del jugador autorizado (página 2)
+        - AUTORIZA_JUGADOR_DNI: DNI del tutor (página 2)
+        - CIERRE_FECHA_LOCALIDAD: fecha y localidad al pie del documento
+        - CIERRE_FIRMA_TUTOR: "SI" o "NO"
+
+        SALIDA: responde ÚNICAMENTE con el objeto JSON plano, sin bloques de código markdown, sin explicaciones.
+        Si un campo no aparece en el documento, devuelve "".
         """
 
         response = model.generate_content([
@@ -225,6 +226,15 @@ def upload_ficha_ia():
         print("--- DETALLE DEL ERROR IA ---")
         print(f"Tipo de error: {type(e).__name__}")
         print(f"Mensaje: {str(e)}")
+        # Fallback: intento extractor tradicional si Gemini falla
+        try:
+            datos_fallback = extraer_datos_pdf_tradicional(file_content, mime_type)
+            if datos_fallback and any(v for v in datos_fallback.values() if v):
+                datos_fallback['ARCHIVO_URL'] = file_url
+                print("INFO: Fallback a pdfplumber tras error de Gemini")
+                return jsonify({"status": "success", "data": datos_fallback, "metodo": "tradicional"})
+        except Exception:
+            pass
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @jugadores_datos_bp.route('/api/jugadores_datos/confirmar', methods=['POST'])

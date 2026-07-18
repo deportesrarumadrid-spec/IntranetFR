@@ -264,8 +264,9 @@ def guardar_sesion_img():
             json.dump(metadata, f, ensure_ascii=False, indent=4)
             
         # 2. Guardar como evidencia de entrenamiento para el calendario (botón VER)
-        dia_num = str(int(fecha.split('/')[0]))
-        filename_evidencia = f"entreno_{usuario}_{dia_num}.jpg"
+        # Formato: entreno_{EQUIPO}_{DD}-{MM}-{YYYY}.jpg  (fecha completa para no confundir meses)
+        fp = fecha.split('/')  # ['DD', 'MM', 'YYYY']
+        filename_evidencia = f"entreno_{equipo}_{fp[0]}-{fp[1]}-{fp[2]}.jpg"
         with open(os.path.join(app.config['UPLOAD_FOLDER'], filename_evidencia), "wb") as f:
             f.write(img_data)
             
@@ -482,17 +483,22 @@ def sanitizar_equipo_archivo(equipo):
 @app.route('/upload_foto', methods=['POST'])
 def upload_foto():
     data = request.json
-    usuario = data.get('usuario')
-    equipo = data.get('equipo')
-    dia = data.get('dia')
-    clave = sanitizar_equipo_archivo(equipo) if equipo else usuario
+    equipo = data.get('equipo') or data.get('usuario')
+    fecha  = data.get('fecha')   # DD/MM/YYYY  (nuevo)
+    dia    = data.get('dia')     # solo número (fallback antiguo)
+    clave  = sanitizar_equipo_archivo(equipo)
     try:
         img_data = base64.b64decode(data.get('image').split(",")[1])
-        filename = f"entreno_{clave}_{dia}.jpg"
+        if fecha:
+            fp = fecha.split('/')  # ['DD', 'MM', 'YYYY']
+            filename = f"entreno_{clave}_{fp[0]}-{fp[1]}-{fp[2]}.jpg"
+        else:
+            filename = f"entreno_{clave}_{dia}.jpg"
         with open(os.path.join(UPLOAD_FOLDER, filename), "wb") as f:
             f.write(img_data)
         return jsonify({"status": "success"})
-    except:
+    except Exception as e:
+        print(f"Error upload_foto: {e}")
         return jsonify({"status": "error"}), 500
 @app.route('/login', methods=['POST'])
 def login():
