@@ -2316,4 +2316,148 @@ def api_descargar_escudos():
         "descargados": descargados,
         "fallidos": fallidos,
         "total": len(shield_urls)
-    })
+    })
+
+
+# --- INFORMES SEMANALES ---
+
+def _get_or_crear_sheet_informes_semanales():
+    client = current_app.gs_client
+    NOMBRE_EXCEL = current_app.gs_name
+    try:
+        return client.open(NOMBRE_EXCEL).worksheet("INFORMES_SEMANALES")
+    except Exception:
+        sheet = client.open(NOMBRE_EXCEL).add_worksheet(title="INFORMES_SEMANALES", rows="2000", cols="3")
+        sheet.append_row(["FECHA_FINDE", "EQUIPO", "AUDIO_ENVIADO"])
+        return sheet
+
+
+@deportivo_bp.route('/api/informes_semanales', methods=['GET'])
+def api_informes_semanales_get():
+    if not session.get('usuario'):
+        return jsonify({"status": "error"}), 401
+
+    from datetime import date as _date
+    finde_str = request.args.get('finde', '')
+    try:
+        finde_dt = datetime.strptime(finde_str, '%Y-%m-%d').date()
+    except Exception:
+        today = _date.today()
+        days_since_sat = (today.weekday() - 5) % 7
+        finde_dt = today - timedelta(days=days_since_sat)
+
+    sat = finde_dt
+    sun = finde_dt + timedelta(days=1)
+    sat_str = sat.strftime('%d/%m/%Y')
+
+    equipos = []
+    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'equipos_config.json')
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            equipos = [e['nombre'] for e in json.load(f).get('equipos', [])]
+    except Exception:
+        pass
+
+    teams_with_game = set()
+    try:
+        from competicion_scraper import load_convocatorias_report
+        conv_data = load_convocatorias_report()
+        for entry in (conv_data or {}).get('entries', []):
+            fecha_raw = entry.get('fecha', '')
+            parts = fecha_raw.split('-')
+            if len(parts) == 3:
+                ed, em, ey = int(parts[0]), int(parts[1]), int(parts[2])
+                if _date(ey, em, ed) in (sat, sun):
+                    cat = (entry.get('categoria') or '').strip().upper()
+                    letra = (entry.get('letra') or '').strip().upper()
+                    teams_with_game.add(f"{cat} {letra}".strip() if letra else cat)
+    except Exception:
+        pass
+
+    teams_formulario = set()
+    try:
+        client = current_app.gs_client
+        NOMBRE_EXCEL = current_app.gs_name
+        ws_form = client.open(NOMBRE_EXCEL).worksheet('FORMULARIO_PARTIDOS')
+        all_form = ws_form.get_all_values()
+        if all_form and len(all_form) > 1:
+            hdrs = [h.strip().upper().replace(' ', '') for h in all_form[0]]
+            idx_eq = next((i for i, h in enumerate(hdrs) if 'EQUIPO' in h), 1)
+            idx_fe = next((i for i, h in enumerate(hdrs) if 'MARCA' in h or 'TEMPORAL' in h), 0)
+            for row in all_form[1:]:
+                if len(row) <= max(idx_eq, idx_fe): continue
+                fecha_raw = row[idx_fe].strip()
+                if not fecha_raw: continue
+                pf = fecha_raw.split()[0].split('/')
+                try:
+                    fd, fm, fy = int(pf[0]), int(pf[1]), int(pf[2])
+                    if fy < 100: fy += 2000
+                    if _date(fy, fm, fd) in (sat, sun):
+                        teams_formulario.add(row[idx_eq].strip().upper())
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    audio_data = {}
+    try:
+        ws_inf = _get_or_crear_sheet_informes_semanales()
+        all_inf = ws_inf.get_all_values()
+        for row in (all_inf[1:] if all_inf else []):
+            if len(row) >= 3 and row[0].strip() == sat_str:
+                audio_data[row[1].strip().upper()] = row[2].strip().upper()
+    except Exception:
+        pass
+
+    result = []
+    for eq in equipos:
+        eq_up = eq.upper()
+        if teams_with_game:
+            tiene_partido = any(eq_up == tg or tg.startswith(eq_up) or eq_up.startswith(tg) for tg in teams_with_game)
+        else:
+            tiene_partido = True
+        result.append({
+            'nombre': eq,
+            'tiene_partido': tiene_partido,
+            'formulario': eq_up in teams_formulario,
+            'audio': audio_data.get(eq_up)
+        })
+
+    return jsonify({
+        'status': 'ok',
+        'equipos': result,
+        'finde': sat_str,
+        'finde_iso': sat.strftime('%Y-%m-%d')
+    })
+
+
+@deportivo_bp.route('/api/informes_semanales/audio', methods=['POST'])
+def api_informes_semanales_audio_post():
+    if not session.get('usuario'):
+        return jsonify({"status": "error"}), 401
+
+    data = request.json or {}
+    finde_iso = (data.get('finde') or '').strip()
+    equipo = (data.get('equipo') or '').strip().upper()
+    valor = (data.get('valor') or '').strip().upper()
+
+    if not finde_iso or not equipo or valor not in ('SI', 'NO'):
+        return jsonify({"status": "error", "message": "Datos inválidos"}), 400
+
+    try:
+        finde_dt = datetime.strptime(finde_iso, '%Y-%m-%d').date()
+        sat_str = finde_dt.strftime('%d/%m/%Y')
+    except Exception:
+        return jsonify({"status": "error", "message": "Fecha inválida"}), 400
+
+    try:
+        ws = _get_or_crear_sheet_informes_semanales()
+        all_data = ws.get_all_values()
+        for i, row in enumerate(all_data[1:] if all_data else [], start=2):
+            if len(row) >= 2 and row[0].strip() == sat_str and row[1].strip().upper() == equipo:
+                ws.update_cell(i, 3, valor)
+                return jsonify({"status": "ok"})
+        ws.append_row([sat_str, equipo, valor])
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
