@@ -105,7 +105,7 @@ def format_date_for_frontend(date_value):
         if isinstance(date_value, datetime):
             return date_value.strftime('%d/%m/%Y')
         s_date = str(date_value).strip()
-        for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y'):
+        for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%d%m%Y', '%Y%m%d'):
             try:
                 dt_obj = datetime.strptime(s_date, fmt)
                 return dt_obj.strftime('%d/%m/%Y')
@@ -271,7 +271,10 @@ def api_presupuesto():
         
         datos = request.json
         pilar = datos.get('pilar')
-        
+        # duplicate_action: None (preguntar al usuario) | 'force_new' | 'overwrite' | 'compensate'
+        duplicate_action = datos.get('duplicate_action')
+        print(f"[api_presupuesto] pilar={pilar!r} nombre={datos.get('nombre')!r} concepto={datos.get('concepto')!r} importe={datos.get('importe')} dup={duplicate_action!r}")
+
         if pilar == "Cuotas":
             # Guardado específico en la nueva pestaña PAGOS JUGADORES
             try:
@@ -378,19 +381,19 @@ def api_presupuesto():
             sheet_fin = client.open(NOMBRE_EXCEL).worksheet("FINANCIERO")
         except gspread.exceptions.WorksheetNotFound:
             sheet_fin = client.open(NOMBRE_EXCEL).add_worksheet(title="FINANCIERO", rows="1000", cols="11")
-            sheet_fin.update('A1', [["FECHA", "Nº ASIENTO", "DEPARTAMENTO", "PILAR", "DESCRIPCION", "IMPORTE", "NOMBRE", "EQUIPO", "CONCEPTO", "ESPERADO", "FACTURA"]])
+            sheet_fin.update('A1', [["FECHA", "Nº ASIENTO", "DEPARTAMENTO", "PILAR", "DESCRIPCION", "IMPORTE", "NOMBRE", "EQUIPO", "CONCEPTO", "ESPERADO", "FACTURA", "FORMA_PAGO"]])
 
         all_fin = sheet_fin.get_all_values()
         headers_fin_raw = all_fin[0] if all_fin else []
         headers_fin_norm = normalizar_cabeceras(headers_fin_raw)
         
         if 'N_ASIENTO' not in headers_fin_norm:
-            sheet_fin.update('A1', [["FECHA", "Nº ASIENTO", "DEPARTAMENTO", "PILAR", "DESCRIPCION", "IMPORTE", "NOMBRE", "EQUIPO", "CONCEPTO", "ESPERADO", "FACTURA"]])
+            sheet_fin.update('A1', [["FECHA", "Nº ASIENTO", "DEPARTAMENTO", "PILAR", "DESCRIPCION", "IMPORTE", "NOMBRE", "EQUIPO", "CONCEPTO", "ESPERADO", "FACTURA", "FORMA_PAGO"]])
             all_fin = sheet_fin.get_all_values()
             headers_fin_raw = all_fin[0]
             headers_fin_norm = normalizar_cabeceras(headers_fin_raw)
         else:
-            missing = [c for c in ["NOMBRE", "EQUIPO", "CONCEPTO", "ESPERADO", "FACTURA"] if c not in headers_fin_norm]
+            missing = [c for c in ["NOMBRE", "EQUIPO", "CONCEPTO", "ESPERADO", "FACTURA", "FORMA_PAGO"] if c not in headers_fin_norm]
             if missing:
                 new_headers_raw = headers_fin_raw + missing
                 sheet_fin.update('A1', [new_headers_raw])
@@ -399,13 +402,14 @@ def api_presupuesto():
                 headers_fin_norm = normalizar_cabeceras(headers_fin_raw)
 
         # BÚSQUEDA ROBUSTA DE DUPLICADOS EN FINANCIERO (MAESTRA)
+        # force_new=True lo usa la carga masiva: cada transacción bancaria es única → siempre nueva fila
         idx_fin_existente = -1
         try:
             idx_p = headers_fin_norm.index('PILAR') if 'PILAR' in headers_fin_norm else -1
             idx_n = headers_fin_norm.index('NOMBRE') if 'NOMBRE' in headers_fin_norm else -1
             idx_c = headers_fin_norm.index('CONCEPTO') if 'CONCEPTO' in headers_fin_norm else -1
-            
-            if pilar in ["Cuotas", "Pagos Staff"] and idx_p != -1 and idx_n != -1 and idx_c != -1:
+
+            if duplicate_action != 'force_new' and pilar in ["Cuotas", "Pagos Staff"] and idx_p != -1 and idx_n != -1 and idx_c != -1:
                 nom_b = str(datos.get('nombre', '')).strip().lower()
                 con_norm = normalizar_concepto_interno(datos.get('concepto'))
 
@@ -423,53 +427,72 @@ def api_presupuesto():
             print(f"Error buscando duplicado en FINANCIERO: {e}")
 
         if idx_fin_existente != -1:
-            old_row = all_fin[idx_fin_existente - 1]
-            idx_imp_col = headers_fin_norm.index('IMPORTE') if 'IMPORTE' in headers_fin_norm else -1
+            old_row    = all_fin[idx_fin_existente - 1]
+            idx_imp_col  = headers_fin_norm.index('IMPORTE')     if 'IMPORTE'     in headers_fin_norm else -1
             idx_desc_col = headers_fin_norm.index('DESCRIPCION') if 'DESCRIPCION' in headers_fin_norm else -1
-            idx_asi_col = next((headers_fin_norm.index(v) for v in ['N_ASIENTO', 'Nº_ASIENTO', 'ASIENTO'] if v in headers_fin_norm), -1)
+            idx_asi_col  = next((headers_fin_norm.index(v) for v in ['N_ASIENTO','Nº_ASIENTO','ASIENTO'] if v in headers_fin_norm), -1)
             try:
                 old_importe = float(str(old_row[idx_imp_col]).replace(',', '.')) if idx_imp_col != -1 and len(old_row) > idx_imp_col and old_row[idx_imp_col] else 0
             except:
                 old_importe = 0
-            nuevo_importe = float(datos.get('importe', 0))
-            # Comparar valores absolutos: FINANCIERO puede tener el importe como positivo (entradas antiguas) o negativo (nuevo criterio)
-            usar_compensacion = pilar == "Pagos Staff" and abs(abs(nuevo_importe) - abs(old_importe)) > 0.01
+            old_desc        = old_row[idx_desc_col] if idx_desc_col != -1 and len(old_row) > idx_desc_col else ''
+            old_num_asiento = old_row[idx_asi_col]  if idx_asi_col  != -1 and len(old_row) > idx_asi_col  else ''
 
-            if not usar_compensacion:
-                # Actualización robusta in-place (misma cantidad o no es staff)
+            if not duplicate_action:
+                # Sin acción → informar al frontend para que el usuario decida
+                return jsonify({
+                    'status': 'duplicate',
+                    'existing': {
+                        'asiento':     str(old_num_asiento),
+                        'fecha':       old_row[0] if old_row else '',
+                        'descripcion': old_desc,
+                        'importe':     str(old_importe),
+                    }
+                }), 200
+
+            elif duplicate_action == 'overwrite':
+                # Sobreescribir la fila existente
                 updates = []
-                mapping = {'FECHA': datos.get('fecha'), 'DESCRIPCION': datos.get('descripcion'), 'IMPORTE': datos.get('importe'), 'ESPERADO': datos.get('esperado', 0)}
+                mapping = {'FECHA': datos.get('fecha'), 'DESCRIPCION': datos.get('descripcion'),
+                           'IMPORTE': datos.get('importe'), 'ESPERADO': datos.get('esperado', 0)}
                 for key, val in mapping.items():
                     if key in headers_fin_norm:
                         col_idx = headers_fin_norm.index(key) + 1
                         updates.append({'range': f"'FINANCIERO'!{rowcol_to_a1(idx_fin_existente, col_idx)}", 'values': [[val]]})
                 if updates:
                     sheet_fin.spreadsheet.values_batch_update({'valueInputOption': 'USER_ENTERED', 'data': updates})
-                idx_asi_col2 = headers_fin_norm.index('N_ASIENTO') if 'N_ASIENTO' in headers_fin_norm else 1
-                return jsonify({"status": "success", "asiento": all_fin[idx_fin_existente-1][idx_asi_col2]})
-            else:
-                # Asientos compensatorios: mantener original, añadir anulación + nuevo
-                old_desc = old_row[idx_desc_col] if idx_desc_col != -1 and len(old_row) > idx_desc_col else datos.get('descripcion', '')
-                old_num_asiento = old_row[idx_asi_col] if idx_asi_col != -1 and len(old_row) > idx_asi_col else ""
+                return jsonify({"status": "success", "asiento": old_num_asiento})
+
+            elif duplicate_action == 'compensate':
+                # Abonar el anterior (línea de signo contrario) y crear el nuevo
                 max_asi = 0
                 for row in all_fin[1:]:
                     if idx_asi_col != -1 and len(row) > idx_asi_col and row[idx_asi_col]:
                         try:
-                            val_limpio = str(row[idx_asi_col]).strip().replace('#', '').split('_')[0]
-                            if val_limpio.isdigit():
-                                max_asi = max(max_asi, int(val_limpio))
+                            v = str(row[idx_asi_col]).strip().replace('#', '').split('_')[0]
+                            if v.isdigit():
+                                max_asi = max(max_asi, int(v))
                         except: continue
                 rev_num = max_asi + 1
                 rev_mapeo = {
-                    "FECHA": datos.get('fecha'), "N_ASIENTO": rev_num,
-                    "DEPARTAMENTO": datos.get('departamento'), "PILAR": pilar,
-                    "DESCRIPCION": f"Anulación: {old_desc} (#{old_num_asiento})" if old_num_asiento else f"Anulación: {old_desc}", "IMPORTE": -old_importe,
-                    "NOMBRE": datos.get('nombre', ''), "EQUIPO": datos.get('equipo', ''),
-                    "CONCEPTO": datos.get('concepto', ''), "ESPERADO": 0, "FACTURA": ''
+                    "FECHA":        datos.get('fecha'),
+                    "N_ASIENTO":    rev_num,
+                    "DEPARTAMENTO": datos.get('departamento'),
+                    "PILAR":        pilar,
+                    "DESCRIPCION":  f"Anulación #{old_num_asiento}: {old_desc}" if old_num_asiento else f"Anulación: {old_desc}",
+                    "IMPORTE":      -old_importe,
+                    "NOMBRE":       datos.get('nombre', ''),
+                    "EQUIPO":       datos.get('equipo', ''),
+                    "CONCEPTO":     datos.get('concepto', ''),
+                    "ESPERADO":     0,
+                    "FACTURA":      ''
                 }
                 sheet_fin.append_row([rev_mapeo.get(h, "") for h in headers_fin_norm])
                 datos['n_asiento'] = rev_num + 1
-                # Fall through to append the new corrected entry below
+                # Fall through → append nuevo asiento a continuación
+
+            # duplicate_action == 'force_new': el índice nunca se encontró (la búsqueda se saltó),
+            # pero si por algún motivo llegamos aquí con force_new, también caemos en el append.
 
         # Intentamos usar el número de asiento proporcionado (de la carga masiva o manual)
         num_asiento = datos.get('n_asiento')
@@ -500,6 +523,39 @@ def api_presupuesto():
             else:
                 num_asiento = num_str # Mantener como string (incluye los que llevan sufijo "_N")
 
+        # Verificar asientos de apertura obligatorios (#000001 BAN y #000002 EFE)
+        # Excepción: si el propio asiento que se crea ES el #1 o el #2
+        _num_asi_int = None
+        try:
+            _num_asi_int = int(str(num_asiento).strip().replace('#', '').split('_')[0])
+        except: pass
+
+        if _num_asi_int is None or _num_asi_int > 2:
+            _idx_asi2 = next((headers_fin_norm.index(v) for v in ['N_ASIENTO','Nº_ASIENTO','ASIENTO'] if v in headers_fin_norm), -1)
+            _idx_fp   = headers_fin_norm.index('FORMA_PAGO') if 'FORMA_PAGO' in headers_fin_norm else -1
+            _tiene_001_ban = _tiene_002_efe = False
+            for _row in all_fin[1:]:
+                if _idx_asi2 == -1: break
+                _asi_v = str(_row[_idx_asi2]).strip().replace('#', '').split('_')[0] if len(_row) > _idx_asi2 else ''
+                _fp_v  = str(_row[_idx_fp]).strip().upper() if _idx_fp != -1 and len(_row) > _idx_fp else ''
+                if _asi_v in ('1', '000001') and _fp_v == 'BAN': _tiene_001_ban = True
+                if _asi_v in ('2', '000002') and _fp_v == 'EFE': _tiene_002_efe = True
+            if not _tiene_001_ban or not _tiene_002_efe:
+                _falt = []
+                if not _tiene_001_ban: _falt.append('#000001 (BAN · Saldo apertura banco)')
+                if not _tiene_002_efe: _falt.append('#000002 (EFE · Saldo apertura efectivo)')
+                return jsonify({'status': 'error', 'message': f"Faltan asientos de apertura: {', '.join(_falt)}. Créalos primero."}), 400
+        elif _num_asi_int == 2:
+            _idx_asi2 = next((headers_fin_norm.index(v) for v in ['N_ASIENTO','Nº_ASIENTO','ASIENTO'] if v in headers_fin_norm), -1)
+            _idx_fp   = headers_fin_norm.index('FORMA_PAGO') if 'FORMA_PAGO' in headers_fin_norm else -1
+            _tiene_001_ban = any(
+                str(r[_idx_asi2]).strip().replace('#','').split('_')[0] in ('1','000001') and
+                str(r[_idx_fp]).strip().upper() == 'BAN'
+                for r in all_fin[1:] if _idx_asi2 != -1 and _idx_fp != -1 and len(r) > max(_idx_asi2, _idx_fp)
+            )
+            if not _tiene_001_ban:
+                return jsonify({'status': 'error', 'message': 'Primero debes crear el asiento #000001 (BAN · Saldo apertura banco).'}), 400
+
         # Los pagos a staff son un gasto (dinero que sale) → importe negativo en FINANCIERO
         importe_fin = datos.get('importe')
         if pilar == "Pagos Staff":
@@ -519,7 +575,8 @@ def api_presupuesto():
             "EQUIPO": datos.get('equipo', ''),
             "CONCEPTO": datos.get('concepto', ''),
             "ESPERADO": datos.get('esperado', datos.get('importe', 0)),
-            "FACTURA": datos.get('factura_estado', '')
+            "FACTURA": datos.get('factura_estado', ''),
+            "FORMA_PAGO": datos.get('forma_pago', '')
         }
 
         nueva_fila_fin = []
@@ -527,9 +584,12 @@ def api_presupuesto():
             nueva_fila_fin.append(mapeo_fila.get(h_norm, ""))
 
         sheet_fin.append_row(nueva_fila_fin)
+        print(f"[api_presupuesto] FINANCIERO OK → asiento={num_asiento}")
         return jsonify({"status": "success", "asiento": num_asiento})
     except Exception as e:
-        print(f"Error en api_presupuesto: {e}")
+        import traceback
+        print(f"[api_presupuesto] ERROR: {e}")
+        traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @financiero_bp.route('/api/asiento/subir_factura', methods=['POST'])
@@ -1007,7 +1067,14 @@ def api_operacion_asiento():
         # SIEMPRE operamos primero sobre la pestaña maestra FINANCIERO para el historial
         sheet_fin = client.open(NOMBRE_EXCEL).worksheet("FINANCIERO")
         all_fin = sheet_fin.get_all_values()
-        headers_fin = normalizar_cabeceras(all_fin[0])
+        headers_fin_raw = all_fin[0] if all_fin else []
+        headers_fin = normalizar_cabeceras(headers_fin_raw)
+        # Migración: asegurar columna FORMA_PAGO existe
+        if 'FORMA_PAGO' not in headers_fin:
+            headers_fin_raw = headers_fin_raw + ['FORMA_PAGO']
+            sheet_fin.update('A1', [headers_fin_raw])
+            all_fin = sheet_fin.get_all_values()
+            headers_fin = normalizar_cabeceras(all_fin[0])
         
         idx_asi = -1
         for v in ['Nº_ASIENTO', 'N_ASIENTO', 'ASIENTO']:
@@ -1041,19 +1108,76 @@ def api_operacion_asiento():
                     if i > 0 and len(row) > max(col_n, col_c) and row[col_n].strip().lower() == data.get('nombre_orig','').strip().lower() and normalizar_concepto_interno(row[col_c]) == normalizar_concepto_interno(data.get('concepto_orig')):
                         sheet_esp.delete_rows(i + 1)
                         break
+
+            # Desconciliar la línea de remesa vinculada a este jugador
+            # Solo si ya no quedan pagos registrados en PAGOS JUGADORES para ese jugador
+            nombre_del = (data.get('nombre_orig') or '').strip().lower()
+            if nombre_del:
+                try:
+                    _puede_desconciliar = True
+                    if tipo_origen == 'JUGADOR':
+                        # sheet_esp es PAGOS JUGADORES (ya abierto arriba); re-leer tras borrar
+                        try:
+                            _rows_pj = sheet_esp.get_all_records()
+                            _tiene_pagos = any(
+                                str(_r.get('NOMBRE', '')).strip().lower() == nombre_del and
+                                float(str(_r.get('PAGADO', '0')).replace(',', '.') or '0') > 0
+                                for _r in _rows_pj
+                            )
+                            if _tiene_pagos:
+                                _puede_desconciliar = False  # quedan otros asientos → mantener verde
+                        except Exception:
+                            _puede_desconciliar = False  # por seguridad: no desconciliar si error
+                    if _puede_desconciliar:
+                        with open(_REMESAS_PATH, 'r', encoding='utf-8') as _f:
+                            _historial = json.load(_f)
+                        _cambio = False
+                        for _remesa in _historial:
+                            for _linea in _remesa.get('lineas', []):
+                                if _linea.get('conciliada') and (_linea.get('jugador') or '').strip().lower() == nombre_del:
+                                    _linea['conciliada'] = False
+                                    _cambio = True
+                        if _cambio:
+                            with open(_REMESAS_PATH, 'w', encoding='utf-8') as _f:
+                                json.dump(_historial, _f, ensure_ascii=False, indent=2)
+                            print(f"[borrar_asiento] Desconciliadas líneas de remesa para '{nombre_del}'")
+                except Exception as _e_rem:
+                    print(f"[borrar_asiento] No se pudo desconciliar remesa: {_e_rem}")
         
         elif accion == 'editar':
-            # Actualización maestra en FINANCIERO (usa batch para ser atómico)
-            mapeo_fin = {'fecha': 'FECHA', 'departamento': 'DEPARTAMENTO', 'pilar': 'PILAR', 'descripcion': 'DESCRIPCION', 'importe': 'IMPORTE'}
+            print(f"[editar] fila_fin_idx={fila_fin_idx} tipo_origen={tipo_origen!r} asiento_id={asiento_id!r}")
+            print(f"[editar] headers_fin={headers_fin}")
+            print(f"[editar] data keys={list(data.keys())}")
+
+            if tipo_origen in ['JUGADOR', 'STAFF']:
+                mapeo_fin = {'fecha': 'FECHA', 'departamento': 'DEPARTAMENTO', 'descripcion': 'DESCRIPCION', 'forma_pago': 'FORMA_PAGO'}
+            else:
+                mapeo_fin = {'fecha': 'FECHA', 'departamento': 'DEPARTAMENTO', 'pilar': 'PILAR', 'descripcion': 'DESCRIPCION', 'importe': 'IMPORTE', 'forma_pago': 'FORMA_PAGO'}
+
             updates_fin = []
+            skipped = []
             for k_json, k_head in mapeo_fin.items():
-                if k_json in data and k_head in headers_fin:
-                    updates_fin.append({'range': f"'FINANCIERO'!{rowcol_to_a1(fila_fin_idx, headers_fin.index(k_head)+1)}", 'values': [[data[k_json]]]})
-            
+                in_data = k_json in data
+                in_headers = k_head in headers_fin
+                if in_data and in_headers:
+                    col_idx = headers_fin.index(k_head) + 1
+                    cell_ref = rowcol_to_a1(fila_fin_idx, col_idx)
+                    updates_fin.append({'range': f"'FINANCIERO'!{cell_ref}", 'values': [[data[k_json]]]})
+                    print(f"[editar] → actualizar {k_head} ({cell_ref}) = {data[k_json]!r}")
+                else:
+                    skipped.append(f"{k_json}(in_data={in_data},in_headers={in_headers})")
+            if skipped:
+                print(f"[editar] saltados: {skipped}")
+
             if tipo_origen in ['JUGADOR', 'STAFF'] and 'ESPERADO' in headers_fin:
                 updates_fin.append({'range': f"'FINANCIERO'!{rowcol_to_a1(fila_fin_idx, headers_fin.index('ESPERADO')+1)}", 'values': [[data.get('esperado', 0)]]})
-            
+
+            if not updates_fin:
+                return jsonify({"status": "error", "message": f"No hay campos que actualizar. Saltados: {skipped}"}), 400
+
+            print(f"[editar] ejecutando batch update con {len(updates_fin)} celdas")
             sheet_fin.spreadsheet.values_batch_update({'valueInputOption': 'USER_ENTERED', 'data': updates_fin})
+            print(f"[editar] batch update OK")
 
             # Sincronizar con sub-hoja específica
             if tipo_origen in ['JUGADOR', 'STAFF']:
@@ -1333,7 +1457,14 @@ def api_carga_masiva_presupuesto():
                 return jsonify({"status": "error", "message": "El servidor no tiene instalada la librería 'pandas'. Ejecuta: pip install pandas openpyxl"}), 500
             try:
                 file.seek(0)
-                df = pd.read_excel(file).fillna("") 
+                try:
+                    df = pd.read_excel(file, engine='openpyxl').fillna("")
+                except Exception as _e1:
+                    if "zip" in str(_e1).lower() or "not a zip" in str(_e1).lower():
+                        file.seek(0)
+                        df = pd.read_excel(file, engine='xlrd').fillna("")
+                    else:
+                        raise _e1
                 df.columns = normalizar_cabeceras(df.columns.tolist())
                 
                 for _, row in df.iterrows():
@@ -1349,11 +1480,11 @@ def api_carga_masiva_presupuesto():
                         "EQUIPO": str(row.get('EQUIPO', '')),
                         "CONCEPTO": str(row.get('CONCEPTO', ''))
                     })
-            except ImportError:
-                return jsonify({"status": "error", "message": "El servidor necesita la librería 'pandas' y 'openpyxl' para procesar archivos Excel."}), 500
+            except ImportError as ie:
+                print(f"ImportError leyendo Excel: {ie}")
+                return jsonify({"status": "error", "message": f"Falta dependencia para leer Excel: {ie}. Ejecuta: pip install pandas openpyxl"}), 500
             except Exception as e:
-                if "openpyxl" in str(e) or "xlrd" in str(e):
-                    return jsonify({"status": "error", "message": "El servidor necesita las librerías 'pandas', 'openpyxl' y 'xlrd' para procesar archivos Excel."}), 500
+                print(f"Error leyendo Excel: {type(e).__name__}: {e}")
                 return jsonify({"status": "error", "message": f"Error al leer el archivo Excel: {str(e)}"}), 500
 
         elif filename.endswith('.pdf'):
@@ -1889,3 +2020,785 @@ def api_subvenciones_adjunto_delete(fname):
 def api_subvenciones_archivo(fname):
     from flask import send_from_directory
     return send_from_directory(_subvenciones_dir(), fname)
+
+
+# ─────────────────────────────────────────────
+#  GENERAR REMESA BANCARIA
+# ─────────────────────────────────────────────
+TEAM_CODES_REMESA = {
+    'CHUPETIN': 'CHU',
+    'PREBENJAMIN A': 'PRA', 'PREBENJAMIN B': 'PRB', 'PREBENJAMIN C': 'PRC',
+    'BENJAMIN A': 'BEA', 'BENJAMIN B': 'BEB', 'BENJAMIN C': 'BEC',
+    'ALEVIN F7 A': 'A7A', 'ALEVIN F7 B': 'A7B',
+    'ALEVIN FEM': 'ALF',
+    'ALEVIN F11 A': 'A1A', 'ALEVIN F11 B': 'A1B',
+    'INFANTIL A': 'INA', 'INFANTIL B': 'INB',
+    'CADETE A': 'CDA', 'CADETE B': 'CDB',
+    'JUVENIL A': 'JUA', 'JUVENIL B': 'JUB',
+    'AFICIONADO A': 'AFA', 'AFICIONADO B': 'AFB',
+}
+MES_NUM = {'ENE':'01','FEB':'02','MAR':'03','ABR':'04','MAY':'05','JUN':'06',
+           'JUL':'07','AGO':'08','SEP':'09','OCT':'10','NOV':'11','DIC':'12'}
+MES_LABEL = {v: k for k, v in MES_NUM.items()}
+
+@financiero_bp.route('/api/estado_pagos_jugadores', methods=['GET'])
+def api_estado_pagos_jugadores():
+    """Combina PAGOS JUGADORES + FINANCIERO para devolver estado completo de pagos."""
+    from app import client, NOMBRE_EXCEL
+    try:
+        wb = client.open(NOMBRE_EXCEL)
+        resultado = []
+        pj_keys = set()  # (nombre_lower, equipo_lower, concepto) ya cubiertos por PAGOS JUGADORES
+
+        # Construir lookup de remesas guardadas: (jugador_lower, pj_concepto) → {'info': str, 'cobrada': bool}
+        remesa_lookup = {}
+        try:
+            with open(_REMESAS_PATH, 'r', encoding='utf-8') as _f:
+                _hist = json.load(_f)
+            for _entrada in _hist:
+                _info    = f"{_entrada.get('titulo','')} · {_entrada.get('fecha','')}"
+                _cobrada = bool(_entrada.get('cobrada', False))
+                for _lin in _entrada.get('lineas', []):
+                    _jug = str(_lin.get('jugador','')).strip().lower()
+                    _lin_conciliada = bool(_lin.get('conciliada', False))
+                    _des = _lin.get('desglose', [])
+                    if _des:
+                        for _d in _des:
+                            _dc = str(_d.get('concepto', '')).strip().rstrip('*')
+                            _pj = MES_NUM.get(_dc.upper()) or \
+                                  ('Inscripción' if _dc.upper() == 'INSC' else
+                                   ('PACK_ROPA'   if _dc.upper() == 'ROPA' else _dc))
+                            _key = (_jug, _pj)
+                            if _key not in remesa_lookup:
+                                remesa_lookup[_key] = {'info': _info, 'cobrada': _cobrada or _lin_conciliada}
+                    else:
+                        _key = (_jug, str(_lin.get('concepto','')).strip())
+                        if _key not in remesa_lookup:
+                            remesa_lookup[_key] = {'info': _info, 'cobrada': _cobrada or _lin_conciliada}
+        except Exception:
+            pass
+
+        # 1. PAGOS JUGADORES — fuente primaria (nuevos pagos registrados desde la UI)
+        try:
+            sh_pj = wb.worksheet("PAGOS JUGADORES")
+            for r in sh_pj.get_all_records():
+                nombre   = str(r.get('NOMBRE', '')).strip()
+                equipo   = str(r.get('EQUIPO', '')).strip()
+                concepto = str(r.get('CONCEPTO', '')).strip()
+                pagado   = str(r.get('PAGADO', '0')).strip()
+                esperado = str(r.get('ESPERADO', '0')).strip()
+                if not nombre or not concepto:
+                    continue
+                _r = remesa_lookup.get((nombre.lower(), concepto), {})
+                remesa          = _r.get('info', '')    if _r else ''
+                remesa_cobrada  = _r.get('cobrada', False) if _r else False
+                resultado.append({'NOMBRE': nombre, 'EQUIPO': equipo,
+                                   'CONCEPTO': concepto, 'PAGADO': pagado,
+                                   'ESPERADO': esperado, 'REMESA': remesa,
+                                   'REMESA_COBRADA': remesa_cobrada})
+                pj_keys.add((nombre.lower(), equipo.lower(), concepto))
+        except Exception:
+            pass
+
+        # 2. FINANCIERO — fuente secundaria para pagos históricos no en PAGOS JUGADORES
+        try:
+            sh_fin = wb.worksheet("FINANCIERO")
+            all_fin = sh_fin.get_all_values()
+            if len(all_fin) > 1:
+                hdrs = normalizar_cabeceras(all_fin[0])
+                def col(name): return hdrs.index(name) if name in hdrs else -1
+                i_pilar = col('PILAR'); i_nom = col('NOMBRE'); i_eq = col('EQUIPO')
+                i_con = col('CONCEPTO'); i_imp = col('IMPORTE'); i_esp = col('ESPERADO')
+                i_desc = col('DESCRIPCION'); i_fecha = col('FECHA')
+
+                for row in all_fin[1:]:
+                    def v(i): return str(row[i]).strip() if 0 <= i < len(row) else ''
+                    pilar = v(i_pilar).upper()
+                    if 'CUOTA' not in pilar:
+                        continue
+                    desc   = v(i_desc)
+                    nombre = v(i_nom)
+                    if not nombre and i_desc >= 0:
+                        m = re.search(r'[:\-]\s*([^:\-]+)$', desc)
+                        if m:
+                            nombre = m.group(1).strip()
+                    if not nombre:
+                        continue
+                    equipo   = v(i_eq)
+                    concepto = v(i_con)
+                    if not concepto:
+                        continue
+                    key = (nombre.lower(), equipo.lower(), concepto)
+                    if key in pj_keys:
+                        continue
+                    # Extraer info de remesa desde DESCRIPCION o lookup
+                    remesa = ''
+                    remesa_cobrada = False
+                    if desc.upper().startswith('REMESA '):
+                        partes = desc.split(' · ', 1)
+                        remesa_titulo = partes[0][len('REMESA '):]
+                        remesa_fecha  = v(i_fecha)
+                        remesa = f"{remesa_titulo} · {remesa_fecha}" if remesa_titulo else ''
+                    if not remesa:
+                        _r2 = remesa_lookup.get((nombre.lower(), concepto), {})
+                        remesa         = _r2.get('info', '')    if _r2 else ''
+                        remesa_cobrada = _r2.get('cobrada', False) if _r2 else False
+                    resultado.append({'NOMBRE': nombre, 'EQUIPO': equipo,
+                                      'CONCEPTO': concepto, 'PAGADO': v(i_imp),
+                                      'ESPERADO': v(i_esp), 'REMESA': remesa,
+                                      'REMESA_COBRADA': remesa_cobrada})
+                    pj_keys.add(key)
+        except Exception:
+            pass
+
+        return jsonify({'status': 'success', 'data': resultado})
+    except Exception as e:
+        import traceback; print(traceback.format_exc())
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@financiero_bp.route('/api/generar_remesa', methods=['POST'])
+def api_generar_remesa():
+    import unicodedata
+    from app import client, NOMBRE_EXCEL
+    params = request.json or {}
+    meses_sel   = params.get('meses', [])          # ['ENE','FEB',...]
+    impagos     = params.get('impagos', False)
+    formas_pago = [f.strip().upper() for f in params.get('formas_pago', [])]
+    incluir_ropa = params.get('ropa', False)
+    incluir_insc = params.get('incluir_insc', False)
+    config_cuotas = params.get('config_cuotas', {})        # {EQUIPO-01: 44}
+    config_insc   = params.get('config_inscripciones', {}) # {EQUIPO: 10}
+    grupos_anchor = params.get('grupos_anchor', {})        # {'04':'03','10':'09',...}
+    grupos_labels = params.get('grupos_labels', {})        # {'SEP':'SEP-OCT-NOV','DIC':'DIC-ENE-FEB',...}
+    anio_actual = params.get('anio', 26)  # últimos 2 dígitos del año
+
+    def norm(s):
+        s = str(s).strip().upper()
+        nfkd = unicodedata.normalize('NFKD', s)
+        return ' '.join(''.join(c for c in nfkd if not unicodedata.category(c).startswith('M')).split())
+
+    def get_code(equipo):
+        eq = norm(equipo)
+        return TEAM_CODES_REMESA.get(eq, eq[:3])
+
+    try:
+        wb = client.open(NOMBRE_EXCEL)
+
+        # 0. Leer remesas pendientes → excluir jugadores/meses ya en otra remesa sin cobrar
+        ya_en_remesa = set()  # (norm_nombre, mes_label_upper)  ej: ('HUGO', 'SEP')
+        try:
+            with open(_REMESAS_PATH, 'r', encoding='utf-8') as _f:
+                _historial = json.load(_f)
+            for _r in _historial:
+                if _r.get('cobrada'):
+                    continue  # remesa ya cobrada → no bloquea
+                for _lin in (_r.get('lineas') or []):
+                    _nombre = norm(str(_lin.get('jugador', '')))
+                    for _d in (_lin.get('desglose') or []):
+                        _con = str(_d.get('concepto', '')).replace('*', '').strip().upper()
+                        if _nombre and _con:
+                            ya_en_remesa.add((_nombre, _con))
+        except Exception:
+            pass
+
+        # 1. Jugadores (roster)
+        jugadores = leer_hoja_limpia(client, NOMBRE_EXCEL, "JUGADORES")
+
+        # 1b. Datos de ropa: packs + prendas individuales (CONFIGURACION + hoja ROPA)
+        pack_config_ropa = {"pequeno": {"prendas": [], "precio": 0}, "grande": {"prendas": [], "precio": 0}}
+        jugadores_pack_ropa = {}   # "EQ_NORM|||NOM_NORM" → "pequeno"|"grande"
+        precios_prendas_ropa = {}  # prenda_nombre → precio
+        # (nombre_norm, equipo_norm) → total esperado de prendas individuales
+        ropa_prendas_esperado = {}
+        if incluir_ropa:
+            try:
+                todas_hojas_conf = {s.title.upper().strip(): s for s in wb.worksheets()}
+                if "CONFIGURACION" in todas_hojas_conf:
+                    conf_vals = todas_hojas_conf["CONFIGURACION"].get_all_values()
+                    for _row in conf_vals:
+                        if len(_row) < 2:
+                            continue
+                        if _row[0].strip() == 'PACK_ROPA_CONFIG':
+                            try:
+                                pack_config_ropa = json.loads(_row[1])
+                            except Exception:
+                                pass
+                        elif _row[0].strip() == 'JUGADORES_PACK_ROPA':
+                            try:
+                                _raw = json.loads(_row[1])
+                                for _k, _v in _raw.items():
+                                    _parts = _k.split('|||')
+                                    if len(_parts) == 2:
+                                        jugadores_pack_ropa[norm(_parts[0]) + '|||' + norm(_parts[1])] = _v
+                            except Exception:
+                                pass
+                        elif _row[0].strip() == 'PRECIOS_PRENDAS':
+                            try:
+                                precios_prendas_ropa = json.loads(_row[1])
+                            except Exception:
+                                pass
+            except Exception:
+                pass
+
+            # Prendas que forman parte de algún pack → no se cobran sueltas
+            _prendas_en_pack = set(
+                (pack_config_ropa.get('grande') or {}).get('prendas', []) +
+                (pack_config_ropa.get('pequeno') or {}).get('prendas', [])
+            )
+
+            # Leer hoja ROPA para calcular total de prendas individuales por jugador
+            try:
+                _ropa_vals = wb.worksheet("ROPA").get_all_values()
+                if len(_ropa_vals) > 1:
+                    _hdr = _ropa_vals[0]  # ['FECHA','EQUIPO','JUGADOR','PRENDA1',...]
+                    # Prendas individuales empiezan en índice 3
+                    _prendas_hdr = _hdr[3:] if len(_hdr) > 3 else []
+                    for _rrow in _ropa_vals[1:]:
+                        _req  = norm(str(_rrow[1])) if len(_rrow) > 1 else ''  # col B = EQUIPO
+                        _rnom = norm(str(_rrow[2])) if len(_rrow) > 2 else ''  # col C = JUGADOR
+                        if not _req or not _rnom:
+                            continue
+                        _total_prendas = 0.0
+                        for _pi, _pnm in enumerate(_prendas_hdr):
+                            if _pnm in _prendas_en_pack:
+                                continue  # pertenece a pack, no se suma suelto
+                            _cell_val = _rrow[_pi + 3] if (_pi + 3) < len(_rrow) else ''
+                            if _cell_val and _cell_val.strip():
+                                _talla = _cell_val.split('|')[0].strip()
+                                if _talla:
+                                    _total_prendas += float(precios_prendas_ropa.get(_pnm, 0) or 0)
+                        if _total_prendas > 0:
+                            ropa_prendas_esperado[(_rnom, _req)] = _total_prendas
+            except Exception:
+                pass
+
+        precio_pack_pequeno = float((pack_config_ropa.get('pequeno') or {}).get('precio') or 0)
+        precio_pack_grande  = float((pack_config_ropa.get('grande')  or {}).get('precio') or 0)
+
+        # 2. PAGOS JUGADORES → historial de lo ya cobrado
+        pagados_idx = {}  # (norm_nombre, norm_equipo, concepto) → total_pagado
+        esperado_idx = {}
+        try:
+            sh_pj = wb.worksheet("PAGOS JUGADORES")
+            for r in sh_pj.get_all_records():
+                kn  = norm(str(r.get('NOMBRE', '')))
+                keq = norm(str(r.get('EQUIPO', '')))
+                con = str(r.get('CONCEPTO', '')).strip()
+                pag = float(str(r.get('PAGADO', 0)).replace(',', '.') or 0)
+                esp = float(str(r.get('ESPERADO', 0)).replace(',', '.') or 0)
+                k = (kn, keq, con)
+                pagados_idx[k]  = pagados_idx.get(k, 0) + pag
+                esperado_idx[k] = max(esperado_idx.get(k, 0), esp)
+        except Exception:
+            pass
+
+        # 2b. FINANCIERO → complementa pagados_idx con pagos no registrados en PAGOS JUGADORES
+        try:
+            sh_fin = wb.worksheet("FINANCIERO")
+            all_fin = sh_fin.get_all_values()
+            if len(all_fin) > 1:
+                hdrs_fin = normalizar_cabeceras(all_fin[0])
+                def _col(n): return hdrs_fin.index(n) if n in hdrs_fin else -1
+                _i_pilar = _col('PILAR'); _i_nom = _col('NOMBRE'); _i_eq = _col('EQUIPO')
+                _i_con = _col('CONCEPTO'); _i_imp = _col('IMPORTE'); _i_esp = _col('ESPERADO')
+                for _row in all_fin[1:]:
+                    def _v(i): return str(_row[i]).strip() if 0 <= i < len(_row) else ''
+                    if 'CUOTA' not in _v(_i_pilar).upper():
+                        continue
+                    _kn  = norm(_v(_i_nom))
+                    _keq = norm(_v(_i_eq))
+                    _con = _v(_i_con)
+                    if not _kn or not _con:
+                        continue
+                    _k = (_kn, _keq, _con)
+                    if _k in pagados_idx:
+                        continue  # ya cubierto por PAGOS JUGADORES, no sobreescribir
+                    _pag = float(str(_v(_i_imp)).replace(',', '.') or 0)
+                    _esp = float(str(_v(_i_esp)).replace(',', '.') or 0)
+                    pagados_idx[_k]  = pagados_idx.get(_k, 0) + _pag
+                    esperado_idx[_k] = max(esperado_idx.get(_k, 0), _esp)
+        except Exception:
+            pass
+
+        # 3. DATOS JUGADORES → IBAN, titular, apellidos
+        datos_jug_idx = {}
+        try:
+            for d in wb.worksheet("DATOS JUGADORES").get_all_records():
+                kn  = norm(str(d.get('JUGADOR_NOMBRE', '')))
+                keq = norm(str(d.get('JUGADOR_EQUIPO_LETRA', '')))
+                if kn:
+                    datos_jug_idx[(kn, keq)] = d
+        except Exception:
+            pass
+
+        # 4. Construir filas de remesa
+        team_counter = {}
+        filas = []
+
+        for jug in jugadores:
+            forma = norm(str(jug.get('FORMA_PAGO', jug.get('FORMA PAGO', ''))))
+            if formas_pago and forma not in formas_pago:
+                continue
+
+            nombre_corto = norm(str(jug.get('NOMBRE', '')))
+            equipo       = norm(str(jug.get('EQUIPO', '')))
+            if not nombre_corto or not equipo:
+                continue
+
+            # Obtener datos de ficha
+            datos_ficha = datos_jug_idx.get((nombre_corto, equipo)) or \
+                          next((v for (kn, keq), v in datos_jug_idx.items()
+                                if kn == nombre_corto and norm(keq).startswith(equipo[:5])), {})
+
+            iban    = str(datos_ficha.get('SEPA_IBAN', '')).strip().replace(' ', '')
+            titular = str(datos_ficha.get('SEPA_NOMBRE_DEUDOR', '')).strip()
+            apellidos = str(datos_ficha.get('JUGADOR_APELLIDOS', '')).strip()
+            nombre_largo = f"{apellidos} {nombre_corto}".strip() if apellidos else nombre_corto
+
+            # Fecha de firma del mandato SEPA (extraída de CIERRE_FECHA_LOCALIDAD)
+            _fecha_loc = str(datos_ficha.get('CIERRE_FECHA_LOCALIDAD', '')).strip()
+            _m = re.search(r'\b(\d{1,2}[/\-]\d{1,2}[/\-]\d{4})\b', _fecha_loc)
+            firma_sepa = _m.group(1).replace('-', '/') if _m else ''
+
+            desglose = []
+
+            # Meses seleccionados
+            for mes_label in meses_sel:
+                mes_num = MES_NUM.get(mes_label.upper(), '')
+                if not mes_num:
+                    continue
+                # Excluir si ya está en una remesa pendiente sin cobrar
+                if (nombre_corto, mes_label.upper()) in ya_en_remesa:
+                    continue
+                pag = pagados_idx.get((nombre_corto, equipo, mes_num), 0)
+                esp = float(config_cuotas.get(f"{equipo}-{mes_num}",
+                       config_cuotas.get(f"{jug.get('EQUIPO','')}-{mes_num}", 0)) or 0)
+                pendiente = max(0, esp - pag)
+                if pendiente > 0:
+                    desglose.append({'concepto': mes_label, 'importe': round(pendiente, 2)})
+
+            # Impagos pasados — agrupa meses del mismo trimestre por su anchor
+            if impagos:
+                meses_sel_nums = {MES_NUM.get(m, '') for m in meses_sel}
+                impago_por_anchor = {}  # anchor_num → {pagado, esperado}
+                for con, pag in pagados_idx.items():
+                    kn, keq, concepto = con
+                    if kn != nombre_corto or keq != equipo:
+                        continue
+                    if concepto not in MES_LABEL:
+                        continue
+                    anchor = grupos_anchor.get(concepto, concepto)
+                    if anchor in meses_sel_nums:
+                        continue  # ya cubierto por los meses seleccionados
+                    esp = esperado_idx.get(con, 0)
+                    if anchor not in impago_por_anchor:
+                        impago_por_anchor[anchor] = {'pagado': 0, 'esperado': 0}
+                    impago_por_anchor[anchor]['pagado'] += pag
+                    impago_por_anchor[anchor]['esperado'] = max(impago_por_anchor[anchor]['esperado'], esp)
+                for anchor, vals in sorted(impago_por_anchor.items()):
+                    anchor_label = MES_LABEL.get(anchor, anchor)
+                    # Excluir si el anchor ya está en remesa pendiente
+                    if (nombre_corto, anchor_label.upper()) in ya_en_remesa:
+                        continue
+                    pendiente = max(0, vals['esperado'] - vals['pagado'])
+                    if pendiente > 0:
+                        desglose.append({'concepto': anchor_label + '*', 'importe': round(pendiente, 2)})
+
+            # Inscripción impagada (por impagos o por checkbox INSC explícito)
+            if (impagos or incluir_insc):
+                if (nombre_corto, 'INSC') not in ya_en_remesa:
+                    pag_insc = pagados_idx.get((nombre_corto, equipo, 'Inscripción'), 0)
+                    esp_insc = float(config_insc.get(equipo, config_insc.get(jug.get('EQUIPO',''), 0)) or 0)
+                    if esp_insc > 0 and pag_insc < esp_insc:
+                        desglose.append({'concepto': 'INSC*', 'importe': round(esp_insc - pag_insc, 2)})
+
+            # ROPA pendiente — pack asignado o prendas individuales
+            if incluir_ropa:
+                _pack_key = f"{equipo}|||{nombre_corto}"
+                _pack_tipo = jugadores_pack_ropa.get(_pack_key, '')
+                if _pack_tipo == 'pequeno':
+                    esp_ropa = precio_pack_pequeno
+                elif _pack_tipo == 'grande':
+                    esp_ropa = precio_pack_grande
+                else:
+                    # Sin pack → suma prendas individuales desde hoja ROPA
+                    esp_ropa = ropa_prendas_esperado.get((nombre_corto, equipo), 0)
+                # Lo ya pagado (columna PACK_ROPA en PAGOS JUGADORES)
+                pag_ropa = pagados_idx.get((nombre_corto, equipo, 'PACK_ROPA'), 0)
+                if esp_ropa > 0 and pag_ropa < esp_ropa:
+                    desglose.append({'concepto': 'ROPA', 'importe': round(esp_ropa - pag_ropa, 2)})
+
+            if not desglose:
+                continue
+
+            total = round(sum(d['importe'] for d in desglose), 2)
+            cod_eq = get_code(equipo)
+            team_counter[cod_eq] = team_counter.get(cod_eq, 0) + 1
+            cod = f"{anio_actual}F{cod_eq}{team_counter[cod_eq]}"
+
+            # Concepto: APELLIDO NOMBRE ENSENANZA FUTBOL meses
+            # Solo TRIMESTRAL expande anchor → rango (SEP → SEP-OCT-NOV); MENSUAL deja la etiqueta tal cual
+            tipo_pago_jug = norm(str(jug.get('TIPO_PAGO', jug.get('TIPO PAGO', '')))).upper()
+            es_trimestral = tipo_pago_jug == 'TRIMESTRAL'
+            def _expand(c):
+                lbl = c.rstrip('*')
+                suffix = '*' if c.endswith('*') else ''
+                return (grupos_labels.get(lbl, lbl) if es_trimestral else lbl) + suffix
+            conceptos_str = '+'.join(_expand(d['concepto']) for d in desglose)
+            concepto_full = f"{nombre_largo} ENSENANZA FUTBOL {conceptos_str}".upper()
+
+            filas.append({
+                'cod': cod, 'jugador': nombre_largo.upper(),
+                'firma': firma_sepa, 'cc': iban, 'titular': titular.upper(),
+                'importe': total, 'desglose': desglose,
+                'concepto': concepto_full, 'equipo': equipo
+            })
+
+        return jsonify({'status': 'success', 'data': filas})
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+# ── GUARDAR REMESA ────────────────────────────────────────────────
+_REMESAS_PATH = os.path.join(os.path.dirname(__file__), 'static', 'data', 'remesas_historial.json')
+
+@financiero_bp.route('/api/guardar_remesa', methods=['POST'])
+def api_guardar_remesa():
+    """Guarda el historial de remesa en JSON y actualiza celdas a azul.
+    NO crea asientos en FINANCIERO: los asientos de cobro se crean más tarde,
+    cuando el banco confirma el ingreso (vía Carga Masiva o asiento manual)."""
+    from datetime import date
+    try:
+        datos = request.get_json()
+        titulo = datos.get('titulo', 'Remesa sin título').strip()
+        lineas = datos.get('lineas', [])
+        if not lineas:
+            return jsonify({'status': 'error', 'message': 'No hay líneas'}), 400
+
+        hoy = date.today().strftime('%d/%m/%Y')
+
+        # Historial JSON
+        try:
+            with open(_REMESAS_PATH, 'r', encoding='utf-8') as f:
+                historial = json.load(f)
+        except Exception:
+            historial = []
+
+        historial.insert(0, {
+            'titulo':   titulo,
+            'fecha':    hoy,
+            'cobrada':  False,
+            'total':    round(sum(float(l.get('importe', 0)) for l in lineas), 2),
+            'n_lineas': len(lineas),
+            'lineas':   lineas
+        })
+        os.makedirs(os.path.dirname(_REMESAS_PATH), exist_ok=True)
+        with open(_REMESAS_PATH, 'w', encoding='utf-8') as f:
+            json.dump(historial, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'status': 'success', 'asientos_guardados': 0})
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@financiero_bp.route('/api/historico_remesas', methods=['GET'])
+def api_historico_remesas():
+    try:
+        with open(_REMESAS_PATH, 'r', encoding='utf-8') as f:
+            historial = json.load(f)
+    except Exception:
+        historial = []
+    return jsonify({'status': 'success', 'data': historial})
+
+
+@financiero_bp.route('/api/marcar_remesa_cobrada', methods=['POST'])
+def api_marcar_remesa_cobrada():
+    try:
+        datos   = request.get_json() or {}
+        titulo  = datos.get('titulo', '').strip()
+        fecha   = datos.get('fecha', '').strip()
+        cobrada = bool(datos.get('cobrada', True))
+        try:
+            with open(_REMESAS_PATH, 'r', encoding='utf-8') as f:
+                historial = json.load(f)
+        except Exception:
+            historial = []
+        found = False
+        for entrada in historial:
+            if entrada.get('titulo') == titulo and entrada.get('fecha') == fecha:
+                entrada['cobrada'] = cobrada
+                found = True
+                break
+        if not found:
+            return jsonify({'status': 'error', 'message': 'Remesa no encontrada'}), 404
+        with open(_REMESAS_PATH, 'w', encoding='utf-8') as f:
+            json.dump(historial, f, ensure_ascii=False, indent=2)
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@financiero_bp.route('/api/marcar_linea_conciliada', methods=['POST'])
+def api_marcar_linea_conciliada():
+    """Marca una línea concreta de una remesa como conciliada (pagada parcialmente)."""
+    try:
+        datos     = request.get_json() or {}
+        titulo    = datos.get('titulo', '').strip()
+        fecha     = datos.get('fecha', '').strip()
+        linea_idx = int(datos.get('linea_idx', -1))
+        if not titulo or linea_idx < 0:
+            return jsonify({'status': 'error', 'message': 'Parámetros inválidos'}), 400
+        try:
+            with open(_REMESAS_PATH, 'r', encoding='utf-8') as f:
+                historial = json.load(f)
+        except Exception:
+            historial = []
+        found = False
+        for entrada in historial:
+            if entrada.get('titulo') == titulo and entrada.get('fecha') == fecha:
+                lineas = entrada.get('lineas', [])
+                if 0 <= linea_idx < len(lineas):
+                    lineas[linea_idx]['conciliada'] = True
+                    found = True
+                break
+        if not found:
+            return jsonify({'status': 'error', 'message': 'Remesa o línea no encontrada'}), 404
+        with open(_REMESAS_PATH, 'w', encoding='utf-8') as f:
+            json.dump(historial, f, ensure_ascii=False, indent=2)
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@financiero_bp.route('/api/eliminar_remesa', methods=['POST'])
+def api_eliminar_remesa():
+    """Elimina una remesa del historial JSON.
+    Bloquea si la remesa está cobrada globalmente o si alguna línea
+    conciliada aún tiene pago real en PAGOS JUGADORES."""
+    try:
+        datos  = request.get_json() or {}
+        titulo = datos.get('titulo', '').strip()
+        fecha  = datos.get('fecha', '').strip()
+        idx    = datos.get('index', -1)
+        if not titulo:
+            return jsonify({'status': 'error', 'message': 'Parámetros inválidos'}), 400
+
+        try:
+            with open(_REMESAS_PATH, 'r', encoding='utf-8') as f:
+                historial = json.load(f)
+        except Exception:
+            historial = []
+
+        # Buscar por índice exacto para no borrar remesas gemelas (mismo título y fecha)
+        remesa_obj = None
+        remesa_idx = None
+        if isinstance(idx, int) and 0 <= idx < len(historial):
+            candidate = historial[idx]
+            if candidate.get('titulo') == titulo and candidate.get('fecha') == fecha:
+                remesa_obj = candidate
+                remesa_idx = idx
+        if remesa_obj is None:
+            # Fallback: primera coincidencia por titulo+fecha
+            for i, e in enumerate(historial):
+                if e.get('titulo') == titulo and e.get('fecha') == fecha:
+                    remesa_obj = e
+                    remesa_idx = i
+                    break
+        if remesa_obj is None:
+            return jsonify({'status': 'error', 'message': 'Remesa no encontrada'}), 404
+
+        if remesa_obj.get('cobrada'):
+            return jsonify({
+                'status': 'error', 'blocked': True,
+                'message': 'La remesa está marcada como COBRADA. Usa REVERTIR antes de eliminar.'
+            }), 409
+
+        lineas_conciliadas = [l for l in remesa_obj.get('lineas', []) if l.get('conciliada')]
+        if lineas_conciliadas:
+            from app import client, NOMBRE_EXCEL
+            pj_pagados = None  # None = no se pudo leer; {} = se leyó pero vacío
+            try:
+                wb  = client.open(NOMBRE_EXCEL)
+                sh  = wb.worksheet('PAGOS JUGADORES')
+                pj_pagados = {}
+                for row in sh.get_all_records():
+                    n = str(row.get('NOMBRE', '')).strip().lower()
+                    c = str(row.get('CONCEPTO', '')).strip()
+                    try:
+                        p = float(str(row.get('PAGADO', '0')).replace(',', '.') or 0)
+                    except Exception:
+                        p = 0.0
+                    if n and c and p > 0:
+                        pj_pagados[(n, c)] = p
+            except Exception:
+                pass  # pj_pagados queda en None → bloqueamos por seguridad
+
+            nombres_conciliados = [str(l.get('jugador', '')).strip() for l in lineas_conciliadas]
+
+            if pj_pagados is None:
+                # No se pudo leer PAGOS JUGADORES → bloquear por precaución
+                return jsonify({
+                    'status': 'error', 'blocked': True,
+                    'message': (
+                        'Hay líneas con ✔ COBRADA. Elimina primero el asiento de cobro '
+                        'en Contabilidad para: ' + ', '.join(nombres_conciliados)
+                    ),
+                    'jugadores': nombres_conciliados
+                }), 409
+
+            bloqueados = []
+            lineas_a_resetear = []
+            for lin in lineas_conciliadas:
+                jug       = str(lin.get('jugador', '')).strip()
+                jug_lower = jug.lower()
+                tiene_pago = False
+                for d in lin.get('desglose', []):
+                    dc   = str(d.get('concepto', '')).strip().rstrip('*').upper()
+                    pj_c = MES_NUM.get(dc) or \
+                           ('Inscripción' if dc == 'INSC' else
+                            ('PACK_ROPA'   if dc == 'ROPA' else dc))
+                    if (jug_lower, pj_c) in pj_pagados:
+                        tiene_pago = True
+                        if jug not in bloqueados:
+                            bloqueados.append(jug)
+                        break
+                if not tiene_pago:
+                    lineas_a_resetear.append(lin)  # flag obsoleto, se limpiará al borrar
+
+            if bloqueados:
+                return jsonify({
+                    'status': 'error', 'blocked': True,
+                    'message': (
+                        'Elimina primero el asiento de cobro en Contabilidad para: '
+                        + ', '.join(bloqueados)
+                    ),
+                    'jugadores': bloqueados
+                }), 409
+
+        del historial[remesa_idx]
+        with open(_REMESAS_PATH, 'w', encoding='utf-8') as f:
+            json.dump(historial, f, ensure_ascii=False, indent=2)
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@financiero_bp.route('/api/desconciliar_asiento', methods=['POST'])
+def api_desconciliar_asiento():
+    """Desmarca una línea de remesa como conciliada y pone PAGADO=0 en PAGOS JUGADORES."""
+    try:
+        from app import client, NOMBRE_EXCEL
+        datos = request.get_json() or {}
+        titulo        = datos.get('titulo', '').strip()
+        fecha         = datos.get('fecha', '').strip()
+        jugador       = datos.get('jugador', '').strip()
+        conceptos_raw = datos.get('conceptos', [])
+        nueva_desc    = datos.get('nueva_descripcion') or None
+        real_id       = str(datos.get('real_id', '')).strip()
+
+        if not titulo or not jugador:
+            return jsonify({'status': 'error', 'message': 'Parámetros inválidos'}), 400
+
+        jug_lower = jugador.lower()
+
+        # ── 1. Desmarcar línea en remesas_historial.json ────────────────────────
+        try:
+            with open(_REMESAS_PATH, 'r', encoding='utf-8') as f:
+                historial = json.load(f)
+        except Exception:
+            historial = []
+
+        remesa_encontrada = False
+        for remesa in historial:
+            if remesa.get('titulo', '').strip() != titulo:
+                continue
+            if fecha and remesa.get('fecha', '').strip() != fecha:
+                continue
+            for lin in remesa.get('lineas', []):
+                if str(lin.get('jugador', '')).strip().lower() == jug_lower:
+                    lin['conciliada'] = False
+                    remesa_encontrada = True
+                    break
+            if remesa_encontrada:
+                break
+
+        if remesa_encontrada:
+            with open(_REMESAS_PATH, 'w', encoding='utf-8') as f:
+                json.dump(historial, f, ensure_ascii=False, indent=2)
+
+        # ── 2. Poner PAGADO=0 en PAGOS JUGADORES para los conceptos de esta línea ─
+        conceptos_mapeados = []
+        for c in conceptos_raw:
+            cu = str(c).strip().upper().rstrip('*')
+            mapped = MES_NUM.get(cu) or (
+                'Inscripción' if cu == 'INSC' else (
+                'PACK_ROPA'   if cu == 'ROPA' else cu))
+            conceptos_mapeados.append(mapped)
+
+        if conceptos_mapeados:
+            try:
+                wb  = client.open(NOMBRE_EXCEL)
+                sh  = wb.worksheet('PAGOS JUGADORES')
+                all_vals = sh.get_all_values()
+                if len(all_vals) > 1:
+                    hdrs = [h.strip().upper().replace(' ', '_') for h in all_vals[0]]
+                    idx_nom = next((i for i, h in enumerate(hdrs) if 'NOMBRE' in h), -1)
+                    idx_con = next((i for i, h in enumerate(hdrs) if 'CONCEPTO' in h), -1)
+                    idx_pag = next((i for i, h in enumerate(hdrs) if 'PAGADO' in h), -1)
+                    if idx_nom >= 0 and idx_con >= 0 and idx_pag >= 0:
+                        updates = []
+                        for row_i, row in enumerate(all_vals[1:], start=2):
+                            if len(row) <= max(idx_nom, idx_con, idx_pag):
+                                continue
+                            r_nom = row[idx_nom].strip().lower()
+                            r_con_norm = normalizar_concepto_interno(row[idx_con].strip())
+                            if r_nom == jug_lower:
+                                for c_map in conceptos_mapeados:
+                                    if normalizar_concepto_interno(c_map) == r_con_norm:
+                                        updates.append({
+                                            'range': f"'PAGOS JUGADORES'!{rowcol_to_a1(row_i, idx_pag + 1)}",
+                                            'values': [[0]]
+                                        })
+                                        break
+                        if updates:
+                            sh.spreadsheet.values_batch_update({
+                                'valueInputOption': 'USER_ENTERED',
+                                'data': updates
+                            })
+            except Exception as e_pj:
+                print(f"[desconciliar] Error en PAGOS JUGADORES: {e_pj}")
+
+        # ── 3. Actualizar descripción en FINANCIERO si se solicitó ──────────────
+        if nueva_desc and real_id:
+            try:
+                sheet_fin = client.open(NOMBRE_EXCEL).worksheet('FINANCIERO')
+                all_fin   = sheet_fin.get_all_values()
+                if all_fin:
+                    headers_fin = normalizar_cabeceras(all_fin[0])
+                    idx_asi = next(
+                        (headers_fin.index(v) for v in ['Nº_ASIENTO', 'N_ASIENTO', 'ASIENTO'] if v in headers_fin),
+                        -1
+                    )
+                    if idx_asi >= 0 and 'DESCRIPCION' in headers_fin:
+                        idx_desc = headers_fin.index('DESCRIPCION')
+                        for i, row in enumerate(all_fin):
+                            if i == 0: continue
+                            if len(row) > idx_asi:
+                                val_row    = str(row[idx_asi]).strip().replace('#', '')
+                                val_target = real_id.replace('#', '')
+                                if val_row == val_target or (
+                                    val_row.isdigit() and val_target.isdigit()
+                                    and int(val_row) == int(val_target)
+                                ):
+                                    sheet_fin.update_cell(i + 1, idx_desc + 1, nueva_desc)
+                                    break
+            except Exception as e_fin:
+                print(f"[desconciliar] Error actualizando FINANCIERO: {e_fin}")
+
+        return jsonify({'status': 'success', 'remesa_encontrada': remesa_encontrada})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500

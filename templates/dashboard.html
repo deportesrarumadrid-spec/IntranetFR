@@ -819,22 +819,28 @@
         // === ÍNDICE DE NAVEGACIÓN (buscador + accesos rápidos) ===
         const INDICE_NAVEGACION = [
             { label: 'Mi Equipo', ruta: '/mi-equipo', keywords: 'jugadores plantilla' },
-            { label: 'Entrenamientos', ruta: '/deportivo', keywords: 'sesiones ejercicios' },
-            { label: 'Asistencias', ruta: '/asistencias', keywords: 'faltas convocatoria' },
-            { label: 'Financiero - Presupuestos', ruta: '/financiero', tab: 'tab-presupuesto', keywords: 'dinero gastos ingresos' },
-            { label: 'Financiero - Pago Jugadores', ruta: '/financiero', tab: 'tab-jugadores', keywords: 'cuotas recibos pagos jugadores' },
-            { label: 'Financiero - Pago Staff', ruta: '/financiero', tab: 'tab-staff', keywords: 'nominas entrenadores pagos staff' },
-            { label: 'Financiero - Datos Jugadores', ruta: '/financiero', tab: 'tab-datos-jugadores', keywords: 'fichas contacto telefono' },
-            { label: 'D. Deportiva - Coordinación', ruta: '/direccion_deportiva', tab: 'tab-coordinacion', keywords: 'reuniones' },
-            { label: 'D. Deportiva - Gestión Estratégica', ruta: '/direccion_deportiva', tab: 'tab-d-deportiva', subtab: 'subtab-gestion-estrategica', keywords: 'objetivos estrategia' },
-            { label: 'D. Deportiva - KPIs', ruta: '/direccion_deportiva', tab: 'tab-d-deportiva', subtab: 'subtab-kpis', keywords: 'indicadores estadisticas' },
-            { label: 'D. Deportiva - Informes', ruta: '/direccion_deportiva', tab: 'tab-otros', keywords: 'equipaciones coincidencias segunda equipacion colores rivales camiseta pantalon medias roja partidos visitante' },
-            { label: 'D. Deportiva - Usuarios y Contraseñas', ruta: '/direccion_deportiva', tab: 'tab-usuarios', keywords: 'claves accesos permisos' },
-            { label: 'Clasificaciones y Resultados', ruta: '/clasificaciones', keywords: 'liga tabla puntos partidos resultados' },
-            { label: 'D.Videoanálisis', ruta: '/videoanalisis', keywords: 'video analisis tactico postpartido videoanalista entrenador' },
-            { label: 'GPS', ruta: '/gps', keywords: 'gps sonra statsports informe rendimiento fisico tracking' },
-            { label: 'Fisioterapia', ruta: '/fisioterapia', keywords: 'fisio fisioterapeuta citas calendario lesion rehabilitacion sesion' },
-            { label: 'RRSS/MK', ruta: '/rrss', keywords: 'redes sociales marketing publicidad contenido difusion' },
+            { label: 'Entrenamientos', ruta: '/deportivo', keywords: 'sesiones ejercicios entrenamiento' },
+            { label: 'Asistencias', ruta: '/asistencias', keywords: 'faltas convocatoria presencia lista' },
+            { label: 'Financiero - Presupuestos', ruta: '/financiero', tab: 'tab-presupuesto', keywords: 'dinero gastos ingresos presupuesto' },
+            { label: 'Financiero - Pago Jugadores', ruta: '/financiero', tab: 'tab-jugadores', keywords: 'cuotas recibos pagos jugadores impagos deuda mensualidad' },
+            { label: 'Financiero - Pago Staff', ruta: '/financiero', tab: 'tab-staff', keywords: 'nominas entrenadores pagos staff coordinador' },
+            { label: 'Financiero - Datos Jugadores', ruta: '/financiero', tab: 'tab-datos-jugadores', keywords: 'fichas contacto telefono datos personales dni nacimiento' },
+            { label: 'D. Deportiva - Coordinación', ruta: '/direccion_deportiva', tab: 'tab-coordinacion', keywords: 'reunion coordinacion metodologia desarrollo individual' },
+            { label: 'D. Deportiva - Gestión Estratégica', ruta: '/direccion_deportiva', tab: 'tab-d-deportiva', subtab: 'subtab-gestion-estrategica', keywords: 'objetivos estrategia planificacion temporada' },
+            { label: 'D. Deportiva - KPIs', ruta: '/direccion_deportiva', tab: 'tab-d-deportiva', subtab: 'subtab-kpis', keywords: 'indicadores estadisticas rendimiento kpi metricas' },
+            { label: 'D. Deportiva - Horarios Finde', ruta: '/direccion_deportiva', tab: 'tab-d-deportiva', subtab: 'subtab-horarios', keywords: 'horarios fin de semana partidos calendario sabado domingo' },
+            { label: 'D. Deportiva - Base de Datos Histórico', ruta: '/direccion_deportiva', tab: 'tab-d-deportiva', subtab: 'subtab-base-datos', keywords: 'base datos historico jugadores temporadas años nacimiento archivo' },
+            { label: 'D. Deportiva - Equipaciones Coincidencias', ruta: '/direccion_deportiva', tab: 'tab-d-deportiva', subtab: 'subtab-informes', keywords: 'equipaciones coincidencias segunda equipacion colores rivales camiseta pantalon medias roja visitante local' },
+            { label: 'D. Deportiva - Recuento Balones', ruta: '/direccion_deportiva', tab: 'tab-d-deportiva', subtab: 'subtab-informes', keywords: 'recuento balones jaula material inventario stock' },
+            { label: 'D. Deportiva - Informe Finde WhatsApp', ruta: '/direccion_deportiva', tab: 'tab-d-deportiva', subtab: 'subtab-informes', keywords: 'informe finde fin semana whatsapp resultados cumplimiento objetivos partido sabado domingo' },
+            { label: 'D. Deportiva - Informe Mensual', ruta: '/direccion_deportiva', tab: 'tab-d-deportiva', subtab: 'subtab-informes', keywords: 'informe mensual mes resumen objetivos cumplimiento estadisticas rendimiento' },
+            { label: 'D. Deportiva - Jugador del Mes', ruta: '/direccion_deportiva', tab: 'tab-d-deportiva', subtab: 'subtab-informes', keywords: 'jugador del mes premio mejor destacado mvp reconocimiento' },
+            { label: 'D. Deportiva - Usuarios y Contraseñas', ruta: '/direccion_deportiva', tab: 'tab-usuarios', keywords: 'claves accesos permisos usuarios contraseñas login' },
+            { label: 'Clasificaciones y Resultados', ruta: '/clasificaciones', keywords: 'liga tabla puntos partidos resultados clasificacion' },
+            { label: 'D.Videoanálisis', ruta: '/videoanalisis', keywords: 'video analisis tactico postpartido videoanalista entrenador grabacion partido' },
+            { label: 'GPS', ruta: '/gps', keywords: 'gps sonra statsports informe rendimiento fisico tracking carga distancia velocidad' },
+            { label: 'Fisioterapia', ruta: '/fisioterapia', keywords: 'fisio fisioterapeuta citas calendario lesion rehabilitacion sesion baja medica' },
+            { label: 'RRSS/MK', ruta: '/rrss', keywords: 'redes sociales marketing publicidad contenido difusion instagram twitter facebook' },
         ];
 
         function toggleBuscadorIntranet(evt) {
@@ -2034,7 +2040,7 @@
                         const cellContent = conv
                             ? ``
                             : `<div style="display:flex; flex-direction:column; align-items:center; gap:1px;">
-                                <span style="font-size:10px; font-weight:800; color:#94a3b8; letter-spacing:.5px;">NO</span>
+                                <span style="font-size:10px; font-weight:800; color:#d1d5db; letter-spacing:.5px;">NO</span>
                                 ${comentario ? `<span style="font-size:9px; color:#64748b; line-height:1.2; text-align:center; word-break:break-word; max-width:88px; white-space:normal;">${comentario}</span>` : ''}
                                </div>`;
                         return `<td onclick="abrirPopoverAnotacionConvocatoria(event, '${e.match_key}', '${nombreEscapado}', ${conv})"
@@ -2339,16 +2345,10 @@
             }, 2500); // Failsafe agresivo: 2.5s máximo
         });
 
-        // Cerrar modales al hacer clic en el fondo (fuera del contenido)
-        document.addEventListener('click', function(e) {
-            var t = e.target;
-            if (!t || !t.style) return;
-            var cls = (typeof t.className === 'string') ? t.className : (t.className && t.className.baseVal) || '';
-            // e.target es el backdrop cuando el clic cae fuera del .modal-content interior
-            if (/\bmodal-backdrop\b|\bmodal-crono\b|\bmodal-ia\b|\bmodal\b/.test(cls)) {
-                t.style.display = 'none';
-            }
-        });
+        // El cierre de modales al clic en el fondo lo gestiona /static/js/modal_clickout.js
+        // (incluye detección de cambios no guardados antes de cerrar)
     </script>
+    <script src="/static/js/modal_clickout.js"></script>
+    {% block extra_scripts %}{% endblock %}
 </body>
 </html>

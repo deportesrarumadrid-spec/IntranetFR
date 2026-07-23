@@ -2092,13 +2092,49 @@ def api_presupuesto_objetivo():
 
 @app.route('/api/historico_jugadores')
 def api_historico_jugadores():
-    """Devuelve el histórico completo de jugadores archivados por temporada."""
+    """Devuelve el histórico archivado + la temporada actual desde DATOS JUGADORES."""
     if not session.get('usuario'): return jsonify({"status": "error"}), 401
     try:
-        with open(HISTORICO_FILE, 'r', encoding='utf-8') as f:
-            return jsonify(json.load(f))
-    except FileNotFoundError:
-        return jsonify({"temporadas": {}})
+        try:
+            with open(HISTORICO_FILE, 'r', encoding='utf-8') as f:
+                historico = json.load(f)
+        except FileNotFoundError:
+            historico = {"temporadas": {}}
+
+        # Nombre de la temporada actual
+        try:
+            with open(EQUIPOS_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                ec = json.load(f)
+            temporada_actual = (ec.get('temporada') or '').strip() or 'Temporada actual'
+        except Exception:
+            temporada_actual = 'Temporada actual'
+
+        # Leer DATOS JUGADORES en vivo
+        try:
+            wb = client.open(NOMBRE_EXCEL)
+            sheet = wb.worksheet("DATOS JUGADORES")
+            records = sheet.get_all_records()
+            jugadores_actuales = []
+            for r in records:
+                fecha_nac = str(r.get('JUGADOR_FECHA_NACIMIENTO', '')).strip()
+                año_nac = None
+                if fecha_nac:
+                    m = re.search(r'\b(19|20)\d{2}\b', fecha_nac)
+                    if m:
+                        año_nac = int(m.group(0))
+                jugadores_actuales.append({
+                    **{k: str(v).strip() for k, v in r.items()},
+                    'AÑO_NACIMIENTO': año_nac
+                })
+            if jugadores_actuales:
+                historico['temporadas'][temporada_actual] = {
+                    'fecha_cierre': None,
+                    'jugadores': jugadores_actuales
+                }
+        except Exception:
+            pass
+
+        return jsonify(historico)
     except Exception as e:
         return jsonify({"temporadas": {}, "error": str(e)})
 
@@ -3237,6 +3273,75 @@ def api_seguimiento_coord_post():
     data[equipo][categoria].append({'fecha': datetime.now().strftime('%d/%m/%Y'), 'texto': texto})
     _seg_coord_guardar(data)
     return jsonify({'categorias': data[equipo]})
+
+@app.route('/api/obs_comentario_ia', methods=['POST'])
+def obs_comentario_ia():
+    """Genera un comentario breve con Gemini sobre el rendimiento de un equipo en el seguimiento de temporada."""
+    if not session.get('usuario'):
+        return jsonify({"status": "error", "message": "No autenticado"}), 401
+    try:
+        import google.generativeai as genai
+        with open('secretos.json', encoding='utf-8') as f:
+            cfg = json.load(f)
+        api_key = cfg.get('gemini_api_key') or cfg.get('GEMINI_API_KEY', '')
+        if not api_key:
+            return jsonify({"status": "error", "message": "No hay clave Gemini configurada"}), 500
+        genai.configure(api_key=api_key)
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Error IA: {e}"}), 500
+
+    body = request.get_json() or {}
+    equipo = (body.get('equipo') or '').strip()
+    jornadas = body.get('jornadas') or []
+    pct = body.get('pct', 0)
+    verde = body.get('verde', 0)
+    rojo = body.get('rojo', 0)
+
+    if not equipo or not jornadas:
+        return jsonify({"status": "error", "message": "Datos insuficientes"}), 400
+
+    # Calcular racha actual de rojos al final de la serie
+    racha_actual = 0
+    for j in reversed(jornadas):
+        if j.get('cumplido') is False:
+            racha_actual += 1
+        elif j.get('cumplido') is True:
+            break
+
+    resumen_jornadas = "\n".join(
+        f"- J{j['jornada']} vs {j.get('rival','?')}: {j.get('resultado','-')} | Obj: {j.get('objetivo','-')} | {'✅ Cumplido' if j.get('cumplido') else ('❌ No cumplido' if j.get('cumplido') is False else '⬜ Sin dato')}"
+        for j in jornadas if j.get('rival')
+    )
+
+    prompt = f"""Eres el analista de rendimiento de la Escuela de Fútbol Club Fuentelarreyna.
+Analiza los datos del siguiente equipo y genera un comentario breve (máximo 2 frases) en español sobre su rendimiento esta temporada.
+Sé directo, específico y con tono constructivo. No repitas el nombre del equipo ni el porcentaje textualmente.
+
+Equipo: {equipo}
+Cumplimiento global: {pct}% ({verde} cumplidos, {rojo} no cumplidos)
+Racha actual de objetivos no cumplidos: {racha_actual}
+Últimas jornadas:
+{resumen_jornadas}
+
+Responde SOLO el comentario, sin introducción ni explicación."""
+
+    try:
+        # Seleccionar mejor modelo disponible dinámicamente
+        try:
+            modelos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+            modelo_nombre = next((m for m in modelos if 'gemini-2.0-flash' in m),
+                           next((m for m in modelos if 'gemini-1.5-flash' in m),
+                           next((m for m in modelos if 'flash' in m),
+                           next((m for m in modelos if 'gemini' in m), 'models/gemini-2.0-flash'))))
+        except Exception:
+            modelo_nombre = 'models/gemini-2.0-flash'
+        model = genai.GenerativeModel(modelo_nombre)
+        response = model.generate_content(prompt)
+        comentario = (response.text or '').strip()
+        return jsonify({"status": "ok", "comentario": comentario})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001, use_reloader=True)

@@ -305,6 +305,108 @@ def confirmar_ficha():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@jugadores_datos_bp.route('/api/validar_ficha_ia', methods=['POST'])
+def validar_ficha_ia():
+    import unicodedata
+    from app import client, NOMBRE_EXCEL
+    datos = request.json or {}
+
+    nombre   = str(datos.get('nombre', '')).strip()
+    apellidos = str(datos.get('apellidos', '')).strip()
+    equipo   = str(datos.get('equipo', '')).strip().upper()
+    iban_raw = str(datos.get('iban', '')).strip().replace(' ', '').upper()
+
+    def norm(s):
+        s = str(s).strip().upper()
+        nfkd = unicodedata.normalize('NFKD', s)
+        s = ''.join(c for c in nfkd if not unicodedata.category(c).startswith('M'))
+        return ' '.join(s.split())
+
+    resultados = {}
+
+    # ── 1. Validar jugador en equipo ──────────────────────────────────
+    res_jug = {'ok': False, 'msg': ''}
+    if not nombre and not apellidos:
+        res_jug = {'ok': False, 'msg': 'Nombre y apellidos vacíos'}
+    elif not equipo:
+        res_jug = {'ok': False, 'msg': 'No se ha seleccionado equipo'}
+    else:
+        try:
+            wb = client.open(NOMBRE_EXCEL)
+            sheet_jug = wb.worksheet("JUGADORES")
+            all_v = sheet_jug.get_all_values()
+
+            def lh(h):
+                nfkd = unicodedata.normalize('NFKD', str(h).strip().upper())
+                return ''.join(c for c in nfkd if not unicodedata.category(c).startswith('M')).replace(' ', '').replace('_', '')
+
+            hdrs = [lh(h) for h in all_v[0]] if all_v else []
+            idx_nom = next((i for i, h in enumerate(hdrs) if h == 'NOMBRE'), 0)
+            idx_eq  = next((i for i, h in enumerate(hdrs) if h in ('EQUIPO','CATEGORIA','GRUPO','EQUIPOS')), 1)
+
+            jugadores_equipo = []
+            for row in all_v[1:]:
+                eq_row = row[idx_eq].strip().upper() if idx_eq < len(row) else ''
+                if norm(eq_row) == norm(equipo):
+                    nom_row = row[idx_nom].strip() if idx_nom < len(row) else ''
+                    if nom_row:
+                        jugadores_equipo.append(norm(nom_row))
+
+            if not jugadores_equipo:
+                res_jug = {'ok': False, 'warn': False, 'msg': f'No se encontraron jugadores para el equipo "{equipo}"'}
+            else:
+                nombre_n    = norm(nombre)
+                apellidos_n = norm(apellidos)
+                palabras_apellido = [w for w in apellidos_n.split() if len(w) > 2]
+
+                candidatos = [j for j in jugadores_equipo if nombre_n and nombre_n in j.split()]
+                if candidatos:
+                    apellido_ok = not palabras_apellido or any(
+                        any(ap in cand for ap in palabras_apellido) for cand in candidatos
+                    )
+                    if apellido_ok:
+                        res_jug = {'ok': True, 'warn': False, 'msg': f'Jugador encontrado en {equipo}'}
+                    else:
+                        # Nombre sí, apellido no → advertencia (warn), no bloqueo
+                        res_jug = {'ok': True, 'warn': True,
+                                   'msg': f'Nombre "{nombre}" está en {equipo} pero ningún apellido coincide. Jugadores en roster: {", ".join(candidatos[:3])}'}
+                else:
+                    palabras_busq = [w for w in (nombre_n + ' ' + apellidos_n).split() if len(w) > 2]
+                    similares = [j for j in jugadores_equipo if any(p in j for p in palabras_busq)]
+                    if similares:
+                        res_jug = {'ok': False, 'warn': False,
+                                   'msg': f'"{nombre}" no encontrado en {equipo}. Similares: {", ".join(similares[:3])}'}
+                    else:
+                        res_jug = {'ok': False, 'warn': False,
+                                   'msg': f'"{nombre} {apellidos}" no encontrado en el equipo {equipo}'}
+        except Exception as e:
+            res_jug = {'ok': False, 'msg': f'Error al consultar roster: {str(e)}'}
+
+    resultados['jugador'] = res_jug
+
+    # ── 2. Validar IBAN ───────────────────────────────────────────────
+    def validar_iban(iban):
+        if not iban:
+            return False, 'IBAN vacío'
+        if not iban.startswith('ES'):
+            return False, f'IBAN debe empezar por ES (se recibió: {iban[:2]})'
+        if len(iban) != 24:
+            return False, f'IBAN español debe tener 24 caracteres (tiene {len(iban)})'
+        if not iban[2:].isdigit():
+            return False, 'IBAN contiene caracteres no numéricos tras ES'
+        # Mod-97 check
+        rearranged = iban[4:] + iban[:4]
+        numeric = ''.join(str(ord(c) - 55) if c.isalpha() else c for c in rearranged)
+        if int(numeric) % 97 != 1:
+            return False, 'IBAN inválido (fallo de dígito de control)'
+        return True, f'IBAN válido: {iban[:4]} {iban[4:8]} {iban[8:12]} {iban[12:16]} {iban[16:20]} {iban[20:]}'
+
+    iban_ok, iban_msg = validar_iban(iban_raw)
+    resultados['iban'] = {'ok': iban_ok, 'msg': iban_msg}
+
+    return jsonify(resultados)
+
+
 @jugadores_datos_bp.route('/api/jugadores_datos', methods=['GET'])
 def get_datos_jugadores():
     from app import client, NOMBRE_EXCEL

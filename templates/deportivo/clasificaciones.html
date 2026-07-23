@@ -295,6 +295,12 @@
         color: white !important;
     }
 
+    .timeline-result-cell-v.outcome-GG {
+        background-color: white !important;
+        color: #64748b !important;
+        border: 2px solid #94a3b8 !important;
+    }
+
     .timeline-result-cell-v.outcome-E {
         background-color: var(--yellow-state) !important;
         color: #1e293b !important;
@@ -1219,12 +1225,14 @@
             const matchIda = matches[0];
             const matchVuelta = matches[1];
 
+            const ambosGanados = matchIda && matchVuelta && matchIda.estado === 'G' && matchVuelta.estado === 'G';
+
             const idaCell = matchIda
-                ? `<td class="timeline-result-cell-v outcome-${matchIda.estado || 'G'}"><span class="result-text">${matchIda.resultado || '-'}</span></td>`
+                ? `<td class="timeline-result-cell-v outcome-${ambosGanados ? 'GG' : (matchIda.estado || 'G')}"><span class="result-text">${matchIda.resultado || '-'}</span></td>`
                 : `<td class="timeline-result-cell-v empty-result"><span class="result-text">-</span></td>`;
 
             const vueltaCell = matchVuelta
-                ? `<td class="timeline-result-cell-v outcome-${matchVuelta.estado || 'G'}"><span class="result-text">${matchVuelta.resultado || '-'}</span></td>`
+                ? `<td class="timeline-result-cell-v outcome-${ambosGanados ? 'GG' : (matchVuelta.estado || 'G')}"><span class="result-text">${matchVuelta.resultado || '-'}</span></td>`
                 : `<td class="timeline-result-cell-v empty-result"><span class="result-text">-</span></td>`;
 
             bodyRows += `
@@ -1236,7 +1244,6 @@
                     </td>
                     ${idaCell}
                     ${vueltaCell}
-                    <td class="timeline-objective-cell-v"></td>
                 </tr>
             `;
         });
@@ -1253,7 +1260,6 @@
                                 <th class="timeline-rival-cell-v">RIVAL</th>
                                 <th class="timeline-result-cell-v">IDA</th>
                                 <th class="timeline-result-cell-v">VUELTA</th>
-                                <th class="timeline-objective-cell-v">OBJETIVO</th>
                             </tr>
                         </thead>
                         <tbody>${bodyRows}</tbody>

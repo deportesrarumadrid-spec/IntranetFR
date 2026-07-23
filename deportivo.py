@@ -1290,8 +1290,7 @@ def api_kpis_pagos():
         else:
             for m in range(9, 13):
                 season_months.append((season_start_year, m))
-            end_m = min(cur_month, 6)
-            for m in range(1, end_m + 1):
+            for m in range(1, cur_month + 1):
                 season_months.append((season_start_year + 1, m))
 
         # Conceptos de columnas y mapeo de nombres de mes
@@ -1474,9 +1473,15 @@ def api_kpis_pagos():
             tipo_p = p['tipo_pago'].strip().upper() if p['tipo_pago'] else "MENSUAL"
             config_match = None
             for c in grid_config:
-                if str(c.get('tipo', '')).strip().upper() == forma_p:
+                if str(c.get('tipo', '')).strip().upper() == tipo_p:
                     config_match = c
                     break
+            # Fallback: match by forma if tipo not found
+            if not config_match:
+                for c in grid_config:
+                    if str(c.get('tipo', '')).strip().upper() == forma_p:
+                        config_match = c
+                        break
             
             expected_concepts = {}
             
@@ -1557,6 +1562,7 @@ def api_kpis_pagos():
                     deu = max(esp - pag, 0.0)
                     
                     if deu > 0.1: # Tolerancia para flotantes
+                        month_num = None
                         if con == 'INSCRIPCION':
                             lbl = 'Inscr.'
                             tipo_pago_deuda = 'inscripcion'
@@ -1565,17 +1571,21 @@ def api_kpis_pagos():
                             tipo_pago_deuda = 'ropa'
                         elif con.isdigit():
                             tipo_pago_deuda = 'mensual'
-                            lbl = month_labels.get(int(con), con)
+                            month_num = int(con)
+                            lbl = month_labels.get(month_num, con)
                         else:
                             lbl = con
                             tipo_pago_deuda = 'mensual'
-                            
+
                         lbl_deu = int(deu) if deu.is_integer() else round(deu, 2)
-                        conceptos_deuda.append({
+                        entry = {
                             'label': lbl,
                             'deuda': lbl_deu,
                             'tipo': tipo_pago_deuda
-                        })
+                        }
+                        if month_num is not None:
+                            entry['month_num'] = month_num
+                        conceptos_deuda.append(entry)
                         total_deuda += deu
 
             if total_deuda > 0:
@@ -1608,9 +1618,11 @@ def api_kpis_pagos():
         # Ordenar por equipo -> nombre
         result_jugadores.sort(key=lambda x: (x['equipo'].upper(), x['nombre'].upper()))
 
+        season_months_out = [{'year': y, 'month': m, 'label': month_labels.get(m, str(m))} for (y, m) in season_months]
         return jsonify({
             'jugadores': result_jugadores,
-            'equipos': sorted(list(all_equipos))
+            'equipos': sorted(list(all_equipos)),
+            'season_months': season_months_out
         })
 
     except Exception as e:

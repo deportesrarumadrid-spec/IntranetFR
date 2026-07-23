@@ -137,8 +137,9 @@
         border-bottom: 1px solid #f1f5f9;
     }
     .month-rank-title {
-        font-size: 10px; font-weight: 900; color: #94a3b8;
+        font-size: 10px; font-weight: 900; color: #1e293b;
         margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;
+        text-align: center;
     }
     .rank-mini-item {
         display: flex; align-items: center; gap: 6px;
@@ -222,14 +223,12 @@
 
         <!-- Bloque 4: NOTAS -->
         <div class="card-modern">
-            <div class="card-title" style="margin-bottom: 10px; display:flex; align-items:center; justify-content:space-between;">
+            <div class="card-title" style="margin-bottom: 10px; display:flex; align-items:center; justify-content:space-between; position:relative;">
                 <span>NOTAS</span>
-                <div style="display:flex; gap:4px;">
-                    <button id="meMatrizBtnPrev" onclick="meMatrizNav(-1)"
-                        style="width:26px;height:26px;border-radius:6px;border:1px solid #e2e8f0;background:white;color:#475569;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;">&#8592;</button>
-                    <button id="meMatrizBtnNext" onclick="meMatrizNav(1)" disabled
-                        style="width:26px;height:26px;border-radius:6px;border:1px solid #e2e8f0;background:white;color:#cbd5e1;font-size:12px;cursor:not-allowed;display:flex;align-items:center;justify-content:center;">&#8594;</button>
-                </div>
+                <button id="meMatrizBtnPrev" onclick="meMatrizNav(-1)"
+                    style="position:absolute;left:210px;width:28px;height:28px;border-radius:6px;border:1px solid #e2e8f0;background:white;color:#475569;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">&#8592;</button>
+                <button id="meMatrizBtnNext" onclick="meMatrizNav(1)" disabled
+                    style="width:28px;height:28px;border-radius:6px;border:1px solid #e2e8f0;background:white;color:#cbd5e1;font-size:16px;cursor:not-allowed;display:flex;align-items:center;justify-content:center;line-height:1;">&#8594;</button>
             </div>
             <div id="meMatrizCont" style="flex:1; overflow:auto; font-size:10px;">
                 <div style="color:#94a3b8;font-size:12px;text-align:center;padding:30px;">Cargando...</div>
@@ -324,9 +323,11 @@
             forms.forEach(f => {
                 const dateShort = f['MARCA TEMPORAL'] ? f['MARCA TEMPORAL'].split(' ')[0] : 'XX/XX/XXXX';
                 
+                const rival = (f.RIVAL || '').trim();
+                const headerLabel = rival ? `${dateShort} partido vs ${rival}` : dateShort;
                 const formatEntry = (text) => `
                     <div style="margin-bottom: 8px; border-bottom: 1px dashed #e2e8f0; padding-bottom: 5px;">
-                        <span style="color: #94a3b8; font-weight: 800; font-size: 11px;">${dateShort}:</span>
+                        <span style="color: #94a3b8; font-weight: 800; font-size: 11px;">${headerLabel}</span>
                         <span style="color: #1e293b; font-weight: 600; font-size: 12px; margin-left: 5px;">${text.replace(/\\n|\n/g, '<br>')}</span>
                     </div>
                 `;
@@ -364,27 +365,27 @@
                     
                     <div style="font-size: 12px; margin-bottom: 10px; flex: 1;">
                         <strong style="color: #333; font-size: 10px; text-transform: uppercase;"><i class="fas fa-users" style="color:#64748b"></i> Eval. Equipo:</strong>
-                        <div style="color: #666; margin-top: 2px;">Global: <strong style="color:#10b981;">${f.EVAL_GLOBAL}</strong> | Int: <strong>${f.EVAL_INTENSIDAD}</strong> | Fís: <strong>${f.EVAL_FISICO}</strong></div>
-                        <div style="color: #777; font-size: 11px; margin-top: 4px; font-style: italic; background: white; padding: 6px; border-radius: 6px; border: 1px solid #eee;">
-                            <div style="margin-bottom: 3px;"><span style="color:#E31E24; font-weight:bold;">Fallos:</span> ${f.FALLOS_EQUIPO}</div>
-                            <div><span style="color:#10b981; font-weight:bold;">Mejorar Físico:</span> ${f.MEJORAR_FISICO}</div>
+                        <div style="color: #666; margin-top: 2px;">Global: <strong>${f.EVAL_GLOBAL}</strong> | Intensidad: <strong>${f.EVAL_INTENSIDAD}</strong> | Físico: <strong>${f.EVAL_FISICO}</strong></div>
+                        <div style="color: #475569; font-size: 11px; margin-top: 4px; font-style: italic; background: white; padding: 6px; border-radius: 6px; border: 1px solid #eee;">
+                            <div style="margin-bottom: 3px;"><span style="font-weight:bold; text-decoration:underline;">Fallos:</span> ${f.FALLOS_EQUIPO}</div>
+                            <div><span style="font-weight:bold; text-decoration:underline;">Mejorar Físicamente:</span> ${f.MEJORAR_FISICO}</div>
                         </div>
                     </div>
-                    
+
                     <div style="font-size: 12px; margin-bottom: 10px; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
-                        <strong style="color: #f59e0b; font-size: 10px; text-transform: uppercase;"><i class="fas fa-hands"></i> Porteros:</strong>
+                        <strong style="color: #333; font-size: 10px; text-transform: uppercase; text-decoration:underline;"><i class="fas fa-hands" style="color:#64748b"></i> Porteros:</strong>
                         <div style="color: #666; margin-top: 2px; display: flex; justify-content: space-between;">
                             <span>Nota: <strong>${f.PORT_NOTA}</strong></span>
                             <span style="color: #777; font-size: 11px; max-width: 60%; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${f.PORT_FALLOS}">Fallos: ${f.PORT_FALLOS}</span>
                         </div>
                     </div>
-                    
+
                     <div style="font-size: 12px; border-top: 1px dashed #e2e8f0; padding-top: 8px; background: white; border-radius: 8px; padding: 10px; border: 1px solid #eee;">
-                        <strong style="color: #3b82f6; font-size: 10px; text-transform: uppercase;"><i class="fas fa-star"></i> Destacados:</strong>
-                        <div style="color: #666; font-size: 11px; margin-top: 4px; display: grid; gap: 4px;">
-                            <div><strong style="color:#ef4444;">Rival:</strong> ${f.RIVAL_DESTACADO}</div>
-                            <div><strong style="color:#10b981;">Mejores:</strong> ${f.NUESTROS_MEJORES}</div>
-                            <div><strong style="color:#64748b;">Flojos:</strong> ${f.NUESTROS_FLOJOS}</div>
+                        <strong style="color: #333; font-size: 10px; text-transform: uppercase; text-decoration:underline;"><i class="fas fa-star" style="color:#64748b"></i> Destacados:</strong>
+                        <div style="color: #475569; font-size: 11px; margin-top: 4px; display: grid; gap: 4px;">
+                            <div><strong>Rival:</strong> ${f.RIVAL_DESTACADO}</div>
+                            <div><strong>Mejores:</strong> ${f.NUESTROS_MEJORES}</div>
+                            <div><strong>Flojos:</strong> ${f.NUESTROS_FLOJOS}</div>
                         </div>
                     </div>
                 </div>
@@ -548,7 +549,7 @@
                 else if (sorted.length === 2) rows.push({ p: sorted[1], color: '#E31E24' });
 
                 html += `<div class="history-item hi-top">
-                    <div class="history-month-name">${m.label.split(' ')[0].substring(0,3)}</div>
+                    <div class="history-month-name">${m.label.split(' ')[0]}</div>
                     <div class="history-values">
                         ${rows.map(r => `
                         <div class="history-val">
@@ -753,6 +754,8 @@
     }
 
     const MESES_METODOLOGIA_RO = ['SEP', 'OCT', 'NOV', 'DIC', 'ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN'];
+    const _MES_ABREV_METOD = {1:'ENE',2:'FEB',3:'MAR',4:'ABR',5:'MAY',6:'JUN',7:'JUL',8:'AGO',9:'SEP',10:'OCT',11:'NOV',12:'DIC'};
+    const mesActualMetodologia = _MES_ABREV_METOD[new Date().getMonth() + 1] || '';
     const MACROCICLOS_METODOLOGIA_RO = [
         { nombre: 'MACROCICLO I', meses: ['SEP', 'OCT', 'NOV', 'DIC'] },
         { nombre: 'MACROCICLO II', meses: ['ENE', 'FEB', 'MAR'] },
@@ -778,7 +781,8 @@
         let html = '<tr>';
         if (esPrimera) html += `<td style="background:#f1f5f9; font-weight:900; color:#333; writing-mode:vertical-rl; text-orientation:mixed; letter-spacing:3px; padding:6px 2px; border:1px solid #ddd; text-align:center; vertical-align:middle;" rowspan="${totalFilas}">${etiqueta}</td>`;
         MESES_METODOLOGIA_RO.forEach(mes => {
-            html += `<td style="border:1px solid #ddd; padding:6px; text-align:center; font-size:11px; font-weight:700; color:#1e293b;">${(fila[mes] || '').replace(/</g, '&lt;')}</td>`;
+            const _bgCell = mes === mesActualMetodologia ? 'background:#fff1f2;' : '';
+            html += `<td style="border:1px solid #ddd; padding:6px; text-align:center; font-size:11px; font-weight:700; color:#1e293b; ${_bgCell}">${(fila[mes] || '').replace(/</g, '&lt;')}</td>`;
         });
         html += '</tr>';
         return html;
@@ -792,8 +796,8 @@
         let cabecera = '<tr><th rowspan="2" style="width:30px; border:1px solid #ddd;"></th>';
         MACROCICLOS_METODOLOGIA_RO.forEach(mc => { cabecera += `<th colspan="${mc.meses.length}" style="border:1px solid #ddd; background:#f8f9fa; font-weight:900;">${mc.nombre}</th>`; });
         cabecera += '<th style="width:40px; border:1px solid #ddd;"></th></tr><tr>';
-        MACROCICLOS_METODOLOGIA_RO.forEach(mc => { mc.meses.forEach(mes => { cabecera += `<th style="border:1px solid #ddd; background:#f8f9fa; color:#E31E24; font-size:13px;">${mes}</th>`; }); });
-        cabecera += '<th style="border:1px solid #ddd; background:#f8f9fa; color:#E31E24; font-size:10px;">JUN</th></tr>';
+        MACROCICLOS_METODOLOGIA_RO.forEach(mc => { mc.meses.forEach(mes => { const _bgH = mes === mesActualMetodologia ? '#fee2e2' : '#f8f9fa'; cabecera += `<th style="border:1px solid #ddd; background:${_bgH}; color:#E31E24; font-size:13px;">${mes}</th>`; }); });
+        cabecera += `<th style="border:1px solid #ddd; background:${'JUN' === mesActualMetodologia ? '#fee2e2' : '#f8f9fa'}; color:#E31E24; font-size:10px;">JUN</th></tr>`;
 
         let filasHtml = tecnico.map((f, i) => renderFilaMetodologiaRO(f, 'TÉCNICO', i === 0, tecnico.length)).join('');
         filasHtml += `<tr><td colspan="${MESES_METODOLOGIA_RO.length + 2}" style="border:none; height:8px;"></td></tr>`;

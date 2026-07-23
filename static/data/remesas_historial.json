@@ -1,0 +1,27 @@
+[
+  {
+    "titulo": "JULIO 2026",
+    "fecha": "23/07/2026",
+    "cobrada": false,
+    "total": 110.0,
+    "n_lineas": 1,
+    "lineas": [
+      {
+        "cc": "",
+        "cod": "26FPRA1",
+        "concepto": "JUAN ENSENANZA FUTBOL SEP-OCT-NOV",
+        "desglose": [
+          {
+            "concepto": "SEP",
+            "importe": 110
+          }
+        ],
+        "equipo": "PREBENJAMIN A",
+        "firma": "",
+        "importe": 110,
+        "jugador": "JUAN",
+        "titular": ""
+      }
+    ]
+  }
+]

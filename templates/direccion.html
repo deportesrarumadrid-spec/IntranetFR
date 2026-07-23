@@ -481,6 +481,11 @@
     .pill-checkbox input { display: none; }
     .pill-checkbox.checked { background: #E31E24 !important; color: white !important; border-color: #E31E24 !important; box-shadow: 0 4px 10px rgba(227, 30, 36, 0.3); }
     .pill-checkbox.checked i { color: white !important; }
+    .pill-check-box {
+        width: 14px; height: 14px; border: 2px solid #ccc; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; transition: 0.2s;
+    }
+    .pill-checkbox.checked .pill-check-box { border-color: white; color: white; }
+    .pill-checkbox.checked .pill-check-box::after { content: '✓'; font-size: 10px; font-weight: 900; line-height: 1; }
 
     /* Resaltado de fila de semana */
     .calendar-week-row {
@@ -536,6 +541,23 @@
     #tablaBalones input[type=number]::-webkit-outer-spin-button,
     #tablaBalones input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     #tablaBalones input[type=number] { -moz-appearance: textfield; }
+    /* Checkboxes modernos pagos pendientes */
+    .chk-moderno {
+        appearance: none; -webkit-appearance: none;
+        width: 18px; height: 18px; min-width: 18px;
+        border: 2px solid #cbd5e1; border-radius: 5px;
+        background: #fff; cursor: pointer;
+        position: relative; transition: border-color .15s, background .15s;
+        vertical-align: middle;
+    }
+    .chk-moderno:hover { border-color: #3b82f6; }
+    .chk-moderno:checked { background: #3b82f6; border-color: #3b82f6; }
+    .chk-moderno:checked::after {
+        content: ''; position: absolute;
+        left: 4px; top: 1px; width: 5px; height: 9px;
+        border: 2px solid #fff; border-top: none; border-left: none;
+        transform: rotate(45deg);
+    }
 </style>
 
 <div style="padding: 10px;">
@@ -1000,10 +1022,40 @@
             <div id="kpi-financieros" class="kpi-content" style="display: none;">
                 <div style="background: white; border-radius: 12px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 20px;">
                     <!-- Cabecera con título y filtro -->
-                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; border-bottom:1px solid #eee; padding-bottom:14px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:12px; border-bottom:1px solid #eee; padding-bottom:14px;">
                         <h4 style="margin:0; color:#333; font-weight:800; font-size:18px;"><i class="fas fa-file-invoice-dollar" style="color:#dc3545; margin-right:8px;"></i> Jugadores con Pagos Pendientes</h4>
-                        <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <!-- Split button WA: izquierda = enviar, derecha = editar plantilla -->
+                            <div style="display:flex;border-radius:8px;overflow:hidden;border:2px solid #25d366;">
+                                <button id="btnWAPagosPendientes" onclick="enviarWAPagosSeleccionados()"
+                                    style="background:#25d366;color:white;border:none;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">
+                                    <i class="fab fa-whatsapp"></i>
+                                    <span id="txtBtnWAPagos">WHATSAPP</span>
+                                </button>
+                                <div style="width:1px;background:rgba(255,255,255,0.35);flex-shrink:0;"></div>
+                                <button onclick="abrirEditarPlantillaPagos()" title="Editar plantilla del mensaje"
+                                    style="background:#25d366;color:white;border:none;padding:6px 10px;cursor:pointer;font-size:13px;display:flex;align-items:center;">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                            </div>
                             <span id="pagos-total-badge" style="display:none; background:#dc3545; color:white; font-size:14px; font-weight:900; padding:8px 16px; border-radius:24px; box-shadow: 0 4px 10px rgba(220,53,69,0.2);"></span>
+                        </div>
+                    </div>
+                    <!-- Filtros estilo checkboxes -->
+                    <div style="margin-bottom:14px;">
+                        <label style="font-size:10px;font-weight:900;color:#475569;text-transform:uppercase;display:block;margin-bottom:8px;letter-spacing:.4px;">MESES A INCLUIR</label>
+                        <div style="display:flex;flex-wrap:nowrap;gap:5px;overflow-x:auto;margin-bottom:10px;" id="pagosMesesGrid"></div>
+                        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;">
+                            <label style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:8px 14px;border:2px solid #fde68a;border-radius:10px;background:#fffbeb;font-size:12px;font-weight:700;color:#92400e;flex:1;min-width:200px;">
+                                <input type="checkbox" id="pagosIncluyeInscr" checked onchange="aplicarFiltrosPagos()" style="accent-color:#d97706;transform:scale(1.2);"> Incluir INSCRIPCIÓN pendiente
+                            </label>
+                            <label style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:8px 14px;border:2px solid #e0f2fe;border-radius:10px;background:#f0f9ff;font-size:12px;font-weight:700;color:#1e40af;flex:1;min-width:200px;">
+                                <input type="checkbox" id="pagosIncluyeRopa" checked onchange="aplicarFiltrosPagos()" style="accent-color:#1e40af;transform:scale(1.2);"> Incluir ROPA pendiente de pago
+                            </label>
+                        </div>
+                        <div>
+                            <label style="font-size:10px;font-weight:900;color:#475569;text-transform:uppercase;display:block;margin-bottom:6px;letter-spacing:.4px;">FORMA DE PAGO</label>
+                            <div style="display:flex;flex-wrap:wrap;gap:6px;" id="pagosFormasGrid"></div>
                         </div>
                     </div>
                     <div id="kpiPagosContainer">
@@ -1051,7 +1103,7 @@
                     <div style="padding: 14px 20px; border-bottom: 1px solid #eee; font-size: 12px; font-weight: 900; color: #333; text-transform: uppercase;">
                         <i class="fas fa-table" style="color:#E31E24;"></i> Tabla por Colegio (vista Excel)
                     </div>
-                    <table id="tablaColegiosExcel" style="width:100%; border-collapse: collapse; font-size: 11px;"></table>
+                    <div id="tablaColegiosExcel" style="padding:16px;"></div>
                 </div>
 
                 <div style="background: white; border-radius: 12px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden;">
@@ -1096,7 +1148,8 @@
                 <h3 style="margin:0; font-size:14px; font-weight:900; color:#1e293b;"><i class="fas fa-database" style="color:#E31E24; margin-right:8px;"></i>Base de Datos Histórico de Jugadores</h3>
                 <button onclick="bdCargar(true)" style="background:#1e293b; color:white; border:none; border-radius:8px; padding:8px 16px; font-size:10px; font-weight:900; cursor:pointer; font-family:inherit;"><i class="fas fa-rotate" style="margin-right:5px;"></i>ACTUALIZAR</button>
             </div>
-            <!-- Tabs por año -->
+            <!-- Tabs por año de nacimiento -->
+            <div style="margin-bottom:6px; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px;">AÑO DE NACIMIENTO</div>
             <div id="bdAniosTabs" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px;"></div>
             <!-- Tabla de jugadores -->
             <div id="bdTablaWrap"></div>
@@ -1403,6 +1456,247 @@
 
     </div><!-- cierre fila flex finde+mensual -->
 
+    <!-- ===== JUGADOR DEL MES ===== -->
+    <div style="width:100%; margin-top:22px;">
+      <div class="card-coord" style="padding:18px 20px;">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+          <h3 style="margin:0; font-size:14px; font-weight:900; color:#1e293b;">
+            <i class="fas fa-trophy" style="color:#f59e0b; margin-right:7px;"></i>JUGADOR DEL MES
+          </h3>
+          <div style="flex:1;"></div>
+          <button onclick="jdmGuardar()" id="jdmBtnGuardar" style="padding:6px 14px; border:none; background:#E31E24; color:#fff; border-radius:7px; font-size:10px; font-weight:800; cursor:pointer; letter-spacing:.5px;">
+            <i class="fas fa-save"></i> GUARDAR
+          </button>
+        </div>
+
+        <!-- Popover bocadillo sugerencias -->
+        <div id="jdmPopover" style="position:fixed; z-index:9999; background:#fff; border:1.5px solid #e2e8f0; border-radius:10px; box-shadow:0 8px 30px rgba(0,0,0,.14); padding:14px 16px; min-width:220px; max-width:320px; display:none;">
+          <div id="jdmPopoverArrow" style="position:absolute; top:-8px; left:18px; width:14px; height:14px; background:#fff; border-left:1.5px solid #e2e8f0; border-top:1.5px solid #e2e8f0; transform:rotate(45deg);"></div>
+          <div id="jdmPopoverTitle" style="font-size:10px; font-weight:900; color:#64748b; text-transform:uppercase; letter-spacing:.6px; margin-bottom:10px; padding-bottom:7px; border-bottom:1px solid #f1f5f9;"></div>
+          <div id="jdmPopoverBody" style="font-size:11px; color:#374151;"></div>
+        </div>
+
+        <div style="overflow-x:auto;">
+          <table id="jdmTabla" style="width:100%; border-collapse:collapse; font-size:11px; min-width:720px;">
+            <thead>
+              <tr>
+                <th style="padding:9px 10px; border:1px solid #e2e8f0; background:#1e293b; color:#fff; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.6px; text-align:center; width:46px;"></th>
+                <th style="padding:9px 10px; border:1px solid #e2e8f0; background:#1e293b; color:#fff; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.6px; text-align:center; width:46px;">MES</th>
+                <th colspan="2" style="padding:9px 8px; border:1px solid #e2e8f0; background:#1e293b; color:#94a3b8; font-size:10px; font-weight:700; text-transform:uppercase; text-align:center; letter-spacing:.5px;">F7</th>
+                <th colspan="2" style="padding:9px 8px; border:1px solid #e2e8f0; background:#1e293b; color:#94a3b8; font-size:10px; font-weight:700; text-transform:uppercase; text-align:center; letter-spacing:.5px;">11</th>
+                <th colspan="2" style="padding:9px 8px; border:1px solid #e2e8f0; background:#1e293b; color:#94a3b8; font-size:10px; font-weight:700; text-transform:uppercase; text-align:center; letter-spacing:.5px;">PORTEROS</th>
+                <th style="padding:9px 8px; border:1px solid #e2e8f0; background:#1e293b; color:#94a3b8; font-size:10px; font-weight:700; text-transform:uppercase; text-align:center; letter-spacing:.5px; min-width:110px;">ENTRENADOR</th>
+                <th style="padding:9px 8px; border:1px solid #e2e8f0; background:#1e293b; color:#94a3b8; font-size:10px; font-weight:700; text-transform:uppercase; text-align:center; letter-spacing:.5px; min-width:110px;">MEJOR GOL</th>
+              </tr>
+            </thead>
+            <tbody id="jdmTablaBody">
+              <tr><td colspan="10" style="padding:20px; text-align:center; color:#94a3b8; border:1px solid #e2e8f0;"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div><!-- cierre JUGADOR DEL MES -->
+
+    <script>
+    (function(){
+      'use strict';
+      var _jdmData = [];
+      var _jdmSugerencias = {};
+      var _jdmPopoverOpen = null; // yearmon del popover abierto
+
+      function _mkInput(placeholder, value, onChangeFn) {
+        var inp = document.createElement('input');
+        inp.type = 'text';
+        inp.placeholder = placeholder;
+        inp.value = value || '';
+        inp.style.cssText = 'border:1px solid #e2e8f0; border-radius:5px; padding:4px 7px; font-size:10px; font-weight:600; color:#1e293b; width:100%; min-width:78px; box-sizing:border-box; background:#fff; outline:none; font-family:inherit;';
+        inp.onfocus = function(){ this.style.borderColor='#94a3b8'; };
+        inp.onblur  = function(){ this.style.borderColor='#e2e8f0'; };
+        inp.oninput = function(){ onChangeFn(this.value); };
+        return inp;
+      }
+
+      function _mkPlayerCell(mi, categoria, subIdx) {
+        var cat = _jdmData[mi][categoria][subIdx];
+        var isGan = cat.ganador;
+
+        var td = document.createElement('td');
+        td.style.cssText = 'padding:5px 6px; border:1px solid #e2e8f0; min-width:120px;' + (isGan ? 'border-left:3px solid #f59e0b;' : '');
+
+        var wrap = document.createElement('div');
+        wrap.style.cssText = 'display:flex; align-items:center; gap:5px;';
+
+        var btn = document.createElement('button');
+        btn.innerHTML = '★';
+        btn.title = 'Marcar ganador';
+        btn.style.cssText = 'background:none; border:none; cursor:pointer; font-size:14px; line-height:1; padding:0 2px; flex-shrink:0; color:' + (isGan ? '#f59e0b' : '#cbd5e1') + '; transition:color .12s;';
+        (function(m,c,s){ btn.onclick = function(e){ e.stopPropagation(); jdmToggleGanador(m,c,s); }; })(mi, categoria, subIdx);
+
+        var inp = _mkInput('Jugador...', cat.nombre, (function(m,c,s){ return function(v){ _jdmData[m][c][s].nombre = v; }; })(mi, categoria, subIdx));
+        if (isGan) { inp.style.fontWeight = '800'; inp.style.color = '#92400e'; }
+
+        wrap.appendChild(btn);
+        wrap.appendChild(inp);
+        td.appendChild(wrap);
+        return td;
+      }
+
+      function _mkSingleCell(mi, campo, placeholder) {
+        var td = document.createElement('td');
+        td.style.cssText = 'padding:5px 6px; border:1px solid #e2e8f0; min-width:110px;';
+        td.appendChild(_mkInput(placeholder, _jdmData[mi][campo], (function(m,c){ return function(v){ _jdmData[m][c] = v; }; })(mi, campo)));
+        return td;
+      }
+
+      function _buildPopoverHtml(ym) {
+        var equiposData = _jdmSugerencias[ym];
+        if (!equiposData || !Object.keys(equiposData).length) {
+          return '<span style="color:#94a3b8; font-size:11px;">Sin formularios registrados este mes.</span>';
+        }
+        var html = '';
+        Object.entries(equiposData).forEach(function(entry){
+          var equipo = entry[0], jugadores = entry[1];
+          html += '<div style="margin-bottom:8px;">';
+          html += '<div style="font-size:9px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;">' + equipo + '</div>';
+          jugadores.forEach(function(j){
+            var badge = j.count > 1 ? '<span style="background:#fef3c7; color:#92400e; border-radius:4px; padding:1px 5px; font-size:8px; font-weight:900; margin-left:5px;">×'+j.count+'</span>' : '';
+            html += '<div style="font-size:11px; color:#1e293b; font-weight:600; padding:2px 0; display:flex; align-items:center; gap:4px;"><span style="color:#cbd5e1;">›</span> ' + j.nombre + badge + '</div>';
+          });
+          html += '</div>';
+        });
+        return html;
+      }
+
+      window.jdmShowPopover = function(btn, ym) {
+        var pop = document.getElementById('jdmPopover');
+        if (!pop) return;
+        if (_jdmPopoverOpen === ym && pop.style.display !== 'none') {
+          pop.style.display = 'none'; _jdmPopoverOpen = null; return;
+        }
+        if (!Object.keys(_jdmSugerencias).length) {
+          document.getElementById('jdmPopoverTitle').textContent = 'Sin datos';
+          document.getElementById('jdmPopoverBody').innerHTML = '<span style="color:#94a3b8;font-size:11px;">Pulsa "CARGAR SUGERENCIAS" primero.</span>';
+        } else {
+          var _mn = {'01':'ENE','02':'FEB','03':'MAR','04':'ABR','05':'MAY','06':'JUN','07':'JUL','08':'AGO','09':'SEP','10':'OCT','11':'NOV','12':'DIC'};
+          var parts = ym.split('-');
+          document.getElementById('jdmPopoverTitle').textContent = (_mn[parts[1]]||parts[1]) + ' ' + parts[0];
+          document.getElementById('jdmPopoverBody').innerHTML = _buildPopoverHtml(ym);
+        }
+        pop.style.display = 'block';
+        var rect = btn.getBoundingClientRect();
+        var pw = pop.offsetWidth || 260;
+        var left = Math.min(rect.left, window.innerWidth - pw - 12);
+        pop.style.left = left + 'px';
+        pop.style.top  = (rect.bottom + 10) + 'px';
+        document.getElementById('jdmPopoverArrow').style.left = Math.max(10, rect.left - left + 4) + 'px';
+        _jdmPopoverOpen = ym;
+      };
+
+      window.jdmRender = function() {
+        var tbody = document.getElementById('jdmTablaBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        _jdmData.forEach(function(mes, mi) {
+          var tr = document.createElement('tr');
+          tr.style.cssText = 'border-bottom:1px solid #f1f5f9;';
+
+          // Bombilla
+          var tdBulb = document.createElement('td');
+          tdBulb.style.cssText = 'padding:5px 8px; border:1px solid #e2e8f0; text-align:center; background:#fafafa; width:36px;';
+          var hasSug = !!(_jdmSugerencias[mes.yearmon] && Object.keys(_jdmSugerencias[mes.yearmon]).length);
+          var bulb = document.createElement('button');
+          bulb.innerHTML = '<i class="fas fa-lightbulb"></i>';
+          bulb.title = 'Ver sugerencias de formularios';
+          bulb.style.cssText = 'background:none; border:none; cursor:pointer; font-size:13px; padding:2px 4px; border-radius:5px; color:' + (hasSug ? '#f59e0b' : '#cbd5e1') + '; transition:color .12s;';
+          (function(b, ym){ bulb.onclick = function(e){ e.stopPropagation(); jdmShowPopover(b, ym); }; })(bulb, mes.yearmon);
+          tdBulb.appendChild(bulb);
+          tr.appendChild(tdBulb);
+
+          // MES
+          var tdMes = document.createElement('td');
+          tdMes.style.cssText = 'padding:8px 10px; font-weight:900; font-size:12px; color:#1e293b; text-align:center; background:#f8fafc; border:1px solid #e2e8f0; white-space:nowrap;';
+          tdMes.textContent = mes.mes;
+          tr.appendChild(tdMes);
+
+          tr.appendChild(_mkPlayerCell(mi, 'f7', 0));
+          tr.appendChild(_mkPlayerCell(mi, 'f7', 1));
+          tr.appendChild(_mkPlayerCell(mi, 'once', 0));
+          tr.appendChild(_mkPlayerCell(mi, 'once', 1));
+          tr.appendChild(_mkPlayerCell(mi, 'porteros', 0));
+          tr.appendChild(_mkPlayerCell(mi, 'porteros', 1));
+          tr.appendChild(_mkSingleCell(mi, 'entrenador', 'Entrenador...'));
+          tr.appendChild(_mkSingleCell(mi, 'gol', 'Jugador...'));
+
+          tbody.appendChild(tr);
+        });
+      };
+
+      window.jdmToggleGanador = function(mi, categoria, subIdx) {
+        var pair = _jdmData[mi][categoria];
+        var wasOn = pair[subIdx].ganador;
+        pair.forEach(function(c){ c.ganador = false; });
+        if (!wasOn) pair[subIdx].ganador = true;
+        jdmRender();
+      };
+
+      window.jdmInit = function() {
+        fetch('/api/jugador_del_mes')
+          .then(function(r){ return r.json(); })
+          .then(function(res){
+            if (res.status === 'success') { _jdmData = res.data || []; jdmRender(); }
+          }).catch(function(){});
+        jdmCargarSugerencias();
+      };
+
+      window.jdmGuardar = function() {
+        var btn = document.getElementById('jdmBtnGuardar');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...'; }
+        fetch('/api/jugador_del_mes', {
+          method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(_jdmData)
+        }).then(function(r){ return r.json(); }).then(function(res){
+          if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> GUARDAR'; }
+          if (res.status === 'success' && btn) {
+            btn.style.background = '#991b1b';
+            setTimeout(function(){ btn.style.background = '#E31E24'; }, 1200);
+          }
+        }).catch(function(){
+          if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> GUARDAR'; }
+        });
+      };
+
+      window.jdmCargarSugerencias = function() {
+        var btn = document.getElementById('jdmBtnSugerencias');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando...'; }
+        fetch('/api/jugador_del_mes/sugerencias')
+          .then(function(r){ return r.json(); })
+          .then(function(res){
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-lightbulb" style="color:#f59e0b;"></i> CARGAR SUGERENCIAS'; }
+            if (res.status === 'success') {
+              _jdmSugerencias = res.data || {};
+              jdmRender(); // re-render to update bulb colors
+            }
+          }).catch(function(){
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-lightbulb" style="color:#f59e0b;"></i> CARGAR SUGERENCIAS'; }
+          });
+      };
+
+      // Close popover on outside click
+      document.addEventListener('click', function(){
+        var pop = document.getElementById('jdmPopover');
+        if (pop && pop.style.display !== 'none') { pop.style.display = 'none'; _jdmPopoverOpen = null; }
+      });
+
+      document.addEventListener('DOMContentLoaded', function(){
+        var subtabBtns = document.querySelectorAll('[onclick*="subtab-informes"],[data-subtab="subtab-informes"]');
+        subtabBtns.forEach(function(b){
+          b.addEventListener('click', function(){ if (!_jdmData.length) jdmInit(); });
+        });
+        var panel = document.getElementById('subtab-informes');
+        if (panel && getComputedStyle(panel).display !== 'none') jdmInit();
+      });
+    })();
+    </script>
+
         </div><!-- cierre subtab-informes -->
     </div><!-- cierre tab-d-deportiva -->
 
@@ -1555,6 +1849,63 @@
                 <button id="btnLanzarActualizarConv" onclick="lanzarActualizarConvocatorias()" style="flex:1; background:#E31E24; color:white; border:none; border-radius:9px; padding:10px; font-weight:800; font-size:12px; cursor:pointer; font-family:inherit;">INICIAR</button>
             </div>
             <div id="convEstadoActualizar" style="font-size:11px; margin-top:10px; text-align:center; font-weight:700;"></div>
+        </div>
+    </div>
+
+    <!-- POPOVER RECORDATORIO -->
+    <div id="popoverRecordatorio" style="display:none; position:fixed; z-index:99999; background:white; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.18); border:1px solid #e2e8f0; padding:16px; width:440px; max-width:96vw; font-family:inherit;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #f1f5f9;">
+            <span style="font-size:11px;font-weight:900;color:#1e293b;"><i class="fas fa-calendar-alt" style="color:#3b82f6;margin-right:6px;"></i>RECORDATORIO</span>
+            <button onclick="cerrarRecordatorioPop()" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;line-height:1;padding:0;">&times;</button>
+        </div>
+        <!-- Cabecera columnas -->
+        <div style="display:grid;grid-template-columns:150px 1fr 28px;gap:6px;margin-bottom:5px;padding:0 2px;">
+            <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;">Fecha</div>
+            <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;">Comentario</div>
+            <div></div>
+        </div>
+        <!-- Filas -->
+        <div id="popRecFilas" style="display:flex;flex-direction:column;gap:5px;margin-bottom:8px;max-height:240px;overflow-y:auto;"></div>
+        <!-- Añadir línea -->
+        <button onclick="añadirFilaRec()" style="width:100%;background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:8px;padding:6px;font-size:12px;color:#94a3b8;cursor:pointer;font-weight:700;margin-bottom:10px;">+ Añadir línea</button>
+        <!-- Guardar -->
+        <button onclick="guardarRecordatorioPop()" style="width:100%;background:#1e293b;color:white;border:none;border-radius:8px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;">Guardar</button>
+    </div>
+
+    <!-- MODAL EDITAR PLANTILLA WA PAGOS PENDIENTES -->
+    <div id="modalPlantillaPagos" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:99998; align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:16px; padding:24px; width:520px; max-width:96vw; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:2px solid #25d366;padding-bottom:10px;">
+                <h3 style="font-size:14px;margin:0;font-weight:900;color:#16a34a;"><i class="fab fa-whatsapp" style="margin-right:6px;"></i>PLANTILLA MENSAJE WHATSAPP</h3>
+                <button onclick="document.getElementById('modalPlantillaPagos').style.display='none'" style="width:30px;height:30px;border-radius:50%;border:1px solid #e2e8f0;background:#f1f5f9;color:#64748b;font-size:16px;cursor:pointer;">&times;</button>
+            </div>
+            <p style="font-size:11px;color:#64748b;margin:0 0 10px;">Variables: <code>[NOMBRE]</code> <code>[EQUIPO]</code> <code>[DETALLE]</code> <code>[DEUDA]</code> → el importe sin €, escríbelo en el texto si quieres: "[DEUDA]€"</p>
+            <textarea id="txtPlantillaPagos" rows="8" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;"></textarea>
+            <div style="display:flex;gap:8px;margin-top:12px;justify-content:space-between;align-items:center;">
+                <button onclick="restaurarPlantillaPagos()" style="background:none;color:#94a3b8;border:none;font-size:11px;font-weight:700;cursor:pointer;padding:0;text-decoration:underline;">↺ Restaurar predeterminada</button>
+                <div style="display:flex;gap:8px;">
+                    <button onclick="document.getElementById('modalPlantillaPagos').style.display='none'" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:8px;padding:7px 16px;font-weight:800;cursor:pointer;">CANCELAR</button>
+                    <button onclick="guardarPlantillaPagos()" style="background:#16a34a;color:white;border:none;border-radius:8px;padding:7px 16px;font-weight:800;cursor:pointer;"><i class="fas fa-save"></i> GUARDAR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PREVIEW MENSAJES WA PAGOS PENDIENTES -->
+    <div id="modalWAPreviewPagos" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:99999; align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:16px; padding:24px; width:580px; max-width:96vw; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:2px solid #25d366;padding-bottom:10px;flex-shrink:0;">
+                <h3 style="font-size:14px;margin:0;font-weight:900;color:#16a34a;"><i class="fab fa-whatsapp" style="margin-right:6px;"></i>MENSAJES A ENVIAR</h3>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <button id="btnStepperWAPagos" onclick="stepperWAPagos()"
+                        style="background:#25d366;color:white;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:5px;">
+                        <i class="fab fa-whatsapp"></i>
+                        <span id="txtStepperWAPagos">ENVIAR TODOS</span>
+                    </button>
+                    <button onclick="document.getElementById('modalWAPreviewPagos').style.display='none';" style="width:30px;height:30px;border-radius:50%;border:1px solid #e2e8f0;background:#f1f5f9;color:#64748b;font-size:16px;cursor:pointer;">&times;</button>
+                </div>
+            </div>
+            <div id="listaWAPreviewPagos" style="overflow-y:auto;display:flex;flex-direction:column;gap:10px;"></div>
         </div>
     </div>
 
@@ -1800,6 +2151,7 @@
                     <option value="2026-11">Noviembre 2026</option>
                     <option value="2026-12">Diciembre 2026</option>
                 </select>
+                <button onclick="document.getElementById('modalRevisionObjetivos').style.display='none'" style="width:34px;height:34px;border-radius:50%;border:1px solid #e2e8f0;background:#f1f5f9;color:#64748b;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;">&times;</button>
             </div>
         </div>
 
@@ -1808,10 +2160,6 @@
                 <i class="fas fa-info-circle"></i> Haz clic en un objetivo para marcarlo como realizado ese día
             </p>
             <div id="containerRevisionDias"></div>
-        </div>
-
-        <div style="padding: 20px 30px; background: white; border-top: 1px solid #eee; display: flex; justify-content: flex-end;">
-            <button class="btn-fin" style="background: #f0f2f5; color: #666; border: none; border-radius: 15px; padding: 13px 30px; font-weight: 800; font-size: 12px;" onclick="document.getElementById('modalRevisionObjetivos').style.display='none'">CERRAR</button>
         </div>
     </div>
 </div>
@@ -1904,7 +2252,8 @@
                     <div style="display: flex; flex-wrap: wrap; gap: 10px;" id="containerTicksEquipos">
                         {% for eq in equipos %}
                         <label class="pill-checkbox">
-                            <input type="checkbox" class="check-eq-ejercicio" value="{{ eq }}" onchange="this.parentElement.classList.toggle('checked', this.checked); checkAndEnableExerciseCategories();"> 
+                            <input type="checkbox" class="check-eq-ejercicio" value="{{ eq }}" onchange="this.parentElement.classList.toggle('checked', this.checked); checkAndEnableExerciseCategories();">
+                            <span class="pill-check-box"></span>
                             <i class="fas fa-shield-halved" style="font-size: 10px;"></i> {{ eq }}
                         </label>
                         {% endfor %}
@@ -4766,31 +5115,49 @@
     function bdRenderTabla(anio, jugadores) {
         const wrap = document.getElementById('bdTablaWrap');
         if (!wrap) return;
-        if (!jugadores.length) { wrap.innerHTML = '<div style="font-size:11px; color:#94a3b8; padding:16px;">Sin jugadores para este año.</div>'; return; }
-        const rows = jugadores.map(p => {
-            const tempBadges = [...new Set(p.temporadas.map(t => t.temporada))]
-                .map(t => `<span style="font-size:9px; font-weight:900; padding:2px 7px; border-radius:4px; background:#f1f5f9; color:#475569; white-space:nowrap;">${t}</span>`).join(' ');
-            const equipos = [...new Set(p.temporadas.map(t => t.equipo).filter(Boolean))].join(', ');
+        if (!jugadores.length) { wrap.innerHTML = '<div style="font-size:11px; color:#94a3b8; padding:16px;">Sin jugadores para este año de nacimiento.</div>'; return; }
+
+        const th = 'padding:10px 12px; font-size:10px; font-weight:900; color:#64748b; text-align:left; text-transform:uppercase; letter-spacing:.4px; white-space:nowrap;';
+        const td = 'padding:10px 12px; font-size:12px; border-bottom:1px solid #f1f5f9;';
+
+        // Deduplicar por nombre completo por si acaso vienen duplicados del mismo año
+        const vistos = new Set();
+        const jugadoresUnicos = jugadores.filter(p => {
+            const key = [p.nombre, p.apellidos].filter(Boolean).join('|').toLowerCase();
+            if (vistos.has(key)) return false;
+            vistos.add(key);
+            return true;
+        });
+
+        const rows = jugadoresUnicos.map((p, i) => {
+            const bg = i % 2 === 0 ? '#fff' : '#f8fafc';
+            const temporadasUnicas = [...new Set(p.temporadas.map(t => t.temporada))];
+            const tempBadges = temporadasUnicas.map(t => {
+                const esCierre = p.temporadas.find(x => x.temporada === t)?.fecha_cierre;
+                const color = esCierre ? '#f1f5f9' : '#dbeafe';
+                const txtColor = esCierre ? '#475569' : '#1e40af';
+                return `<span style="font-size:9px;font-weight:900;padding:2px 8px;border-radius:5px;background:${color};color:${txtColor};white-space:nowrap;">${t}</span>`;
+            }).join(' ');
             const nombreCompleto = [p.nombre, p.apellidos].filter(Boolean).join(' ');
             const dataJson = btoa(encodeURIComponent(JSON.stringify(p))).replace(/\+/g,'_').replace(/\//g,'-');
-            return `<tr style="border-bottom:1px solid #f1f5f9;">
-                <td style="padding:10px 8px; font-size:12px; font-weight:700; color:#1e293b;">${nombreCompleto}</td>
-                <td style="padding:10px 8px; font-size:11px; color:#64748b;">${anio}</td>
-                <td style="padding:10px 8px; font-size:11px; color:#64748b;">${equipos}</td>
-                <td style="padding:10px 8px;">${tempBadges}</td>
-                <td style="padding:10px 8px;"><button onclick="bdAbrirFicha('${dataJson}')" style="padding:4px 12px; font-size:10px; font-weight:900; background:#1e293b; color:white; border:none; border-radius:5px; cursor:pointer; font-family:inherit;">VER FICHA</button></td>
+            return `<tr style="background:${bg};">
+                <td style="${td} font-weight:800; color:#1e293b;">${nombreCompleto || '<span style="color:#cbd5e1;">Sin nombre</span>'}</td>
+                <td style="${td}">${tempBadges}</td>
+                <td style="${td}"><button onclick="bdAbrirFicha('${dataJson}')" style="padding:4px 12px;font-size:10px;font-weight:900;background:#1e293b;color:white;border:none;border-radius:6px;cursor:pointer;font-family:inherit;">VER FICHA</button></td>
             </tr>`;
         }).join('');
+
         wrap.innerHTML = `
-            <div style="font-size:10px; color:#94a3b8; margin-bottom:8px;">${jugadores.length} jugador(es) con año ${anio}</div>
+            <div style="font-size:11px;color:#64748b;font-weight:700;margin-bottom:10px;">
+                <span style="background:#E31E24;color:white;padding:3px 10px;border-radius:6px;font-weight:900;margin-right:8px;">${anio}</span>
+                ${jugadoresUnicos.length} jugador(es)
+            </div>
             <div style="overflow-x:auto;">
-            <table style="width:100%; border-collapse:collapse; font-family:inherit;">
-                <thead><tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0;">
-                    <th style="padding:10px 8px; font-size:10px; font-weight:900; color:#64748b; text-align:left; text-transform:uppercase;">Jugador</th>
-                    <th style="padding:10px 8px; font-size:10px; font-weight:900; color:#64748b; text-align:left; text-transform:uppercase;">Año Nac.</th>
-                    <th style="padding:10px 8px; font-size:10px; font-weight:900; color:#64748b; text-align:left; text-transform:uppercase;">Equipo(s)</th>
-                    <th style="padding:10px 8px; font-size:10px; font-weight:900; color:#64748b; text-align:left; text-transform:uppercase;">Temporadas</th>
-                    <th style="padding:10px 8px; font-size:10px; font-weight:900; color:#64748b; text-align:left; text-transform:uppercase;">Ficha</th>
+            <table style="width:100%;border-collapse:collapse;font-family:inherit;">
+                <thead><tr style="background:#1e293b;color:white;">
+                    <th style="${th} color:white;">Jugador</th>
+                    <th style="${th} color:white;">Temporada(s)</th>
+                    <th style="${th} color:white;">Ficha</th>
                 </tr></thead>
                 <tbody>${rows}</tbody>
             </table></div>`;
@@ -5702,7 +6069,7 @@
     async function loadKpiPagos() {
         filterEquipoQuery = "";
         filterJugadorQuery = "";
-        
+
         const container = document.getElementById('kpiPagosContainer');
         container.innerHTML = '<div style="text-align:center; padding:24px; color:#999; font-size:14px;"><i class="fas fa-spinner fa-spin"></i> Buscando deudas...</div>';
         try {
@@ -5710,9 +6077,95 @@
             const data = await res.json();
             _pagosData = data;
 
+            // Poblar checkboxes de meses
+            const mesesGrid = document.getElementById('pagosMesesGrid');
+            if (mesesGrid && data.season_months && mesesGrid.children.length === 0) {
+                data.season_months.forEach(sm => {
+                    const lbl = document.createElement('label');
+                    lbl.style.cssText = 'cursor:pointer;display:flex;align-items:center;gap:3px;padding:5px 10px;border:2px solid #dbeafe;border-radius:8px;font-size:11px;font-weight:700;color:#1e40af;background:#f0f9ff;white-space:nowrap;flex-shrink:0;';
+                    lbl.className = 'pagos-mes-lbl';
+                    const chk = document.createElement('input');
+                    chk.type = 'checkbox'; chk.className = 'pagos-mes-chk'; chk.value = sm.month;
+                    chk.style.accentColor = '#1e40af';
+                    chk.addEventListener('change', aplicarFiltrosPagos);
+                    lbl.appendChild(chk);
+                    lbl.appendChild(document.createTextNode(' ' + sm.label));
+                    mesesGrid.appendChild(lbl);
+                });
+            }
+
+            // Poblar checkboxes de forma de pago
+            const formasGrid = document.getElementById('pagosFormasGrid');
+            if (formasGrid && formasGrid.children.length === 0) {
+                const formas = [...new Set((data.jugadores || []).map(j => j.forma_pago).filter(Boolean))];
+                formas.forEach(f => {
+                    const lbl = document.createElement('label');
+                    lbl.style.cssText = 'cursor:pointer;display:flex;align-items:center;gap:5px;padding:5px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:11px;font-weight:700;color:#334155;background:#f8fafc;white-space:nowrap;';
+                    const chk = document.createElement('input');
+                    chk.type = 'checkbox'; chk.className = 'pagos-forma-chk'; chk.value = f; chk.checked = true;
+                    chk.style.accentColor = '#334155';
+                    chk.addEventListener('change', aplicarFiltrosPagos);
+                    lbl.appendChild(chk);
+                    lbl.appendChild(document.createTextNode(' ' + f));
+                    formasGrid.appendChild(lbl);
+                });
+            }
+
             renderTablaPagos(data);
         } catch(e) {
             document.getElementById('kpiPagosContainer').innerHTML = '<div style="text-align:center; padding:20px; color:#dc3545; font-weight:800; font-size:14px;"><i class="fas fa-exclamation-triangle"></i> Error al cargar KPIs de pagos.</div>';
+        }
+    }
+
+    function aplicarFiltrosPagos() {
+        if (!_pagosData) return;
+
+        // Meses seleccionados (vacío = todos)
+        const mesesChk = [...document.querySelectorAll('.pagos-mes-chk:checked')].map(c => parseInt(c.value));
+        const totalMesesChk = document.querySelectorAll('.pagos-mes-chk').length;
+        const todosMeses = mesesChk.length === 0 || mesesChk.length === totalMesesChk;
+
+        const incluyeInscr = document.getElementById('pagosIncluyeInscr')?.checked !== false;
+        const incluyeRopa  = document.getElementById('pagosIncluyeRopa')?.checked !== false;
+
+        // Formas de pago seleccionadas (vacío = todas)
+        const formasChk = [...document.querySelectorAll('.pagos-forma-chk:checked')].map(c => c.value.toUpperCase());
+        const totalFormasChk = document.querySelectorAll('.pagos-forma-chk').length;
+        const todasFormas = formasChk.length === 0 || formasChk.length === totalFormasChk;
+
+        // Filtrar jugadores
+        const jugadoresFiltrados = (_pagosData.jugadores || []).map(jug => {
+            // Filtro por forma de pago
+            if (!todasFormas && !formasChk.includes((jug.forma_pago || '').toUpperCase())) return null;
+
+            const conceptosFiltrados = (jug.conceptos_deuda || []).filter(c => {
+                if (c.tipo === 'inscripcion') return incluyeInscr;
+                if (c.tipo === 'ropa') return incluyeRopa;
+                if (c.tipo === 'mensual') {
+                    if (!todosMeses && c.month_num !== undefined) return mesesChk.includes(c.month_num);
+                    return true;
+                }
+                return true;
+            });
+            if (!conceptosFiltrados.length) return null;
+            const totalFiltrado = conceptosFiltrados.reduce((s, c) => s + c.deuda, 0);
+            return { ...jug, conceptos_deuda: conceptosFiltrados, total_deuda: Math.round(totalFiltrado * 100) / 100 };
+        }).filter(Boolean);
+
+        // Filtros de equipo/jugador también
+        const filteredFinal = jugadoresFiltrados.filter(j => {
+            const matchEq = !filterEquipoQuery || j.equipo.toLowerCase() === filterEquipoQuery.toLowerCase();
+            const matchJug = !filterJugadorQuery || j.nombre.toLowerCase().includes(filterJugadorQuery.toLowerCase());
+            return matchEq && matchJug;
+        });
+
+        updateTbodyRows(filteredFinal);
+
+        const total = filteredFinal.reduce((s, j) => s + j.total_deuda, 0);
+        const badge = document.getElementById('pagos-total-badge');
+        if (badge) {
+            badge.style.display = filteredFinal.length > 0 ? '' : 'none';
+            badge.textContent = `${total.toFixed(2)}€ pendientes`;
         }
     }
 
@@ -5720,14 +6173,7 @@
     let filterJugadorQuery = "";
 
     function filtrarTablaPagos() {
-        if (!_pagosData) return;
-        const filteredJugadores = (_pagosData.jugadores || []).filter(j => {
-            const matchEqHeader = !filterEquipoQuery || j.equipo.toLowerCase() === filterEquipoQuery.toLowerCase();
-            const matchJugHeader = !filterJugadorQuery || j.primer_nombre.toLowerCase().includes(filterJugadorQuery.toLowerCase()) || j.nombre.toLowerCase().includes(filterJugadorQuery.toLowerCase());
-            return matchEqHeader && matchJugHeader;
-        });
-        
-        updateTbodyRows(filteredJugadores);
+        aplicarFiltrosPagos();
     }
 
     window.toggleHeaderFilter = function(event, type, el) {
@@ -5922,6 +6368,92 @@
         }
     }
 
+    // ── Popover recordatorio multi-fila ──
+    let _popRecEquipo = '', _popRecNombre = '';
+
+    function _crearFilaRec(fecha, comentario) {
+        const div = document.createElement('div');
+        div.style.cssText = 'display:grid;grid-template-columns:150px 1fr 28px;gap:6px;align-items:center;';
+        div.innerHTML = `
+            <input type="date" class="pop-rec-fecha" value="${fecha || ''}"
+                style="padding:6px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:inherit;width:100%;box-sizing:border-box;">
+            <input type="text" class="pop-rec-com" value="${comentario || ''}" placeholder="Nota..."
+                style="padding:6px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:inherit;width:100%;box-sizing:border-box;">
+            <button onclick="this.closest('div').remove()"
+                style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">&times;</button>`;
+        return div;
+    }
+
+    window.añadirFilaRec = function() {
+        document.getElementById('popRecFilas').appendChild(_crearFilaRec('', ''));
+    };
+
+    window.abrirRecordatorioPop = function(event, equipo, nombre, fecha, comentario) {
+        event.stopPropagation();
+        _popRecEquipo = equipo;
+        _popRecNombre = nombre;
+        const filas = document.getElementById('popRecFilas');
+        filas.innerHTML = '';
+
+        // Parsear entradas múltiples (separadas por " | ") o entrada simple
+        let entradas = [];
+        if (comentario && comentario.includes(' | ')) {
+            entradas = comentario.split(' | ').map(p => {
+                const idx = p.indexOf(': ');
+                return idx > 0 ? { fecha: p.substring(0, idx), com: p.substring(idx + 2) } : { fecha: '', com: p };
+            });
+        } else if (fecha || comentario) {
+            entradas = [{ fecha: fecha, com: comentario }];
+        }
+
+        if (entradas.length === 0) entradas = [{ fecha: '', com: '' }];
+        entradas.forEach(e => filas.appendChild(_crearFilaRec(e.fecha, e.com)));
+
+        const pop = document.getElementById('popoverRecordatorio');
+        pop.style.display = 'block';
+        const rect = event.currentTarget.getBoundingClientRect();
+        let top = rect.bottom + 8, left = rect.left;
+        if (left + 450 > window.innerWidth) left = window.innerWidth - 458;
+        if (top + 320 > window.innerHeight) top = rect.top - 328;
+        pop.style.top = top + 'px';
+        pop.style.left = left + 'px';
+    };
+
+    window.cerrarRecordatorioPop = function() {
+        document.getElementById('popoverRecordatorio').style.display = 'none';
+    };
+
+    window.guardarRecordatorioPop = async function() {
+        const fechaInputs = [...document.querySelectorAll('#popRecFilas .pop-rec-fecha')];
+        const comInputs   = [...document.querySelectorAll('#popRecFilas .pop-rec-com')];
+        const entradas = fechaInputs.map((f, i) => ({ fecha: f.value, com: comInputs[i].value.trim() }))
+                                    .filter(e => e.fecha || e.com);
+        if (!entradas.length) {
+            await guardarRecordatorioNuevo(_popRecEquipo, _popRecNombre, '', '');
+        } else if (entradas.length === 1) {
+            await guardarRecordatorioNuevo(_popRecEquipo, _popRecNombre, entradas[0].fecha, entradas[0].com);
+        } else {
+            // Múltiples: fecha = primera, comentario = "fecha1: com1 | fecha2: com2"
+            const joined = entradas.map(e => `${formatDateForSheet(e.fecha)}: ${e.com}`).join(' | ');
+            await guardarRecordatorioNuevo(_popRecEquipo, _popRecNombre, entradas[0].fecha, joined);
+        }
+        cerrarRecordatorioPop();
+        loadKpiPagos();
+    };
+
+    window.logRecordatorioSentNew = async function(equipo, nombre) {
+        const today = new Date().toISOString().split('T')[0];
+        await guardarRecordatorioNuevo(equipo, nombre, today, 'WA enviado');
+        loadKpiPagos();
+    };
+
+    document.addEventListener('click', function(e) {
+        const pop = document.getElementById('popoverRecordatorio');
+        if (pop && pop.style.display !== 'none' && !pop.contains(e.target)) {
+            pop.style.display = 'none';
+        }
+    });
+
     function renderTablaPagos(data) {
         const container = document.getElementById('kpiPagosContainer');
         const jugadores = data.jugadores || [];
@@ -5937,15 +6469,12 @@
           <table style="width:100%; border-collapse:collapse; font-size:14px; min-width:800px;">
             <thead>
               <tr style="background:#1e293b; color:white; text-transform:uppercase; font-size:12px; letter-spacing:.5px;">
-                <th style="padding:12px 10px; text-align:left; white-space:nowrap; font-weight:900; position:sticky; left:0; background:#1e293b; z-index:3; width:90px;">
-                    <div style="display:flex; align-items:center; gap:6px;">
+                <th colspan="3" style="padding:10px 14px; text-align:left; white-space:nowrap; font-weight:900; position:sticky; left:0; background:#1e293b; z-index:3; border-right:2px solid #334155; width:260px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <input type="checkbox" id="chkPagosAll" onchange="toggleTodosPagos(this)" class="chk-moderno">
                         <span>Equipo</span>
                         <i class="fas fa-filter" style="cursor:pointer; color:#94a3b8; transition: 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='#94a3b8'" onclick="toggleHeaderFilter(event, 'equipo', this)"></i>
-                    </div>
-                </th>
-                <th style="padding:12px 10px; text-align:left; white-space:nowrap; font-weight:900; position:sticky; left:90px; background:#1e293b; z-index:3; border-right:2px solid #334155; width:180px;">
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <span>Jugador</span>
+                        <span style="margin-left:6px;">Jugador</span>
                         <i class="fas fa-search" style="cursor:pointer; color:#94a3b8; transition: 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='#94a3b8'" onclick="toggleHeaderFilter(event, 'jugador', this)"></i>
                     </div>
                 </th>
@@ -5963,66 +6492,83 @@
         filtrarTablaPagos();
     }
 
+    window._pagosDataActual = [];
+
     function updateTbodyRows(jugadoresFiltrados) {
         const tbody = document.getElementById('kpiPagosTbody');
         if (!tbody) return;
-        
+
+        window._pagosDataActual = jugadoresFiltrados;
+
+        // Reset checkbox all
+        const chkAll = document.getElementById('chkPagosAll');
+        if (chkAll) chkAll.checked = false;
+        actualizarBtnWAPagos();
+
         let html = '';
         let prevEquipo = null;
         let totalDeuda = 0;
-        
+
         jugadoresFiltrados.forEach((jug, idx) => {
             const esNuevoEquipo = jug.equipo !== prevEquipo;
             if (esNuevoEquipo) {
                 prevEquipo = jug.equipo;
                 html += `
               <tr class="fila-separador-equipo" data-equipo="${escapeHtml(jug.equipo)}" style="background:#f1f5f9;">
-                <td colspan="6" style="padding:12px 14px; font-weight:900; font-size:16px; color:#000000; text-transform:uppercase; letter-spacing:.5px; border-top:2px solid #cbd5e1;">
+                <td colspan="7" style="padding:12px 14px; font-weight:900; font-size:16px; color:#000000; text-transform:uppercase; letter-spacing:.5px; border-top:2px solid #cbd5e1;">
                   ${escapeHtml(jug.equipo)}
                 </td>
               </tr>`;
             }
-            
+
             const rowBg = idx % 2 === 0 ? '#ffffff' : '#fafafa';
             html += `<tr class="fila-deuda-jugador" data-equipo="${escapeHtml(jug.equipo)}" data-nombre="${escapeHtml(jug.nombre)}" style="background:${rowBg}; border-bottom:1px solid #f1f5f9;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='${rowBg}'">`;
-            html += `<td style="padding:12px 10px; color:#000000; font-size:13px; position:sticky; left:0; background:${rowBg}; z-index:1;"></td>`;
-            html += `<td style="padding:12px 10px; font-weight:900; color:#000000; font-size:17px; white-space:nowrap; position:sticky; left:90px; background:${rowBg}; z-index:1; border-right:2px solid #cbd5e1;">${escapeHtml(jug.primer_nombre)}</td>`;
-            
-            // Detalle Deuda (badges solo texto en negro y más grande, estilo fino)
+            html += `<td colspan="3" style="padding:10px 14px; position:sticky; left:0; background:${rowBg}; z-index:1; border-right:2px solid #cbd5e1; white-space:nowrap; min-width:220px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <input type="checkbox" class="chk-pago-pendiente chk-moderno" data-idx="${idx}" onchange="actualizarBtnWAPagos()">
+                        <span style="font-weight:900; color:#000; font-size:16px;">${escapeHtml(jug.primer_nombre)}</span>
+                    </div>
+                    <div style="width:30px; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+                        ${jug.telefono ? `<a href="${getWhatsAppLink(jug.telefono, jug.nombre, jug.detalle_text)}" target="_blank" onclick="logRecordatorioSentNew('${escapeHtml(jug.equipo)}','${escapeHtml(jug.primer_nombre)}')" style="background:#25D366;color:white;width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:14px;text-decoration:none;" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>` : ''}
+                    </div>
+                </div>
+            </td>`;
+
             const badges = (jug.conceptos_deuda || []).map(c => {
                 return `<span style="display:inline-block; color:#000000; font-weight:600; font-size:16px; margin:2px 14px 2px 0; white-space:nowrap;">${escapeHtml(c.label)}: ${c.deuda}€</span>`;
             }).join('');
-            
+
             html += `<td style="padding:12px 10px; text-align:left; line-height:1.6;">${badges}</td>`;
             html += `<td style="padding:12px 10px; text-align:center; font-weight:900; font-size:18px; color:white; background:#dc3545; white-space:nowrap; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);">${jug.total_deuda}€</td>`;
             html += `<td style="padding:12px 10px; text-align:center;"><span style="background:#f1f5f9; padding:6px 10px; border-radius:6px; font-size:14px; font-weight:900; color:#000000; white-space:nowrap;">${escapeHtml((jug.tipo_pago || 'Efectivo') + ' ; ' + (jug.forma_pago || 'BIANIAL'))}</span></td>`;
-            
-            // Recordatorio (inputs y botones más grandes)
-            html += `<td style="padding:12px 10px; text-align:center;">
-               <div style="display:flex; align-items:center; gap:8px; justify-content:center; flex-wrap:nowrap;">
-                 <input type="date" class="input-coord input-rec-fecha" value="${formatDateForInput(jug.recordatorio_fecha)}" style="max-width:125px; padding:6px; font-size:13px; height:34px; font-weight:700;">
-                 <input type="text" placeholder="Comentario..." class="input-coord input-rec-comentario" value="${escapeHtml(jug.recordatorio_comentario)}" style="width:160px; padding:6px; font-size:13px; height:34px; border:1px solid #cbd5e1; border-radius:4px; font-weight:700;">
-                 <button class="btn-fin" onclick="guardarFilaRecordatorio('${escapeHtml(jug.equipo)}', '${escapeHtml(jug.primer_nombre)}', this)" style="padding:6px 12px; font-size:12px; height:34px; background:#1e293b; color:white; border-radius:4px; font-weight:800; border:none; cursor:pointer; white-space:nowrap;">AÑADIR</button>
-                 ${jug.telefono ? `<a href="${getWhatsAppLink(jug.telefono, jug.nombre, jug.detalle_text)}" target="_blank" onclick="logRecordatorioSent('${escapeHtml(jug.equipo)}', '${escapeHtml(jug.primer_nombre)}', this)" style="background:#25D366; color:white; width:34px; height:34px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:16px; text-decoration:none; box-shadow:0 2px 5px rgba(37,211,102,0.3); transition:0.2s; cursor:pointer;" title="Enviar recordatorio WhatsApp"><i class="fab fa-whatsapp"></i></a>` : ''}
-               </div>
-             </td>`;
-            
+
+            const _tieneRec = jug.recordatorio_fecha && jug.recordatorio_fecha.trim();
+            const _recFechaIn = _tieneRec ? formatDateForInput(jug.recordatorio_fecha) : '';
+            const _recComEsc = (jug.recordatorio_comentario || '').replace(/'/g, "\\'");
+            const _recBtn = _tieneRec
+                ? `<button onclick="abrirRecordatorioPop(event,'${escapeHtml(jug.equipo)}','${escapeHtml(jug.primer_nombre)}','${_recFechaIn}','${_recComEsc}')"
+                    style="background:#dbeafe;color:#1d4ed8;border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">
+                    <i class="fas fa-calendar-check"></i> ${escapeHtml(jug.recordatorio_fecha)}
+                   </button>`
+                : `<button onclick="abrirRecordatorioPop(event,'${escapeHtml(jug.equipo)}','${escapeHtml(jug.primer_nombre)}','','')"
+                    style="background:#f8fafc;color:#94a3b8;border:1.5px dashed #cbd5e1;border-radius:8px;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">+</button>`;
+            html += `<td style="padding:8px 10px; text-align:center;">${_recBtn}</td>`;
+
             html += '</tr>';
             totalDeuda += jug.total_deuda;
         });
-        
-        // Sumatorio total
+
         html += `
         <tr style="background:#f8fafc; font-weight:900; border-top:2px solid #cbd5e1; border-bottom:2px solid #cbd5e1; font-size:16px;">
-          <td colspan="2" style="padding:14px 12px; text-align:right; color:#000000; text-transform:uppercase; font-size:13px; letter-spacing:.5px; font-weight:900;">SUMATORIO DEUDA:</td>
+          <td colspan="3" style="padding:14px 12px; text-align:right; color:#000000; text-transform:uppercase; font-size:13px; letter-spacing:.5px; font-weight:900;">SUMATORIO DEUDA:</td>
           <td style="padding:14px 12px;"></td>
           <td style="padding:14px 10px; text-align:center; font-size:18px; background:#dc3545; color:white; font-weight:900; white-space:nowrap;">${totalDeuda.toFixed(2)}€</td>
           <td colspan="2"></td>
         </tr>`;
-        
+
         tbody.innerHTML = html;
-        
-        // Update the badge too
+
         const badge = document.getElementById('pagos-total-badge');
         if (badge) {
             if (totalDeuda > 0) {
@@ -6032,6 +6578,145 @@
                 badge.style.display = 'none';
             }
         }
+    }
+
+    function toggleTodosPagos(chk) {
+        document.querySelectorAll('.chk-pago-pendiente').forEach(c => c.checked = chk.checked);
+        actualizarBtnWAPagos();
+    }
+
+    function actualizarBtnWAPagos() {
+        const n = document.querySelectorAll('.chk-pago-pendiente:checked').length;
+        const btn = document.getElementById('btnWAPagosPendientes');
+        const txt = document.getElementById('txtBtnWAPagos');
+        if (!btn) return;
+        if (n > 0) {
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            if (txt) txt.textContent = `ENVIAR (${n})`;
+        } else {
+            btn.style.opacity = '0.65';
+            btn.style.cursor = 'default';
+            if (txt) txt.textContent = 'WHATSAPP';
+        }
+    }
+
+    function _getPlantillaPagos() {
+        const raw = localStorage.getItem('pagosWAPlantilla');
+        if (raw && raw.includes('[NOMBRE]')) return raw;
+        if (raw) localStorage.removeItem('pagosWAPlantilla'); // auto-limpiar si no tiene placeholders
+        return _PLANTILLA_PAGOS_DEFAULT;
+    }
+
+    function enviarWAPagosSeleccionados() {
+        const seleccionados = [...document.querySelectorAll('.chk-pago-pendiente:checked')];
+        if (!seleccionados.length) return;
+
+        const plantilla = _getPlantillaPagos();
+
+        const mensajes = seleccionados.map(chk => {
+            const jug = window._pagosDataActual[parseInt(chk.dataset.idx)];
+            if (!jug) return null;
+            const detalle = (jug.conceptos_deuda || []).map(c => `${c.label}: ${c.deuda}€`).join(', ');
+            return {
+                nombre: jug.primer_nombre,
+                equipo: jug.equipo,
+                telefono: jug.telefono || '',
+                msg: plantilla
+                    .replace(/\[NOMBRE\]/g, jug.primer_nombre)
+                    .replace(/\[EQUIPO\]/g, jug.equipo)
+                    .replace(/\[DETALLE\]/g, detalle)
+                    .replace(/\[DEUDA\]/g, jug.total_deuda)
+            };
+        }).filter(Boolean);
+
+        const contenedor = document.getElementById('listaWAPreviewPagos');
+        contenedor.innerHTML = mensajes.map((m, i) => `
+            <div style="border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <span style="font-size:12px;font-weight:900;color:#1e293b;">${escapeHtml(m.equipo)} — ${escapeHtml(m.nombre)}</span>
+                    <span style="font-size:11px;font-weight:700;color:${m.telefono ? '#25d366' : '#94a3b8'};display:flex;align-items:center;gap:4px;">
+                        <i class="fas fa-phone" style="font-size:10px;"></i>
+                        ${m.telefono ? escapeHtml(m.telefono) : 'Sin teléfono'}
+                    </span>
+                </div>
+                <pre style="font-size:12px;color:#475569;white-space:pre-wrap;margin:0 0 8px;font-family:inherit;">${escapeHtml(m.msg)}</pre>
+                ${m.telefono
+                    ? `<a href="https://wa.me/${m.telefono.replace(/\D/g,'')}?text=${encodeURIComponent(m.msg)}" target="_blank"
+                        style="background:#25d366;color:white;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:5px;">
+                        <i class="fab fa-whatsapp"></i> Enviar a ${escapeHtml(m.nombre)}
+                       </a>`
+                    : `<button onclick="window.open('https://wa.me/?text='+encodeURIComponent(window._waPreviewPagos[${i}].msg),'_blank')"
+                        style="background:#25d366;color:white;border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;">
+                        <i class="fab fa-whatsapp"></i> Abrir en WhatsApp
+                       </button>`}
+            </div>`).join('');
+        window._waPreviewPagos = mensajes;
+        document.getElementById('modalWAPreviewPagos').style.display = 'flex';
+    }
+
+    function stepperWAPagos() {
+        const msgs = window._waPreviewPagos || [];
+        if (!msgs.length) return;
+
+        const txt = document.getElementById('txtStepperWAPagos');
+        const btn = document.getElementById('btnStepperWAPagos');
+        const items = document.querySelectorAll('#listaWAPreviewPagos > div');
+
+        const bloqueados = [];
+        msgs.forEach((m, i) => {
+            const url = m.telefono
+                ? `https://wa.me/${m.telefono.replace(/\D/g,'')}?text=${encodeURIComponent(m.msg)}`
+                : `https://wa.me/?text=${encodeURIComponent(m.msg)}`;
+            const win = window.open(url, '_blank');
+            if (!win) bloqueados.push(i);
+        });
+
+        // Eliminar banner previo si existe
+        const bannerViejo = document.getElementById('waBannerBloqueadoPagos');
+        if (bannerViejo) bannerViejo.remove();
+
+        const contenedor = document.getElementById('listaWAPreviewPagos');
+
+        if (bloqueados.length > 0) {
+            const banner = document.createElement('div');
+            banner.id = 'waBannerBloqueadoPagos';
+            banner.style.cssText = 'background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:10px 12px;font-size:11px;color:#92400e;margin-bottom:8px;line-height:1.5;';
+            banner.innerHTML = `<i class="fas fa-lock" style="margin-right:5px;"></i><strong>El navegador bloqueó ${bloqueados.length} ventana(s).</strong><br>Haz clic en <strong>"Permitir popups"</strong> en la barra del navegador y vuelve a pulsar ENVIAR TODOS. O usa los botones <strong>"Enviar a..."</strong> de cada tarjeta.`;
+            contenedor.parentNode.insertBefore(banner, contenedor);
+            if (txt) txt.textContent = `${msgs.length - bloqueados.length}/${msgs.length} abiertos`;
+            if (btn) btn.style.background = '#f59e0b';
+            setTimeout(() => {
+                if (btn) btn.style.background = '#25d366';
+                if (txt) txt.textContent = 'ENVIAR TODOS';
+            }, 5000);
+        } else {
+            items.forEach(el => { el.style.opacity = '0.45'; el.style.borderColor = '#25d366'; });
+            if (txt) txt.textContent = '✓ TODOS ENVIADOS';
+            if (btn) btn.style.background = '#16a34a';
+            setTimeout(() => {
+                if (txt) txt.textContent = 'ENVIAR TODOS';
+                if (btn) btn.style.background = '#25d366';
+                items.forEach(el => { el.style.opacity = '1'; el.style.borderColor = '#e2e8f0'; });
+            }, 3000);
+        }
+    }
+
+    const _PLANTILLA_PAGOS_DEFAULT = 'Hola [NOMBRE], te recordamos que tienes pagos pendientes con el club.\n\nConcepto: [DETALLE]\nTotal pendiente: [DEUDA]€\n\nPor favor, regulariza tu situación lo antes posible. Gracias.';
+
+    function abrirEditarPlantillaPagos() {
+        document.getElementById('txtPlantillaPagos').value = _getPlantillaPagos();
+        document.getElementById('modalPlantillaPagos').style.display = 'flex';
+    }
+
+    function restaurarPlantillaPagos() {
+        document.getElementById('txtPlantillaPagos').value = _PLANTILLA_PAGOS_DEFAULT;
+    }
+
+    function guardarPlantillaPagos() {
+        const txt = document.getElementById('txtPlantillaPagos').value.trim();
+        if (txt) localStorage.setItem('pagosWAPlantilla', txt);
+        document.getElementById('modalPlantillaPagos').style.display = 'none';
     }
 
     function escapeHtml(t) {
@@ -6154,52 +6839,107 @@
         renderMapaJugadores(kpiEstadisticasCache);
     }
 
+    function _miniTablaEquipo(titulo, jugadores, totalGeneral) {
+        const th = 'padding:6px 10px;border:1px solid #e2e8f0;font-size:10px;font-weight:900;text-align:left;white-space:nowrap;';
+        const td = 'padding:6px 10px;border:1px solid #e2e8f0;font-size:11px;';
+        const tdC = td + 'text-align:center;font-weight:700;';
+
+        // Agrupar por colegio
+        const pc = {};
+        jugadores.forEach(j => {
+            const c = j.colegio || 'Sin dato';
+            if (!pc[c]) pc[c] = [];
+            pc[c].push(j.nombre);
+        });
+        const total = jugadores.length || 1;
+        const colegios = Object.keys(pc).sort((a, b) => pc[b].length - pc[a].length);
+
+        let rows = colegios.map((c, i) => {
+            const n = pc[c].length;
+            const pct = ((n / total) * 100).toFixed(1);
+            const pctGen = ((n / totalGeneral) * 100).toFixed(1);
+            const bg = i % 2 === 0 ? '#fff' : '#f8fafc';
+            return `<tr style="background:${bg};">
+                <td style="${td} font-weight:700;">${c}</td>
+                <td style="${tdC}">${n}</td>
+                <td style="${tdC} color:#3b82f6;">${pct}%</td>
+                <td style="${td} color:#64748b; font-size:10px; white-space:normal; max-width:200px;">${pc[c].join(', ')}</td>
+            </tr>`;
+        }).join('');
+
+        rows += `<tr style="background:#f1f5f9;font-weight:900;border-top:2px solid #cbd5e1;">
+            <td style="${td}">TOTAL</td>
+            <td style="${tdC}">${total}</td>
+            <td style="${tdC}">100%</td>
+            <td style="${td}"></td>
+        </tr>`;
+
+        return `<div style="flex:1;min-width:280px;">
+            <div style="background:#1e293b;color:white;padding:7px 12px;border-radius:8px 8px 0 0;font-size:11px;font-weight:900;letter-spacing:.4px;">${titulo}</div>
+            <table style="width:100%;border-collapse:collapse;">
+                <thead><tr style="background:#f1f5f9;">
+                    <th style="${th}">COLEGIO</th>
+                    <th style="${th} text-align:center;">Nº</th>
+                    <th style="${th} text-align:center;">%</th>
+                    <th style="${th}">JUGADORES</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>`;
+    }
+
     function renderTablaColegiosExcel(equipos) {
-        const porColegio = {};
+        const totalGeneral = kpiEstadisticasCache.length || 1;
+
+        // ── Tabla resumen general ──
+        const pc = {};
         kpiEstadisticasCache.forEach(j => {
             const c = j.colegio || 'Sin dato';
-            if (!porColegio[c]) porColegio[c] = { total: 0, porEquipo: {} };
-            porColegio[c].total++;
-            if (!porColegio[c].porEquipo[j.equipo]) porColegio[c].porEquipo[j.equipo] = [];
-            porColegio[c].porEquipo[j.equipo].push(j.nombre);
+            if (!pc[c]) pc[c] = 0;
+            pc[c]++;
         });
+        const th = 'padding:7px 12px;border:1px solid #e2e8f0;font-size:10px;font-weight:900;text-align:left;white-space:nowrap;';
+        const td = 'padding:7px 12px;border:1px solid #e2e8f0;font-size:12px;';
+        const colegios = Object.keys(pc).sort((a, b) => pc[b] - pc[a]);
 
-        const totalGeneral = kpiEstadisticasCache.length || 1;
-        const colegiosOrdenados = Object.keys(porColegio).sort((a, b) => porColegio[b].total - porColegio[a].total);
-        const celda = 'padding:8px 12px; border:1px solid #e2e8f0; text-align:left; white-space:nowrap;';
-
-        let html = `<thead><tr style="background:#1e293b; color:white;">
-            <th style="${celda}">COLEGIO</th>
-            <th style="${celda} text-align:center;">TOTAL</th>
-            <th style="${celda} text-align:center;">%</th>
-            ${equipos.map(eq => `<th style="${celda} text-align:center;">${eq}</th>`).join('')}
-        </tr></thead><tbody>`;
-
-        colegiosOrdenados.forEach((colegio, idx) => {
-            const datos = porColegio[colegio];
-            const pct = ((datos.total / totalGeneral) * 100).toFixed(1);
-            const bg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
-            html += `<tr style="background:${bg};">
-                <td style="${celda} font-weight:800;">${colegio}</td>
-                <td style="${celda} text-align:center; font-weight:800;">${datos.total}</td>
-                <td style="${celda} text-align:center; color:#64748b;">${pct}%</td>
-                ${equipos.map(eq => {
-                    const jugs = datos.porEquipo[eq];
-                    return `<td style="${celda}">${jugs ? jugs.join(', ') : '<span style="color:#cbd5e1;">-</span>'}</td>`;
-                }).join('')}
+        let resumenRows = colegios.map((c, i) => {
+            const n = pc[c];
+            const pct = ((n / totalGeneral) * 100).toFixed(1);
+            const bg = i % 2 === 0 ? '#fff' : '#f8fafc';
+            return `<tr style="background:${bg};">
+                <td style="${td} font-weight:800;">${c}</td>
+                <td style="${td} text-align:center; font-weight:900;">${n}</td>
+                <td style="${td} text-align:center; color:#3b82f6; font-weight:700;">${pct}%</td>
             </tr>`;
-        });
-
-        const totalesPorEquipo = equipos.map(eq => kpiEstadisticasCache.filter(j => j.equipo === eq).length);
-        html += `<tr style="background:#f1f5f9; font-weight:900;">
-            <td style="${celda}">TOTAL</td>
-            <td style="${celda} text-align:center;">${totalGeneral}</td>
-            <td style="${celda} text-align:center;">100%</td>
-            ${totalesPorEquipo.map(n => `<td style="${celda} text-align:center;">${n}</td>`).join('')}
+        }).join('');
+        resumenRows += `<tr style="background:#f1f5f9;font-weight:900;border-top:2px solid #cbd5e1;">
+            <td style="${td}">TOTAL</td>
+            <td style="${td} text-align:center;">${totalGeneral}</td>
+            <td style="${td} text-align:center;">100%</td>
         </tr>`;
-        html += '</tbody>';
 
-        document.getElementById('tablaColegiosExcel').innerHTML = html;
+        const resumenHtml = `<div style="margin-bottom:20px;">
+            <div style="font-size:11px;font-weight:900;color:#475569;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Resumen general</div>
+            <table style="border-collapse:collapse;min-width:260px;">
+                <thead><tr style="background:#1e293b;color:white;">
+                    <th style="${th}">COLEGIO</th>
+                    <th style="${th} text-align:center;">Nº JUGADORES</th>
+                    <th style="${th} text-align:center;">%</th>
+                </tr></thead>
+                <tbody>${resumenRows}</tbody>
+            </table>
+        </div>`;
+
+        // ── Mini-tablas por equipo ──
+        const equiposHtml = `<div style="font-size:11px;font-weight:900;color:#475569;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Por equipo</div>
+            <div style="display:flex;flex-wrap:wrap;gap:16px;">
+                ${equipos.sort().map(eq => {
+                    const jugs = kpiEstadisticasCache.filter(j => j.equipo === eq);
+                    return _miniTablaEquipo(eq, jugs, totalGeneral);
+                }).join('')}
+            </div>`;
+
+        document.getElementById('tablaColegiosExcel').innerHTML = resumenHtml + equiposHtml;
     }
 
     function getGeocodeCache() {
@@ -7072,40 +7812,79 @@
             var cb = ordenCat[b.categoria] !== undefined ? ordenCat[b.categoria] : 99;
             return ca !== cb ? ca - cb : a.letra.localeCompare(b.letra);
         });
-        var html = '<div style="overflow-x:auto;"><table style="border-collapse:separate;border-spacing:0 1px;font-size:10px;font-family:inherit;"><thead><tr>';
-        html += '<th style="padding:4px 12px;background:#1e293b;color:white;text-align:left;white-space:nowrap;min-width:130px;position:sticky;left:0;z-index:2;border-radius:6px 0 0 6px;">Equipo</th>';
-        for (var j = 1; j <= maxJornada; j++) html += '<th style="padding:4px 4px;background:#1e293b;color:#94a3b8;font-size:8px;text-align:center;min-width:28px;">J.'+j+'</th>';
-        html += '<th style="padding:4px 8px;background:#1e293b;color:#fff;font-size:12px;text-align:center;min-width:55px;">% Cump.</th>';
-        html += '<th style="padding:4px 8px;background:#1e293b;color:#fff;font-size:12px;text-align:center;min-width:70px;border-radius:0 6px 6px 0;">Detalle</th>';
-        html += '</tr></thead><tbody>';
+        // Recopilar datos por equipo
+        var _eqData = [];
         equipos.forEach(function(eq) {
-            html += '<tr style="height:24px;">';
-            html += '<td style="padding:3px 12px;font-weight:900;font-size:10px;color:#1e293b;white-space:nowrap;background:#f8fafc;position:sticky;left:0;z-index:1;border-right:2px solid #e2e8f0;border-radius:6px 0 0 6px;">'+eq.clave+'</td>';
-            var verde = 0, rojo = 0;
+            var verde = 0, rojo = 0, jornadasArr = [], maxStreak = 0, curStreak = 0;
             for (var j = 1; j <= maxJornada; j++) {
                 var p = eq.jornadas[j];
-                var celda = '<span style="color:#e2e8f0;font-size:11px;">·</span>';
-                var title = 'J.'+j;
                 if (p) {
-                    title = (p.jornada||'J.'+j)+' vs '+p.rival+' — '+(p.resultado||'sin jugar')+(p.objetivo?' | Obj: '+p.objetivo:'');
+                    jornadasArr.push({jornada:j, rival:p.rival||'', resultado:p.resultado||'', objetivo:p.objetivo||'', cumplido:p.cumplido});
                     if (p.estado) {
-                        if (p.cumplido === true)  { verde++; celda = '<i class="fas fa-circle-check" style="color:#16a34a;font-size:13px;" title="'+title.replace(/"/g,'&quot;')+'"></i>'; }
-                        else if (p.cumplido === false) { rojo++; celda = '<i class="fas fa-circle-xmark" style="color:#dc2626;font-size:13px;" title="'+title.replace(/"/g,'&quot;')+'"></i>'; }
-                        else { celda = '<i class="fas fa-circle-minus" style="color:#94a3b8;font-size:13px;" title="'+title.replace(/"/g,'&quot;')+'"></i>'; }
+                        if (p.cumplido === true)  { verde++; curStreak = 0; }
+                        else if (p.cumplido === false) { rojo++; curStreak++; if (curStreak > maxStreak) maxStreak = curStreak; }
                     }
                 }
-                html += '<td style="padding:1px 2px;text-align:center;vertical-align:middle;">'+celda+'</td>';
             }
-            var totalEq = verde + rojo;
-            var pctEq = totalEq > 0 ? Math.round((verde / totalEq) * 100) : 0;
-            var colorEq = pctEq >= 70 ? '#16a34a' : (pctEq >= 40 ? '#d97706' : '#dc2626');
-            html += '<td style="padding:2px 6px;text-align:center;font-weight:900;font-size:13px;color:'+(totalEq>0?colorEq:'#cbd5e1')+';background:#f8fafc;">'+(totalEq>0?pctEq+'%':'–')+'</td>';
-            html += '<td style="padding:2px 6px;text-align:center;font-size:12px;white-space:nowrap;background:#f8fafc;border-radius:0 6px 6px 0;"><span style="color:#16a34a;font-weight:800;">✓'+verde+'</span> <span style="color:#dc2626;font-weight:800;">✗'+rojo+'</span></td>';
-            html += '</tr>';
+            var total = verde + rojo;
+            var pct = total > 0 ? Math.round((verde / total) * 100) : 0;
+            _eqData.push({clave: eq.clave, verde: verde, rojo: rojo, pct: pct, maxStreak: maxStreak, jornadas: jornadasArr, jornadas_obj: eq.jornadas});
         });
-        html += '</tbody></table></div>';
-        html += '<div style="margin-top:10px;display:flex;gap:18px;font-size:10px;color:#64748b;"><span><i class="fas fa-circle-check" style="color:#16a34a;margin-right:4px;"></i>Objetivo cumplido</span><span><i class="fas fa-circle-xmark" style="color:#dc2626;margin-right:4px;"></i>No cumplido</span><span><i class="fas fa-circle-minus" style="color:#94a3b8;margin-right:4px;"></i>Sin objetivo definido</span><span style="color:#e2e8f0;">·</span><span style="color:#94a3b8;">Sin jugar</span></div>';
-        el.innerHTML = html;
+
+        // Tabla (sin columnas Aviso/IA)
+        var tableHtml = '<div style="overflow-x:auto;"><table style="border-collapse:separate;border-spacing:0 1px;font-size:10px;font-family:inherit;"><thead><tr>';
+        tableHtml += '<th style="padding:4px 12px;background:#1e293b;color:white;text-align:left;white-space:nowrap;min-width:130px;position:sticky;left:0;z-index:2;border-radius:6px 0 0 6px;">Equipo</th>';
+        for (var j = 1; j <= maxJornada; j++) tableHtml += '<th style="padding:4px 4px;background:#1e293b;color:#94a3b8;font-size:8px;text-align:center;min-width:28px;">J.'+j+'</th>';
+        tableHtml += '<th style="padding:4px 8px;background:#1e293b;color:#fff;font-size:12px;text-align:center;min-width:55px;">% Cump.</th>';
+        tableHtml += '<th style="padding:4px 8px;background:#1e293b;color:#fff;font-size:12px;text-align:center;min-width:70px;border-radius:0 6px 6px 0;">Detalle</th>';
+        tableHtml += '</tr></thead><tbody>';
+        _eqData.forEach(function(d) {
+            tableHtml += '<tr style="height:24px;">';
+            tableHtml += '<td style="padding:3px 12px;font-weight:900;font-size:10px;color:#1e293b;white-space:nowrap;background:#f8fafc;position:sticky;left:0;z-index:1;border-right:2px solid #e2e8f0;border-radius:6px 0 0 6px;">'+d.clave+'</td>';
+            for (var j = 1; j <= maxJornada; j++) {
+                var p = d.jornadas_obj[j];
+                var celda = '<span style="color:#e2e8f0;font-size:11px;">·</span>';
+                if (p) {
+                    var title = (p.jornada||'J.'+j)+' vs '+p.rival+' — '+(p.resultado||'sin jugar')+(p.objetivo?' | Obj: '+p.objetivo:'');
+                    if (p.estado) {
+                        if (p.cumplido === true)  celda = '<i class="fas fa-circle-check" style="color:#16a34a;font-size:13px;" title="'+title.replace(/"/g,'&quot;')+'"></i>';
+                        else if (p.cumplido === false) celda = '<i class="fas fa-circle-xmark" style="color:#dc2626;font-size:13px;" title="'+title.replace(/"/g,'&quot;')+'"></i>';
+                        else celda = '<i class="fas fa-circle-minus" style="color:#94a3b8;font-size:13px;" title="'+title.replace(/"/g,'&quot;')+'"></i>';
+                    }
+                }
+                tableHtml += '<td style="padding:1px 2px;text-align:center;vertical-align:middle;">'+celda+'</td>';
+            }
+            var colorEq = d.pct >= 70 ? '#16a34a' : (d.pct >= 40 ? '#d97706' : '#dc2626');
+            tableHtml += '<td style="padding:2px 6px;text-align:center;font-weight:900;font-size:13px;color:'+(d.verde+d.rojo>0?colorEq:'#cbd5e1')+';background:#f8fafc;">'+(d.verde+d.rojo>0?d.pct+'%':'–')+'</td>';
+            tableHtml += '<td style="padding:2px 6px;text-align:center;font-size:12px;white-space:nowrap;background:#f8fafc;border-radius:0 6px 6px 0;"><span style="color:#16a34a;font-weight:800;">✓'+d.verde+'</span> <span style="color:#dc2626;font-weight:800;">✗'+d.rojo+'</span></td>';
+            tableHtml += '</tr>';
+        });
+        tableHtml += '</tbody></table></div>';
+        tableHtml += '<div style="margin-top:8px;display:flex;gap:14px;font-size:10px;color:#64748b;flex-wrap:wrap;"><span><i class="fas fa-circle-check" style="color:#16a34a;margin-right:4px;"></i>Cumplido</span><span><i class="fas fa-circle-xmark" style="color:#dc2626;margin-right:4px;"></i>No cumplido</span><span><i class="fas fa-circle-minus" style="color:#94a3b8;margin-right:4px;"></i>Sin objetivo</span><span style="color:#94a3b8;">· Sin jugar</span></div>';
+
+        // Panel AVISOS
+        var avisos = _eqData.filter(function(d){ return d.maxStreak >= 2; });
+        var avisosHtml = '<div style="background:white;border-radius:10px;border:1px solid #e2e8f0;padding:12px 14px;min-width:200px;">';
+        avisosHtml += '<div style="font-size:10px;font-weight:900;color:#92400e;margin-bottom:8px;letter-spacing:.3px;"><span style="margin-right:5px;">⚠</span>RACHAS NEGATIVAS</div>';
+        if (!avisos.length) {
+            avisosHtml += '<div style="font-size:10px;color:#94a3b8;">Sin alertas activas</div>';
+        } else {
+            avisos.forEach(function(d) {
+                avisosHtml += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #f1f5f9;">';
+                avisosHtml += '<span style="font-size:10px;font-weight:700;color:#1e293b;">'+d.clave+'</span>';
+                avisosHtml += '<span style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:5px;padding:1px 6px;font-size:9px;font-weight:900;">'+d.maxStreak+' seguidos</span>';
+                avisosHtml += '</div>';
+            });
+        }
+        avisosHtml += '</div>';
+
+        el.innerHTML = '<div style="display:flex;gap:14px;align-items:flex-start;">'
+            + '<div style="flex:1;min-width:0;">'+tableHtml+'</div>'
+            + '<div style="width:220px;flex-shrink:0;">'+avisosHtml+'</div>'
+            + '</div>';
+
+        // Guardar datos de equipos para que el panel IA los use
+        el._eqData = _eqData;
     }
 
     function obsRenderIdaVuelta() {
@@ -7142,29 +7921,131 @@
             Object.entries(rivalesMap).forEach(function(entry) {
                 var rival = entry[0], ps = entry[1];
                 var ida = ps[0] || null, vuelta = ps[1] || null;
+                var ambosG = ida && vuelta && ida.estado === 'G' && vuelta.estado === 'G';
                 var colorVuelta = '#94a3b8';
-                if (ida && vuelta && ida.estado && vuelta.estado) {
+                if (!ambosG && ida && vuelta && ida.estado && vuelta.estado) {
                     var vi = estadoOrd[ida.estado] || 0, vv = estadoOrd[vuelta.estado] || 0;
-                    colorVuelta = vv > vi ? '#16a34a' : (vv === vi ? '#f59e0b' : '#dc2626');
+                    colorVuelta = vv > vi ? '#4ade80' : (vv === vi ? '#f59e0b' : '#dc2626');
                 }
-                // IDA: sin color de fondo, solo texto con letra G/E/P + resultado
+                // IDA: siempre texto plano con letra G/E/P + resultado (sin badge)
                 var idaHtml = '<span style="color:#94a3b8;font-size:10px;">–</span>';
                 if (ida && ida.resultado) {
                     var letraIda = ida.estado || '';
                     var colorLetraIda = {'G':'#16a34a','E':'#d97706','P':'#dc2626'}[letraIda] || '#64748b';
                     idaHtml = '<span style="font-weight:900;color:'+colorLetraIda+';font-size:10px;">'+letraIda+'</span> <span style="font-weight:700;font-size:10px;color:#1e293b;">'+ida.resultado+'</span>';
                 }
-                // VUELTA: con color de fondo según mejora/igual/empeora, letra G/E/P + resultado
+                // VUELTA: badge; si ambos G → borde gris, fondo blanco; si no → color según mejora/igual/empeora
                 var vuelHtml = '<span style="color:#94a3b8;font-size:10px;">–</span>';
                 if (vuelta && vuelta.resultado) {
                     var letraVuelta = vuelta.estado || '';
-                    vuelHtml = '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;background:'+colorVuelta+';color:white;font-weight:900;font-size:10px;">'+letraVuelta+' '+vuelta.resultado+'</span>';
+                    if (ambosG) {
+                        vuelHtml = '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;background:white;border:1.5px solid #94a3b8;color:#64748b;font-weight:900;font-size:10px;">'+letraVuelta+' '+vuelta.resultado+'</span>';
+                    } else {
+                        var txtVuelta = colorVuelta === '#4ade80' ? '#166534' : 'white';
+                        vuelHtml = '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;background:'+colorVuelta+';color:'+txtVuelta+';font-weight:900;font-size:10px;">'+letraVuelta+' '+vuelta.resultado+'</span>';
+                    }
                 }
                 html += '<tr><td style="'+tdS+'text-align:left;font-weight:600;font-size:10px;">'+rival+'</td><td style="'+tdS+'">'+idaHtml+'</td><td style="'+tdS+'">'+vuelHtml+'</td></tr>';
             });
             html += '</tbody></table></div>';
         });
         el.innerHTML = html || '<div style="text-align:center;padding:30px;color:#94a3b8;">Sin datos.</div>';
+    }
+
+    // ── Comentario IA para seguimiento temporada ──
+    var _obsIAPopover = null;
+
+    function obsComentarioIA(btn, eqEnc, verde, rojo, pct) {
+        var equipo = decodeURIComponent(eqEnc);
+        var jornadasRaw = btn.getAttribute('data-jornadas') || '[]';
+        var jornadas;
+        try { jornadas = JSON.parse(decodeURIComponent(jornadasRaw)); } catch(e) { jornadas = []; }
+
+        // Crear o reusar popover
+        if (!_obsIAPopover) {
+            _obsIAPopover = document.createElement('div');
+            _obsIAPopover.id = 'obsIAPopover';
+            _obsIAPopover.style.cssText = 'position:fixed;z-index:99999;background:white;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.18);border:1px solid #e2e8f0;padding:14px 16px;width:320px;max-width:95vw;font-family:inherit;';
+            document.body.appendChild(_obsIAPopover);
+            document.addEventListener('click', function(e) {
+                if (_obsIAPopover && !_obsIAPopover.contains(e.target) && e.target !== btn) {
+                    _obsIAPopover.style.display = 'none';
+                }
+            }, true);
+        }
+
+        // Posicionar junto al botón
+        var rect = btn.getBoundingClientRect();
+        _obsIAPopover.style.display = 'block';
+        _obsIAPopover.style.top = (rect.bottom + 6 + window.scrollY) + 'px';
+        _obsIAPopover.style.left = Math.min(rect.left, window.innerWidth - 340) + 'px';
+        _obsIAPopover.innerHTML = '<div style="font-size:10px;font-weight:900;color:#1e293b;margin-bottom:8px;"><i class="fas fa-robot" style="color:#6366f1;margin-right:5px;"></i>ANÁLISIS IA — '+equipo+'</div><div style="font-size:11px;color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Generando comentario...</div>';
+
+        // Caché localStorage (por equipo + semana)
+        var semana = new Date().toISOString().slice(0,10).slice(0,7); // YYYY-MM
+        var cacheKey = 'obsIA_' + equipo + '_' + semana;
+        var cached = localStorage.getItem(cacheKey);
+        if (cached) {
+            _obsIAPopover.innerHTML = '<div style="font-size:10px;font-weight:900;color:#1e293b;margin-bottom:8px;"><i class="fas fa-robot" style="color:#6366f1;margin-right:5px;"></i>ANÁLISIS IA — '+equipo+'</div><div style="font-size:11px;color:#374151;line-height:1.5;">'+cached+'</div><div style="font-size:9px;color:#94a3b8;margin-top:6px;text-align:right;"><i class="fas fa-clock" style="margin-right:3px;"></i>Desde caché · <button onclick="localStorage.removeItem(\''+cacheKey+'\');obsComentarioIA(document.querySelector(\'[data-clave=\\\''+equipo.replace(/'/g,"\\'")+'\\\']\'),\''+eqEnc+'\','+verde+','+rojo+','+pct+')" style="background:none;border:none;color:#6366f1;cursor:pointer;font-size:9px;font-family:inherit;padding:0;">Regenerar</button></div>';
+            return;
+        }
+
+        fetch('/api/obs_comentario_ia', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({equipo: equipo, jornadas: jornadas, verde: verde, rojo: rojo, pct: pct})
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(d) {
+            if (d.status === 'ok') {
+                localStorage.setItem(cacheKey, d.comentario);
+                _obsIAPopover.innerHTML = '<div style="font-size:10px;font-weight:900;color:#1e293b;margin-bottom:8px;"><i class="fas fa-robot" style="color:#6366f1;margin-right:5px;"></i>ANÁLISIS IA — '+equipo+'</div><div style="font-size:11px;color:#374151;line-height:1.5;">'+d.comentario+'</div><div style="font-size:9px;color:#94a3b8;margin-top:6px;text-align:right;"><button onclick="localStorage.removeItem(\''+cacheKey+'\');_obsIAPopover.style.display=\'none\'" style="background:none;border:none;color:#6366f1;cursor:pointer;font-size:9px;font-family:inherit;padding:0;"><i class="fas fa-refresh" style="margin-right:2px;"></i>Regenerar</button></div>';
+            } else {
+                _obsIAPopover.innerHTML = '<div style="font-size:11px;color:#dc2626;padding:8px;">Error: '+(d.message||'Error IA')+'</div>';
+            }
+        })
+        .catch(function(e) {
+            _obsIAPopover.innerHTML = '<div style="font-size:11px;color:#dc2626;padding:8px;">Error de conexión.</div>';
+        });
+    }
+
+    function obsComentarioIAPanel() {
+        var el = document.getElementById('obsTemporadaGrid');
+        var eqData = el ? el._eqData : null;
+        if (!eqData) return;
+        var sel = document.getElementById('obsIASelect');
+        var idx = sel ? parseInt(sel.value) : 0;
+        var d = eqData[idx];
+        if (!d) return;
+        var res = document.getElementById('obsIAResult');
+        if (!res) return;
+
+        var semana = new Date().toISOString().slice(0, 7);
+        var cacheKey = 'obsIA_' + d.clave + '_' + semana;
+        var cached = localStorage.getItem(cacheKey);
+        if (cached) {
+            res.innerHTML = '<div style="color:#374151;line-height:1.5;">'+cached+'</div>'
+                + '<div style="margin-top:4px;"><button onclick="localStorage.removeItem(\''+cacheKey+'\');obsComentarioIAPanel()" style="background:none;border:none;color:#6366f1;cursor:pointer;font-size:9px;font-family:inherit;padding:0;"><i class="fas fa-rotate" style="margin-right:2px;"></i>Regenerar</button></div>';
+            return;
+        }
+
+        res.innerHTML = '<span style="color:#94a3b8;font-size:10px;"><i class="fas fa-spinner fa-spin"></i> Generando...</span>';
+        fetch('/api/obs_comentario_ia', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({equipo: d.clave, jornadas: d.jornadas, verde: d.verde, rojo: d.rojo, pct: d.pct})
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+            if (data.status === 'ok') {
+                localStorage.setItem(cacheKey, data.comentario);
+                res.innerHTML = '<div style="color:#374151;line-height:1.5;">'+data.comentario+'</div>'
+                    + '<div style="margin-top:4px;"><button onclick="localStorage.removeItem(\''+cacheKey+'\');obsComentarioIAPanel()" style="background:none;border:none;color:#6366f1;cursor:pointer;font-size:9px;font-family:inherit;padding:0;"><i class="fas fa-rotate" style="margin-right:2px;"></i>Regenerar</button></div>';
+            } else {
+                res.innerHTML = '<span style="color:#dc2626;font-size:10px;">'+(data.message||'Error IA')+'</span>';
+            }
+        })
+        .catch(function(){ res.innerHTML = '<span style="color:#dc2626;font-size:10px;">Error de conexión</span>'; });
     }
 
     // Clasificaciones PDF — selector de finde en INFORMES
