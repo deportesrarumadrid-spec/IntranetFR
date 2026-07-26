@@ -34,7 +34,7 @@ def retry_request(self, method, endpoint, *args, **kwargs):
 
 HTTPClient.request = retry_request
 
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials as ServiceAccountCredentials
 import requests # ¡IMPORTANTE! Añadir esta línea
 try:
     from dotenv import load_dotenv
@@ -216,7 +216,7 @@ ARCHIVOS_FOLDER = os.path.join(BASE_DIR, 'static', 'archivos')
 
 # --- CONFIGURACIÓN GOOGLE SHEETS ---
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name(os.path.join(BASE_DIR, "secretos.json"), scope)
+creds = ServiceAccountCredentials.from_service_account_file(os.path.join(BASE_DIR, "secretos.json"), scopes=scope)
 from sheets_cache import CachedClient
 _raw_client = gspread.authorize(creds)
 client = CachedClient(_raw_client, ttl=90)  # caché 90s — lecturas instantáneas en caliente
