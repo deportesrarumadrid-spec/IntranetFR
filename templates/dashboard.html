@@ -1123,7 +1123,7 @@
                     item.style.cssText = 'padding:8px 16px; cursor:pointer; font-size:0.82rem; font-weight:700; text-transform:uppercase; color:#333; white-space:nowrap;';
                     item.onmouseenter = () => item.style.background = '#fef2f2';
                     item.onmouseleave = () => item.style.background = '';
-                    item.onclick = () => { showLoader(); window.location.href = '/seleccionar_equipo?equipo=' + encodeURIComponent(eq); };
+                    item.onclick = () => { showLoader(); window.location.href = '/direccion_deportiva?equipo=' + encodeURIComponent(eq); };
                     list.appendChild(item);
                 });
             }).catch(() => {});

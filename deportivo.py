@@ -516,7 +516,15 @@ def direccion_deportiva():
                 if len(row) > max(i_n, i_e):
                     jugadores.append({"NOMBRE": row[i_n].strip(), "EQUIPO": row[i_e].strip()})
         
-        return render_template('direccion.html', usuario=usuario, equipos=equipos, jugadores_raw=jugadores)
+        equipo_param = request.args.get('equipo')
+        if equipo_param:
+            session['equipo_defecto'] = equipo_param.strip()
+        equipo_activo = session.get('equipo_defecto', '')
+        if not equipo_activo and equipos:
+            equipo_activo = equipos[0]
+            session['equipo_defecto'] = equipo_activo
+
+        return render_template('direccion.html', usuario=usuario, equipos=equipos, jugadores_raw=jugadores, equipo_defecto=equipo_activo)
     except Exception as e:
         print(f"Error en direccion_deportiva: {e}")
         return str(e), 500
