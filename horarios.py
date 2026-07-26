@@ -1,13 +1,12 @@
-import gspread
+import os
 from flask import Blueprint, request, session, jsonify
 
 import competicion_scraper as cs
 
 horarios_bp = Blueprint('horarios_bp', __name__)
 
-# Credenciales de acceso a la intranet de la RFFM (uso interno, sólo lectura del listado de partidos).
-RFFM_USER = 'C30048'
-RFFM_PASS = 'IntranetRFFM1.'
+RFFM_USER = os.environ.get('RFFM_USER', '')
+RFFM_PASS = os.environ.get('RFFM_PASS', '')
 
 CLUB_ID = '4239'  # CLUB FUENTELARREYNA
 CAMPO_PROPIO = '106'  # VALDEYEROS (HA)

@@ -46,8 +46,12 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 from perfiles import get_perfiles_sheet # Importamos la función para obtener la hoja de perfiles
 
 app = Flask(__name__)
-app.secret_key = "club_intranet_secret_key_2024" # Necesario para las sesiones
+_secret = os.environ.get('FLASK_SECRET_KEY')
+if not _secret:
+    raise RuntimeError("FLASK_SECRET_KEY no está definida en las variables de entorno")
+app.secret_key = _secret
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Límite de 16MB para subidas
+app.permanent_session_lifetime = timedelta(hours=8)
 
 # --- LISTAS MAESTRAS DE IDENTIFICACIÓN ---
 DIAS_MESES_IDENT = [
@@ -353,6 +357,17 @@ def listar_sesiones():
 
     return jsonify(sorted(vistas.values(), key=lambda x: sort_fecha(x.get('fecha', '')), reverse=True))
 
+@app.before_request
+def _set_session_permanent():
+    session.permanent = True
+
+@app.after_request
+def _security_headers(response):
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    return response
+
 @app.route('/')
 def index():
     return render_template('login.html')
@@ -532,7 +547,7 @@ def login():
 
         if user_data:
             # Validación de contraseña (sensible a mayúsculas/minúsculas pero ignora espacios laterales)
-            if str(user_data.get('CONTRASEÑA', '')).strip() == password_ingresado:
+            if str(user_data.get('CONTRASENA', '')).strip() == password_ingresado:
                 session['usuario'] = usuario_ingresado
                 
                 def check_p(key):
@@ -3344,4 +3359,5 @@ Responde SOLO el comentario, sin introducción ni explicación."""
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5001, use_reloader=True)
+    _debug = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
+    app.run(debug=_debug, host='0.0.0.0', port=5001, use_reloader=_debug)
