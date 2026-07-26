@@ -559,11 +559,6 @@ def login():
                 _password_ok = _chk(stored, password_ingresado)
             else:
                 _password_ok = (stored == password_ingresado)
-                if _password_ok and row_idx_sheet:
-                    try:
-                        sheet.update_cell(row_idx_sheet, 2, _gen(password_ingresado))
-                    except Exception:
-                        pass
             if _password_ok:
                 session['usuario'] = usuario_ingresado
                 

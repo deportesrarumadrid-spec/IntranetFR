@@ -426,7 +426,7 @@
         {% if session.get('permisos', {}).get('FINANCIERO') == 'SI' %}
         <a href="/financiero" class="menu-item {{ 'active' if request.path == '/financiero' }}" onclick="showLoader()">FINANCIERO</a>
         {% endif %}
-        {% if session.get('permisos', {}).get('D.DEPORTIVA') == 'SI' %}
+        {% if session.get('permisos', {}).get('D.DEPORTIVA') == 'SI' or session.get('permisos', {}).get('ENTRENAMIENTOS') == 'SI' or usuario|lower == 'admin' %}
         <a href="/direccion_deportiva" class="menu-item {{ 'active' if request.path == '/direccion_deportiva' }}" onclick="showLoader()">D. DEPORTIVA</a>
         {% endif %}
         {% if session.get('permisos', {}).get('ENTRENAMIENTOS') == 'SI' or session.get('permisos', {}).get('D.DEPORTIVA') == 'SI' or usuario|lower == 'admin' %}
@@ -594,6 +594,7 @@
                         <div><label style="font-size:10px; font-weight:900; color:#94a3b8; display:block; margin-bottom:6px; text-transform:uppercase;">USUARIO</label><input type="text" id="cgNewUsername" placeholder="Usuario..." style="width:100%; padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:700; box-sizing:border-box; font-family:inherit;"></div>
                         <div><label style="font-size:10px; font-weight:900; color:#94a3b8; display:block; margin-bottom:6px; text-transform:uppercase;">CONTRASEÑA</label><input type="text" id="cgNewPassword" placeholder="Contraseña..." style="width:100%; padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:700; box-sizing:border-box; font-family:inherit;"></div>
                         <div><label style="font-size:10px; font-weight:900; color:#94a3b8; display:block; margin-bottom:6px; text-transform:uppercase;">EQUIPO (opcional)</label><input type="text" id="cgNewEquipo" placeholder="Ej: BENJAMIN A" style="width:100%; padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:700; box-sizing:border-box; font-family:inherit;"></div>
+                        <div><label style="font-size:10px; font-weight:900; color:#94a3b8; display:block; margin-bottom:6px; text-transform:uppercase;">TELÉFONO (opcional)</label><input type="tel" id="cgNewTelefono" placeholder="Ej: 612345678" style="width:100%; padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:700; box-sizing:border-box; font-family:inherit;"></div>
                         <div style="display:flex; flex-direction:column; gap:6px;">
                             <label style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase;">PERMISOS</label>
                             <label style="display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; cursor:pointer;"><input type="checkbox" id="cgCheckEntreno" class="check-coord"> ENTRENAMIENTOS</label>
@@ -615,6 +616,7 @@
                             <th style="padding:10px 12px; text-align:left; font-size:10px; font-weight:900; color:#64748b; text-transform:uppercase; white-space:nowrap;">USUARIO</th>
                             <th style="padding:10px 12px; text-align:left; font-size:10px; font-weight:900; color:#64748b; text-transform:uppercase;">CONTRASEÑA</th>
                             <th style="padding:10px 12px; text-align:left; font-size:10px; font-weight:900; color:#64748b; text-transform:uppercase;">EQUIPO</th>
+                            <th style="padding:10px 12px; text-align:left; font-size:10px; font-weight:900; color:#64748b; text-transform:uppercase; white-space:nowrap;">TELÉFONO</th>
                             <th style="padding:10px 12px; text-align:center; font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase;">ENTRENO</th>
                             <th style="padding:10px 12px; text-align:center; font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase;">ASIST.</th>
                             <th style="padding:10px 12px; text-align:center; font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase;">FINANC.</th>
@@ -1732,8 +1734,9 @@
                     const dis = esAdmin(rawU) ? 'disabled' : '';
                     return `<tr data-user="${un}" style="border-bottom:1px solid #f1f5f9;">
                         <td style="padding:10px 12px; font-weight:900; color:#1e293b;">${un}</td>
-                        <td style="padding:10px 12px;"><input type="password" value="" placeholder="Sin cambios" class="cg-edit-pass" style="width:110px; padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; font-family:inherit;" ${dis}></td>
+                        <td style="padding:10px 12px;"><input type="text" value="${(rawU.CONTRASEÑA||u.CONTRASENA||'').startsWith('scrypt:')||(rawU.CONTRASEÑA||u.CONTRASENA||'').startsWith('pbkdf2:') ? '' : (rawU.CONTRASEÑA||u.CONTRASENA||'')}" placeholder="Contraseña..." class="cg-edit-pass" style="width:110px; padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; font-family:inherit;" ${dis}></td>
                         <td style="padding:10px 12px; min-width:160px;">${_cgEquipoWidget(rawU.EQUIPO||u.EQUIPO||'', !!dis)}</td>
+                        <td style="padding:10px 12px;"><input type="tel" value="${rawU.TELEFONO||u.TELEFONO||''}" placeholder="Sin teléfono" class="cg-edit-telefono" style="width:120px; padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; font-family:inherit;" ${dis}></td>
                         <td style="text-align:center; padding:10px 8px;"><input type="checkbox" class="check-coord cg-edit-entrenos" ${u.ENTRENAMIENTOS==='SI'?'checked':''} ${dis}></td>
                         <td style="text-align:center; padding:10px 8px;"><input type="checkbox" class="check-coord cg-edit-asist" ${u.ASISTENCIAS==='SI'?'checked':''} ${dis}></td>
                         <td style="text-align:center; padding:10px 8px;"><input type="checkbox" class="check-coord cg-edit-financ" ${u.FINANCIERO==='SI'?'checked':''} ${dis}></td>
@@ -1761,6 +1764,7 @@
                 const res = await fetch('/api/perfiles', { method:'POST', headers:{'Content-Type':'application/json'},
                     body: JSON.stringify({ USUARIO:user, CONTRASEÑA:pass,
                         EQUIPO: document.getElementById('cgNewEquipo').value.trim(),
+                        TELEFONO: document.getElementById('cgNewTelefono').value.trim(),
                         ENTRENAMIENTOS: document.getElementById('cgCheckEntreno').checked?'SI':'NO',
                         ASISTENCIAS: document.getElementById('cgCheckAsist').checked?'SI':'NO',
                         FINANCIERO: document.getElementById('cgCheckFinanc').checked?'SI':'NO',
@@ -1778,8 +1782,9 @@
             const row = btn.closest('tr');
             const newPass = row.querySelector('.cg-edit-pass').value.trim();
             const data = {
-                ...(newPass ? {'CONTRASEÑA': newPass} : {}),
+                ...(newPass ? {'CONTRASEÑA': newPass} : {}),  // solo envía si no está vacío (mantiene la actual si se deja en blanco)
                 'EQUIPO': row.querySelector('.cg-edit-equipo').value,
+                'TELEFONO': row.querySelector('.cg-edit-telefono').value.trim(),
                 'ENTRENAMIENTOS': row.querySelector('.cg-edit-entrenos').checked?'SI':'NO',
                 'ASISTENCIAS': row.querySelector('.cg-edit-asist').checked?'SI':'NO',
                 'FINANCIERO': row.querySelector('.cg-edit-financ').checked?'SI':'NO',

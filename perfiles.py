@@ -1,11 +1,10 @@
 from flask import Blueprint, request, jsonify, current_app
 import gspread
-from werkzeug.security import generate_password_hash
 
 perfiles_bp = Blueprint('perfiles_bp', __name__)
 
 # Definición de las cabeceras esperadas en la hoja "PERFILES"
-PERFILES_HEADERS = ["USUARIO", "CONTRASEÑA", "ENTRENAMIENTOS", "ASISTENCIAS", "FINANCIERO", "D.DEPORTIVA", "SEL. EQ.", "CRONOGRAMA", "EQUIPO"]
+PERFILES_HEADERS = ["USUARIO", "CONTRASEÑA", "ENTRENAMIENTOS", "ASISTENCIAS", "FINANCIERO", "D.DEPORTIVA", "SEL. EQ.", "CRONOGRAMA", "EQUIPO", "TELEFONO"]
 
 def get_perfiles_sheet():
     """
@@ -93,14 +92,15 @@ def add_perfil():
         # Construir la fila con los permisos, por defecto 'NO'
         new_row = [
             usuario,
-            generate_password_hash(contrasena),
+            contrasena,
             str(data.get('ENTRENAMIENTOS', 'NO')).upper(),
             str(data.get('ASISTENCIAS', 'NO')).upper(),
             str(data.get('FINANCIERO', 'NO')).upper(),
             str(data.get('D.DEPORTIVA', 'NO')).upper(),
             str(data.get('SEL. EQ.', data.get('ELEGIR_EQUIPO', 'NO'))).upper(),
             str(data.get('CRONOGRAMA', 'NO')).upper(),
-            str(data.get('EQUIPO', '')).strip()
+            str(data.get('EQUIPO', '')).strip(),
+            str(data.get('TELEFONO', '')).strip()
         ]
         sheet.append_row(new_row)
         return jsonify({"status": "success", "message": "Perfil añadido correctamente."})
@@ -143,7 +143,7 @@ def update_perfil(username):
         existing_pwd = found_row_data[1] if len(found_row_data) > 1 else ""
         nueva_pwd_raw = data_norm.get('CONTRASEÑA')
         if nueva_pwd_raw is not None and str(nueva_pwd_raw).strip():
-            pwd_a_guardar = generate_password_hash(str(nueva_pwd_raw).strip())
+            pwd_a_guardar = str(nueva_pwd_raw).strip()
         else:
             pwd_a_guardar = existing_pwd
 
@@ -155,10 +155,11 @@ def update_perfil(username):
             str(data_norm.get('D.DEPORTIVA', found_row_data[5] if len(found_row_data) > 5 else "NO")).upper(), # Index 5
             str(data_norm.get('SEL. EQ.', found_row_data[6] if len(found_row_data) > 6 else "NO")).upper(), # Index 6
             str(data_norm.get('CRONOGRAMA', found_row_data[7] if len(found_row_data) > 7 else "NO")).upper(),
-            str(data_norm.get('EQUIPO', found_row_data[8] if len(found_row_data) > 8 else "")).strip()
+            str(data_norm.get('EQUIPO', found_row_data[8] if len(found_row_data) > 8 else "")).strip(),
+            str(data_norm.get('TELEFONO', found_row_data[9] if len(found_row_data) > 9 else "")).strip()
         ]
 
-        rango_a_actualizar = f"B{row_index}:I{row_index}"
+        rango_a_actualizar = f"B{row_index}:J{row_index}"
         print(f"DEBUG: Guardando cambios para {username} en fila {row_index}: {nuevos_valores_fila}")
         
         # Usamos keyword arguments para evitar problemas de orden entre versiones de gspread

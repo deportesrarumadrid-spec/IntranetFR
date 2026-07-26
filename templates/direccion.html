@@ -563,7 +563,7 @@
 <div style="padding: 10px;">
     <div class="tabs-container">
         <div class="tab-item active" onclick="switchTab(event, 'tab-coordinacion')">COORDINACIÓN</div>
-        <div class="tab-item" onclick="switchTab(event, 'tab-d-deportiva')">D. DEPORTIVA</div>
+        {% if tiene_ddep %}<div class="tab-item" onclick="switchTab(event, 'tab-d-deportiva')">D. DEPORTIVA</div>{% endif %}
         <div class="tab-item" onclick="switchTab(event, 'tab-push')">PUSH</div>
         <div class="tab-item" onclick="switchTab(event, 'tab-horarios-temp')">HORARIOS TEMP.</div>
         <div class="tab-item" onclick="switchTab(event, 'tab-obj-semanales')">OBJ FINES DE SEMANA</div>
@@ -926,7 +926,7 @@
     </div>
 
     <!-- SUBPESTAÑA: D. DEPORTIVA -->
-    <div id="tab-d-deportiva" class="tab-content">
+    {% if tiene_ddep %}<div id="tab-d-deportiva" class="tab-content">
         <div class="tabs-container" style="margin-bottom: 20px; background: #f8fafc; border: 1px solid #e2e8f0;">
             <div class="tab-item active" onclick="switchSubTab(event, 'subtab-gestion-estrategica')" style="font-size: 11px;">GESTIÓN ESTRATÉGICA</div>
             <div class="tab-item" onclick="switchSubTab(event, 'subtab-kpis')" style="font-size: 11px;">KPIs</div>
@@ -1698,7 +1698,7 @@
     </script>
 
         </div><!-- cierre subtab-informes -->
-    </div><!-- cierre tab-d-deportiva -->
+    </div><!-- cierre tab-d-deportiva -->{% endif %}
 
     <div id="tab-push" class="tab-content">
         <div class="card-coord" style="padding: 22px; max-width: 480px;">

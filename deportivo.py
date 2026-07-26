@@ -489,9 +489,11 @@ def direccion_deportiva():
     if not usuario:
         return redirect('/')
 
-    if session.get('permisos', {}).get('D.DEPORTIVA') != 'SI':
+    perms = session.get('permisos', {})
+    if perms.get('D.DEPORTIVA') != 'SI' and perms.get('ENTRENAMIENTOS') != 'SI' and usuario.lower() != 'admin':
         return "Acceso denegado", 403
-    
+    tiene_ddep = perms.get('D.DEPORTIVA') == 'SI' or usuario.lower() == 'admin'
+
     try:
         # 1. Obtener lista de TODOS los equipos desde la pestaña EQUIPO (fuente de verdad)
         equipos = []
@@ -524,7 +526,7 @@ def direccion_deportiva():
             equipo_activo = equipos[0]
             session['equipo_defecto'] = equipo_activo
 
-        return render_template('direccion.html', usuario=usuario, equipos=equipos, jugadores_raw=jugadores, equipo_defecto=equipo_activo)
+        return render_template('direccion.html', usuario=usuario, equipos=equipos, jugadores_raw=jugadores, equipo_defecto=equipo_activo, tiene_ddep=tiene_ddep)
     except Exception as e:
         print(f"Error en direccion_deportiva: {e}")
         return str(e), 500
