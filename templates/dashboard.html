@@ -1732,7 +1732,7 @@
                     const dis = esAdmin(rawU) ? 'disabled' : '';
                     return `<tr data-user="${un}" style="border-bottom:1px solid #f1f5f9;">
                         <td style="padding:10px 12px; font-weight:900; color:#1e293b;">${un}</td>
-                        <td style="padding:10px 12px;"><input type="text" value="${rawU.CONTRASEÑA||u.CONTRASEA||''}" class="cg-edit-pass" style="width:100px; padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; font-weight:700; font-family:inherit;" ${dis}></td>
+                        <td style="padding:10px 12px;"><input type="password" value="" placeholder="Sin cambios" class="cg-edit-pass" style="width:110px; padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; font-family:inherit;" ${dis}></td>
                         <td style="padding:10px 12px; min-width:160px;">${_cgEquipoWidget(rawU.EQUIPO||u.EQUIPO||'', !!dis)}</td>
                         <td style="text-align:center; padding:10px 8px;"><input type="checkbox" class="check-coord cg-edit-entrenos" ${u.ENTRENAMIENTOS==='SI'?'checked':''} ${dis}></td>
                         <td style="text-align:center; padding:10px 8px;"><input type="checkbox" class="check-coord cg-edit-asist" ${u.ASISTENCIAS==='SI'?'checked':''} ${dis}></td>
@@ -1776,8 +1776,9 @@
 
         async function cgGuardarFila(btn, username) {
             const row = btn.closest('tr');
+            const newPass = row.querySelector('.cg-edit-pass').value.trim();
             const data = {
-                'CONTRASEÑA': row.querySelector('.cg-edit-pass').value,
+                ...(newPass ? {'CONTRASEÑA': newPass} : {}),
                 'EQUIPO': row.querySelector('.cg-edit-equipo').value,
                 'ENTRENAMIENTOS': row.querySelector('.cg-edit-entrenos').checked?'SI':'NO',
                 'ASISTENCIAS': row.querySelector('.cg-edit-asist').checked?'SI':'NO',
