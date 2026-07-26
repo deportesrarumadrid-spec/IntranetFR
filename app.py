@@ -3207,7 +3207,9 @@ from videoanalisis import videoanalisis_bp
 from gps import gps_bp
 from fisioterapia import fisio_bp
 from rrss import rrss_bp
+from loteria import loteria_bp
 app.register_blueprint(financiero_bp)
+app.register_blueprint(loteria_bp)
 app.register_blueprint(deportivo_bp)
 app.register_blueprint(jugadores_datos_bp)
 app.register_blueprint(perfiles_bp)

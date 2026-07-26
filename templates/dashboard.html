@@ -19,39 +19,61 @@
 
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.init({
-          appId: "3fb3580a-20d1-4c62-b850-a88c47a80dec",
-          allowLocalhostAsSecureOrigin: true,
-        });
+        try {
+          await OneSignal.init({
+            appId: "3fb3580a-20d1-4c62-b850-a88c47a80dec",
+            allowLocalhostAsSecureOrigin: true,
+          });
+        } catch(e) {
+          console.warn('OneSignal init:', e);
+        }
 
-        if (_OS_ES_ADMIN) return; // Admin no necesita push
+        if (_OS_ES_ADMIN) return;
+
+        // iOS Safari sin PWA: Notification no existe o no funciona desde navegador
+        var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        var isStandalone = !!(navigator.standalone || window.matchMedia('(display-mode: standalone)').matches);
+
+        if (isIOS && !isStandalone) {
+          _mostrarOverlayiOS();
+          return;
+        }
+
+        if (typeof Notification === 'undefined') return; // Navegador sin soporte
 
         var perm = Notification.permission;
 
-        // Si ya est\u00e1 concedido, vincular y listo
         if (perm === 'granted') {
-            await OneSignal.login(_osNormId(_OS_USUARIO));
-            return;
+          try { await OneSignal.login(_osNormId(_OS_USUARIO)); } catch(e) {}
+          return;
         }
 
-        // Mostrar overlay bloqueante
         _mostrarOverlayPush(perm === 'denied');
 
-        // Escuchar cambio de permiso (cuando acepta desde el overlay)
         OneSignal.Notifications.addEventListener("permissionChange", async function(granted) {
-            if (granted) {
-                await OneSignal.login(_osNormId(_OS_USUARIO));
-                _ocultarOverlayPush();
-            }
+          if (granted) {
+            try { await OneSignal.login(_osNormId(_OS_USUARIO)); } catch(e) {}
+            _ocultarOverlayPush();
+          }
         });
       });
 
       function _mostrarOverlayPush(bloqueado) {
         var el = document.getElementById('pushOverlay');
         if (!el) return;
-        document.getElementById('pushOverlay').style.display = 'flex';
+        el.style.display = 'flex';
         document.getElementById('pushBloqueado').style.display = bloqueado ? 'block' : 'none';
         document.getElementById('pushBoton').style.display = bloqueado ? 'none' : 'block';
+        document.getElementById('pushiOS').style.display = 'none';
+      }
+
+      function _mostrarOverlayiOS() {
+        var el = document.getElementById('pushOverlay');
+        if (!el) return;
+        el.style.display = 'flex';
+        document.getElementById('pushBloqueado').style.display = 'none';
+        document.getElementById('pushBoton').style.display = 'none';
+        document.getElementById('pushiOS').style.display = 'block';
       }
 
       function _ocultarOverlayPush() {
@@ -61,7 +83,7 @@
 
       async function _activarNotificaciones() {
         OneSignalDeferred.push(async function(OneSignal) {
-            await OneSignal.Notifications.requestPermission();
+          await OneSignal.Notifications.requestPermission();
         });
       }
     </script>
@@ -593,10 +615,20 @@
                     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:16px; align-items:end;">
                         <div><label style="font-size:10px; font-weight:900; color:#94a3b8; display:block; margin-bottom:6px; text-transform:uppercase;">USUARIO</label><input type="text" id="cgNewUsername" placeholder="Usuario..." style="width:100%; padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:700; box-sizing:border-box; font-family:inherit;"></div>
                         <div><label style="font-size:10px; font-weight:900; color:#94a3b8; display:block; margin-bottom:6px; text-transform:uppercase;">CONTRASEÑA</label><input type="text" id="cgNewPassword" placeholder="Contraseña..." style="width:100%; padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:700; box-sizing:border-box; font-family:inherit;"></div>
-                        <div><label style="font-size:10px; font-weight:900; color:#94a3b8; display:block; margin-bottom:6px; text-transform:uppercase;">EQUIPO (opcional)</label><input type="text" id="cgNewEquipo" placeholder="Ej: BENJAMIN A" style="width:100%; padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:700; box-sizing:border-box; font-family:inherit;"></div>
+                        <div><label style="font-size:10px; font-weight:900; color:#94a3b8; display:block; margin-bottom:6px; text-transform:uppercase;">EQUIPO (opcional)</label>
+                            <div id="cgNewEquipoWidget" style="position:relative;">
+                                <div class="cg-equipo-chips" onclick="cgToggleEquipoDD(this)" style="display:flex;flex-wrap:wrap;gap:4px;min-height:38px;border:1.5px solid #e2e8f0;border-radius:8px;padding:6px 10px;cursor:pointer;background:white;align-items:center;">
+                                    <span style="color:#94a3b8;font-size:12px;font-weight:600;">Seleccionar...</span>
+                                </div>
+                                <input type="hidden" class="cg-edit-equipo" id="cgNewEquipoHidden" value="">
+                            </div>
+                        </div>
                         <div><label style="font-size:10px; font-weight:900; color:#94a3b8; display:block; margin-bottom:6px; text-transform:uppercase;">TELÉFONO (opcional)</label><input type="tel" id="cgNewTelefono" placeholder="Ej: 612345678" style="width:100%; padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:700; box-sizing:border-box; font-family:inherit;"></div>
                         <div style="display:flex; flex-direction:column; gap:6px;">
-                            <label style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase;">PERMISOS</label>
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                                <label style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase;">PERMISOS</label>
+                                <button type="button" onclick="cgPresetEntrenadores()" style="background:#E31E24;color:white;border:none;border-radius:6px;padding:3px 10px;font-size:9px;font-weight:900;cursor:pointer;font-family:inherit;white-space:nowrap;">⚡ ENTRENADORES</button>
+                            </div>
                             <label style="display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; cursor:pointer;"><input type="checkbox" id="cgCheckEntreno" class="check-coord"> ENTRENAMIENTOS</label>
                             <label style="display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; cursor:pointer;"><input type="checkbox" id="cgCheckAsist" class="check-coord"> ASISTENCIAS</label>
                             <label style="display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; cursor:pointer;"><input type="checkbox" id="cgCheckFinanc" class="check-coord"> FINANCIERO</label>
@@ -1763,7 +1795,7 @@
             try {
                 const res = await fetch('/api/perfiles', { method:'POST', headers:{'Content-Type':'application/json'},
                     body: JSON.stringify({ USUARIO:user, CONTRASEÑA:pass,
-                        EQUIPO: document.getElementById('cgNewEquipo').value.trim(),
+                        EQUIPO: document.getElementById('cgNewEquipoHidden').value.trim(),
                         TELEFONO: document.getElementById('cgNewTelefono').value.trim(),
                         ENTRENAMIENTOS: document.getElementById('cgCheckEntreno').checked?'SI':'NO',
                         ASISTENCIAS: document.getElementById('cgCheckAsist').checked?'SI':'NO',
@@ -1798,6 +1830,15 @@
                 if (res.ok) { btn.style.background='#16a34a'; btn.innerHTML='<i class="fas fa-check"></i> LISTO'; setTimeout(()=>{btn.style.background='#E31E24'; btn.innerHTML=orig;},2000); }
                 else alert('Error al guardar.');
             } catch(e) { alert('Error de conexión.'); }
+        }
+
+        function cgPresetEntrenadores() {
+            document.getElementById('cgCheckEntreno').checked = true;
+            document.getElementById('cgCheckAsist').checked = true;
+            document.getElementById('cgCheckFinanc').checked = false;
+            document.getElementById('cgCheckDepor').checked = false;
+            document.getElementById('cgCheckCrono').checked = false;
+            document.getElementById('cgCheckSelEq').checked = true;
         }
 
         async function cgEliminarPerfil(username) {
@@ -2528,6 +2569,23 @@
           </div>
           <button onclick="location.reload()" style="width:100%;background:#475569;color:white;border:none;border-radius:10px;padding:12px;font-family:'Montserrat',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;">
             🔄 Ya lo activé, recargar
+          </button>
+        </div>
+
+        <!-- iOS Safari: pedir añadir a pantalla de inicio -->
+        <div id="pushiOS" style="display:none;">
+          <div style="background:#e0f2fe;border:1px solid #38bdf8;border-radius:8px;padding:16px;margin-bottom:16px;text-align:left;">
+            <p style="font-size:0.85rem;font-weight:700;color:#0c4a6e;margin-bottom:10px;">📱 Para recibir avisos en iPhone / iPad:</p>
+            <p style="font-size:0.82rem;color:#075985;line-height:1.9;">
+              1. Toca el icono compartir <strong style="font-size:1rem;">⎋</strong> en la barra de Safari<br>
+              2. Selecciona <strong>"Añadir a pantalla de inicio"</strong><br>
+              3. Pulsa <strong>"Añadir"</strong><br>
+              4. Abre la intranet desde el icono de tu pantalla de inicio<br>
+              5. Acepta las notificaciones cuando te lo pida
+            </p>
+          </div>
+          <button onclick="_ocultarOverlayPush()" style="width:100%;background:#475569;color:white;border:none;border-radius:10px;padding:12px;font-family:'Montserrat',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;">
+            Lo haré después
           </button>
         </div>
       </div>

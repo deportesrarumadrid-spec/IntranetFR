@@ -933,6 +933,7 @@
             <div class="tab-item" onclick="switchSubTab(event, 'subtab-horarios')" style="font-size: 11px;">HORARIOS FINDE</div>
             <div class="tab-item" onclick="switchSubTab(event, 'subtab-base-datos'); bdCargar();" style="font-size: 11px;">BASE DE DATOS</div>
             <div class="tab-item" onclick="switchSubTab(event, 'subtab-informes'); setTimeout(rbCargar,50); setTimeout(isCargar,80); setTimeout(imCargar,110);" style="font-size: 11px;">INFORMES</div>
+            <div class="tab-item" onclick="switchSubTab(event, 'subtab-loteria'); lotInit();" style="font-size: 11px;">LOTERÍA</div>
         </div>
         
         <div id="subtab-gestion-estrategica" class="subtab-content active" style="display: grid; grid-template-columns: 1fr 350px; gap: 20px;">
@@ -1698,24 +1699,480 @@
     </script>
 
         </div><!-- cierre subtab-informes -->
+
+    <!-- SUBTAB: LOTERÍA -->
+    <div id="subtab-loteria" class="subtab-content" style="display:none;">
+        <!-- Tabs de temporada -->
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:16px; flex-wrap:wrap; border-bottom:2px solid #e2e8f0; padding-bottom:12px;">
+            <div id="lot-tabs-container" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+            <button onclick="lotNuevaTemporada()" style="background:#1e293b; color:white; border:none; border-radius:6px; padding:6px 14px; font-size:10px; font-weight:900; cursor:pointer; font-family:inherit;">+ NUEVA</button>
+            <div style="display:flex;align-items:center;gap:6px;margin-left:auto;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:5px 10px;">
+                <span style="font-size:10px;font-weight:800;color:#475569;white-space:nowrap;">TOTAL PAPELETAS</span>
+                <input type="number" id="lot-input-papeletas" min="10" step="10" value="200"
+                    style="width:72px;padding:4px 7px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:12px;font-weight:900;font-family:inherit;text-align:center;">
+                <button onclick="lotGuardarPapeletas()" style="background:#1e293b;color:white;border:none;border-radius:6px;padding:4px 11px;font-size:10px;font-weight:900;cursor:pointer;font-family:inherit;">GUARDAR</button>
+            </div>
+        </div>
+        <!-- Buscador + botones de acción -->
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:16px; flex-wrap:wrap;">
+            <div style="position:relative; flex:1; min-width:180px; max-width:260px;">
+                <input type="text" id="lot-buscar" placeholder="Buscar persona o número..." oninput="lotBuscar(this.value)"
+                    style="width:100%; padding:8px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:12px; font-family:inherit; box-sizing:border-box;">
+                <span onclick="lotLimpiarBusqueda()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:#94a3b8;font-size:13px;">✕</span>
+            </div>
+            <button onclick="lotAccionSeleccionada('PERDIDO',0)" style="background:#92400e;color:white;border:none;border-radius:6px;padding:7px 12px;font-size:10px;font-weight:900;cursor:pointer;font-family:inherit;white-space:nowrap;">PERDIDO</button>
+            <button onclick="lotAccionSeleccionada('ENTREGADO',50)" style="background:#22c55e;color:white;border:none;border-radius:6px;padding:7px 12px;font-size:10px;font-weight:900;cursor:pointer;font-family:inherit;white-space:nowrap;">✅ ENTREGADO · 50€</button>
+            <button onclick="lotAccionSeleccionada('INCOMPLETO',null)" style="background:#eab308;color:white;border:none;border-radius:6px;padding:7px 12px;font-size:10px;font-weight:900;cursor:pointer;font-family:inherit;white-space:nowrap;">⚠️ INCOMPLETO</button>
+            <button onclick="lotAccionSeleccionada('PAGADO',50)" style="background:#16a34a;color:white;border:none;border-radius:6px;padding:7px 12px;font-size:10px;font-weight:900;cursor:pointer;font-family:inherit;white-space:nowrap;">💰 PAGADO · 50€</button>
+            <button onclick="lotAccionSeleccionada('DEVUELTO',0)" style="background:#ef4444;color:white;border:none;border-radius:6px;padding:7px 12px;font-size:10px;font-weight:900;cursor:pointer;font-family:inherit;white-space:nowrap;">↩ DEVUELTO · 0€</button>
+            <button onclick="lotExportar()" style="background:#0f172a;color:white;border:none;border-radius:6px;padding:7px 12px;font-size:10px;font-weight:900;cursor:pointer;font-family:inherit;white-space:nowrap;margin-left:auto;">📥 EXPORTAR EXCEL</button>
+        </div>
+        <div id="lot-loading" style="display:none;text-align:center;padding:40px;color:#94a3b8;font-weight:700;font-size:12px;">Cargando...</div>
+        <div id="lot-empty" style="display:none;text-align:center;padding:40px;color:#94a3b8;font-weight:700;font-size:12px;">No hay datos. Crea una nueva temporada con el botón <strong>+ NUEVA</strong>.</div>
+        <div id="lot-grid" style="overflow-x:auto;"></div>
+    </div>
+
+    <!-- Modal: actualizar taco -->
+    <div id="lot-modal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50000;align-items:center;justify-content:center;">
+        <div style="background:white;border-radius:16px;padding:24px;width:430px;max-width:96vw;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+            <div style="font-size:11px;font-weight:900;color:#64748b;text-transform:uppercase;margin-bottom:4px;">Actualizar taco</div>
+            <div id="lot-m-titulo" style="font-size:14px;font-weight:900;color:#1e293b;margin-bottom:16px;"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+                <div>
+                    <label style="font-size:9px;font-weight:900;color:#94a3b8;text-transform:uppercase;display:block;margin-bottom:4px;">PERSONA</label>
+                    <input type="text" id="lot-m-persona" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:inherit;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-size:9px;font-weight:900;color:#94a3b8;text-transform:uppercase;display:block;margin-bottom:4px;">EQUIPO</label>
+                    <select id="lot-m-equipo" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:inherit;box-sizing:border-box;">
+                        <option value="">— Sin equipo —</option>
+                        {% for eq in equipos %}<option value="{{ eq }}">{{ eq }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div style="margin-bottom:14px;">
+                    <label style="font-size:9px;font-weight:900;color:#94a3b8;text-transform:uppercase;display:block;margin-bottom:4px;">FECHA ENTREGA</label>
+                    <input type="date" id="lot-m-fecha" style="width:200px;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:inherit;box-sizing:border-box;">
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="font-size:9px;font-weight:900;color:#94a3b8;text-transform:uppercase;display:block;margin-bottom:8px;">ESTADO</label>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <button onclick="lotModalEstado('PERDIDO')" class="lot-btn-e" data-e="PERDIDO" style="border:2px solid transparent;border-radius:6px;padding:6px 10px;font-size:10px;font-weight:900;cursor:pointer;font-family:inherit;background:#fef0db;color:#92400e;">PERDIDO</button>
+                    <button onclick="lotModalEstado('ENTREGADO')" class="lot-btn-e" data-e="ENTREGADO" style="border:2px solid transparent;border-radius:6px;padding:6px 10px;font-size:10px;font-weight:900;cursor:pointer;font-family:inherit;background:#dcfce7;color:#15803d;">✅ ENTREGADO</button>
+                    <button onclick="lotModalEstado('PAGADO')" class="lot-btn-e" data-e="PAGADO" style="border:2px solid transparent;border-radius:6px;padding:6px 10px;font-size:10px;font-weight:900;cursor:pointer;font-family:inherit;background:#bbf7d0;color:#166534;">💰 PAGADO</button>
+                    <button onclick="lotModalEstado('INCOMPLETO')" class="lot-btn-e" data-e="INCOMPLETO" style="border:2px solid transparent;border-radius:6px;padding:6px 10px;font-size:10px;font-weight:900;cursor:pointer;font-family:inherit;background:#fef9c3;color:#854d0e;">⚠️ INCOMPLETO</button>
+                    <button onclick="lotModalEstado('DEVUELTO')" class="lot-btn-e" data-e="DEVUELTO" style="border:2px solid transparent;border-radius:6px;padding:6px 10px;font-size:10px;font-weight:900;cursor:pointer;font-family:inherit;background:#fee2e2;color:#dc2626;">↩ DEVUELTO</button>
+                </div>
+            </div>
+            <div style="margin-bottom:20px;">
+                <label style="font-size:9px;font-weight:900;color:#94a3b8;text-transform:uppercase;display:block;margin-bottom:6px;">PAGADO (€)</label>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <input type="number" id="lot-m-pagado" min="0" max="50" step="5" value="50" oninput="lotCalc()" style="width:100px;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-weight:900;font-family:inherit;">
+                    <span id="lot-m-calc" style="font-size:11px;color:#64748b;font-weight:700;"></span>
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:space-between;align-items:center;">
+                <button onclick="lotVerHistorialModal()" style="background:none;border:1.5px solid #e2e8f0;border-radius:8px;padding:8px 14px;font-size:10px;font-weight:900;cursor:pointer;color:#64748b;font-family:inherit;">⏱ HISTORIAL</button>
+                <div style="display:flex;gap:8px;">
+                    <button onclick="document.getElementById('lot-modal').style.display='none'" style="background:#f1f5f9;border:none;border-radius:8px;padding:8px 16px;font-size:11px;font-weight:900;cursor:pointer;font-family:inherit;">CANCELAR</button>
+                    <button onclick="lotGuardarModal()" style="background:#E31E24;color:white;border:none;border-radius:8px;padding:8px 20px;font-size:11px;font-weight:900;cursor:pointer;font-family:inherit;">GUARDAR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: historial -->
+    <div id="lot-hist-modal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50001;align-items:center;justify-content:center;">
+        <div style="background:white;border-radius:16px;padding:24px;width:400px;max-width:96vw;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+            <div style="font-size:14px;font-weight:900;color:#1e293b;margin-bottom:16px;">⏱ Historial de cambios</div>
+            <div id="lot-hist-list"></div>
+            <button onclick="document.getElementById('lot-hist-modal').style.display='none'" style="margin-top:16px;background:#f1f5f9;border:none;border-radius:8px;padding:10px;font-size:11px;font-weight:900;cursor:pointer;font-family:inherit;width:100%;">CERRAR</button>
+        </div>
+    </div>
+
+    <script>
+    (function(){
+        var _lTemp=null, _lData=[], _lModalId=null, _lBusqId=null, _lNumPapeletas=200, _lModalNuevo=false, _lModalNuevoNums=null;
+
+        window.lotInit = async function(){
+            try{
+                var r = await fetch('/api/loteria/temporadas');
+                var temps = await r.json();
+                var cont = document.getElementById('lot-tabs-container');
+                cont.innerHTML='';
+                document.getElementById('lot-empty').style.display='none';
+                if(!temps.length){ document.getElementById('lot-empty').style.display='block'; document.getElementById('lot-grid').innerHTML=''; return; }
+                temps.forEach(function(t){
+                    var btn=document.createElement('button');
+                    btn.textContent=t; btn.dataset.t=t;
+                    btn.style.cssText='border:2px solid #e2e8f0;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:900;cursor:pointer;font-family:inherit;background:white;color:#1e293b;';
+                    btn.onclick=function(){ lotSelTemp(t); };
+                    cont.appendChild(btn);
+                });
+                if(!_lTemp||!temps.includes(_lTemp)) lotSelTemp(temps[0]);
+                else lotSelTemp(_lTemp);
+            }catch(e){ console.error('lotInit',e); }
+        };
+
+        window.lotSelTemp = async function(n){
+            _lTemp=n;
+            document.querySelectorAll('#lot-tabs-container button').forEach(function(b){
+                var on=b.dataset.t===n;
+                b.style.background=on?'#1e293b':'white';
+                b.style.color=on?'white':'#1e293b';
+                b.style.borderColor=on?'#1e293b':'#e2e8f0';
+            });
+            await lotCargar();
+        };
+
+        function _lotSafe(t){ return t.replace(/\//g,'_'); }
+
+        window.lotCargar = async function(){
+            if(!_lTemp) return;
+            document.getElementById('lot-loading').style.display='block';
+            document.getElementById('lot-grid').innerHTML='';
+            document.getElementById('lot-empty').style.display='none';
+            try{
+                var r=await fetch('/api/loteria/'+_lotSafe(_lTemp));
+                var d=await r.json();
+                _lData=d.tacos||[];
+                _lNumPapeletas=d.num_papeletas||200;
+                var inp=document.getElementById('lot-input-papeletas');
+                if(inp) inp.value=_lNumPapeletas;
+                document.getElementById('lot-loading').style.display='none';
+                if(!_lData.length){ document.getElementById('lot-empty').style.display='block'; return; }
+                lotRender(_lData);
+            }catch(e){ document.getElementById('lot-loading').style.display='none'; console.error(e); }
+        };
+
+        window.lotGuardarPapeletas = async function(){
+            if(!_lTemp) return;
+            var v=parseInt(document.getElementById('lot-input-papeletas').value)||200;
+            _lNumPapeletas=v;
+            await fetch('/api/loteria/'+_lotSafe(_lTemp),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({num_papeletas:v})});
+            lotRender(_lData);
+        };
+
+        function _lotFecha(f){
+            if(!f) return '';
+            if(/^\d{4}-\d{2}-\d{2}$/.test(f)){
+                var p=f.split('-');
+                var m=['','ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+                return p[2]+'-'+m[parseInt(p[1])];
+            }
+            return f;
+        }
+
+        window.lotRender = function(tacos){
+            var PG=20;
+            var totalTacos=Math.max(PG, Math.ceil(_lNumPapeletas/10));
+            var ng=Math.ceil(totalTacos/PG);
+            var tLot=0,tFr=0,tPag=0;
+            tacos.forEach(function(t){ tLot+=t.lot||0; tFr+=t.fr||0; tPag+=t.pagado||0; });
+            var nPed=tacos.filter(function(t){return t.estado==='PERDIDO';}).length;
+            var nPag=tacos.filter(function(t){return t.estado==='PAGADO';}).length;
+            var nEnt=tacos.filter(function(t){return t.estado==='ENTREGADO';}).length;
+            var nInc=tacos.filter(function(t){return t.estado==='INCOMPLETO';}).length;
+            var nDev=tacos.filter(function(t){return t.estado==='DEVUELTO';}).length;
+            var nSin=tacos.filter(function(t){return !t.estado;}).length;
+            var nGest=nPed+nPag+nEnt+nInc+nDev;
+            var pct=_lNumPapeletas>0?Math.min(100,Math.round(nGest*10/_lNumPapeletas*100)):0;
+
+            // ── RESUMEN TOP ──
+            var html='<div style="background:white;border:1px solid #e2e8f0;border-left:4px solid #E31E24;border-radius:10px;padding:16px 20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">';
+            // Fila métricas
+            html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #f1f5f9;">';
+            html+='<div style="text-align:center;border-right:1px solid #f1f5f9;">'
+                +'<div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px;">Recaudado</div>'
+                +'<div style="font-size:20px;font-weight:900;color:#1e293b;line-height:1;">'+tPag+'€</div></div>';
+            html+='<div style="text-align:center;border-right:1px solid #f1f5f9;">'
+                +'<div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px;">LOT <span style="color:#d1d5db;">(80%)</span></div>'
+                +'<div style="font-size:20px;font-weight:900;color:#16a34a;line-height:1;">'+tLot+'€</div></div>';
+            html+='<div style="text-align:center;border-right:1px solid #f1f5f9;">'
+                +'<div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px;">FR <span style="color:#d1d5db;">(20%)</span></div>'
+                +'<div style="font-size:20px;font-weight:900;color:#E31E24;line-height:1;">'+tFr+'€</div></div>';
+            html+='<div style="text-align:center;">'
+                +'<div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px;">Tacos gestionados</div>'
+                +'<div style="font-size:20px;font-weight:900;color:#1e293b;line-height:1;">'+nGest+' <span style="font-size:11px;color:#94a3b8;font-weight:600;">/ '+totalTacos+'</span></div></div>';
+            html+='</div>';
+            // Barra de progreso papeletas
+            html+='<div style="margin-bottom:12px;">';
+            html+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">';
+            html+='<span style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.7px;">Papeletas vendidas</span>';
+            html+='<span style="font-size:12px;font-weight:900;color:#1e293b;">'+nGest*10+' <span style="font-size:10px;color:#94a3b8;font-weight:600;">/ '+_lNumPapeletas+'</span> <span style="font-size:10px;color:#64748b;">('+pct+'%)</span></span>';
+            html+='</div>';
+            html+='<div style="height:8px;background:#f1f5f9;border-radius:99px;overflow:hidden;">';
+            html+='<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#E31E24,#f87171);border-radius:99px;transition:width .4s;min-width:'+(pct>0?'6px':'0')+'"></div>';
+            html+='</div></div>';
+            // Pills de estado
+            html+='<div style="display:flex;gap:5px;flex-wrap:wrap;">';
+            html+='<span style="font-size:10px;font-weight:700;background:#fef0db;color:#92400e;padding:3px 9px;border-radius:5px;border:1px solid #fcd9a8;">Perdido: '+nPed+'</span>';
+            html+='<span style="font-size:10px;font-weight:700;background:#f0fdf4;color:#15803d;padding:3px 9px;border-radius:5px;border:1px solid #bbf7d0;">✅ Pagado: '+nPag+'</span>';
+            html+='<span style="font-size:10px;font-weight:700;background:#dcfce7;color:#166534;padding:3px 9px;border-radius:5px;border:1px solid #86efac;">📦 Entregado: '+nEnt+'</span>';
+            html+='<span style="font-size:10px;font-weight:700;background:#fffbeb;color:#92400e;padding:3px 9px;border-radius:5px;border:1px solid #fde68a;">⚠ Incompleto: '+nInc+'</span>';
+            html+='<span style="font-size:10px;font-weight:700;background:#fef2f2;color:#dc2626;padding:3px 9px;border-radius:5px;border:1px solid #fecaca;">↩ Devuelto: '+nDev+'</span>';
+            html+='<span style="font-size:10px;font-weight:700;background:#f8fafc;color:#64748b;padding:3px 9px;border-radius:5px;border:1px solid #e2e8f0;">— Sin estado: '+nSin+'</span>';
+            html+='</div>';
+            html+='</div>';
+
+            // ── GRID 3 COLUMNAS ──
+            html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:start;">';
+            var BD='1px solid #d1d5db';
+            for(var g=0;g<ng;g++){
+                var grupoTacos=Math.min(PG, totalTacos-g*PG);
+                var gt=tacos.slice(g*PG,(g+1)*PG);
+                var n0=g*200+1, n1=n0+grupoTacos*10-1;
+                var gL=0,gF=0,gP=0;
+                gt.forEach(function(t){ gL+=t.lot||0; gF+=t.fr||0; gP+=t.pagado||0; });
+                html+='<div>';
+                html+='<div style="font-size:10px;font-weight:900;background:#1e3a5f;color:white;padding:5px 8px;text-align:center;letter-spacing:.5px;">'+n0+' — '+n1+'</div>';
+                html+='<table style="width:100%;border-collapse:collapse;font-size:10px;">';
+                html+='<thead><tr style="background:#334155;color:white;">'
+                    +'<th style="padding:4px 5px;text-align:left;font-size:8px;font-weight:900;border:'+BD+';white-space:nowrap;">FECHA</th>'
+                    +'<th style="padding:4px 5px;font-size:8px;font-weight:900;border:'+BD+';white-space:nowrap;">NÚMS</th>'
+                    +'<th style="padding:4px 5px;font-size:8px;font-weight:900;border:'+BD+';">PERSONA</th>'
+                    +'<th style="padding:4px 5px;font-size:8px;font-weight:900;border:'+BD+';">EQ</th>'
+                    +'<th style="padding:4px 5px;font-size:8px;font-weight:900;border:'+BD+';text-align:right;">PAG</th>'
+                    +'<th style="padding:4px 5px;font-size:8px;font-weight:900;border:'+BD+';text-align:right;color:#86efac;">LOT</th>'
+                    +'<th style="padding:4px 5px;font-size:8px;font-weight:900;border:'+BD+';text-align:right;color:#fca5a5;">FR</th>'
+                    +'</tr></thead><tbody>';
+                gt.forEach(function(t){ html+=lotFila(t,BD); });
+                // Filas vacías hasta grupoTacos (clicables para añadir)
+                for(var ex=gt.length;ex<grupoTacos;ex++){
+                    var en0=n0+ex*10;
+                    html+='<tr style="background:white;cursor:pointer;" onclick="lotAbrirNuevo('+en0+','+(en0+9)+')" title="Clic para añadir entrada">'
+                        +'<td style="padding:3px 5px;border:'+BD+';font-size:9px;">&nbsp;</td>'
+                        +'<td style="padding:3px 5px;border:'+BD+';font-size:9px;color:#cbd5e1;white-space:nowrap;">'+en0+'-'+(en0+9)+'</td>'
+                        +'<td style="padding:3px 5px;border:'+BD+';color:#e2e8f0;font-size:9px;">+ añadir</td>'
+                        +'<td style="padding:3px 5px;border:'+BD+';"></td>'
+                        +'<td style="padding:3px 5px;border:'+BD+';"></td>'
+                        +'<td style="padding:3px 5px;border:'+BD+';"></td>'
+                        +'<td style="padding:3px 5px;border:'+BD+';"></td>'
+                        +'</tr>';
+                }
+                html+='</tbody><tfoot><tr style="background:#e2e8f0;font-weight:900;">'
+                    +'<td colspan="3" style="padding:4px 5px;font-size:9px;border:'+BD+';">SUBTOTAL</td>'
+                    +'<td style="border:'+BD+';"></td>'
+                    +'<td style="padding:4px 5px;font-size:9px;text-align:right;border:'+BD+';">'+gP+'€</td>'
+                    +'<td style="padding:4px 5px;font-size:9px;text-align:right;color:#16a34a;border:'+BD+';">'+gL+'€</td>'
+                    +'<td style="padding:4px 5px;font-size:9px;text-align:right;color:#dc2626;border:'+BD+';">'+gF+'€</td>'
+                    +'</tr></tfoot></table></div>';
+            }
+            html+='</div>';
+            document.getElementById('lot-grid').innerHTML=html;
+        };
+
+        window.lotFila = function(t,BD){
+            BD=BD||'1px solid #d1d5db';
+            var bgs={PERDIDO:'#fef0db',ENTREGADO:'#bbf7d0',PAGADO:'#d1fae5',INCOMPLETO:'#fef08a',DEVUELTO:'#fecaca'};
+            var bg=bgs[t.estado]||(t.id%2===0?'#f9fafb':'white');
+            var fecha=_lotFecha(t.fecha_entrega||'');
+            return '<tr id="lot-row-'+t.id+'" style="background:'+bg+';cursor:pointer;" onclick="lotAbrirModal('+t.id+')" title="'+(t.estado||'Sin estado')+'">'
+                +'<td style="padding:3px 5px;border:'+BD+';font-size:9px;color:#475569;white-space:nowrap;">'+fecha+'</td>'
+                +'<td style="padding:3px 5px;border:'+BD+';font-size:9px;font-weight:700;white-space:nowrap;">'+t.num_inicio+'-'+t.num_fin+'</td>'
+                +'<td style="padding:3px 5px;border:'+BD+';font-size:9px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+(t.persona||'')+'">'+(t.persona||'')+'</td>'
+                +'<td style="padding:3px 5px;border:'+BD+';font-size:8px;color:#475569;white-space:nowrap;">'+(t.equipo||'')+'</td>'
+                +'<td style="padding:3px 5px;border:'+BD+';font-size:9px;text-align:right;font-weight:700;">'+(t.pagado?t.pagado+'€':'')+'</td>'
+                +'<td style="padding:3px 5px;border:'+BD+';font-size:9px;text-align:right;color:#16a34a;font-weight:700;">'+(t.lot?t.lot+'€':'')+'</td>'
+                +'<td style="padding:3px 5px;border:'+BD+';font-size:9px;text-align:right;color:#dc2626;font-weight:700;">'+(t.fr?t.fr+'€':'')+'</td>'
+                +'</tr>';
+        };
+
+        window.lotBuscar = function(q){
+            _lBusqId=null;
+            document.querySelectorAll('[id^="lot-row-"]').forEach(function(r){ r.style.outline=''; });
+            if(!q||q.length<2) return;
+            var ql=q.toLowerCase().trim();
+            var match=_lData.find(function(t){
+                return (t.persona||'').toLowerCase().includes(ql)||String(t.num_inicio).includes(ql)||String(t.num_fin).includes(ql)||(t.equipo||'').toLowerCase().includes(ql);
+            });
+            if(match){
+                var row=document.getElementById('lot-row-'+match.id);
+                if(row){ row.style.outline='3px solid #E31E24'; row.scrollIntoView({behavior:'smooth',block:'center'}); _lBusqId=match.id; }
+            }
+        };
+
+        window.lotLimpiarBusqueda = function(){
+            document.getElementById('lot-buscar').value='';
+            document.querySelectorAll('[id^="lot-row-"]').forEach(function(r){ r.style.outline=''; });
+            _lBusqId=null;
+        };
+
+        window.lotAccionSeleccionada = function(estado,pagado){
+            if(_lBusqId){ lotAbrirModal(_lBusqId,estado,pagado); }
+            else{ alert('Primero busca una persona en el buscador para seleccionarla.'); }
+        };
+
+        window.lotAbrirNuevo = function(ni, nf){
+            _lModalNuevo=true; _lModalNuevoNums={ni:ni,nf:nf}; _lModalId=null;
+            document.getElementById('lot-m-titulo').textContent=ni+'–'+nf+' · Nueva entrada';
+            document.getElementById('lot-m-persona').value='';
+            document.getElementById('lot-m-equipo').value='';
+            document.getElementById('lot-m-fecha').value=new Date().toISOString().split('T')[0];
+            document.getElementById('lot-m-pagado').value=50;
+            document.querySelectorAll('.lot-btn-e').forEach(function(b){ b.style.border='2px solid transparent'; });
+            lotCalc();
+            document.getElementById('lot-modal').style.display='flex';
+        };
+
+        window.lotAbrirModal = function(id,estadoP,pagadoP){
+            var t=_lData.find(function(x){ return x.id===id; });
+            if(!t) return;
+            _lModalNuevo=false; _lModalNuevoNums=null; _lModalId=id;
+            document.getElementById('lot-m-titulo').textContent=t.num_inicio+'–'+t.num_fin+' · '+(t.persona||'Sin nombre');
+            document.getElementById('lot-m-persona').value=t.persona||'';
+            document.getElementById('lot-m-equipo').value=t.equipo||'';
+            var hoy=new Date().toISOString().split('T')[0];
+            document.getElementById('lot-m-fecha').value=t.fecha_entrega||hoy;
+            document.getElementById('lot-m-pagado').value=(pagadoP!=null?pagadoP:(t.pagado||50));
+            var e=estadoP||t.estado||'';
+            document.querySelectorAll('.lot-btn-e').forEach(function(b){ b.style.border=b.dataset.e===e?'2px solid #1e293b':'2px solid transparent'; });
+            lotCalc();
+            document.getElementById('lot-modal').style.display='flex';
+        };
+
+        window.lotModalEstado = function(e){
+            document.querySelectorAll('.lot-btn-e').forEach(function(b){ b.style.border=b.dataset.e===e?'2px solid #1e293b':'2px solid transparent'; });
+            if(e==='DEVUELTO') document.getElementById('lot-m-pagado').value=0;
+            if(e==='PAGADO'||e==='ENTREGADO') document.getElementById('lot-m-pagado').value=50;
+            lotCalc();
+        };
+
+        window.lotCalc = function(){
+            var p=parseFloat(document.getElementById('lot-m-pagado').value)||0;
+            document.getElementById('lot-m-calc').textContent='LOT: '+Math.round(p*4/5)+'€ · FR: '+Math.round(p*1/5)+'€';
+        };
+
+        window.lotGuardarModal = async function(){
+            if(!_lTemp) return;
+            var eb=document.querySelector('.lot-btn-e[style*="1e293b"]');
+            var estado=eb?eb.dataset.e:'';
+            var pagado=parseFloat(document.getElementById('lot-m-pagado').value)||0;
+            var fecha=document.getElementById('lot-m-fecha').value||'';
+            var persona=document.getElementById('lot-m-persona').value.trim();
+            var equipo=document.getElementById('lot-m-equipo').value;
+            try{
+                var r;
+                if(_lModalNuevo && _lModalNuevoNums){
+                    r=await fetch('/api/loteria/'+_lotSafe(_lTemp)+'/taco',{
+                        method:'POST', headers:{'Content-Type':'application/json'},
+                        body:JSON.stringify({num_inicio:_lModalNuevoNums.ni,num_fin:_lModalNuevoNums.nf,estado:estado,pagado:pagado,fecha_entrega:fecha,persona:persona,equipo:equipo})
+                    });
+                    if(r.ok){ var d=await r.json(); _lData.push(d.taco); _lData.sort(function(a,b){return a.num_inicio-b.num_inicio;}); }
+                } else {
+                    if(!_lModalId) return;
+                    r=await fetch('/api/loteria/'+_lotSafe(_lTemp)+'/'+_lModalId,{
+                        method:'PUT', headers:{'Content-Type':'application/json'},
+                        body:JSON.stringify({estado:estado, pagado:pagado, fecha_entrega:fecha, persona:persona, equipo:equipo})
+                    });
+                    if(r.ok){
+                        var d=await r.json();
+                        var idx=_lData.findIndex(function(t){ return t.id===_lModalId; });
+                        if(idx>=0) _lData[idx]=d.taco;
+                    }
+                }
+                if(r && r.ok){
+                    lotRender(_lData);
+                    document.getElementById('lot-modal').style.display='none';
+                } else alert('Error al guardar.');
+            }catch(e){ alert('Error de conexión.'); }
+        };
+
+        window.lotVerHistorial = function(id){
+            var t=_lData.find(function(x){ return x.id===id; });
+            if(!t) return;
+            var hist=t.historial||[];
+            var list=document.getElementById('lot-hist-list');
+            if(!hist.length){
+                list.innerHTML='<p style="color:#94a3b8;font-size:12px;text-align:center;">Sin cambios registrados</p>';
+            } else {
+                list.innerHTML=hist.slice().reverse().map(function(h){
+                    return '<div style="padding:8px 12px;margin-bottom:6px;background:#f8fafc;border-radius:8px;border-left:3px solid #E31E24;">'
+                        +'<div style="font-size:9px;color:#94a3b8;font-weight:700;">'+h.ts+'</div>'
+                        +'<div style="font-size:11px;color:#1e293b;font-weight:700;margin-top:3px;"><span style="color:#64748b;">'+h.de+'</span> → '+h.a+'</div>'
+                        +'</div>';
+                }).join('');
+            }
+            document.getElementById('lot-hist-modal').style.display='flex';
+        };
+
+        window.lotVerHistorialModal = function(){
+            document.getElementById('lot-modal').style.display='none';
+            if(_lModalId) lotVerHistorial(_lModalId);
+        };
+
+        window.lotNuevaTemporada = async function(){
+            var nombre=prompt('Nombre de la temporada (ej: 27/28):');
+            if(!nombre||!nombre.trim()) return;
+            try{
+                var r=await fetch('/api/loteria/temporadas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:nombre.trim()})});
+                if(r.ok){ await lotInit(); }
+                else{ var e=await r.json(); alert('Error: '+(e.error||'desconocido')); }
+            }catch(e){ alert('Error de conexión.'); }
+        };
+
+        window.lotExportar = function(){
+            if(!_lData.length) return;
+            var csv='﻿'+'Fecha Entrega,Num Inicio,Num Fin,Persona,Equipo,Estado,Pagado,LOT,FR\n';
+            _lData.forEach(function(t){
+                csv+='"'+(t.fecha_entrega||'')+'",'+t.num_inicio+','+t.num_fin+',"'+(t.persona||'')+'","'+(t.equipo||'')+'","'+(t.estado||'')+'",'+(t.pagado||0)+','+(t.lot||0)+','+(t.fr||0)+'\n';
+            });
+            var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+            var a=document.createElement('a');
+            a.href=URL.createObjectURL(blob);
+            a.download='loteria_'+(_lTemp||'export')+'.csv';
+            a.click();
+        };
+    })();
+    </script>
+
     </div><!-- cierre tab-d-deportiva -->{% endif %}
 
     <div id="tab-push" class="tab-content">
-        <div class="card-coord" style="padding: 22px; max-width: 480px;">
+        <div class="card-coord" style="padding: 22px; max-width: 680px;">
             <h3 style="margin: 0 0 14px 0; font-size: 14px; font-weight: 900; color: #1e293b;"><i class="fas fa-bell" style="color:#E31E24; margin-right: 6px;"></i> Enviar aviso push</h3>
 
-            <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 5px;">Partido relacionado (opcional)</label>
-            <select id="pushTabSelectPartido" style="width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid #ddd; font-size: 12px; box-sizing: border-box; margin-bottom: 14px; font-family: inherit;">
-                <option value="">— Ninguno —</option>
-            </select>
+            <!-- Fila: destinatario | comentario -->
+            <div style="display: flex; gap: 16px; align-items: flex-start;">
 
-            <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 5px;">Usuario destinatario (intranet)</label>
-            <input type="text" id="pushTabDestinatario" placeholder="ej: admin" style="width: 100%; padding: 9px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 12px; box-sizing: border-box; margin-bottom: 14px; font-family: inherit;">
+                <!-- Columna izquierda: toggle + selector -->
+                <div style="flex: 1; min-width: 0;">
+                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 7px;">Destinatario</label>
 
-            <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 5px;">Comentario</label>
-            <textarea id="pushTabComentario" rows="4" style="width: 100%; padding: 9px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 12px; resize: vertical; box-sizing: border-box; font-family: inherit; margin-bottom: 14px;"></textarea>
+                    <!-- Toggle EQUIPO / ENTRENADOR -->
+                    <div style="display: flex; gap: 0; border: 1.5px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin-bottom: 10px;">
+                        <button id="pushToggleEquipo" onclick="pushSetModo('equipo')"
+                            style="flex:1; padding: 8px 6px; font-size: 11px; font-weight: 800; font-family: inherit; border: none; cursor: pointer; background: #E31E24; color: white; transition: all .15s;">
+                            ⚽ EQUIPO
+                        </button>
+                        <button id="pushToggleEntrenador" onclick="pushSetModo('entrenador')"
+                            style="flex:1; padding: 8px 6px; font-size: 11px; font-weight: 800; font-family: inherit; border: none; cursor: pointer; background: #f1f5f9; color: #64748b; transition: all .15s;">
+                            👤 ENTRENADOR
+                        </button>
+                    </div>
 
-            <button onclick="enviarPushTab()" style="width: 100%; background: #E31E24; color: white; border: none; border-radius: 9px; padding: 11px; font-weight: 800; font-size: 13px; cursor: pointer; font-family: inherit;">
+                    <!-- Dropdown EQUIPO -->
+                    <select id="pushSelectEquipo" style="width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid #ddd; font-size: 12px; box-sizing: border-box; font-family: inherit;">
+                        <option value="">— Selecciona equipo —</option>
+                        {% for eq in equipos %}
+                        <option value="{{ eq }}">{{ eq }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <!-- Dropdown ENTRENADOR -->
+                    <select id="pushSelectEntrenador" style="width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid #ddd; font-size: 12px; box-sizing: border-box; font-family: inherit; display: none;">
+                        <option value="">— Selecciona entrenador —</option>
+                    </select>
+                </div>
+
+                <!-- Columna derecha: comentario -->
+                <div style="flex: 1.2; min-width: 0;">
+                    <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 7px;">Comentario</label>
+                    <textarea id="pushTabComentario" rows="5" placeholder="Escribe el mensaje aquí..." style="width: 100%; padding: 9px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 12px; resize: vertical; box-sizing: border-box; font-family: inherit;"></textarea>
+                </div>
+            </div>
+
+            <button onclick="enviarPushTab()" style="width: 100%; background: #E31E24; color: white; border: none; border-radius: 9px; padding: 11px; font-weight: 800; font-size: 13px; cursor: pointer; font-family: inherit; margin-top: 14px;">
                 <i class="fas fa-paper-plane"></i> ENVIAR PUSH
             </button>
             <div id="pushTabEstado" style="font-size: 11px; margin-top: 10px; text-align: center; font-weight: 700;"></div>
@@ -4099,53 +4556,83 @@
         }
     });
 
-    function prepararTabPush() {
-        const select = document.getElementById('pushTabSelectPartido');
-        const opciones = (coloresEntriesCache || []).map(e => {
-            const nombre = nombreEquipoConCategoria(e);
-            const txt = `${e.fecha || ''} - ${nombre || '?'} vs ${e.rival || '?'}${e.warning ? ' ⚠ COINCIDE ROJO' : ''}`;
-            return { txt, contexto: `${nombre || '?'} vs ${e.rival || '?'} (${e.fecha || ''})` };
-        });
-        select.innerHTML = '<option value="">— Ninguno —</option>' + opciones.map((o, i) => `<option value="${i}">${o.txt}</option>`).join('');
-        select.dataset.contextos = JSON.stringify(opciones.map(o => o.contexto));
+    var _pushModo = 'equipo';
+
+    function pushSetModo(modo) {
+        _pushModo = modo;
+        document.getElementById('pushSelectEquipo').style.display = modo === 'equipo' ? '' : 'none';
+        document.getElementById('pushSelectEntrenador').style.display = modo === 'entrenador' ? '' : 'none';
+        document.getElementById('pushToggleEquipo').style.background = modo === 'equipo' ? '#E31E24' : '#f1f5f9';
+        document.getElementById('pushToggleEquipo').style.color = modo === 'equipo' ? 'white' : '#64748b';
+        document.getElementById('pushToggleEntrenador').style.background = modo === 'entrenador' ? '#E31E24' : '#f1f5f9';
+        document.getElementById('pushToggleEntrenador').style.color = modo === 'entrenador' ? 'white' : '#64748b';
+    }
+
+    async function prepararTabPush() {
         document.getElementById('pushTabEstado').textContent = '';
+
+        // Cargar entrenadores desde perfiles
+        try {
+            const res = await fetch('/api/perfiles');
+            const perfiles = await res.json();
+            const selEnt = document.getElementById('pushSelectEntrenador');
+            const entrenadores = perfiles.filter(p => p.USUARIO && p.USUARIO.toLowerCase() !== 'admin');
+            selEnt.innerHTML = '<option value="">— Selecciona entrenador —</option>' +
+                entrenadores.map(p => {
+                    const eq = p.EQUIPO ? ` (${p.EQUIPO})` : '';
+                    return `<option value="${p.USUARIO}">${p.USUARIO}${eq}</option>`;
+                }).join('');
+        } catch(e) {}
     }
 
     async function enviarPushTab() {
-        const usuario = document.getElementById('pushTabDestinatario').value.trim();
         const comentario = document.getElementById('pushTabComentario').value.trim();
-        const select = document.getElementById('pushTabSelectPartido');
         const estado = document.getElementById('pushTabEstado');
-        let contexto = '';
-        if (select.value !== '') {
-            const contextos = JSON.parse(select.dataset.contextos || '[]');
-            contexto = contextos[parseInt(select.value)] || '';
-        }
-        if (!usuario || !comentario) {
+        const contexto = '';
+        if (!comentario) {
             estado.style.color = '#dc2626';
-            estado.textContent = 'Indica usuario destinatario y comentario.';
+            estado.textContent = 'Escribe un comentario antes de enviar.';
             return;
         }
+
+        let destinatarios = [];
+        if (_pushModo === 'equipo') {
+            const eq = document.getElementById('pushSelectEquipo').value;
+            if (!eq) { estado.style.color = '#dc2626'; estado.textContent = 'Selecciona un equipo.'; return; }
+            // Buscar todos los usuarios de ese equipo
+            try {
+                const res = await fetch('/api/perfiles');
+                const perfiles = await res.json();
+                destinatarios = perfiles.filter(p => p.EQUIPO && p.EQUIPO.split(',').map(x=>x.trim()).includes(eq) && p.USUARIO && p.USUARIO.toLowerCase() !== 'admin').map(p => p.USUARIO);
+            } catch(e) {}
+            if (!destinatarios.length) { estado.style.color = '#dc2626'; estado.textContent = 'No hay usuarios para ese equipo.'; return; }
+        } else {
+            const usr = document.getElementById('pushSelectEntrenador').value;
+            if (!usr) { estado.style.color = '#dc2626'; estado.textContent = 'Selecciona un entrenador.'; return; }
+            destinatarios = [usr];
+        }
+
         estado.style.color = '#64748b';
-        estado.textContent = 'Enviando...';
-        try {
-            const res = await fetch('/api/informes/enviar_push_equipacion', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ usuario, comentario, contexto })
-            });
-            const data = await res.json();
-            if (data.status === 'success') {
-                estado.style.color = '#16a34a';
-                estado.textContent = '✓ Enviado correctamente.';
-                document.getElementById('pushTabComentario').value = '';
-            } else {
-                estado.style.color = '#dc2626';
-                estado.textContent = data.message || 'Error al enviar.';
-            }
-        } catch (e) {
-            estado.style.color = '#dc2626';
-            estado.textContent = 'Error de conexión.';
+        estado.textContent = `Enviando a ${destinatarios.length} destinatario(s)...`;
+        let ok = 0, err = 0;
+        for (const usuario of destinatarios) {
+            try {
+                const res = await fetch('/api/informes/enviar_push_equipacion', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ usuario, comentario, contexto })
+                });
+                const data = await res.json();
+                if (data.status === 'success') ok++; else err++;
+            } catch(e) { err++; }
+        }
+        if (err === 0) {
+            estado.style.color = '#16a34a';
+            estado.textContent = `✓ Enviado a ${ok} destinatario(s).`;
+            document.getElementById('pushTabComentario').value = '';
+        } else {
+            estado.style.color = ok > 0 ? '#d97706' : '#dc2626';
+            estado.textContent = `${ok} enviados, ${err} fallidos.`;
         }
     }
 
