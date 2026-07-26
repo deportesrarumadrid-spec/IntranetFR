@@ -1652,6 +1652,55 @@
             f.style.display = f.style.display === 'none' ? 'block' : 'none';
         }
 
+        let _cgEquiposDisponibles = [];
+        fetch('/api/equipos_lista').then(r=>r.json()).then(d=>{ _cgEquiposDisponibles = d.equipos||[]; }).catch(()=>{});
+
+        function _cgEquipoWidget(valorActual, disabled) {
+            const sel = valorActual ? valorActual.split(',').map(s=>s.trim()).filter(Boolean) : [];
+            const chips = sel.map(e=>`<span style="background:#E31E24;color:white;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:900;white-space:nowrap;">${e}</span>`).join('');
+            if (disabled) return `<div style="display:flex;flex-wrap:wrap;gap:4px;min-height:28px;">${chips||'<span style="color:#cbd5e1;font-size:11px;">—</span>'}</div>`;
+            return `<div class="cg-equipo-widget" style="position:relative;">
+                <div class="cg-equipo-chips" onclick="cgToggleEquipoDD(this)" style="display:flex;flex-wrap:wrap;gap:4px;min-height:28px;border:1px solid #e2e8f0;border-radius:6px;padding:4px 6px;cursor:pointer;background:white;align-items:center;">
+                    ${chips||'<span style="color:#94a3b8;font-size:11px;font-weight:600;">Seleccionar...</span>'}
+                </div>
+                <input type="hidden" class="cg-edit-equipo" value="${sel.join(', ')}">
+                <div class="cg-equipo-dd" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:9999;background:white;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.15);min-width:180px;padding:6px 0;max-height:220px;overflow-y:auto;"></div>
+            </div>`;
+        }
+
+        function cgToggleEquipoDD(chipsEl) {
+            const widget = chipsEl.closest('.cg-equipo-widget');
+            const dd = widget.querySelector('.cg-equipo-dd');
+            const hidden = widget.querySelector('.cg-edit-equipo');
+            if (dd.style.display !== 'none') { dd.style.display='none'; return; }
+            const selected = hidden.value ? hidden.value.split(',').map(s=>s.trim()).filter(Boolean) : [];
+            dd.innerHTML = (_cgEquiposDisponibles.length ? _cgEquiposDisponibles : selected).map(eq => {
+                const isOn = selected.includes(eq);
+                return `<div onclick="cgToggleEquipoItem(this,'${eq.replace(/'/g,"\\'")}',event)" style="padding:8px 14px;cursor:pointer;font-size:11px;font-weight:700;display:flex;align-items:center;gap:8px;${isOn?'background:#fef2f2;':''}" onmouseenter="this.style.background='#fef2f2'" onmouseleave="this.style.background='${isOn?'#fef2f2':''}'">
+                    <span style="width:14px;height:14px;border-radius:3px;border:2px solid #E31E24;display:inline-flex;align-items:center;justify-content:center;background:${isOn?'#E31E24':'white'}">${isOn?'<i class="fas fa-check" style="color:white;font-size:8px;"></i>':''}</span>
+                    ${eq}
+                </div>`;
+            }).join('') || '<div style="padding:10px 14px;color:#94a3b8;font-size:11px;">Sin equipos disponibles</div>';
+            dd.style.display = 'block';
+            setTimeout(()=>{ document.addEventListener('click', function _close(e){ if(!widget.contains(e.target)){dd.style.display='none'; document.removeEventListener('click',_close);} }); }, 0);
+        }
+
+        function cgToggleEquipoItem(el, equipo, e) {
+            e.stopPropagation();
+            const widget = el.closest('.cg-equipo-widget');
+            const hidden = widget.querySelector('.cg-edit-equipo');
+            const chips = widget.querySelector('.cg-equipo-chips');
+            let sel = hidden.value ? hidden.value.split(',').map(s=>s.trim()).filter(Boolean) : [];
+            if (sel.includes(equipo)) sel = sel.filter(s=>s!==equipo);
+            else sel.push(equipo);
+            hidden.value = sel.join(', ');
+            chips.innerHTML = sel.length ? sel.map(e=>`<span style="background:#E31E24;color:white;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:900;white-space:nowrap;">${e}</span>`).join('') : '<span style="color:#94a3b8;font-size:11px;font-weight:600;">Seleccionar...</span>';
+            const isOn = sel.includes(equipo);
+            el.style.background = isOn?'#fef2f2':'';
+            el.querySelector('span').style.background = isOn?'#E31E24':'white';
+            el.querySelector('span').innerHTML = isOn?'<i class="fas fa-check" style="color:white;font-size:8px;"></i>':'';
+        }
+
         async function cargarPerfilesCG() {
             try {
                 const res = await fetch('/api/perfiles');
@@ -1669,7 +1718,7 @@
                     return `<tr data-user="${un}" style="border-bottom:1px solid #f1f5f9;">
                         <td style="padding:10px 12px; font-weight:900; color:#1e293b;">${un}</td>
                         <td style="padding:10px 12px;"><input type="text" value="${rawU.CONTRASEÑA||u.CONTRASEA||''}" class="cg-edit-pass" style="width:100px; padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; font-weight:700; font-family:inherit;" ${dis}></td>
-                        <td style="padding:10px 12px;"><input type="text" value="${rawU.EQUIPO||u.EQUIPO||''}" class="cg-edit-equipo" placeholder="—" style="width:110px; padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; font-weight:700; font-family:inherit;" ${dis}></td>
+                        <td style="padding:10px 12px; min-width:160px;">${_cgEquipoWidget(rawU.EQUIPO||u.EQUIPO||'', !!dis)}</td>
                         <td style="text-align:center; padding:10px 8px;"><input type="checkbox" class="check-coord cg-edit-entrenos" ${u.ENTRENAMIENTOS==='SI'?'checked':''} ${dis}></td>
                         <td style="text-align:center; padding:10px 8px;"><input type="checkbox" class="check-coord cg-edit-asist" ${u.ASISTENCIAS==='SI'?'checked':''} ${dis}></td>
                         <td style="text-align:center; padding:10px 8px;"><input type="checkbox" class="check-coord cg-edit-financ" ${u.FINANCIERO==='SI'?'checked':''} ${dis}></td>
