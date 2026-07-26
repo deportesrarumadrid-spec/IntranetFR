@@ -1960,7 +1960,7 @@
 
         window.lotFila = function(t,BD){
             BD=BD||'1px solid #d1d5db';
-            var bgs={PERDIDO:'#fcd9a8',PAGADO:'#86efac',INCOMPLETO:'#fde047',DEVUELTO:'#fca5a5'};
+            var bgs={PERDIDO:'#fcd9a8',PAGADO:'#86efac',ENTREGADO:'#86efac',INCOMPLETO:'#fde047',DEVUELTO:'#fca5a5'};
             var bg=bgs[t.estado]||(t.id%2===0?'#f9fafb':'white');
             var fecha=_lotFecha(t.fecha_entrega||'');
             return '<tr id="lot-row-'+t.id+'" style="background:'+bg+';cursor:pointer;" onclick="lotAbrirModal('+t.id+')" title="'+(t.estado||'Sin estado')+'">'
