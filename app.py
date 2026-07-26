@@ -385,7 +385,8 @@ def seleccionar_equipo():
         perms = session.get('permisos', {})
         
         # Redirección inteligente al módulo correspondiente tras elegir equipo
-        if perms.get('D.DEPORTIVA') == 'SI': target = url_for('deportivo_bp.direccion_deportiva')
+        if session.get('usuario', '').lower() == 'admin': target = url_for('deportivo_bp.direccion_deportiva')
+        elif perms.get('D.DEPORTIVA') == 'SI': target = url_for('deportivo_bp.direccion_deportiva')
         elif perms.get('ENTRENAMIENTOS') == 'SI': target = url_for('deportivo_bp.deportivo')
         elif perms.get('ASISTENCIAS') == 'SI': target = url_for('asistencias')
         elif perms.get('FINANCIERO') == 'SI': target = url_for('financiero.financiero')
