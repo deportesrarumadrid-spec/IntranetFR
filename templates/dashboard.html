@@ -593,6 +593,7 @@
                     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:16px; align-items:end;">
                         <div><label style="font-size:10px; font-weight:900; color:#94a3b8; display:block; margin-bottom:6px; text-transform:uppercase;">USUARIO</label><input type="text" id="cgNewUsername" placeholder="Usuario..." style="width:100%; padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:700; box-sizing:border-box; font-family:inherit;"></div>
                         <div><label style="font-size:10px; font-weight:900; color:#94a3b8; display:block; margin-bottom:6px; text-transform:uppercase;">CONTRASEÑA</label><input type="text" id="cgNewPassword" placeholder="Contraseña..." style="width:100%; padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:700; box-sizing:border-box; font-family:inherit;"></div>
+                        <div><label style="font-size:10px; font-weight:900; color:#94a3b8; display:block; margin-bottom:6px; text-transform:uppercase;">EQUIPO (opcional)</label><input type="text" id="cgNewEquipo" placeholder="Ej: BENJAMIN A" style="width:100%; padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:700; box-sizing:border-box; font-family:inherit;"></div>
                         <div style="display:flex; flex-direction:column; gap:6px;">
                             <label style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase;">PERMISOS</label>
                             <label style="display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; cursor:pointer;"><input type="checkbox" id="cgCheckEntreno" class="check-coord"> ENTRENAMIENTOS</label>
@@ -613,6 +614,7 @@
                         <thead><tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0;">
                             <th style="padding:10px 12px; text-align:left; font-size:10px; font-weight:900; color:#64748b; text-transform:uppercase; white-space:nowrap;">USUARIO</th>
                             <th style="padding:10px 12px; text-align:left; font-size:10px; font-weight:900; color:#64748b; text-transform:uppercase;">CONTRASEÑA</th>
+                            <th style="padding:10px 12px; text-align:left; font-size:10px; font-weight:900; color:#64748b; text-transform:uppercase;">EQUIPO</th>
                             <th style="padding:10px 12px; text-align:center; font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase;">ENTRENO</th>
                             <th style="padding:10px 12px; text-align:center; font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase;">ASIST.</th>
                             <th style="padding:10px 12px; text-align:center; font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase;">FINANC.</th>
@@ -1667,6 +1669,7 @@
                     return `<tr data-user="${un}" style="border-bottom:1px solid #f1f5f9;">
                         <td style="padding:10px 12px; font-weight:900; color:#1e293b;">${un}</td>
                         <td style="padding:10px 12px;"><input type="text" value="${rawU.CONTRASEÑA||u.CONTRASEA||''}" class="cg-edit-pass" style="width:100px; padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; font-weight:700; font-family:inherit;" ${dis}></td>
+                        <td style="padding:10px 12px;"><input type="text" value="${rawU.EQUIPO||u.EQUIPO||''}" class="cg-edit-equipo" placeholder="—" style="width:110px; padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; font-weight:700; font-family:inherit;" ${dis}></td>
                         <td style="text-align:center; padding:10px 8px;"><input type="checkbox" class="check-coord cg-edit-entrenos" ${u.ENTRENAMIENTOS==='SI'?'checked':''} ${dis}></td>
                         <td style="text-align:center; padding:10px 8px;"><input type="checkbox" class="check-coord cg-edit-asist" ${u.ASISTENCIAS==='SI'?'checked':''} ${dis}></td>
                         <td style="text-align:center; padding:10px 8px;"><input type="checkbox" class="check-coord cg-edit-financ" ${u.FINANCIERO==='SI'?'checked':''} ${dis}></td>
@@ -1693,6 +1696,7 @@
             try {
                 const res = await fetch('/api/perfiles', { method:'POST', headers:{'Content-Type':'application/json'},
                     body: JSON.stringify({ USUARIO:user, CONTRASEÑA:pass,
+                        EQUIPO: document.getElementById('cgNewEquipo').value.trim(),
                         ENTRENAMIENTOS: document.getElementById('cgCheckEntreno').checked?'SI':'NO',
                         ASISTENCIAS: document.getElementById('cgCheckAsist').checked?'SI':'NO',
                         FINANCIERO: document.getElementById('cgCheckFinanc').checked?'SI':'NO',
@@ -1710,6 +1714,7 @@
             const row = btn.closest('tr');
             const data = {
                 'CONTRASEÑA': row.querySelector('.cg-edit-pass').value,
+                'EQUIPO': row.querySelector('.cg-edit-equipo').value,
                 'ENTRENAMIENTOS': row.querySelector('.cg-edit-entrenos').checked?'SI':'NO',
                 'ASISTENCIAS': row.querySelector('.cg-edit-asist').checked?'SI':'NO',
                 'FINANCIERO': row.querySelector('.cg-edit-financ').checked?'SI':'NO',
