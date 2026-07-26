@@ -535,19 +535,32 @@ def login():
         records = sheet.get_all_records()
         
         # Búsqueda ultra-precisa: normalizamos el target y los registros
+        from werkzeug.security import check_password_hash as _chk, generate_password_hash as _gen
         user_data = None
+        row_idx_sheet = None
         target_upper = usuario_ingresado.upper()
-        
-        for r in records:
+
+        for idx, r in enumerate(records):
             # Normalización de llaves del diccionario de la fila
             r_norm = {normalizar_cabecera_universal(k): v for k, v in r.items()}
             if str(r_norm.get('USUARIO', '')).strip().upper() == target_upper:
                 user_data = r_norm
+                row_idx_sheet = idx + 2  # fila 1 = cabecera
                 break
 
         if user_data:
-            # Validación de contraseña (sensible a mayúsculas/minúsculas pero ignora espacios laterales)
-            if str(user_data.get('CONTRASENA', '')).strip() == password_ingresado:
+            stored = str(user_data.get('CONTRASENA', '')).strip()
+            _is_hash = stored.startswith(('pbkdf2:', '$2b$', 'scrypt:'))
+            if _is_hash:
+                _password_ok = _chk(stored, password_ingresado)
+            else:
+                _password_ok = (stored == password_ingresado)
+                if _password_ok and row_idx_sheet:
+                    try:
+                        sheet.update_cell(row_idx_sheet, 2, _gen(password_ingresado))
+                    except Exception:
+                        pass
+            if _password_ok:
                 session['usuario'] = usuario_ingresado
                 
                 def check_p(key):

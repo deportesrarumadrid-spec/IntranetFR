@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app
 import gspread
+from werkzeug.security import generate_password_hash
 
 perfiles_bp = Blueprint('perfiles_bp', __name__)
 
@@ -92,7 +93,7 @@ def add_perfil():
         # Construir la fila con los permisos, por defecto 'NO'
         new_row = [
             usuario,
-            contrasena,
+            generate_password_hash(contrasena),
             str(data.get('ENTRENAMIENTOS', 'NO')).upper(),
             str(data.get('ASISTENCIAS', 'NO')).upper(),
             str(data.get('FINANCIERO', 'NO')).upper(),
@@ -138,8 +139,15 @@ def update_perfil(username):
 
         # Construimos los valores para las columnas B a G (indices 1 a 6 de PERFILES_HEADERS)
         # Tomamos el valor nuevo del JSON o mantenemos el antiguo si no viene en la petición
+        existing_pwd = found_row_data[1] if len(found_row_data) > 1 else ""
+        nueva_pwd_raw = data_norm.get('CONTRASEÑA')
+        if nueva_pwd_raw is not None and str(nueva_pwd_raw).strip():
+            pwd_a_guardar = generate_password_hash(str(nueva_pwd_raw).strip())
+        else:
+            pwd_a_guardar = existing_pwd
+
         nuevos_valores_fila = [
-            data_norm.get('CONTRASEÑA', found_row_data[1] if len(found_row_data) > 1 else ""),
+            pwd_a_guardar,
             str(data_norm.get('ENTRENAMIENTOS', found_row_data[2] if len(found_row_data) > 2 else "NO")).upper(),
             str(data_norm.get('ASISTENCIAS', found_row_data[3] if len(found_row_data) > 3 else "NO")).upper(),
             str(data_norm.get('FINANCIERO', found_row_data[4] if len(found_row_data) > 4 else "NO")).upper(),
