@@ -703,7 +703,17 @@
                 <img src="{{ url_for('static', filename='ESCUDO SIN FONDO.png') }}" alt="Escudo" style="height: 65px; width: auto;">
                 <span style="font-size: 0.9rem; color: #666; display: flex; gap: 8px; align-items: center;">
                     Bienvenido, <strong id="userId" style="color: #333;">{{ usuario }}</strong>
-                    {% if equipo_defecto %}
+                    {% if usuario|lower == 'admin' %}
+                    <div style="position:relative; display:inline-block;">
+                        <button id="adminEquipoBtn" onclick="toggleAdminEquipoDropdown(event)" style="background:#E31E24; color:white; border:none; border-radius:999px; padding:3px 10px 3px 12px; font-size:0.78rem; font-weight:900; letter-spacing:0.5px; text-transform:uppercase; cursor:pointer; display:flex; align-items:center; gap:5px;">
+                            <span id="adminEquipoLabel">{{ equipo_defecto or 'EQUIPO' }}</span>
+                            <i class="fas fa-chevron-down" style="font-size:0.6rem;"></i>
+                        </button>
+                        <div id="adminEquipoDropdown" style="display:none; position:absolute; top:calc(100% + 6px); left:0; background:white; border-radius:10px; box-shadow:0 4px 20px rgba(0,0,0,0.15); min-width:160px; z-index:9999; overflow:hidden; max-height:300px; overflow-y:auto;">
+                            <div id="adminEquipoList" style="padding:4px 0;"></div>
+                        </div>
+                    </div>
+                    {% elif equipo_defecto %}
                     <span id="topbarEquipoBadge" style="background: #E31E24; color: white; border-radius: 999px; padding: 3px 10px; font-size: 0.78rem; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase;">
                         {{ equipo_defecto }}
                     </span>
@@ -1100,6 +1110,32 @@
         }
 
         cargarAlquileresSidebar();
+
+        // === DROPDOWN EQUIPO ADMIN ===
+        (function() {
+            const btn = document.getElementById('adminEquipoBtn');
+            if (!btn) return;
+            fetch('/api/equipos_lista').then(r => r.json()).then(data => {
+                const list = document.getElementById('adminEquipoList');
+                (data.equipos || []).forEach(eq => {
+                    const item = document.createElement('div');
+                    item.textContent = eq;
+                    item.style.cssText = 'padding:8px 16px; cursor:pointer; font-size:0.82rem; font-weight:700; text-transform:uppercase; color:#333; white-space:nowrap;';
+                    item.onmouseenter = () => item.style.background = '#fef2f2';
+                    item.onmouseleave = () => item.style.background = '';
+                    item.onclick = () => { showLoader(); window.location.href = '/seleccionar_equipo?equipo=' + encodeURIComponent(eq); };
+                    list.appendChild(item);
+                });
+            }).catch(() => {});
+            document.addEventListener('click', e => {
+                if (!btn.closest('div').contains(e.target)) document.getElementById('adminEquipoDropdown').style.display = 'none';
+            });
+        })();
+        function toggleAdminEquipoDropdown(e) {
+            e.stopPropagation();
+            const dd = document.getElementById('adminEquipoDropdown');
+            dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+        }
 
         // === CUMPLEAÑOS (widget sidebar, todos los usuarios) ===
         let _cumpleannosCache = null;
