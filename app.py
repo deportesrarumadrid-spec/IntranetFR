@@ -521,8 +521,11 @@ def login():
     usuario_ingresado = (request.form.get('usuario') or "").strip()
     password_ingresado = (request.form.get('password') or "").strip()
 
-    # 1. Caso especial para admin (Master) - NO SE TOCA, acceso total garantizado
+    # 1. Caso especial para admin (Master)
     if usuario_ingresado.lower() == 'admin':
+        admin_pwd = os.environ.get('ADMIN_PASSWORD', '')
+        if not admin_pwd or password_ingresado != admin_pwd:
+            return render_template('login.html', error="Credenciales incorrectas.")
         session['usuario'] = 'admin'
         session['permisos'] = {
             'ENTRENAMIENTOS': 'SI', 'ASISTENCIAS': 'SI', 'FINANCIERO': 'SI', 'D.DEPORTIVA': 'SI', 'USUARIOS': 'SI',
