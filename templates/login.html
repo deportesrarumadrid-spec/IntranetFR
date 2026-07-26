@@ -93,7 +93,10 @@
 
         <form action="/login" method="POST">
             <input type="text" name="usuario" placeholder="Usuario" required>
-            <input type="password" name="password" placeholder="Contraseña" required>
+            <div style="position:relative;">
+                <input type="password" name="password" id="passwordInput" placeholder="Contraseña" required style="padding-right:42px;">
+                <span onclick="togglePwd()" style="position:absolute; right:14px; top:50%; transform:translateY(-50%); cursor:pointer; color:#aaa; font-size:18px; user-select:none;">👁</span>
+            </div>
             {% if error %}
             <div style="color: #e60000; font-size: 12px; font-weight: 800; margin-bottom: 15px; background: #ffebeb; padding: 10px; border-radius: 8px; border: 1px solid #ffcccc;">{{ error }}</div>
             {% endif %}
@@ -102,6 +105,10 @@
     </div>
     <script>
         // Pequeño script para mostrar que está cargando antes de la redirección
+        function togglePwd() {
+            const inp = document.getElementById('passwordInput');
+            inp.type = inp.type === 'password' ? 'text' : 'password';
+        }
         document.querySelector('form').onsubmit = function() {
             const btn = this.querySelector('button');
             btn.disabled = true;
