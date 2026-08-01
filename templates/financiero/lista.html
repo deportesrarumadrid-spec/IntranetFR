@@ -5738,7 +5738,7 @@ async function confirmarPago(btn) {
             const fila = cell.closest('tr');
             const currentRowIsStaff = fila.classList.contains('fila-staff');
 
-            const nombre = currentRowIsStaff ? fila.dataset.nombre : fila.cells[1].innerText;
+            const nombre = currentRowIsStaff ? fila.dataset.nombre : fila.cells[1].innerText.trim();
             const equipo = currentRowIsStaff ? "STAFF" : fila.dataset.equipo;
             const forma = currentRowIsStaff ? "Varios" : fila.cells[3].innerText.trim();
             const tipo = currentRowIsStaff ? "Varios" : fila.cells[2].innerText.trim();
