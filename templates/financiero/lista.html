@@ -5863,6 +5863,18 @@ async function confirmarPago(btn) {
                 }
                 if (dataPago.asiento) ultimoAsientoPagoCreado = dataPago.asiento;
                 if (dataPago.recibo_html) ultimoReciboHtml = dataPago.recibo_html;
+                // Actualizar celda inmediatamente en el DOM: no esperar a cargarPresupuesto
+                // evita que un Sheets cache stale deje la celda en estado anterior
+                if (pagadoTotal > 0) {
+                    const _espCel = parseFloat(cell.dataset.esperado) || esperadoIndividual;
+                    cell.dataset.importe = pagadoTotal;
+                    cell.classList.remove('pago-verde', 'pago-naranja', 'pago-exceso', 'selected-cell');
+                    cell.classList.add(pagadoTotal >= _espCel && _espCel > 0 ? 'pago-verde' : 'pago-naranja');
+                    cell.style.color = '';
+                    cell.innerText = _espCel > 0
+                        ? `${pagadoTotal}€/${Math.round(_espCel)}€`
+                        : `${pagadoTotal}€`;
+                }
             } else {
                 const errText = await resPago.text().catch(() => '');
                 alert(`Error del servidor (${resPago.status}) al guardar el pago.\n${errText.slice(0,200)}`);
