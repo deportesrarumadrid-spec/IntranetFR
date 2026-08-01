@@ -1050,13 +1050,15 @@ def api_operacion_asiento():
         fila_idx = -1
 
         if tipo_origen in ['JUGADOR', 'STAFF']:
-            # Búsqueda robusta por contenido (Fecha, Nombre, Concepto) enviada desde el front
-            # Esto evita borrar la fila equivocada si el orden en el Excel ha cambiado
-            # Columnas según hoja: 
-            # JUGADOR: FECHA(0), EQUIPO(1), NOMBRE(2), TIPO(3), FORMA(4), CONCEPTO(5), PAGADO(6), ESPERADO(7)
-            # STAFF: FECHA(0), NOMBRE(1), CONCEPTO(2), PAGADO(3), ESPERADO(4)
-            col_n = 2 if tipo_origen == 'JUGADOR' else 1
-            col_c = 5 if tipo_origen == 'JUGADOR' else 2
+            # Determinar columnas desde headers reales para no asumir orden fijo
+            headers_esp_raw = normalizar_cabeceras(all_v[0]) if all_v else []
+            if tipo_origen == 'JUGADOR':
+                col_n = next((headers_esp_raw.index(v) for v in ['NOMBRE','JUGADOR'] if v in headers_esp_raw), 2)
+                col_c = next((headers_esp_raw.index(v) for v in ['CONCEPTO'] if v in headers_esp_raw), 5)
+            else:
+                col_n = next((headers_esp_raw.index(v) for v in ['NOMBRE','JUGADOR'] if v in headers_esp_raw), 1)
+                col_c = next((headers_esp_raw.index(v) for v in ['CONCEPTO'] if v in headers_esp_raw), 2)
+            print(f"[operacion_asiento] {nombre_hoja} headers={headers_esp_raw!r} col_n={col_n} col_c={col_c}")
             
             for i, row in enumerate(all_v):
                 if i == 0: continue
@@ -1137,10 +1139,17 @@ def api_operacion_asiento():
             # También borrar de la hoja específica si corresponde
             if tipo_origen in ['JUGADOR', 'STAFF']:
                 sheet_esp = client.open(NOMBRE_EXCEL).worksheet("PAGOS STAFF" if tipo_origen == 'STAFF' else "PAGOS JUGADORES")
-                # Búsqueda por contenido para borrar en la sub-hoja
                 all_esp = sheet_esp.get_all_values()
-                col_n = 2 if tipo_origen == 'JUGADOR' else 1
-                col_c = 5 if tipo_origen == 'JUGADOR' else 2
+                # Recalcular col_n/col_c por si los headers de PAGOS JUGADORES difieren del orden asumido
+                if all_esp:
+                    _h2 = normalizar_cabeceras(all_esp[0])
+                    if tipo_origen == 'JUGADOR':
+                        col_n = next((h for h in [_h2.index(v) if v in _h2 else None for v in ['NOMBRE','JUGADOR']] if h is not None), col_n)
+                        col_c = _h2.index('CONCEPTO') if 'CONCEPTO' in _h2 else col_c
+                    else:
+                        col_n = next((h for h in [_h2.index(v) if v in _h2 else None for v in ['NOMBRE','JUGADOR']] if h is not None), col_n)
+                        col_c = _h2.index('CONCEPTO') if 'CONCEPTO' in _h2 else col_c
+                    print(f"[borrar] PAGOS sub-hoja headers={_h2!r} col_n={col_n} col_c={col_c}")
                 for i, row in enumerate(all_esp):
                     if i > 0 and len(row) > max(col_n, col_c) and row[col_n].strip().lower() == data.get('nombre_orig','').strip().lower() and normalizar_concepto_interno(row[col_c]) == normalizar_concepto_interno(data.get('concepto_orig')):
                         sheet_esp.delete_rows(i + 1)
