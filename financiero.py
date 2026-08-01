@@ -1100,20 +1100,40 @@ def api_operacion_asiento():
                 break
         
         fila_fin_idx = -1
-        for i, row in enumerate(all_fin):
-            if i > 0 and len(row) > idx_asi:
-                # Comparación flexible de IDs (ignora símbolos y ceros a la izquierda)
-                val_row = str(row[idx_asi]).strip().replace('#','')
-                val_target = str(asiento_id).strip().replace('#','')
-                if val_row == val_target or (val_row.isdigit() and val_target.isdigit() and int(val_row) == int(val_target)):
-                    fila_fin_idx = i + 1
-                    break
+        if idx_asi != -1:
+            for i, row in enumerate(all_fin):
+                if i > 0 and len(row) > idx_asi:
+                    # Comparación flexible de IDs (ignora símbolos y ceros a la izquierda)
+                    val_row = str(row[idx_asi]).strip().replace('#','')
+                    val_target = str(asiento_id).strip().replace('#','')
+                    if val_row == val_target or (val_row.isdigit() and val_target.isdigit() and int(val_row) == int(val_target)):
+                        fila_fin_idx = i + 1
+                        break
+
+        # Fallback: buscar por NOMBRE+CONCEPTO en FINANCIERO si el ID no encontró nada
+        if fila_fin_idx == -1 and tipo_origen in ['JUGADOR', 'STAFF']:
+            idx_nom = next((headers_fin.index(v) for v in ['NOMBRE', 'JUGADOR'] if v in headers_fin), -1)
+            idx_con = next((headers_fin.index(v) for v in ['CONCEPTO'] if v in headers_fin), -1)
+            print(f"[borrar] Fallback contenido: idx_asi={idx_asi!r} idx_nom={idx_nom!r} idx_con={idx_con!r} headers={headers_fin!r}")
+            if idx_nom != -1 and idx_con != -1:
+                nom_bus = data.get('nombre_orig', '').strip().lower()
+                con_bus = normalizar_concepto_interno(data.get('concepto_orig', ''))
+                for i, row in enumerate(all_fin):
+                    if i > 0 and len(row) > max(idx_nom, idx_con):
+                        if (row[idx_nom].strip().lower() == nom_bus and
+                                normalizar_concepto_interno(row[idx_con]) == con_bus):
+                            fila_fin_idx = i + 1
+                            print(f"[borrar] Fallback encontró fila {fila_fin_idx} por nombre+concepto")
+                            break
 
         if fila_fin_idx == -1:
-            return jsonify({"status": "error", "message": "Asiento no encontrado en el historial"}), 404
+            if tipo_origen not in ['JUGADOR', 'STAFF']:
+                return jsonify({"status": "error", "message": "Asiento no encontrado en el historial"}), 404
+            print(f"[borrar] FINANCIERO: asiento {asiento_id!r} no encontrado — borrando solo de sub-hoja")
 
         if accion == 'borrar':
-            sheet_fin.delete_rows(fila_fin_idx)
+            if fila_fin_idx != -1:
+                sheet_fin.delete_rows(fila_fin_idx)
             # También borrar de la hoja específica si corresponde
             if tipo_origen in ['JUGADOR', 'STAFF']:
                 sheet_esp = client.open(NOMBRE_EXCEL).worksheet("PAGOS STAFF" if tipo_origen == 'STAFF' else "PAGOS JUGADORES")
@@ -1162,6 +1182,8 @@ def api_operacion_asiento():
                     print(f"[borrar_asiento] No se pudo desconciliar remesa: {_e_rem}")
         
         elif accion == 'editar':
+            if fila_fin_idx == -1:
+                return jsonify({"status": "error", "message": "Asiento no encontrado en el historial"}), 404
             print(f"[editar] fila_fin_idx={fila_fin_idx} tipo_origen={tipo_origen!r} asiento_id={asiento_id!r}")
             print(f"[editar] headers_fin={headers_fin}")
             print(f"[editar] data keys={list(data.keys())}")
