@@ -5800,6 +5800,7 @@ async function confirmarPago(btn) {
         const fechaHoy = new Date().toLocaleDateString('es-ES');
         let saldoARepartir = totalPagado;
         let ultimoAsientoPagoCreado = null;
+        let ultimoReciboHtml = null;
         const numConceptosSeleccionados = celdasSeleccionadas.length;
 
         for (let i = 0; i < celdasSeleccionadas.length; i++) {
@@ -5861,6 +5862,7 @@ async function confirmarPago(btn) {
                     return;
                 }
                 if (dataPago.asiento) ultimoAsientoPagoCreado = dataPago.asiento;
+                if (dataPago.recibo_html) ultimoReciboHtml = dataPago.recibo_html;
             } else {
                 const errText = await resPago.text().catch(() => '');
                 alert(`Error del servidor (${resPago.status}) al guardar el pago.\n${errText.slice(0,200)}`);
@@ -5870,7 +5872,7 @@ async function confirmarPago(btn) {
         await cargarPresupuesto();
         cerrarModalsFin();
         if (numConceptosSeleccionados === 1 && ultimoAsientoPagoCreado) {
-            abrirModalRecibo(ultimoAsientoPagoCreado);
+            abrirModalRecibo(ultimoAsientoPagoCreado, ultimoReciboHtml || null);
         }
     } catch (e) {
         console.error(e);
@@ -6589,12 +6591,18 @@ function celdaFacturaHtml(a, importe, real_id) {
 let reciboAsientoActivo = null;
 let reciboHtmlActivo = '';
 
-async function abrirModalRecibo(nAsiento) {
+async function abrirModalRecibo(nAsiento, htmlDirecto) {
     reciboAsientoActivo = nAsiento;
     document.getElementById('inputEmailRecibo').value = '';
     document.getElementById('reciboEstadoEnvio').style.display = 'none';
-    document.getElementById('reciboPreviewCont').innerHTML = '<div style="font-size:11px; color:#999;"><i class="fas fa-spinner fa-spin"></i> Cargando recibo...</div>';
     document.getElementById('modalRecibo').style.display = 'flex';
+    // htmlDirecto: HTML generado directamente tras un pago (muestra solo lo recién registrado)
+    if (htmlDirecto) {
+        reciboHtmlActivo = htmlDirecto;
+        document.getElementById('reciboPreviewCont').innerHTML = htmlDirecto;
+        return;
+    }
+    document.getElementById('reciboPreviewCont').innerHTML = '<div style="font-size:11px; color:#999;"><i class="fas fa-spinner fa-spin"></i> Cargando recibo...</div>';
     try {
         const res = await fetch(`/api/recibo/${nAsiento}`);
         const data = await res.json();

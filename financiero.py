@@ -606,7 +606,25 @@ def api_presupuesto():
 
         sheet_fin.append_row(nueva_fila_fin)
         print(f"[api_presupuesto] FINANCIERO OK → asiento={num_asiento}")
-        return jsonify({"status": "success", "asiento": num_asiento})
+
+        # Generar recibo desde los datos exactos recién registrados, sin agrupar por N_ASIENTO
+        recibo_html = None
+        if pilar in ("Cuotas", "Pagos Staff"):
+            try:
+                from app import _generar_html_recibo
+                concepto_friendly = get_friendly_concepto(datos.get('concepto', '')) or datos.get('concepto', '')
+                recibo_html = _generar_html_recibo({
+                    'n_asiento': num_asiento,
+                    'fecha': datos.get('fecha', ''),
+                    'nombre': datos.get('nombre', ''),
+                    'equipo': datos.get('equipo', ''),
+                    'importe': importe_fin,
+                    'conceptos': [{'concepto': concepto_friendly, 'importe': importe_fin}]
+                })
+            except Exception as e_rec:
+                print(f"[recibo_html] Error generando recibo inline: {e_rec}")
+
+        return jsonify({"status": "success", "asiento": num_asiento, "recibo_html": recibo_html})
     except Exception as e:
         import traceback
         print(f"[api_presupuesto] ERROR: {e}")
