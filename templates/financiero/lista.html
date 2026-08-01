@@ -5801,6 +5801,7 @@ async function confirmarPago(btn) {
         let saldoARepartir = totalPagado;
         let ultimoAsientoPagoCreado = null;
         let ultimoReciboHtml = null;
+        const _cellsPaid = []; // {cell, pagadoTotal, esperado} para re-aplicar tras cargarPresupuesto
         const numConceptosSeleccionados = celdasSeleccionadas.length;
 
         for (let i = 0; i < celdasSeleccionadas.length; i++) {
@@ -5863,17 +5864,14 @@ async function confirmarPago(btn) {
                 }
                 if (dataPago.asiento) ultimoAsientoPagoCreado = dataPago.asiento;
                 if (dataPago.recibo_html) ultimoReciboHtml = dataPago.recibo_html;
-                // Actualizar celda inmediatamente en el DOM: no esperar a cargarPresupuesto
-                // evita que un Sheets cache stale deje la celda en estado anterior
+                // Guardar referencia para re-aplicar el estado correcto DESPUÉS de cargarPresupuesto
+                // (cargarEstadoPagosJugadores puede leer Sheets en caché y revertir a estado anterior)
                 if (pagadoTotal > 0) {
-                    const _espCel = parseFloat(cell.dataset.esperado) || esperadoIndividual;
-                    cell.dataset.importe = pagadoTotal;
-                    cell.classList.remove('pago-verde', 'pago-naranja', 'pago-exceso', 'selected-cell');
-                    cell.classList.add(pagadoTotal >= _espCel && _espCel > 0 ? 'pago-verde' : 'pago-naranja');
-                    cell.style.color = '';
-                    cell.innerText = _espCel > 0
-                        ? `${pagadoTotal}€/${Math.round(_espCel)}€`
-                        : `${pagadoTotal}€`;
+                    _cellsPaid.push({
+                        cell,
+                        pagadoTotal,
+                        esperado: parseFloat(cell.dataset.esperado) || esperadoIndividual
+                    });
                 }
             } else {
                 const errText = await resPago.text().catch(() => '');
@@ -5882,6 +5880,19 @@ async function confirmarPago(btn) {
             }
         }
         await cargarPresupuesto();
+
+        // Re-aplicar estado correcto a las celdas recién pagadas.
+        // cargarEstadoPagosJugadores puede haber leído PAGOS JUGADORES en caché (dato stale)
+        // y revertido la celda. Aplicamos aquí el valor definitivo calculado en el pago.
+        _cellsPaid.forEach(({ cell, pagadoTotal, esperado }) => {
+            const espR = Math.round(esperado);
+            cell.dataset.importe = pagadoTotal;
+            cell.classList.remove('pago-verde', 'pago-naranja', 'pago-exceso');
+            cell.classList.add(pagadoTotal >= esperado && esperado > 0 ? 'pago-verde' : 'pago-naranja');
+            cell.style.color = '';
+            cell.innerText = esperado > 0 ? `${pagadoTotal}€/${espR}€` : `${pagadoTotal}€`;
+        });
+
         cerrarModalsFin();
         if (numConceptosSeleccionados === 1 && ultimoAsientoPagoCreado) {
             abrirModalRecibo(ultimoAsientoPagoCreado, ultimoReciboHtml || null);
