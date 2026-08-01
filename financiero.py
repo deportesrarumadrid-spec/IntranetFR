@@ -314,16 +314,19 @@ def api_presupuesto():
                             idx_existente = i + 1
                             break
 
+            # pagado_total: importe acumulado total para PAGOS JUGADORES (en pago complementario
+            # = ya_pagado + nuevo). Si no viene, se usa importe (primer pago o pago normal).
+            pagado_total_pj = datos.get('pagado_total', datos.get('importe'))
             if idx_existente != -1:
                 # ACTUALIZAR: Evitamos duplicar la línea modificando la existente
-                print(f"[PAGOS JUGADORES] Actualizando fila {idx_existente}: importe={datos.get('importe')} esperado={datos.get('esperado')}")
+                print(f"[PAGOS JUGADORES] Actualizando fila {idx_existente}: pagado_total={pagado_total_pj} esperado={datos.get('esperado')}")
                 col_pag = rowcol_to_a1(idx_existente, idx_pag + 1)
                 col_esp = rowcol_to_a1(idx_existente, idx_esp + 1)
                 col_tp  = rowcol_to_a1(idx_existente, idx_tp  + 1)
                 col_fp  = rowcol_to_a1(idx_existente, idx_fp  + 1)
                 updates = [
                     {'range': f"'PAGOS JUGADORES'!{rowcol_to_a1(idx_existente, 1)}", 'values': [[datos.get('fecha')]]},
-                    {'range': f"'PAGOS JUGADORES'!{col_pag}", 'values': [[datos.get('importe')]]},
+                    {'range': f"'PAGOS JUGADORES'!{col_pag}", 'values': [[pagado_total_pj]]},
                     {'range': f"'PAGOS JUGADORES'!{col_esp}", 'values': [[datos.get('esperado')]]},
                     {'range': f"'PAGOS JUGADORES'!{col_tp}",  'values': [[datos.get('tipo_pago')]]},
                     {'range': f"'PAGOS JUGADORES'!{col_fp}",  'values': [[datos.get('forma_pago')]]},
@@ -334,8 +337,8 @@ def api_presupuesto():
                 })
                 print(f"[PAGOS JUGADORES] OK fila {idx_existente}")
             else:
-                print(f"[PAGOS JUGADORES] Insertando nueva fila: nombre={datos.get('nombre')} concepto={datos.get('concepto')} importe={datos.get('importe')}")
-                sheet.append_row([datos.get('fecha'), datos.get('equipo'), datos.get('nombre'), datos.get('tipo_pago'), datos.get('forma_pago'), datos.get('concepto'), datos.get('importe'), datos.get('esperado')])
+                print(f"[PAGOS JUGADORES] Insertando nueva fila: nombre={datos.get('nombre')} concepto={datos.get('concepto')} pagado_total={pagado_total_pj}")
+                sheet.append_row([datos.get('fecha'), datos.get('equipo'), datos.get('nombre'), datos.get('tipo_pago'), datos.get('forma_pago'), datos.get('concepto'), pagado_total_pj, datos.get('esperado')])
                 print(f"[PAGOS JUGADORES] OK nueva fila")
 
             # Preparamos los metadatos para el registro maestro en FINANCIERO
@@ -371,14 +374,15 @@ def api_presupuesto():
                             idx_existente = i + 1
                             break
 
+            pagado_total_ps = datos.get('pagado_total', datos.get('importe'))
             if idx_existente != -1:
                 updates = [
                     {'range': f"'PAGOS STAFF'!{rowcol_to_a1(idx_existente, 1)}", 'values': [[datos.get('fecha')]]},
-                    {'range': f"'PAGOS STAFF'!{rowcol_to_a1(idx_existente, idx_pag+1)}:{rowcol_to_a1(idx_existente, idx_esp+1)}", 'values': [[datos.get('importe'), datos.get('esperado')]]}
+                    {'range': f"'PAGOS STAFF'!{rowcol_to_a1(idx_existente, idx_pag+1)}:{rowcol_to_a1(idx_existente, idx_esp+1)}", 'values': [[pagado_total_ps, datos.get('esperado')]]}
                 ]
                 sheet.spreadsheet.values_batch_update({'valueInputOption': 'USER_ENTERED', 'data': updates})
             else:
-                sheet.append_row([datos.get('fecha'), datos.get('nombre'), datos.get('concepto'), datos.get('importe'), datos.get('esperado')])
+                sheet.append_row([datos.get('fecha'), datos.get('nombre'), datos.get('concepto'), pagado_total_ps, datos.get('esperado')])
 
             # Preparamos los metadatos para el registro maestro en FINANCIERO
             if not datos.get('descripcion'):

@@ -5835,9 +5835,12 @@ async function confirmarPago(btn) {
                 saldoARepartir -= pagoAsignado;
             }
 
-            // Modo complemento per-celda: si la celda es naranja, sumar lo ya pagado al importe
+            // Modo complemento per-celda: si la celda es naranja, calcular total acumulado
+            // importe (pagoAsignado) = solo lo nuevo → va a FINANCIERO como movimiento nuevo
+            // pagadoTotal = ya_pagado + nuevo → va a PAGOS JUGADORES/STAFF como total acumulado
+            let pagadoTotal = pagoAsignado;
             if (_cellYaPagado > 0) {
-                pagoAsignado = Math.round((_cellYaPagado + pagoAsignado) * 100) / 100;
+                pagadoTotal = Math.round((_cellYaPagado + pagoAsignado) * 100) / 100;
                 esperadoIndividual = parseFloat(cell.dataset.esperado) || esperadoIndividual;
             }
 
@@ -5846,7 +5849,9 @@ async function confirmarPago(btn) {
                 fecha: fechaHoy, departamento: currentRowIsStaff ? "Sueldos" : "Administración", pilar: pilar,
                 descripcion: `${prefixDesc} ${labelConcepto}: ${nombre}`, importe: pagoAsignado,
                 equipo, nombre, tipo_pago: tipo, forma_pago: forma, concepto: item, esperado: esperadoIndividual,
-                force_compensar: _yaHabiaImporte
+                force_compensar: _yaHabiaImporte,
+                pagado_total: pagadoTotal,
+                duplicate_action: _cellYaPagado > 0 ? 'force_new' : undefined
             };
             const resPago = await fetch('/api/presupuesto', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(asiento) });
             if (resPago.ok) {
