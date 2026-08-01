@@ -1340,6 +1340,8 @@ let celdaActiva = null;
 let _ajusteAplicado = false;
 let _esperadoOriginalBar = 0;
 let _staffAjusteSugerido = 0;
+let _yaPagadoActual = 0;       // importe ya pagado cuando la celda es naranja (modo complemento)
+let _esperadoOriginalActual = 0; // esperado total original para modo complemento
 
 function toggleAjuste() {
     const btn = document.getElementById('btnAjuste');
@@ -5476,8 +5478,52 @@ function seleccionarPago(e, el, item) {
         return;
     }
 
-    // Si clicamos en una celda ya pagada y NO estamos usando CTRL, mostramos info de modificación
-    if (!e.ctrlKey && (el.classList.contains('pago-verde') || el.classList.contains('pago-naranja'))) {
+    // Celda naranja (pago parcial) sin CTRL → modo complemento de pago en la barra
+    if (!e.ctrlKey && el.classList.contains('pago-naranja')) {
+        const yaPagado = Math.abs(parseFloat(el.dataset.importe) || 0);
+        const esperadoOrig = parseFloat(el.dataset.esperado) || 0;
+        const restante = Math.max(0, Math.round((esperadoOrig - yaPagado) * 100) / 100);
+
+        celdaActiva = el;
+        el.dataset.concepto = item;
+        el.dataset.tempItem = item;
+        celdasSeleccionadas.forEach(c => c.classList.remove('selected-cell'));
+        celdasSeleccionadas = [el];
+        el.classList.add('selected-cell');
+
+        _yaPagadoActual = yaPagado;
+        _esperadoOriginalActual = esperadoOrig;
+
+        const fila = el.closest('tr');
+        const nombre = fila.cells[1].innerText.trim();
+        document.getElementById('txtSeleccionados').innerText = nombre.toUpperCase();
+        document.getElementById('detalleSeleccion').innerText = getLabelConcepto(item, fila.cells[3]?.innerText.trim() || '', false);
+
+        document.getElementById('pagoImporteBar').value = restante;
+        document.getElementById('pagoEsperadoBar').value = restante;
+        _esperadoOriginalBar = restante;
+        _ajusteAplicado = false;
+
+        document.getElementById('yaPagadoDisplay').innerText = yaPagado;
+        document.getElementById('wrapYaPagado').style.display = 'flex';
+        document.getElementById('restaraDisplay').innerText = 0;
+        document.getElementById('wrapRestara').style.display = 'flex';
+
+        const _lockZone = document.getElementById('remesaLockZone');
+        const _inputsZn = document.getElementById('inputsZonePagos');
+        const _btnReg   = document.getElementById('btnRegistrarPago');
+        if (_lockZone) _lockZone.style.display = 'none';
+        if (_inputsZn) { _inputsZn.style.opacity = ''; _inputsZn.style.pointerEvents = ''; }
+        if (_btnReg)   { _btnReg.disabled = false; _btnReg.style.opacity = ''; }
+
+        document.getElementById('barraAccionPagos').style.display = 'flex';
+        document.getElementById('pagoImporteBar').focus();
+        _actualizarRestara();
+        return;
+    }
+
+    // Si clicamos en una celda ya pagada (verde) y NO estamos usando CTRL, mostramos info de modificación
+    if (!e.ctrlKey && el.classList.contains('pago-verde')) {
          celdaActiva = el;
          const nombre = el.closest('tr').cells[1].innerText;
          const asientoId = el.dataset.asientoId || "N/A";
@@ -5643,6 +5689,18 @@ function actualizarBarraPagos() {
     barra.style.display = 'flex';
 }
 
+function _actualizarRestara() {
+    if (_yaPagadoActual <= 0) return;
+    const nuevoPago = parseFloat(document.getElementById('pagoImporteBar').value) || 0;
+    const restara = Math.max(0, Math.round((_esperadoOriginalActual - _yaPagadoActual - nuevoPago) * 100) / 100);
+    const el = document.getElementById('restaraDisplay');
+    if (el) {
+        el.innerText = restara;
+        el.style.color = restara <= 0 ? '#22c55e' : '#f59e0b';
+        el.style.borderColor = restara <= 0 ? '#22c55e' : '#f59e0b';
+    }
+}
+
 function toggleRemesaLock() {
     const unlocked = document.getElementById('remesaLockToggle').checked;
     const _inputsZn = document.getElementById('inputsZonePagos');
@@ -5684,6 +5742,13 @@ function cerrarModalsFin() {
         c.td.classList.remove('selected-cell');
     });
     celdasRopaSeleccionadas = [];
+    // Resetear modo complemento (celda naranja)
+    _yaPagadoActual = 0;
+    _esperadoOriginalActual = 0;
+    const _wyp = document.getElementById('wrapYaPagado');
+    const _wr  = document.getElementById('wrapRestara');
+    if (_wyp) _wyp.style.display = 'none';
+    if (_wr)  _wr.style.display  = 'none';
     actualizarBarraPagos();
 }
 
@@ -5759,6 +5824,12 @@ async function confirmarPago(btn) {
             } else {
                 pagoAsignado = Math.min(saldoARepartir, esperadoIndividual);
                 saldoARepartir -= pagoAsignado;
+            }
+
+            // Modo complemento (celda naranja): sumar al importe ya existente y restaurar esperado original
+            if (_yaPagadoActual > 0) {
+                pagoAsignado = Math.round((_yaPagadoActual + pagoAsignado) * 100) / 100;
+                esperadoIndividual = _esperadoOriginalActual;
             }
 
             const _yaHabiaImporte = currentRowIsStaff && Math.abs(parseFloat(cell.dataset.importe || 0)) > 0.01;
@@ -10073,7 +10144,14 @@ async function cargarResumenEquipoPanel(equipo, mes, nombre) {
         </label>
     </div>
     <div id="inputsZonePagos" style="display: flex; align-items: center; gap: 14px;">
-        <div><label>PAGADO (€)</label><input type="number" id="pagoImporteBar" value="" placeholder="-" style="border-color: #28a745;" onkeyup="if(event.key === 'Enter') confirmarPago()"></div>
+        <div id="wrapYaPagado" style="display:none; align-items:center; gap:10px;">
+            <div style="text-align:center;">
+                <label style="color:#94a3b8;">YA PAGADO (€)</label>
+                <div id="yaPagadoDisplay" style="background:rgba(255,255,255,0.06);border:2px solid #475569;color:#94a3b8;padding:8px 12px;border-radius:8px;width:85px;font-weight:800;font-size:15px;text-align:center;box-sizing:border-box;">0</div>
+            </div>
+            <span style="color:#475569;font-size:20px;font-weight:900;margin-top:12px;">+</span>
+        </div>
+        <div><label>PAGADO (€)</label><input type="number" id="pagoImporteBar" value="" placeholder="-" style="border-color: #28a745;" oninput="_actualizarRestara()" onkeyup="if(event.key === 'Enter') confirmarPago()"></div>
         <div id="wrapAjuste" style="display:none; flex-direction:column; align-items:center; gap:2px;">
             <button id="btnAjuste" onclick="toggleAjuste()"
                     title="Aplicar ajuste sugerido al importe esperado"
@@ -10081,6 +10159,13 @@ async function cargarResumenEquipoPanel(equipo, mes, nombre) {
             <span style="font-size:8px;color:#94a3b8;font-weight:700;white-space:nowrap;">AJUSTE</span>
         </div>
         <div><label>ESPERADO (€)</label><input type="number" id="pagoEsperadoBar" value="50" style="border-color: #38bdf8;"></div>
+        <div id="wrapRestara" style="display:none; align-items:center; gap:10px;">
+            <span style="color:#475569;font-size:20px;font-weight:900;margin-top:12px;">=</span>
+            <div style="text-align:center;">
+                <label style="color:#f59e0b;">RESTARÁ (€)</label>
+                <div id="restaraDisplay" style="background:rgba(245,158,11,0.08);border:2px solid #f59e0b;color:#f59e0b;padding:8px 12px;border-radius:8px;width:85px;font-weight:800;font-size:15px;text-align:center;box-sizing:border-box;">0</div>
+            </div>
+        </div>
     </div>
     <div class="action-bar-divider"></div>
     <div style="display: flex; gap: 16px;">
