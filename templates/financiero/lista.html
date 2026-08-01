@@ -12042,32 +12042,20 @@ async function ejecutarBorradoSplit(eliminarTodo) {
 async function ejecutarBorradoDirecto(btn, asientoId) {
     btn.disabled = true;
     try {
-        let res;
-        if (asientoId) {
-            res = await fetch('/api/operacion_asiento', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ 
-                    accion: 'borrar', 
-                    id: asientoId, 
-                    tipo_origen: 'JUGADOR', 
-                    nombre_orig: celdaActiva.closest('tr').cells[1].innerText.trim(), 
-                    concepto_orig: celdaActiva.dataset.concepto, 
-                    fecha_orig: celdaActiva.dataset.fecha || '-' 
-                })
-            });
-        } else {
-            const datos = {
-                nombre: celdaActiva.closest('tr').cells[1].innerText.trim(),
-                equipo: celdaActiva.closest('tr').dataset.equipo,
-                concepto: celdaActiva.dataset.concepto
-            };
-            res = await fetch('/api/borrar_pago', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(datos)
-            });
-        }
+        // Siempre usar /api/operacion_asiento: tiene fallback por nombre+concepto
+        // cuando asientoId es vacío o no está en FINANCIERO
+        const res = await fetch('/api/operacion_asiento', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                accion: 'borrar',
+                id: asientoId || '',
+                tipo_origen: 'JUGADOR',
+                nombre_orig: celdaActiva.closest('tr').cells[1].innerText.trim(),
+                concepto_orig: celdaActiva.dataset.concepto,
+                fecha_orig: celdaActiva.dataset.fecha || '-'
+            })
+        });
 
         if (res.ok) {
             celdaActiva.innerText = '-'; 
