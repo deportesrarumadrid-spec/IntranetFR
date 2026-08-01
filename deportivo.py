@@ -606,6 +606,34 @@ def api_objetivos_mensuales():
 
     return jsonify({"status": "success"})
 
+@deportivo_bp.route('/api/objetivos_movil', methods=['GET'])
+def api_objetivos_movil():
+    """Objetivos del mes para la vista móvil: metodología primero (misma fuente que web), luego OBJ TACTEC."""
+    client = current_app.gs_client
+    NOMBRE_EXCEL = current_app.gs_name
+    equipo = request.args.get('equipo', '').strip()
+    mes = request.args.get('mes', '').strip()  # YYYY-MM
+    if not equipo or not mes:
+        return jsonify({"tactico": "", "tecnico": ""})
+    # Misma lógica que la vista web: metodología tiene prioridad
+    tactico, tecnico = obtener_tactico_tecnico_metodologia(client, NOMBRE_EXCEL, equipo, mes)
+    # Fallback a OBJ TACTEC si no hay nada en metodología
+    if not tactico and not tecnico:
+        try:
+            target_y, target_m = mes.split('-')
+            sheet = client.open(NOMBRE_EXCEL).worksheet("OBJ TACTEC")
+            for row in sheet.get_all_values()[1:]:
+                if len(row) < 2: continue
+                f = row[0].strip()
+                if '/' not in f: continue
+                d_r, m_r, y_r = [p.zfill(2) if p.isdigit() else p for p in f.split('/')]
+                if m_r == target_m and y_r == target_y and row[1].strip().upper() == equipo.upper():
+                    tactico = tactico or (row[3].strip() if len(row) > 3 else "")
+                    tecnico = tecnico or (row[4].strip() if len(row) > 4 else "")
+        except:
+            pass
+    return jsonify({"tactico": tactico, "tecnico": tecnico})
+
 @deportivo_bp.route('/api/revision_objetivos')
 def api_revision_objetivos():
     """Para el popup de REVISIÓN OBJETIVOS en Dirección Deportiva: devuelve, para un

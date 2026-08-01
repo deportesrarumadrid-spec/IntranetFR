@@ -1990,25 +1990,52 @@
 
             try {
                 showLoader();
+                // Expandir al alto total para que html2canvas capture todo el contenido (no solo lo visible)
+                const _savedFlex = sheet.style.flex;
+                const _savedH    = sheet.style.height;
+                const _savedMaxH = sheet.style.maxHeight;
+                const _savedOvY  = sheet.style.overflowY;
+                sheet.style.flex      = 'none';
+                sheet.style.height    = sheet.scrollHeight + 'px';
+                sheet.style.maxHeight = 'none';
+                sheet.style.overflowY = 'visible';
+                await new Promise(r => setTimeout(r, 80));
                 const canvas = await html2canvas(sheet, { scale: 1.5, useCORS: true, logging: false });
+                sheet.style.flex      = _savedFlex;
+                sheet.style.height    = _savedH;
+                sheet.style.maxHeight = _savedMaxH;
+                sheet.style.overflowY = _savedOvY;
                 const imgData = canvas.toDataURL('image/jpeg', 0.8);
-                const res = await fetch('/api/guardar_sesion_img', {
+                const payload = {
+                    equipo: equipo,
+                    fecha: fechaFormatted,
+                    image: imgData,
+                    usuario: usuario,
+                    notas: sessionData.notas,
+                    ejercicios: sessionData.ejercicios
+                };
+                let res = await fetch('/api/guardar_sesion_img', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ 
-                        equipo: equipo, 
-                        fecha: fechaFormatted, 
-                        image: imgData, 
-                        usuario: usuario,
-                        notas: sessionData.notas,
-                        ejercicios: sessionData.ejercicios
-                    })
+                    body: JSON.stringify(payload)
                 });
-                if(res.ok) {
-                    alert("Sesión guardada correctamente en tu carpeta del club.");
-                    location.reload(); // Recargar para mostrar el botón VER en el calendario
+                if (res.status === 409) {
+                    hideLoader();
+                    const confirmar = confirm("⚠️ Ya existe una sesión guardada para esta fecha.\n¿Quieres sobreescribirla?");
+                    if (!confirmar) return;
+                    showLoader();
+                    res = await fetch('/api/guardar_sesion_img', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({...payload, overwrite: true})
+                    });
                 }
-                else alert("Error al guardar en el servidor.");
+                if (res.ok) {
+                    alert("Sesión guardada correctamente en tu carpeta del club.");
+                    location.reload();
+                } else {
+                    alert("Error al guardar en el servidor.");
+                }
             } catch (e) {
                 console.error(e);
                 alert("Error al procesar la imagen de la sesión.");

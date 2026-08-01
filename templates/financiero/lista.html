@@ -5771,7 +5771,15 @@ async function confirmarPago(btn) {
             const resPago = await fetch('/api/presupuesto', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(asiento) });
             if (resPago.ok) {
                 const dataPago = await resPago.json();
+                if (dataPago.status === 'error') {
+                    alert(`Error al guardar el pago: ${dataPago.message || 'Error desconocido'}`);
+                    return;
+                }
                 if (dataPago.asiento) ultimoAsientoPagoCreado = dataPago.asiento;
+            } else {
+                const errText = await resPago.text().catch(() => '');
+                alert(`Error del servidor (${resPago.status}) al guardar el pago.\n${errText.slice(0,200)}`);
+                return;
             }
         }
         await cargarPresupuesto();

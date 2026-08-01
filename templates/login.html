@@ -2,7 +2,13 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Intranet Club</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#dc2626">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Intranet CF">
+    <link rel="apple-touch-icon" href="/static/app-icon.png">
     <style>
         /* Fondo con degradado sutil y centrado total */
         body { 
@@ -83,6 +89,28 @@
         button:active {
             transform: translateY(0);
         }
+
+        .version-pill {
+            display: inline-flex;
+            background: #1565c0;
+            border-radius: 30px;
+            padding: 4px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.25s;
+            margin-bottom: 8px;
+        }
+        .version-pill.is-movil { background: #2e7d32; }
+        .vp-opt {
+            padding: 9px 20px;
+            border-radius: 26px;
+            font-size: 13px;
+            font-weight: 800;
+            color: rgba(255,255,255,0.55);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .vp-opt.active { background: white; color: #1e293b; }
     </style>
 </head>
 <body>
@@ -100,20 +128,48 @@
             {% if error %}
             <div style="color: #e60000; font-size: 12px; font-weight: 800; margin-bottom: 15px; background: #ffebeb; padding: 10px; border-radius: 8px; border: 1px solid #ffcccc;">{{ error }}</div>
             {% endif %}
-            <button type="submit" onclick="this.innerHTML='CARGANDO...';">ACCEDER</button>
+
+            <div style="margin:18px 0 10px; text-align:center;">
+                <div id="versionPill" onclick="toggleVersion()" style="display:inline-flex; background:#e60000; border-radius:30px; padding:4px; cursor:pointer; user-select:none; transition:background 0.25s;">
+                    <span id="optWeb"   style="display:inline-block; padding:9px 22px; border-radius:26px; font-size:12px; font-weight:900; background:white; color:#1e293b; white-space:nowrap; letter-spacing:1px;">WEB</span>
+                    <span id="optMovil" style="display:inline-block; padding:9px 22px; border-radius:26px; font-size:12px; font-weight:900; color:rgba(255,255,255,0.75); white-space:nowrap; letter-spacing:1px;">MÓVIL</span>
+                </div>
+                <input type="hidden" name="version" id="versionInput" value="WEB">
+            </div>
+
+            <button type="submit">ACCEDER</button>
         </form>
     </div>
     <script>
-        // Pequeño script para mostrar que está cargando antes de la redirección
         function togglePwd() {
             const inp = document.getElementById('passwordInput');
             inp.type = inp.type === 'password' ? 'text' : 'password';
         }
+        function toggleVersion() {
+            const pill = document.getElementById('versionPill');
+            const web = document.getElementById('optWeb');
+            const mov = document.getElementById('optMovil');
+            const input = document.getElementById('versionInput');
+            const isMovil = input.value === 'MOVIL';
+            if (isMovil) {
+                // Volver a Web
+                input.value = 'WEB';
+                pill.style.background = '#e60000';
+                web.style.background = 'white'; web.style.color = '#1e293b';
+                mov.style.background = 'transparent'; mov.style.color = 'rgba(255,255,255,0.7)';
+            } else {
+                // Pasar a Móvil
+                input.value = 'MOVIL';
+                pill.style.background = '#e60000';
+                mov.style.background = 'white'; mov.style.color = '#1e293b';
+                web.style.background = 'transparent'; web.style.color = 'rgba(255,255,255,0.7)';
+            }
+        }
         document.querySelector('form').onsubmit = function() {
-            const btn = this.querySelector('button');
+            const btn = this.querySelector('button[type="submit"]');
             btn.disabled = true;
             btn.style.opacity = "0.7";
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ACCEDIENDO...';
+            btn.innerHTML = 'ACCEDIENDO...';
         };
     </script>
 </body>

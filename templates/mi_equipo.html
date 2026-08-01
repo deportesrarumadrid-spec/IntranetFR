@@ -230,7 +230,7 @@
                 <button id="meMatrizBtnNext" onclick="meMatrizNav(1)" disabled
                     style="width:28px;height:28px;border-radius:6px;border:1px solid #e2e8f0;background:white;color:#cbd5e1;font-size:16px;cursor:not-allowed;display:flex;align-items:center;justify-content:center;line-height:1;">&#8594;</button>
             </div>
-            <div id="meMatrizCont" style="flex:1; overflow:auto; font-size:10px;">
+            <div id="meMatrizCont" style="overflow-x:auto; overflow-y:visible; font-size:10px; min-width:0;">
                 <div style="color:#94a3b8;font-size:12px;text-align:center;padding:30px;">Cargando...</div>
             </div>
         </div>
@@ -652,15 +652,15 @@
         const { jugadores, datos, mesesMap, mesesList } = _meData;
         const total = mesesList.length;
 
-        // Calcular slice de 2 meses según offset
+        // Calcular slice de 1 mes según offset
         const end   = total - _meOffset;
-        const start = Math.max(0, end - 2);
+        const start = Math.max(0, end - 1);
         const visibles = mesesList.slice(start, end);
 
         // Botones nav
         const btnPrev = document.getElementById('meMatrizBtnPrev');
         const btnNext = document.getElementById('meMatrizBtnNext');
-        const canPrev = end - 2 > 0;
+        const canPrev = end - 1 > 0;
         const canNext = _meOffset > 0;
         if (btnPrev) { btnPrev.disabled = !canPrev; btnPrev.style.color = canPrev ? '#475569' : '#e2e8f0'; btnPrev.style.cursor = canPrev ? 'pointer' : 'not-allowed'; }
         if (btnNext) { btnNext.disabled = !canNext; btnNext.style.color = canNext ? '#475569' : '#e2e8f0'; btnNext.style.cursor = canNext ? 'pointer' : 'not-allowed'; }
@@ -705,7 +705,7 @@
             </tr>`;
         });
 
-        cont.innerHTML = `<table style="border-collapse:collapse;font-family:'Montserrat',sans-serif;width:100%;">
+        cont.innerHTML = `<table style="border-collapse:collapse;font-family:'Montserrat',sans-serif;">
             <thead><tr>${thMeses}</tr><tr>${thDias}</tr></thead>
             <tbody>${filas}</tbody>
         </table>`;
@@ -714,7 +714,7 @@
     function meMatrizNav(dir) {
         if (!_meData) return;
         const total = _meData.mesesList.length;
-        _meOffset = Math.max(0, Math.min(total - 2, _meOffset - dir));
+        _meOffset = Math.max(0, Math.min(total - 1, _meOffset - dir));
         meMatrizRender();
     }
 

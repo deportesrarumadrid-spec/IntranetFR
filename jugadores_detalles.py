@@ -221,3 +221,53 @@ def update_jugador_detalle():
     except Exception as e:
         print(f"Error en update_jugador_detalle: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@jugadores_detalles_bp.route('/api/detalles_equipo/update', methods=['POST'])
+def update_detalle_equipo():
+    client = getattr(current_app, 'gs_client', None)
+    NOMBRE_EXCEL = getattr(current_app, 'gs_name', "Control Asistencia Club")
+
+    data = request.json
+    equipo = (data.get('equipo') or '').strip()
+    # Acepta batch {datos: {campo: valor}} o individual {campo, valor}
+    datos = data.get('datos')
+    if datos is None:
+        campo = (data.get('campo') or '').strip()
+        valor = data.get('valor', '')
+        datos = {campo: valor} if campo else {}
+
+    if not equipo or not datos:
+        return jsonify({"status": "error", "message": "Faltan datos"}), 400
+
+    SHEET = "DETALLES_EQUIPO"
+    try:
+        try:
+            sheet = client.open(NOMBRE_EXCEL).worksheet(SHEET)
+        except Exception:
+            sheet = client.open(NOMBRE_EXCEL).add_worksheet(title=SHEET, rows=500, cols=3)
+            sheet.append_row(["EQUIPO", "CAMPO", "VALOR"])
+
+        rows = sheet.get_all_values()
+        equipo_n = equipo.strip().lower()
+
+        # Índice de filas existentes: {campo_lower: fila_idx}
+        existentes = {}
+        for i, row in enumerate(rows[1:], start=2):
+            if len(row) >= 2 and row[0].strip().lower() == equipo_n:
+                existentes[row[1].strip().lower()] = i
+
+        for campo, valor in datos.items():
+            campo = campo.strip()
+            if not campo:
+                continue
+            campo_n = campo.lower()
+            if campo_n in existentes:
+                sheet.update_cell(existentes[campo_n], 3, valor)
+            else:
+                sheet.append_row([equipo, campo, valor])
+
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error en update_detalle_equipo: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500

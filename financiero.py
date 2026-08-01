@@ -316,17 +316,27 @@ def api_presupuesto():
 
             if idx_existente != -1:
                 # ACTUALIZAR: Evitamos duplicar la línea modificando la existente
+                print(f"[PAGOS JUGADORES] Actualizando fila {idx_existente}: importe={datos.get('importe')} esperado={datos.get('esperado')}")
+                col_pag = rowcol_to_a1(idx_existente, idx_pag + 1)
+                col_esp = rowcol_to_a1(idx_existente, idx_esp + 1)
+                col_tp  = rowcol_to_a1(idx_existente, idx_tp  + 1)
+                col_fp  = rowcol_to_a1(idx_existente, idx_fp  + 1)
                 updates = [
                     {'range': f"'PAGOS JUGADORES'!{rowcol_to_a1(idx_existente, 1)}", 'values': [[datos.get('fecha')]]},
-                    {'range': f"'PAGOS JUGADORES'!{rowcol_to_a1(idx_existente, idx_tp+1)}:{rowcol_to_a1(idx_existente, idx_fp+1)}", 'values': [[datos.get('tipo_pago'), datos.get('forma_pago')]]},
-                    {'range': f"'PAGOS JUGADORES'!{rowcol_to_a1(idx_existente, idx_pag+1)}:{rowcol_to_a1(idx_existente, idx_esp+1)}", 'values': [[datos.get('importe'), datos.get('esperado')]]}
+                    {'range': f"'PAGOS JUGADORES'!{col_pag}", 'values': [[datos.get('importe')]]},
+                    {'range': f"'PAGOS JUGADORES'!{col_esp}", 'values': [[datos.get('esperado')]]},
+                    {'range': f"'PAGOS JUGADORES'!{col_tp}",  'values': [[datos.get('tipo_pago')]]},
+                    {'range': f"'PAGOS JUGADORES'!{col_fp}",  'values': [[datos.get('forma_pago')]]},
                 ]
                 sheet.spreadsheet.values_batch_update({
                     'valueInputOption': 'USER_ENTERED',
                     'data': updates
                 })
+                print(f"[PAGOS JUGADORES] OK fila {idx_existente}")
             else:
+                print(f"[PAGOS JUGADORES] Insertando nueva fila: nombre={datos.get('nombre')} concepto={datos.get('concepto')} importe={datos.get('importe')}")
                 sheet.append_row([datos.get('fecha'), datos.get('equipo'), datos.get('nombre'), datos.get('tipo_pago'), datos.get('forma_pago'), datos.get('concepto'), datos.get('importe'), datos.get('esperado')])
+                print(f"[PAGOS JUGADORES] OK nueva fila")
 
             # Preparamos los metadatos para el registro maestro en FINANCIERO
             if not datos.get('descripcion'):
@@ -439,19 +449,24 @@ def api_presupuesto():
             old_num_asiento = old_row[idx_asi_col]  if idx_asi_col  != -1 and len(old_row) > idx_asi_col  else ''
 
             if not duplicate_action:
-                # Sin acción → informar al frontend para que el usuario decida
-                return jsonify({
-                    'status': 'duplicate',
-                    'existing': {
-                        'asiento':     str(old_num_asiento),
-                        'fecha':       old_row[0] if old_row else '',
-                        'descripcion': old_desc,
-                        'importe':     str(old_importe),
-                    }
-                }), 200
+                if pilar in ("Cuotas", "Pagos Staff"):
+                    # Para cuotas/staff: sobreescribir siempre (PAGOS JUGADORES ya se actualizó arriba)
+                    duplicate_action = 'overwrite'
+                else:
+                    # Para entradas manuales: informar al frontend para que el usuario decida
+                    return jsonify({
+                        'status': 'duplicate',
+                        'existing': {
+                            'asiento':     str(old_num_asiento),
+                            'fecha':       old_row[0] if old_row else '',
+                            'descripcion': old_desc,
+                            'importe':     str(old_importe),
+                        }
+                    }), 200
 
-            elif duplicate_action == 'overwrite':
+            if duplicate_action == 'overwrite':
                 # Sobreescribir la fila existente
+                print(f"[FINANCIERO] Overwrite fila {idx_fin_existente}: importe={datos.get('importe')} esperado={datos.get('esperado')}")
                 updates = []
                 mapping = {'FECHA': datos.get('fecha'), 'DESCRIPCION': datos.get('descripcion'),
                            'IMPORTE': datos.get('importe'), 'ESPERADO': datos.get('esperado', 0)}
@@ -461,6 +476,7 @@ def api_presupuesto():
                         updates.append({'range': f"'FINANCIERO'!{rowcol_to_a1(idx_fin_existente, col_idx)}", 'values': [[val]]})
                 if updates:
                     sheet_fin.spreadsheet.values_batch_update({'valueInputOption': 'USER_ENTERED', 'data': updates})
+                print(f"[FINANCIERO] Overwrite OK fila {idx_fin_existente}")
                 return jsonify({"status": "success", "asiento": old_num_asiento})
 
             elif duplicate_action == 'compensate':
@@ -525,12 +541,13 @@ def api_presupuesto():
 
         # Verificar asientos de apertura obligatorios (#000001 BAN y #000002 EFE)
         # Excepción: si el propio asiento que se crea ES el #1 o el #2
+        # Excepción también para cuotas y pagos de staff (no son asientos contables manuales)
         _num_asi_int = None
         try:
             _num_asi_int = int(str(num_asiento).strip().replace('#', '').split('_')[0])
         except: pass
 
-        if _num_asi_int is None or _num_asi_int > 2:
+        if pilar not in ("Cuotas", "Pagos Staff") and (_num_asi_int is None or _num_asi_int > 2):
             _idx_asi2 = next((headers_fin_norm.index(v) for v in ['N_ASIENTO','Nº_ASIENTO','ASIENTO'] if v in headers_fin_norm), -1)
             _idx_fp   = headers_fin_norm.index('FORMA_PAGO') if 'FORMA_PAGO' in headers_fin_norm else -1
             _tiene_001_ban = _tiene_002_efe = False
@@ -545,7 +562,7 @@ def api_presupuesto():
                 if not _tiene_001_ban: _falt.append('#000001 (BAN · Saldo apertura banco)')
                 if not _tiene_002_efe: _falt.append('#000002 (EFE · Saldo apertura efectivo)')
                 return jsonify({'status': 'error', 'message': f"Faltan asientos de apertura: {', '.join(_falt)}. Créalos primero."}), 400
-        elif _num_asi_int == 2:
+        elif pilar not in ("Cuotas", "Pagos Staff") and _num_asi_int == 2:
             _idx_asi2 = next((headers_fin_norm.index(v) for v in ['N_ASIENTO','Nº_ASIENTO','ASIENTO'] if v in headers_fin_norm), -1)
             _idx_fp   = headers_fin_norm.index('FORMA_PAGO') if 'FORMA_PAGO' in headers_fin_norm else -1
             _tiene_001_ban = any(

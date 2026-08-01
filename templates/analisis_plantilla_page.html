@@ -390,20 +390,20 @@
             <div id="coord-hist-{{ cat_id }}" style="display:none; margin-bottom:8px;">
                 <div class="coord-hist-list"></div>
             </div>
-            <textarea class="team-details-textarea" style="min-height:70px; font-size:12px; width:100%; box-sizing:border-box;" onchange="guardarDetalleEquipo('{{ key_com }}', this.value)" placeholder="comentarios"></textarea>
+            <textarea class="team-details-textarea equipo-campo" data-campo="{{ key_com }}" style="min-height:70px; font-size:12px; width:100%; box-sizing:border-box;" placeholder="comentarios"></textarea>
             <div style="text-align:center; font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin:10px 0 6px;">EVOLUCIÓN TEMPORADA</div>
             <div style="display:flex; gap:4px;">
                 <div style="flex:1; text-align:center;">
                     <div style="font-size:9px; font-weight:900; color:#1e293b; text-transform:uppercase; margin-bottom:3px;">INICIO</div>
-                    <input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('{{ key_evol }}_inicio', this.value)" placeholder="nota">
+                    <input type="number" class="stat-input equipo-campo" data-campo="{{ key_evol }}_inicio" min="1" max="10" placeholder="nota">
                 </div>
                 <div style="flex:1; text-align:center;">
                     <div style="font-size:9px; font-weight:900; color:#1e293b; text-transform:uppercase; margin-bottom:3px;">MEDIO</div>
-                    <input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('{{ key_evol }}_medio', this.value)" placeholder="nota">
+                    <input type="number" class="stat-input equipo-campo" data-campo="{{ key_evol }}_medio" min="1" max="10" placeholder="nota">
                 </div>
                 <div style="flex:1; text-align:center;">
                     <div style="font-size:9px; font-weight:900; color:#1e293b; text-transform:uppercase; margin-bottom:3px;">FINAL</div>
-                    <input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('{{ key_evol }}_final', this.value)" placeholder="nota">
+                    <input type="number" class="stat-input equipo-campo" data-campo="{{ key_evol }}_final" min="1" max="10" placeholder="nota">
                 </div>
             </div>
         </div>
@@ -425,26 +425,33 @@
             <div id="coord-hist-{{ cat_id }}" style="display:none; margin-bottom:8px;">
                 <div class="coord-hist-list"></div>
             </div>
-            <textarea class="team-details-textarea" style="min-height:70px; font-size:12px; width:100%; box-sizing:border-box;" onchange="guardarDetalleEquipo('{{ key_com }}', this.value)" placeholder="comentarios"></textarea>
+            <textarea class="team-details-textarea equipo-campo" data-campo="{{ key_com }}" style="min-height:70px; font-size:12px; width:100%; box-sizing:border-box;" placeholder="comentarios"></textarea>
             <div style="text-align:center; font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin:10px 0 6px;">EVOLUCIÓN TEMPORADA</div>
             <div style="display:flex; gap:4px;">
                 <div style="flex:1; text-align:center;">
                     <div style="font-size:9px; font-weight:900; color:#1e293b; text-transform:uppercase; margin-bottom:3px;">INICIO</div>
-                    <input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('{{ key_evol }}_inicio', this.value)" placeholder="nota">
+                    <input type="number" class="stat-input equipo-campo" data-campo="{{ key_evol }}_inicio" min="1" max="10" placeholder="nota">
                 </div>
                 <div style="flex:1; text-align:center;">
                     <div style="font-size:9px; font-weight:900; color:#1e293b; text-transform:uppercase; margin-bottom:3px;">MEDIO</div>
-                    <input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('{{ key_evol }}_medio', this.value)" placeholder="nota">
+                    <input type="number" class="stat-input equipo-campo" data-campo="{{ key_evol }}_medio" min="1" max="10" placeholder="nota">
                 </div>
                 <div style="flex:1; text-align:center;">
                     <div style="font-size:9px; font-weight:900; color:#1e293b; text-transform:uppercase; margin-bottom:3px;">FINAL</div>
-                    <input type="number" class="stat-input" min="1" max="10" onchange="guardarDetalleEquipo('{{ key_evol }}_final', this.value)" placeholder="nota">
+                    <input type="number" class="stat-input equipo-campo" data-campo="{{ key_evol }}_final" min="1" max="10" placeholder="nota">
                 </div>
             </div>
         </div>
         {% endfor %}
     </div>
-    
+
+    <div style="text-align:center; margin-top:12px;">
+        <button id="btnGuardarEquipo" onclick="guardarTodoEquipo()" style="background:#E31E24;color:white;border:none;border-radius:8px;padding:6px 24px;font-weight:900;font-size:12px;cursor:pointer;letter-spacing:.5px;">
+            GUARDAR EQUIPO
+        </button>
+        <span id="statusGuardarEquipo" style="font-size:11px;font-weight:700;margin-left:10px;color:#64748b;"></span>
+    </div>
+
 </div><!-- /card-modern EQUIPO -->
 </div><!-- /sec-wrapper sec-equipo -->
 
@@ -1013,6 +1020,63 @@
             }
         } catch (e) {
             mostrarToastAutoguardado(`Error de conexión: ${e.message}`, true, false, 4000);
+        }
+    }
+
+    async function guardarTodoEquipo() {
+        const btn = document.getElementById('btnGuardarEquipo');
+        const status = document.getElementById('statusGuardarEquipo');
+        btn.disabled = true;
+        btn.textContent = 'Guardando...';
+        status.textContent = '';
+        const equipo = '{{ equipo }}';
+        const catMap = {
+            'comentarios_entrenamientos':'ENTRENAMIENTOS','comentarios_partidos':'PARTIDOS',
+            'comentarios_tecnico':'TECNICO','comentarios_tactico':'TACTICO',
+            'comentarios_fisico':'FISICO','comentarios_extradeportivo':'EXTRADEPORTIVO'
+        };
+        let errores = 0;
+        const evolDatos = {};
+        const promesas = [];
+        document.querySelectorAll('.equipo-campo').forEach(el => {
+            const campo = el.dataset.campo;
+            const valor = el.value.trim();
+            if (!campo) return;
+            if (campo.startsWith('comentarios_') && valor) {
+                const categoria = catMap[campo];
+                if (!categoria) return;
+                promesas.push(
+                    fetch('/api/seguimiento_coord', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ equipo, categoria, texto: valor })
+                    }).then(r => { if (!r.ok) errores++; else el.value = ''; })
+                    .catch(() => errores++)
+                );
+            } else if (campo.startsWith('evol_') && valor) {
+                evolDatos[campo] = valor;
+            }
+        });
+        if (Object.keys(evolDatos).length) {
+            promesas.push(
+                fetch('/api/detalles_equipo/update', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ equipo, datos: evolDatos })
+                }).then(r => { if (!r.ok) errores++; }).catch(() => errores++)
+            );
+        }
+        await Promise.all(promesas);
+        if (errores === 0) await cargarSegCoordMiEquipo();
+        btn.disabled = false;
+        btn.textContent = 'GUARDAR EQUIPO';
+        if (errores === 0) {
+            status.style.color = '#16a34a';
+            status.textContent = '✓ Guardado';
+            setTimeout(() => { status.textContent = ''; }, 3000);
+        } else {
+            status.style.color = '#dc2626';
+            status.textContent = 'Error al guardar — reinicia el servidor';
         }
     }
 

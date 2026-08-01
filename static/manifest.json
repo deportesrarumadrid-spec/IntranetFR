@@ -1,0 +1,16 @@
+{
+  "name": "Intranet Club Fuentelarreyna",
+  "short_name": "INTRANET FR",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#dc2626",
+  "theme_color": "#dc2626",
+  "icons": [
+    {
+      "src": "/static/app-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

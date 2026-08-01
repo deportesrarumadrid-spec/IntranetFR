@@ -46,6 +46,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 from perfiles import get_perfiles_sheet # Importamos la función para obtener la hoja de perfiles
 
 app = Flask(__name__)
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 _secret = os.environ.get('FLASK_SECRET_KEY')
 if not _secret:
     raise RuntimeError("FLASK_SECRET_KEY no está definida en las variables de entorno")
@@ -223,6 +224,8 @@ client = CachedClient(_raw_client, ttl=90)  # caché 90s — lecturas instantán
 NOMBRE_EXCEL = "Control Asistencia Club"
 app.gs_client = client
 app.gs_name = NOMBRE_EXCEL
+_asis_cache = {}  # {equipo_lower: {'data': list, 'ts': float}}
+_ASIS_CACHE_TTL = 60  # segundos
 # ----------------------------------
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -253,9 +256,15 @@ def guardar_sesion_img():
         filename_equipo = f"{filename_base}.jpg"
         
         img_data = base64.b64decode(img_base64)
+
+        # Comprobar si ya existe sesión para esa fecha
+        json_path = os.path.join(folder_equipo, f"{filename_base}.json")
+        if os.path.exists(json_path) and not data.get('overwrite', False):
+            return jsonify({"status": "exists", "message": "Ya existe una sesión guardada para esta fecha"}), 409
+
         with open(os.path.join(folder_equipo, filename_equipo), "wb") as f:
             f.write(img_data)
-            
+
         # Guardar metadatos para búsqueda (JSON)
         metadata = {
             "fecha": fecha,
@@ -383,7 +392,11 @@ def seleccionar_equipo():
         equipo_clean = str(equipo_seleccionado).strip()
         session['equipo_defecto'] = equipo_clean
         perms = session.get('permisos', {})
-        
+
+        # Si versión móvil, redirigir a /movil tras elegir equipo
+        if session.get('_version') == 'MOVIL':
+            return redirect(url_for('movil'))
+
         # Redirección inteligente al módulo correspondiente tras elegir equipo
         if session.get('usuario', '').lower() == 'admin': target = url_for('deportivo_bp.direccion_deportiva')
         elif perms.get('D.DEPORTIVA') == 'SI': target = url_for('deportivo_bp.direccion_deportiva')
@@ -426,6 +439,134 @@ def logout():
     """Limpia la sesión por completo y redirige al login."""
     session.clear()
     return redirect(url_for('index'))
+
+@app.route('/movil')
+def movil():
+    usuario = session.get('usuario')
+    if not usuario:
+        return redirect(url_for('index'))
+    perms = session.get('permisos', {})
+    if perms.get('ENTRENAMIENTOS') != 'SI' and perms.get('ASISTENCIAS') != 'SI':
+        return redirect(url_for('index'))
+    equipo = session.get('equipo_defecto', '')
+
+    # Jugadores del equipo
+    jugadores = []
+    try:
+        sheet_jug = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
+        all_values = sheet_jug.get_all_values()
+        if all_values:
+            headers = [normalizar_cabecera_universal(h) for h in all_values[0]]
+            idx_eq = next((headers.index(c) for c in ["EQUIPO","CATEGORIA","GRUPO","EQUIPOS","EQUIPOACTIVO"] if c in headers), -1)
+            idx_nom = headers.index('NOMBRE') if 'NOMBRE' in headers else 0
+            for row in all_values[1:]:
+                if not any(row): continue
+                eq = row[idx_eq].strip() if idx_eq >= 0 and idx_eq < len(row) else ''
+                nom = row[idx_nom].strip() if idx_nom < len(row) else ''
+                if eq.upper() == equipo.upper() and nom:
+                    jugadores.append(nom)
+    except Exception as e:
+        print(f"Error cargando jugadores en movil: {e}")
+
+    # Objetivos del mes (TÁCTICO / TÉCNICO)
+    hoy = datetime.now()
+    mes_actual = f"{hoy.year}-{hoy.month:02d}"
+    objetivos = {"tactico": "", "tecnico": ""}
+    try:
+        from deportivo import obtener_tactico_tecnico_metodologia
+        sheet_obj = client.open(NOMBRE_EXCEL).worksheet("OBJ TACTEC")
+        all_objs = sheet_obj.get_all_values()
+        target_y, target_m = mes_actual.split('-')
+        for row in all_objs[1:]:
+            if len(row) < 2: continue
+            fecha_row = row[0].strip()
+            if '/' not in fecha_row: continue
+            parts = fecha_row.split('/')
+            if len(parts) != 3: continue
+            d, m, y = [p.zfill(2) if p.strip().isdigit() else p.strip() for p in parts]
+            if m == target_m and y == target_y and row[1].strip().upper() == equipo.upper():
+                if d == "01" or not objetivos["tactico"]:
+                    objetivos["tactico"] = row[3].strip() if len(row) > 3 else objetivos["tactico"]
+                    objetivos["tecnico"] = row[4].strip() if len(row) > 4 else objetivos["tecnico"]
+        tac_m, tec_m = obtener_tactico_tecnico_metodologia(client, NOMBRE_EXCEL, equipo, mes_actual)
+        if tac_m: objetivos["tactico"] = tac_m
+        if tec_m: objetivos["tecnico"] = tec_m
+    except Exception as e:
+        print(f"Error cargando objetivos en movil: {e}")
+
+    # Ejercicios semanales
+    ejercicios_semanales = {}
+    try:
+        from deportivo import limpiar_texto_robusto, normalizar_fecha_sheet
+        sheet_eje = client.open(NOMBRE_EXCEL).worksheet("EJERCICIOS")
+        all_eje = sheet_eje.get_all_values()
+        if all_eje:
+            for row in all_eje[1:]:
+                if len(row) >= 4 and row[0] and row[1]:
+                    equipos_eje = [limpiar_texto_robusto(e) for e in str(row[1]).split(',') if e.strip()]
+                    if limpiar_texto_robusto(equipo) in equipos_eje:
+                        sem_key = normalizar_fecha_sheet(row[0])
+                        if sem_key not in ejercicios_semanales:
+                            ejercicios_semanales[sem_key] = []
+                        ejercicios_semanales[sem_key].append({
+                            "categoria": str(row[2]) if len(row) > 2 else "0",
+                            "titulo":    row[3] if len(row) > 3 else "",
+                            "descripcion": row[4] if len(row) > 4 else "",
+                            "url":       row[5] if len(row) > 5 else "",
+                        })
+    except Exception as e:
+        print(f"Error cargando ejercicios en movil: {e}")
+
+    # Fotos ya subidas este mes (para saber qué días muestran VER vs SUBIR)
+    fotos_subidas = []
+    try:
+        clave_eq = sanitizar_equipo_archivo(equipo)
+        mes_str = f"{hoy.month:02d}"
+        anio_str = str(hoy.year)
+        prefijo = f"entreno_{clave_eq}_"
+        if os.path.exists(UPLOAD_FOLDER):
+            for f in os.listdir(UPLOAD_FOLDER):
+                if not f.startswith(prefijo): continue
+                rest = f[len(prefijo):].rsplit('.', 1)[0]
+                pf = rest.split('-')
+                if len(pf) == 3 and pf[1] == mes_str and pf[2] == anio_str:
+                    fotos_subidas.append(str(int(pf[0])))
+    except Exception as e:
+        print(f"Error cargando fotos en movil: {e}")
+
+    return render_template('movil.html',
+                           usuario=usuario, equipo=equipo,
+                           jugadores=jugadores, perms=perms,
+                           objetivos=objetivos,
+                           ejercicios_semanales=ejercicios_semanales,
+                           fotos_subidas=fotos_subidas)
+
+@app.route('/api/fotos_mes')
+def api_fotos_mes():
+    if not session.get('usuario'):
+        return jsonify([])
+    equipo = session.get('equipo_defecto', '')
+    try:
+        mes  = int(request.args.get('mes',  datetime.now().month))
+        anio = int(request.args.get('anio', datetime.now().year))
+    except Exception:
+        mes, anio = datetime.now().month, datetime.now().year
+    fotos = []
+    try:
+        clave_eq = sanitizar_equipo_archivo(equipo)
+        mes_str  = f"{mes:02d}"
+        anio_str = str(anio)
+        prefijo  = f"entreno_{clave_eq}_"
+        if os.path.exists(UPLOAD_FOLDER):
+            for f in os.listdir(UPLOAD_FOLDER):
+                if not f.startswith(prefijo): continue
+                rest = f[len(prefijo):].rsplit('.', 1)[0]
+                pf = rest.split('-')
+                if len(pf) == 3 and pf[1] == mes_str and pf[2] == anio_str:
+                    fotos.append(str(int(pf[0])))
+    except Exception as e:
+        print(f"Error en api_fotos_mes: {e}")
+    return jsonify(fotos)
 
 @app.route('/OneSignalSDKWorker.js')
 def onesignal_worker():
@@ -521,6 +662,11 @@ def login():
     usuario_ingresado = (request.form.get('usuario') or "").strip()
     password_ingresado = (request.form.get('password') or "").strip()
 
+    version_pref = request.form.get('version', 'WEB').strip().upper()
+    if version_pref not in ('WEB', 'MOVIL'):
+        version_pref = 'WEB'
+    session['_version'] = version_pref
+
     # 1. Caso especial para admin (Master)
     if usuario_ingresado.lower() == 'admin':
         admin_pwd = os.environ.get('ADMIN_PASSWORD', '')
@@ -572,6 +718,7 @@ def login():
                     'ASISTENCIAS': check_p('ASISTENCIAS'),
                     'FINANCIERO': check_p('FINANCIERO'),
                     'D.DEPORTIVA': check_p('D.DEPORTIVA'),
+                    'D.DEP': check_p('D.DEP'),
                     'CRONOGRAMA': check_p('CRONOGRAMA'),
                     'RRSS': check_p('RRSS'),
                     'SEL. EQ.': 'SI' if str(user_data.get('SELEQ', user_data.get('SELEQ.', 'NO'))).strip().upper() == 'SI' else 'NO'
@@ -583,7 +730,11 @@ def login():
                 if str(debe_elegir).strip().upper() == 'SI':
                     session['equipo_defecto'] = '' # Limpiamos selección previa para forzar la nueva
                     return redirect(url_for('seleccionar_equipo'))
-                
+
+                # Si versión móvil, redirigir directamente a /movil
+                if version_pref == 'MOVIL':
+                    return redirect(url_for('movil'))
+
                 # Redirección inteligente al primer acceso permitido
                 if perms.get('D.DEPORTIVA') == 'SI': return redirect(url_for('deportivo_bp.direccion_deportiva'))
                 if perms.get('ENTRENAMIENTOS') == 'SI': return redirect(url_for('deportivo_bp.deportivo'))
@@ -852,6 +1003,10 @@ def obtener_asistencias():
     equipo_filtro = request.args.get('equipo')
     equipo_filtro_clean = equipo_filtro.strip().lower() if equipo_filtro else ""
     mes_filtro = request.args.get('mes')
+    if not mes_filtro:
+        cached = _asis_cache.get(equipo_filtro_clean)
+        if cached and (time.time() - cached['ts']) < _ASIS_CACHE_TTL:
+            return jsonify(cached['data'])
     try:
         sheet = client.open(NOMBRE_EXCEL).worksheet("ASISTENCIAS")
         # Usamos get_all_values para evitar errores si hay celdas vacías o duplicadas en la cabecera
@@ -888,7 +1043,8 @@ def obtener_asistencias():
                     "motivo": fila[6] if len(fila) > 6 else "",
                     "charla": fila[7] if len(fila) > 7 else "NO"
                 })
-        
+        if not mes_filtro:
+            _asis_cache[equipo_filtro_clean] = {'data': registros, 'ts': time.time()}
         return jsonify(registros)
     except Exception as e:
         print(f"Error al leer asistencias: {e}")
@@ -1067,6 +1223,9 @@ def guardar_asistencia_masiva():
                 # Nueva fila: FECHA, EQUIPO, NOMBRE, APELLIDO, ASISTENCIA, VALORACIÓN, OBSERVACIONES, CHARLA
                 sheet.append_row([fecha_full, c['equipo'], nombre, "", estado, valoracion, observacion, charla])
 
+        equipos_mod = {c['equipo'].strip().lower() for c in cambios}
+        for eq in equipos_mod:
+            _asis_cache.pop(eq, None)
         return jsonify({"status": "success"}), 200
     except Exception as e:
         print(f"Error crítico al guardar: {e}")
@@ -3298,10 +3457,11 @@ def api_seguimiento_coord_post():
     if not equipo or not texto or categoria not in _SEG_COORD_CATS:
         return jsonify({'error': 'missing'}), 400
     data = _seg_coord_leer()
-    _seg_coord_equipo_init(data, equipo)
-    data[equipo][categoria].append({'fecha': datetime.now().strftime('%d/%m/%Y'), 'texto': texto})
+    clave = _buscar_clave_seg_coord(data, equipo)
+    _seg_coord_equipo_init(data, clave)
+    data[clave][categoria].append({'fecha': datetime.now().strftime('%d/%m/%Y'), 'texto': texto})
     _seg_coord_guardar(data)
-    return jsonify({'categorias': data[equipo]})
+    return jsonify({'categorias': data[clave]})
 
 @app.route('/api/obs_comentario_ia', methods=['POST'])
 def obs_comentario_ia():
