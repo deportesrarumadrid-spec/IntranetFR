@@ -427,7 +427,16 @@ def seleccionar_equipo():
         actual_idx = idx_eq if found_header else 0
         start_row = 1 if found_header else 0
         
-        equipos = sorted(list(set(str(row[actual_idx]).strip() for row in all_v[start_row:] if len(row) > actual_idx and str(row[actual_idx]).strip())))
+        todos = sorted(list(set(str(row[actual_idx]).strip() for row in all_v[start_row:] if len(row) > actual_idx and str(row[actual_idx]).strip())))
+        # Si el usuario tiene equipos asignados, mostrar solo esos (en el orden del perfil)
+        permitidos = session.get('equipos_permitidos', [])
+        if permitidos:
+            permitidos_upper = [e.upper() for e in permitidos]
+            equipos = [e for e in permitidos if e.upper() in [t.upper() for t in todos]]
+            # Añadir cualquier equipo de la lista que exista en el sistema aunque el orden difiera
+            equipos = sorted(equipos, key=lambda e: permitidos_upper.index(e.upper()) if e.upper() in permitidos_upper else 999)
+        else:
+            equipos = todos
     except Exception as e:
         print(f"Error recuperando equipos para selección: {e}")
         equipos = []
@@ -725,6 +734,10 @@ def login():
                 }
                 session['permisos'] = perms
                 
+                # Guardar equipos asignados al usuario (para filtrar la pantalla de selección)
+                equipo_raw = str(user_data.get('EQUIPO', '')).strip()
+                session['equipos_permitidos'] = [e.strip() for e in equipo_raw.split(',') if e.strip()] if equipo_raw else []
+
                 # 3. ¿Debe elegir equipo? Buscamos SELEQ (normalizado de SEL. EQ.)
                 debe_elegir = user_data.get('SELEQ') or user_data.get('ELEGIRIQUIPO') or user_data.get('SELEQ.') or 'NO'
                 if str(debe_elegir).strip().upper() == 'SI':
