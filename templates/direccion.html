@@ -2296,11 +2296,12 @@
             const frecLabel = psFrecLabel(s);
             const tipoIcon = s.tipo === 'asistencias' ? '📋' : '🏃';
             card.innerHTML = `
-                <label style="position:relative; cursor:pointer; flex-shrink:0;">
+                <label style="display:flex; align-items:center; gap:5px; cursor:pointer; flex-shrink:0;">
                     <input type="checkbox" ${s.activo ? 'checked' : ''} onchange="psToggle('${s.id}', this.checked)" style="opacity:0; position:absolute;">
                     <span style="display:block; width:36px; height:20px; background:${s.activo ? '#E31E24' : '#cbd5e1'}; border-radius:10px; transition:.2s; position:relative;">
                         <span style="display:block; width:16px; height:16px; background:white; border-radius:50%; position:absolute; top:2px; left:${s.activo ? '18px' : '2px'}; transition:.2s;"></span>
                     </span>
+                    <span style="font-size:10px; font-weight:800; color:${s.activo ? '#E31E24' : '#94a3b8'};">${s.activo ? 'ON' : 'OFF'}</span>
                 </label>
                 <div style="flex:1; min-width:0;">
                     <div style="font-size:12px; font-weight:800; color:#1e293b;">${tipoIcon} ${s.nombre}</div>
