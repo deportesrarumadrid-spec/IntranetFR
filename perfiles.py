@@ -194,7 +194,32 @@ def delete_perfil(username):
         if row_index == -1:
             return jsonify({"status": "error", "message": "Usuario no encontrado."}), 404
         
+        # Leer la fila antes de borrarla para saber si es entrenador
+        row_data = all_values[row_index - 1] if row_index - 1 < len(all_values) else []
+        headers = [str(h).strip().upper() for h in all_values[0]] if all_values else []
+        idx_tipo = headers.index('TIPO') if 'TIPO' in headers else -1
+        tipo = str(row_data[idx_tipo]).strip().upper() if idx_tipo >= 0 and idx_tipo < len(row_data) else ''
+
         sheet.delete_rows(row_index)
+
+        # Si era un entrenador auto-generado, limpiar también equipos_config.json
+        if tipo == 'ENTRENADOR':
+            try:
+                parts = username.strip().split(' ', 1)
+                nombre = parts[0].strip()
+                apellido = parts[1].strip() if len(parts) > 1 else ''
+                with open(EQUIPOS_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                    ec = _json.load(f)
+                for eq in ec.get('equipos', []):
+                    for i, ent in enumerate(eq.get('entrenadores') or []):
+                        if isinstance(ent, dict):
+                            if ent.get('nombre','').strip() == nombre and ent.get('apellido','').strip() == apellido:
+                                eq['entrenadores'][i] = {'nombre': '', 'apellido': '', 'telefono': ''}
+                with open(EQUIPOS_CONFIG_FILE, 'w', encoding='utf-8') as f:
+                    _json.dump(ec, f, ensure_ascii=False, indent=2)
+            except Exception as e_ec:
+                print(f"[delete_perfil] Error limpiando equipos_config: {e_ec}")
+
         return jsonify({"status": "success", "message": "Perfil eliminado correctamente."})
     except Exception as e:
         print(f"Error al eliminar perfil: {e}")
