@@ -174,7 +174,7 @@ def enviar_push(usuario, mensaje):
     url = "https://onesignal.com/api/v1/notifications"
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Basic {rest_api_key}"
+        "Authorization": f"Key {rest_api_key}"
     }
     
     payload = {
