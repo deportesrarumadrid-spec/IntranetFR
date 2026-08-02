@@ -3,13 +3,13 @@ import time
 import json
 import os
 import unicodedata
-from datetime import datetime
+from datetime import datetime, timedelta, date as date_type
 
 SCHEDULE_FILE = os.path.join('static', 'data', 'push_schedule.json')
 EQUIPOS_CONFIG_FILE = os.path.join('static', 'data', 'equipos_config.json')
 
 _DIAS_TO_NUM = {
-    'lunes': 0, 'martes': 1, 'miercoles': 2, 'miercoles': 2,
+    'lunes': 0, 'martes': 1, 'miercoles': 2,
     'jueves': 3, 'viernes': 4, 'sabado': 5, 'domingo': 6
 }
 
@@ -125,6 +125,46 @@ def _check_entrenamientos(data_folder, equipo, dias_numeros):
                 faltas += 1
     return faltas
 
+def _weekend_days(hoy):
+    """Returns (friday, saturday, sunday) dates for the current week (Mon-Sun)."""
+    today = hoy.date() if isinstance(hoy, datetime) else hoy
+    monday = today - timedelta(days=today.weekday())
+    return (monday + timedelta(days=4), monday + timedelta(days=5), monday + timedelta(days=6))
+
+def _check_formulario_partido(client, nombre_excel, equipo_up, hoy):
+    """Returns True if a match form has been submitted for this team this weekend."""
+    try:
+        friday, saturday, sunday = _weekend_days(hoy)
+        weekend_set = {friday, saturday, sunday}
+
+        ws = client.open(nombre_excel).worksheet('FORMULARIO_PARTIDOS')
+        all_data = ws.get_all_values()
+        if not all_data or len(all_data) < 2:
+            return False
+
+        hdrs = [h.strip().upper().replace(' ', '') for h in all_data[0]]
+        idx_eq = next((i for i, h in enumerate(hdrs) if 'EQUIPO' in h), 1)
+        idx_fe = next((i for i, h in enumerate(hdrs) if 'MARCA' in h or 'TEMPORAL' in h), 0)
+
+        for row in all_data[1:]:
+            if len(row) <= max(idx_eq, idx_fe):
+                continue
+            if row[idx_eq].strip().upper() != equipo_up:
+                continue
+            date_str = row[idx_fe].strip().split()[0] if row[idx_fe].strip() else ''
+            parts = date_str.split('/')
+            if len(parts) >= 3:
+                try:
+                    form_date = date_type(int(parts[2]), int(parts[1]), int(parts[0]))
+                    if form_date in weekend_set:
+                        return True
+                except Exception:
+                    pass
+        return False
+    except Exception as e:
+        print(f"[SCHED] check_formulario_partido {equipo_up}: {e}", flush=True)
+        return False
+
 def _run_schedule(schedule, flask_app):
     from app import enviar_push
     sid = schedule.get('id')
@@ -142,12 +182,44 @@ def _run_schedule(schedule, flask_app):
         mes_nombre = ['enero','febrero','marzo','abril','mayo','junio','julio',
                       'agosto','septiembre','octubre','noviembre','diciembre'][hoy.month - 1]
 
-        # Get coaches from PERFILES (TIPO=ENTRENADOR)
         perfiles_sheet = client.open(nombre_excel).worksheet("PERFILES")
         perfiles_data = perfiles_sheet.get_all_records()
 
         for equipo in equipos_obj:
             equipo_up = equipo.strip().upper()
+
+            # --- FORMULARIO DE PARTIDO ---
+            if tipo == 'formulario_partido':
+                weekday = hoy.weekday()  # 0=Lun, 4=Vie, 5=Sab, 6=Dom
+                es_prebenjamines = 'prebenjamin' in _norm(equipo)
+                dias_validos = {4, 5, 6} if es_prebenjamines else {5, 6}
+                if weekday not in dias_validos:
+                    print(f"[SCHED] {equipo}: hoy no es día de recordatorio de partido (weekday={weekday})", flush=True)
+                    continue
+                ya_enviado = _check_formulario_partido(client, nombre_excel, equipo_up, hoy)
+                if ya_enviado:
+                    print(f"[SCHED] {equipo}: formulario de partido ya enviado este finde", flush=True)
+                    continue
+                coaches = [
+                    p for p in perfiles_data
+                    if equipo_up in [e.strip().upper() for e in str(p.get('EQUIPO', '')).split(',')]
+                    and str(p.get('TIPO', '')).strip().upper() == 'ENTRENADOR'
+                ]
+                if not coaches:
+                    print(f"[SCHED] Sin entrenadores para {equipo}", flush=True)
+                    continue
+                for coach in coaches:
+                    nombre = str(coach.get('USUARIO', '')).strip()
+                    if not nombre:
+                        continue
+                    msg = texto_tpl.replace('{nombre}', nombre).replace('{equipo}', equipo).replace('{mes}', mes_nombre)
+                    if link:
+                        msg += f"\n\n{link}"
+                    enviar_push(nombre.lower(), msg)
+                    print(f"[SCHED] Push formulario → {nombre} ({equipo})", flush=True)
+                continue
+
+            # --- ASISTENCIAS / ENTRENAMIENTOS ---
             cfg = equipos_cfg.get(equipo, equipos_cfg.get(equipo_up, {}))
             dias_numeros = _dias_a_numeros(cfg.get('dias', []))
             if not dias_numeros:
