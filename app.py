@@ -176,23 +176,26 @@ def enviar_push(usuario, mensaje):
         "Content-Type": "application/json",
         "Authorization": f"Key {rest_api_key}"
     }
-    
+
+    external_id = normalizar_id(usuario)
     payload = {
         "app_id": app_id,
         "contents": {"es": mensaje, "en": mensaje},
         "headings": {"es": "Intranet Club", "en": "Intranet Club"},
-        "include_external_user_ids": [normalizar_id(usuario)], # Usamos el ID normalizado
+        "include_external_user_ids": [external_id],
+        "channel_for_external_user_ids": "push",
     }
 
+    print(f"[PUSH DEBUG] Usuario='{usuario}' ID='{external_id}' AppID='{app_id}' KeyPrefix='{rest_api_key[:20] if rest_api_key else None}'")
     try:
         response = requests.post(url, headers=headers, json=payload)
+        print(f"[PUSH DEBUG] HTTP {response.status_code}: {response.text[:300]}")
         response.raise_for_status()
         res_json = response.json()
-        # OneSignal devuelve 'id' si tuvo éxito. Verificamos si hubo destinatarios
         recipients = res_json.get('recipients', 0)
         print(f">>> RESULTADO PUSH ({usuario}): {recipients} dispositivos alcanzados. ID: {res_json.get('id')}")
         if recipients == 0:
-            print(f"⚠️ AVISO: El entrenador '{usuario}' (ID: {normalizar_id(usuario)}) aún no ha aceptado notificaciones en su móvil.")
+            print(f"⚠️ AVISO: El entrenador '{usuario}' (ID: {external_id}) aún no ha aceptado notificaciones en su móvil.")
     except requests.exceptions.RequestException as e:
         print(f"Error al enviar Push a {usuario}: {e}")
         if hasattr(e, 'response') and e.response is not None:
