@@ -184,6 +184,8 @@ def enviar_push(usuario, mensaje):
         "headings": {"es": "Intranet Club", "en": "Intranet Club"},
         "include_external_user_ids": [external_id],
         "channel_for_external_user_ids": "push",
+        "chrome_web_icon": "https://intranet.clubfuentelarreyna.com/static/escudoapp.png",
+        "chrome_web_badge": "https://intranet.clubfuentelarreyna.com/static/escudoapp.png",
     }
 
     import sys
