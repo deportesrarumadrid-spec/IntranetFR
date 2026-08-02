@@ -186,20 +186,21 @@ def enviar_push(usuario, mensaje):
         "channel_for_external_user_ids": "push",
     }
 
-    print(f"[PUSH DEBUG] Usuario='{usuario}' ID='{external_id}' AppID='{app_id}' KeyPrefix='{rest_api_key[:20] if rest_api_key else None}'")
+    import sys
+    print(f"[PUSH DEBUG] Usuario='{usuario}' ID='{external_id}' AppID='{app_id}' KeyPrefix='{rest_api_key[:20] if rest_api_key else None}'", flush=True)
     try:
         response = requests.post(url, headers=headers, json=payload)
-        print(f"[PUSH DEBUG] HTTP {response.status_code}: {response.text[:300]}")
+        print(f"[PUSH DEBUG] HTTP {response.status_code}: {response.text[:300]}", flush=True)
         response.raise_for_status()
         res_json = response.json()
         recipients = res_json.get('recipients', 0)
-        print(f">>> RESULTADO PUSH ({usuario}): {recipients} dispositivos alcanzados. ID: {res_json.get('id')}")
+        print(f">>> RESULTADO PUSH ({usuario}): {recipients} dispositivos alcanzados. ID: {res_json.get('id')}", flush=True)
         if recipients == 0:
-            print(f"⚠️ AVISO: El entrenador '{usuario}' (ID: {external_id}) aún no ha aceptado notificaciones en su móvil.")
+            print(f"⚠️ AVISO: El entrenador '{usuario}' (ID: {external_id}) aún no ha aceptado notificaciones en su móvil.", flush=True)
     except requests.exceptions.RequestException as e:
-        print(f"Error al enviar Push a {usuario}: {e}")
+        print(f"Error al enviar Push a {usuario}: {e}", flush=True)
         if hasattr(e, 'response') and e.response is not None:
-            print(f"OneSignal API Response: {e.response.text}")
+            print(f"OneSignal API Response: {e.response.text}", flush=True)
 
 def parse_dias_entreno(texto):
     """Convierte 'L,X,V' en lista de números [0, 2, 4]"""
