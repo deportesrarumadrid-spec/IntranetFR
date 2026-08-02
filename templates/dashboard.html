@@ -1947,6 +1947,9 @@
 
         async function cgEliminarPerfil(username) {
             if (!confirm(`¿Eliminar acceso de ${username}?`)) return;
+            // Quitar la fila del DOM inmediatamente
+            const tr = document.querySelector(`#cgTbodyPerfiles tr[data-user="${username}"]`);
+            if (tr) tr.remove();
             await fetch(`/api/perfiles/${username}`, {method:'DELETE'});
             cargarPerfilesCG();
         }
