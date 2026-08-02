@@ -2125,55 +2125,315 @@
     </div><!-- cierre tab-d-deportiva -->{% endif %}
 
     <div id="tab-push" class="tab-content">
-        <div class="card-coord" style="padding: 22px; max-width: 680px;">
-            <h3 style="margin: 0 0 14px 0; font-size: 14px; font-weight: 900; color: #1e293b;"><i class="fas fa-bell" style="color:#E31E24; margin-right: 6px;"></i> Enviar aviso push</h3>
+        <div style="max-width: 720px; display: flex; flex-direction: column; gap: 18px;">
 
-            <!-- Fila: destinatario | comentario -->
+        <!-- PUSH MANUAL -->
+        <div class="card-coord" style="padding: 22px;">
+            <h3 style="margin: 0 0 14px 0; font-size: 14px; font-weight: 900; color: #1e293b;"><i class="fas fa-paper-plane" style="color:#E31E24; margin-right: 6px;"></i> Push Manual</h3>
             <div style="display: flex; gap: 16px; align-items: flex-start;">
-
-                <!-- Columna izquierda: toggle + selector -->
                 <div style="flex: 1; min-width: 0;">
                     <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 7px;">Destinatario</label>
-
-                    <!-- Toggle EQUIPO / ENTRENADOR -->
                     <div style="display: flex; gap: 0; border: 1.5px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin-bottom: 10px;">
-                        <button id="pushToggleEquipo" onclick="pushSetModo('equipo')"
-                            style="flex:1; padding: 8px 6px; font-size: 11px; font-weight: 800; font-family: inherit; border: none; cursor: pointer; background: #E31E24; color: white; transition: all .15s;">
-                            ⚽ EQUIPO
-                        </button>
-                        <button id="pushToggleEntrenador" onclick="pushSetModo('entrenador')"
-                            style="flex:1; padding: 8px 6px; font-size: 11px; font-weight: 800; font-family: inherit; border: none; cursor: pointer; background: #f1f5f9; color: #64748b; transition: all .15s;">
-                            👤 ENTRENADOR
-                        </button>
+                        <button id="pushToggleEquipo" onclick="pushSetModo('equipo')" style="flex:1; padding: 8px 6px; font-size: 11px; font-weight: 800; font-family: inherit; border: none; cursor: pointer; background: #E31E24; color: white; transition: all .15s;">⚽ EQUIPO</button>
+                        <button id="pushToggleEntrenador" onclick="pushSetModo('entrenador')" style="flex:1; padding: 8px 6px; font-size: 11px; font-weight: 800; font-family: inherit; border: none; cursor: pointer; background: #f1f5f9; color: #64748b; transition: all .15s;">👤 ENTRENADOR</button>
                     </div>
-
-                    <!-- Dropdown EQUIPO -->
                     <select id="pushSelectEquipo" style="width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid #ddd; font-size: 12px; box-sizing: border-box; font-family: inherit;">
                         <option value="">— Selecciona equipo —</option>
-                        {% for eq in equipos %}
-                        <option value="{{ eq }}">{{ eq }}</option>
-                        {% endfor %}
+                        {% for eq in equipos %}<option value="{{ eq }}">{{ eq }}</option>{% endfor %}
                     </select>
-
-                    <!-- Dropdown ENTRENADOR -->
                     <select id="pushSelectEntrenador" style="width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid #ddd; font-size: 12px; box-sizing: border-box; font-family: inherit; display: none;">
                         <option value="">— Selecciona entrenador —</option>
                     </select>
                 </div>
-
-                <!-- Columna derecha: comentario -->
                 <div style="flex: 1.2; min-width: 0;">
                     <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 7px;">Comentario</label>
                     <textarea id="pushTabComentario" rows="5" placeholder="Escribe el mensaje aquí..." style="width: 100%; padding: 9px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 12px; resize: vertical; box-sizing: border-box; font-family: inherit;"></textarea>
                 </div>
             </div>
-
-            <button onclick="enviarPushTab()" style="width: 100%; background: #E31E24; color: white; border: none; border-radius: 9px; padding: 11px; font-weight: 800; font-size: 13px; cursor: pointer; font-family: inherit; margin-top: 14px;">
-                <i class="fas fa-paper-plane"></i> ENVIAR PUSH
-            </button>
+            <button onclick="enviarPushTab()" style="width: 100%; background: #E31E24; color: white; border: none; border-radius: 9px; padding: 11px; font-weight: 800; font-size: 13px; cursor: pointer; font-family: inherit; margin-top: 14px;"><i class="fas fa-paper-plane"></i> ENVIAR PUSH</button>
             <div id="pushTabEstado" style="font-size: 11px; margin-top: 10px; text-align: center; font-weight: 700;"></div>
         </div>
+
+        <!-- PROGRAMACIÓN DE PUSH -->
+        <div class="card-coord" style="padding: 22px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                <h3 style="margin:0; font-size:14px; font-weight:900; color:#1e293b;"><i class="fas fa-clock" style="color:#E31E24; margin-right:6px;"></i> Programación de Push</h3>
+                <button onclick="psShowForm()" style="background:#E31E24; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fas fa-plus"></i> Nueva programación</button>
+            </div>
+
+            <!-- Lista de programaciones -->
+            <div id="psLista" style="display:flex; flex-direction:column; gap:10px;"></div>
+            <div id="psListaVacia" style="display:none; text-align:center; color:#94a3b8; font-size:12px; padding:20px;">Sin programaciones configuradas</div>
+
+            <!-- Formulario nueva/editar programación -->
+            <div id="psForm" style="display:none; border-top:1.5px solid #f1f5f9; margin-top:18px; padding-top:18px;">
+                <h4 style="margin:0 0 14px; font-size:12px; font-weight:900; color:#1e293b;" id="psFormTitulo">Nueva programación</h4>
+                <input type="hidden" id="psEditId">
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+                    <!-- Nombre -->
+                    <div style="grid-column:1/-1;">
+                        <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:5px;">Nombre</label>
+                        <input id="psNombre" type="text" placeholder="Ej: Recordatorio asistencias diario" style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:7px; font-size:12px; box-sizing:border-box; font-family:inherit;">
+                    </div>
+
+                    <!-- Tipo -->
+                    <div>
+                        <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:5px;">Tipo</label>
+                        <select id="psTipo" onchange="psUpdateTextoDefault()" style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:7px; font-size:12px; box-sizing:border-box; font-family:inherit;">
+                            <option value="asistencias">Asistencias</option>
+                            <option value="entrenamientos">Entrenamientos</option>
+                        </select>
+                    </div>
+
+                    <!-- Hora -->
+                    <div>
+                        <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:5px;">Hora de envío</label>
+                        <input id="psHora" type="time" value="17:00" style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:7px; font-size:12px; box-sizing:border-box; font-family:inherit;">
+                    </div>
+
+                    <!-- Frecuencia -->
+                    <div>
+                        <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:5px;">Frecuencia</label>
+                        <select id="psModo" onchange="psModoChange()" style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:7px; font-size:12px; box-sizing:border-box; font-family:inherit;">
+                            <option value="diario">Todos los días</option>
+                            <option value="cada_2_dias">Cada 2 días</option>
+                            <option value="dia_semana">Un día de la semana</option>
+                            <option value="dia_mes">Un día del mes</option>
+                        </select>
+                    </div>
+
+                    <!-- Día de la semana (condicional) -->
+                    <div id="psDiaSemanaDiv" style="display:none;">
+                        <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:5px;">Día</label>
+                        <select id="psDiaSemana" style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:7px; font-size:12px; box-sizing:border-box; font-family:inherit;">
+                            <option value="0">Lunes</option>
+                            <option value="1">Martes</option>
+                            <option value="2">Miércoles</option>
+                            <option value="3">Jueves</option>
+                            <option value="4">Viernes</option>
+                            <option value="5">Sábado</option>
+                            <option value="6">Domingo</option>
+                        </select>
+                    </div>
+
+                    <!-- Día del mes (condicional) -->
+                    <div id="psDiaMesDiv" style="display:none;">
+                        <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:5px;">Día del mes (1-31)</label>
+                        <input id="psDiaMes" type="number" min="1" max="31" value="1" style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:7px; font-size:12px; box-sizing:border-box; font-family:inherit;">
+                    </div>
+                </div>
+
+                <!-- Equipos -->
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:7px;">Equipos destinatarios</label>
+                    <div id="psEquiposCheck" style="display:flex; flex-wrap:wrap; gap:6px;">
+                        {% for eq in equipos %}
+                        <label style="display:flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:#334155; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:6px; padding:5px 9px; cursor:pointer;">
+                            <input type="checkbox" class="ps-equipo-check" value="{{ eq }}" style="accent-color:#E31E24;"> {{ eq }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Texto del push -->
+                <div style="margin-bottom:10px;">
+                    <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:4px;">Texto del push <span style="font-weight:400; color:#94a3b8;">({nombre} {equipo} {mes} {faltas})</span></label>
+                    <textarea id="psTexto" rows="3" oninput="psUpdatePreview()" style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:7px; font-size:12px; resize:vertical; box-sizing:border-box; font-family:inherit;"></textarea>
+                </div>
+
+                <!-- Link -->
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:4px;">Link al clicar la notificación</label>
+                    <input id="psLink" type="text" oninput="psUpdatePreview()" placeholder="https://intranet.clubfuentelarreyna.com/movil" style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:7px; font-size:12px; box-sizing:border-box; font-family:inherit;">
+                </div>
+
+                <!-- Preview -->
+                <div style="background:#1e293b; border-radius:10px; padding:14px; margin-bottom:14px;">
+                    <div style="font-size:9px; font-weight:800; color:#64748b; text-transform:uppercase; margin-bottom:8px; letter-spacing:.5px;">Vista previa de la notificación</div>
+                    <div style="display:flex; align-items:flex-start; gap:10px;">
+                        <img src="/static/escudoapp.png" style="width:32px; height:32px; border-radius:6px; object-fit:cover; flex-shrink:0;">
+                        <div>
+                            <div style="font-size:11px; font-weight:800; color:white; margin-bottom:3px;">Intranet Club</div>
+                            <div id="psPreviewTexto" style="font-size:11px; color:#cbd5e1; line-height:1.4; white-space:pre-wrap;"></div>
+                            <div id="psPreviewLink" style="font-size:10px; color:#64748b; margin-top:4px; word-break:break-all;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones -->
+                <div style="display:flex; gap:8px;">
+                    <button onclick="psGuardar()" style="flex:1; background:#E31E24; color:white; border:none; border-radius:7px; padding:10px; font-size:12px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fas fa-save"></i> Guardar</button>
+                    <button onclick="psCancelarForm()" style="background:#f1f5f9; color:#64748b; border:none; border-radius:7px; padding:10px 16px; font-size:12px; font-weight:800; cursor:pointer; font-family:inherit;">Cancelar</button>
+                </div>
+                <div id="psFormEstado" style="font-size:11px; margin-top:8px; text-align:center; font-weight:700;"></div>
+            </div>
+        </div>
+
+        </div><!-- fin flex column -->
     </div>
+
+    <script>
+    // ===================== PUSH SCHEDULE =====================
+    const PS_EQUIPOS = {{ equipos | tojson }};
+    const PS_TEXTOS_DEFAULT = {
+        asistencias: 'Hola {nombre}, tienes {faltas} asistencia(s) pendiente(s) del equipo {equipo} en {mes}. ¡Accede para completarlas!',
+        entrenamientos: 'Hola {nombre}, tienes {faltas} sesión(es) de entrenamiento pendiente(s) del equipo {equipo} en {mes}. ¡Accede para registrarlas!'
+    };
+    const PS_DIAS_SEMANA = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+
+    async function psCargar() {
+        const res = await fetch('/api/push_schedule');
+        const schedules = await res.json();
+        const lista = document.getElementById('psLista');
+        const vacia = document.getElementById('psListaVacia');
+        lista.innerHTML = '';
+        if (!schedules.length) { vacia.style.display='block'; return; }
+        vacia.style.display='none';
+        schedules.forEach(s => {
+            const card = document.createElement('div');
+            card.style.cssText = 'border:1.5px solid #e2e8f0; border-radius:9px; padding:12px 14px; display:flex; align-items:center; gap:10px;';
+            const frecLabel = psFrecLabel(s);
+            const tipoIcon = s.tipo === 'asistencias' ? '📋' : '🏃';
+            card.innerHTML = `
+                <label style="position:relative; cursor:pointer; flex-shrink:0;">
+                    <input type="checkbox" ${s.activo ? 'checked' : ''} onchange="psToggle('${s.id}', this.checked)" style="opacity:0; position:absolute;">
+                    <span style="display:block; width:36px; height:20px; background:${s.activo ? '#E31E24' : '#cbd5e1'}; border-radius:10px; transition:.2s; position:relative;">
+                        <span style="display:block; width:16px; height:16px; background:white; border-radius:50%; position:absolute; top:2px; left:${s.activo ? '18px' : '2px'}; transition:.2s;"></span>
+                    </span>
+                </label>
+                <div style="flex:1; min-width:0;">
+                    <div style="font-size:12px; font-weight:800; color:#1e293b;">${tipoIcon} ${s.nombre}</div>
+                    <div style="font-size:10px; color:#64748b; margin-top:2px;">${frecLabel} · ${s.equipos.join(', ') || '—'}</div>
+                </div>
+                <button onclick="psEditar('${s.id}')" style="background:#f1f5f9; border:none; border-radius:6px; padding:6px 10px; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; color:#475569;"><i class="fas fa-edit"></i></button>
+                <button onclick="psEliminar('${s.id}')" style="background:#fef2f2; border:none; border-radius:6px; padding:6px 10px; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; color:#E31E24;"><i class="fas fa-trash"></i></button>`;
+            lista.appendChild(card);
+        });
+    }
+
+    function psFrecLabel(s) {
+        if (s.modo === 'diario') return `Todos los días a las ${s.hora}`;
+        if (s.modo === 'cada_2_dias') return `Cada 2 días a las ${s.hora}`;
+        if (s.modo === 'dia_semana') return `Todos los ${PS_DIAS_SEMANA[s.dia_semana] || ''} a las ${s.hora}`;
+        if (s.modo === 'dia_mes') return `Día ${s.dia_mes} de cada mes a las ${s.hora}`;
+        return s.hora;
+    }
+
+    async function psToggle(id, activo) {
+        await fetch(`/api/push_schedule/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({activo}) });
+        psCargar();
+    }
+
+    async function psEliminar(id) {
+        if (!confirm('¿Eliminar esta programación?')) return;
+        await fetch(`/api/push_schedule/${id}`, { method:'DELETE' });
+        psCargar();
+    }
+
+    function psShowForm(reset=true) {
+        if (reset) {
+            document.getElementById('psEditId').value = '';
+            document.getElementById('psFormTitulo').textContent = 'Nueva programación';
+            document.getElementById('psNombre').value = '';
+            document.getElementById('psTipo').value = 'asistencias';
+            document.getElementById('psModo').value = 'diario';
+            document.getElementById('psHora').value = '17:00';
+            document.getElementById('psDiaSemana').value = '4';
+            document.getElementById('psDiaMes').value = '1';
+            document.querySelectorAll('.ps-equipo-check').forEach(c => c.checked = false);
+            document.getElementById('psTexto').value = PS_TEXTOS_DEFAULT.asistencias;
+            document.getElementById('psLink').value = 'https://intranet.clubfuentelarreyna.com/movil';
+            psModoChange();
+            psUpdatePreview();
+        }
+        document.getElementById('psForm').style.display = 'block';
+        document.getElementById('psFormEstado').textContent = '';
+        document.getElementById('psForm').scrollIntoView({behavior:'smooth', block:'nearest'});
+    }
+
+    async function psEditar(id) {
+        const res = await fetch('/api/push_schedule');
+        const schedules = await res.json();
+        const s = schedules.find(x => x.id === id);
+        if (!s) return;
+        document.getElementById('psEditId').value = s.id;
+        document.getElementById('psFormTitulo').textContent = 'Editar programación';
+        document.getElementById('psNombre').value = s.nombre;
+        document.getElementById('psTipo').value = s.tipo;
+        document.getElementById('psModo').value = s.modo;
+        document.getElementById('psHora').value = s.hora;
+        document.getElementById('psDiaSemana').value = s.dia_semana ?? '4';
+        document.getElementById('psDiaMes').value = s.dia_mes ?? '1';
+        document.querySelectorAll('.ps-equipo-check').forEach(c => c.checked = (s.equipos || []).includes(c.value));
+        document.getElementById('psTexto').value = s.texto;
+        document.getElementById('psLink').value = s.link || '';
+        psModoChange();
+        psUpdatePreview();
+        psShowForm(false);
+    }
+
+    function psCancelarForm() {
+        document.getElementById('psForm').style.display = 'none';
+    }
+
+    function psModoChange() {
+        const modo = document.getElementById('psModo').value;
+        document.getElementById('psDiaSemanaDiv').style.display = modo === 'dia_semana' ? 'block' : 'none';
+        document.getElementById('psDiaMesDiv').style.display = modo === 'dia_mes' ? 'block' : 'none';
+    }
+
+    function psUpdateTextoDefault() {
+        const tipo = document.getElementById('psTipo').value;
+        document.getElementById('psTexto').value = PS_TEXTOS_DEFAULT[tipo] || '';
+        psUpdatePreview();
+    }
+
+    function psUpdatePreview() {
+        const texto = document.getElementById('psTexto').value
+            .replace('{nombre}', 'Rubén').replace('{equipo}', 'BENJAMIN A')
+            .replace('{mes}', 'agosto').replace('{faltas}', '3');
+        const link = document.getElementById('psLink').value;
+        document.getElementById('psPreviewTexto').textContent = texto;
+        document.getElementById('psPreviewLink').textContent = link;
+    }
+
+    async function psGuardar() {
+        const estado = document.getElementById('psFormEstado');
+        const nombre = document.getElementById('psNombre').value.trim();
+        if (!nombre) { estado.style.color='#dc2626'; estado.textContent='Escribe un nombre.'; return; }
+        const equiposSel = [...document.querySelectorAll('.ps-equipo-check:checked')].map(c => c.value);
+        if (!equiposSel.length) { estado.style.color='#dc2626'; estado.textContent='Selecciona al menos un equipo.'; return; }
+
+        const modo = document.getElementById('psModo').value;
+        const body = {
+            nombre,
+            tipo: document.getElementById('psTipo').value,
+            modo,
+            dia_semana: modo === 'dia_semana' ? parseInt(document.getElementById('psDiaSemana').value) : null,
+            dia_mes: modo === 'dia_mes' ? parseInt(document.getElementById('psDiaMes').value) : null,
+            hora: document.getElementById('psHora').value,
+            equipos: equiposSel,
+            texto: document.getElementById('psTexto').value,
+            link: document.getElementById('psLink').value,
+        };
+
+        const editId = document.getElementById('psEditId').value;
+        estado.style.color='#64748b'; estado.textContent='Guardando...';
+        try {
+            if (editId) {
+                await fetch(`/api/push_schedule/${editId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+            } else {
+                await fetch('/api/push_schedule', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+            }
+            estado.style.color='#16a34a'; estado.textContent='✓ Guardado correctamente';
+            setTimeout(() => { psCancelarForm(); psCargar(); }, 800);
+        } catch(e) {
+            estado.style.color='#dc2626'; estado.textContent='Error al guardar.';
+        }
+    }
+
+</script>
 
     <div id="tab-horarios-temp" class="tab-content">
         <div class="card-coord" style="padding: 22px;">
@@ -4009,6 +4269,7 @@
                 } else {
                     cargarInformeColoresExistente().then(prepararTabPush);
                 }
+                psCargar();
             }
             if (tabId === 'tab-horarios-temp') {
                 horTempCargar();

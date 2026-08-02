@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import uuid
 import base64
 from datetime import datetime, timedelta
 import unicodedata
@@ -3550,6 +3551,69 @@ Responde SOLO el comentario, sin introducción ni explicación."""
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+
+# --- PUSH SCHEDULE CRUD ---
+@app.route('/api/push_schedule', methods=['GET'])
+def api_push_schedule_list():
+    if not session.get('usuario'):
+        return jsonify([]), 401
+    import push_scheduler as _ps
+    return jsonify(_ps.load_schedules())
+
+@app.route('/api/push_schedule', methods=['POST'])
+def api_push_schedule_create():
+    if not session.get('usuario'):
+        return jsonify({}), 401
+    import push_scheduler as _ps
+    data = request.json or {}
+    s = {
+        'id': str(uuid.uuid4()),
+        'nombre': data.get('nombre', 'Sin nombre'),
+        'tipo': data.get('tipo', 'asistencias'),
+        'modo': data.get('modo', 'diario'),
+        'dia_semana': data.get('dia_semana'),
+        'dia_mes': data.get('dia_mes'),
+        'hora': data.get('hora', '17:00'),
+        'equipos': data.get('equipos', []),
+        'texto': data.get('texto', ''),
+        'link': data.get('link', 'https://intranet.clubfuentelarreyna.com/movil'),
+        'activo': False,
+        'ultima_ejecucion': None,
+        'creado_en': datetime.now().isoformat(),
+    }
+    schedules = _ps.load_schedules()
+    schedules.append(s)
+    _ps.save_schedules(schedules)
+    return jsonify(s)
+
+@app.route('/api/push_schedule/<sid>', methods=['PUT'])
+def api_push_schedule_update(sid):
+    if not session.get('usuario'):
+        return jsonify({}), 401
+    import push_scheduler as _ps
+    data = request.json or {}
+    schedules = _ps.load_schedules()
+    for s in schedules:
+        if s['id'] == sid:
+            for k in ['nombre','tipo','modo','dia_semana','dia_mes','hora','equipos','texto','link','activo']:
+                if k in data:
+                    s[k] = data[k]
+            break
+    _ps.save_schedules(schedules)
+    return jsonify({'status': 'ok'})
+
+@app.route('/api/push_schedule/<sid>', methods=['DELETE'])
+def api_push_schedule_delete(sid):
+    if not session.get('usuario'):
+        return jsonify({}), 401
+    import push_scheduler as _ps
+    schedules = [s for s in _ps.load_schedules() if s['id'] != sid]
+    _ps.save_schedules(schedules)
+    return jsonify({'status': 'ok'})
+
+# Arrancar scheduler en background
+import push_scheduler as _push_scheduler_mod
+_push_scheduler_mod.start(app)
 
 if __name__ == '__main__':
     _debug = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
