@@ -1,10 +1,14 @@
 from flask import Blueprint, request, jsonify, current_app
 import gspread
+import os
+import json as _json
 
 perfiles_bp = Blueprint('perfiles_bp', __name__)
 
+EQUIPOS_CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'equipos_config.json')
+
 # Definición de las cabeceras esperadas en la hoja "PERFILES"
-PERFILES_HEADERS = ["USUARIO", "CONTRASEÑA", "ENTRENAMIENTOS", "ASISTENCIAS", "FINANCIERO", "D.DEPORTIVA", "SEL. EQ.", "CRONOGRAMA", "EQUIPO", "TELEFONO"]
+PERFILES_HEADERS = ["USUARIO", "CONTRASEÑA", "ENTRENAMIENTOS", "ASISTENCIAS", "FINANCIERO", "D.DEPORTIVA", "SEL. EQ.", "CRONOGRAMA", "EQUIPO", "TELEFONO", "TIPO"]
 
 def get_perfiles_sheet():
     """
@@ -100,7 +104,8 @@ def add_perfil():
             str(data.get('SEL. EQ.', data.get('ELEGIR_EQUIPO', 'NO'))).upper(),
             str(data.get('CRONOGRAMA', 'NO')).upper(),
             str(data.get('EQUIPO', '')).strip(),
-            str(data.get('TELEFONO', '')).strip()
+            str(data.get('TELEFONO', '')).strip(),
+            str(data.get('TIPO', '')).strip()
         ]
         sheet.append_row(new_row)
         return jsonify({"status": "success", "message": "Perfil añadido correctamente."})
@@ -194,3 +199,174 @@ def delete_perfil(username):
     except Exception as e:
         print(f"Error al eliminar perfil: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@perfiles_bp.route('/api/sync_entrenadores_perfiles', methods=['POST'])
+def sync_entrenadores_perfiles():
+    """Equipos → PERFILES: crea/actualiza/elimina perfiles de entrenadores al guardar configuración de equipos."""
+    try:
+        data = request.get_json() or {}
+        equipos = data.get('equipos', [])
+
+        # Construir mapa: clave_lower → {usuario, telefono, equipos:[]}
+        trainers_map = {}
+        for eq in equipos:
+            eq_nombre = (eq.get('nombre') or '').strip()
+            if not eq_nombre:
+                continue
+            for ent in (eq.get('entrenadores') or []):
+                if isinstance(ent, str):
+                    parts = ent.strip().split(' ', 1)
+                    nombre = parts[0].strip()
+                    apellido = parts[1].strip() if len(parts) > 1 else ''
+                    telefono = ''
+                elif isinstance(ent, dict):
+                    nombre = (ent.get('nombre') or '').strip()
+                    apellido = (ent.get('apellido') or '').strip()
+                    telefono = (ent.get('telefono') or '').strip()
+                else:
+                    continue
+                if not nombre and not apellido:
+                    continue
+                usuario = f"{nombre} {apellido}".strip()
+                key = usuario.lower()
+                if key not in trainers_map:
+                    trainers_map[key] = {'usuario': usuario, 'telefono': telefono, 'equipos': []}
+                if eq_nombre not in trainers_map[key]['equipos']:
+                    trainers_map[key]['equipos'].append(eq_nombre)
+                if not trainers_map[key]['telefono'] and telefono:
+                    trainers_map[key]['telefono'] = telefono
+
+        sheet = get_perfiles_sheet()
+        all_v = sheet.get_all_values()
+        headers = [str(h).strip().upper() for h in all_v[0]] if all_v else list(PERFILES_HEADERS)
+
+        def col_idx(h):
+            try: return headers.index(h.upper())
+            except ValueError: return -1
+
+        # Perfiles actuales → {usuario_upper: {row_idx, tipo}}
+        profiles = {}
+        for i, row in enumerate(all_v[1:], start=2):
+            if row and any(str(c).strip() for c in row):
+                u = str(row[0]).strip().upper()
+                if u:
+                    idx_t = col_idx('TIPO')
+                    tipo = str(row[idx_t]).strip().upper() if idx_t >= 0 and idx_t < len(row) else ''
+                    profiles[u] = {'row_idx': i, 'tipo': tipo}
+
+        # Entrenadores actuales con TIPO=ENTRENADOR (para detectar borrados)
+        existing_trainer_keys = {u.lower() for u, p in profiles.items() if p['tipo'] == 'ENTRENADOR'}
+
+        # Crear o actualizar
+        for key, info in trainers_map.items():
+            usuario = info['usuario']
+            equipo_str = ', '.join(info['equipos'])
+            telefono = info['telefono']
+            u_upper = usuario.upper()
+            if u_upper in profiles:
+                row_idx = profiles[u_upper]['row_idx']
+                idx_eq = col_idx('EQUIPO')
+                idx_tel = col_idx('TELEFONO')
+                updates = []
+                if idx_eq >= 0:
+                    updates.append({'range': f"I{row_idx}", 'values': [[equipo_str]]})
+                if idx_tel >= 0 and telefono:
+                    updates.append({'range': f"J{row_idx}", 'values': [[telefono]]})
+                if updates:
+                    sheet.batch_update(updates)
+            else:
+                sheet.append_row([
+                    usuario, '',  # contraseña vacía, admin la pondrá
+                    'SI', 'SI', 'NO', 'NO', 'SI', 'NO',
+                    equipo_str, telefono, 'ENTRENADOR'
+                ])
+
+        # Eliminar entrenadores que ya no están en ningún equipo
+        trainers_to_delete = existing_trainer_keys - set(trainers_map.keys())
+        if trainers_to_delete:
+            all_v2 = sheet.get_all_values()
+            idx_t = col_idx('TIPO')
+            rows_to_delete = []
+            for i, row in enumerate(all_v2[1:], start=2):
+                u = str(row[0]).strip().lower() if row else ''
+                tipo = str(row[idx_t]).strip().upper() if idx_t >= 0 and idx_t < len(row) else ''
+                if u in trainers_to_delete and tipo == 'ENTRENADOR':
+                    rows_to_delete.append(i)
+            for r in sorted(rows_to_delete, reverse=True):
+                sheet.delete_rows(r)
+
+        return jsonify({'status': 'ok', 'synced': len(trainers_map), 'deleted': len(trainers_to_delete) if trainers_to_delete else 0})
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@perfiles_bp.route('/api/sync_entrenadores_equipos_back', methods=['POST'])
+def sync_entrenadores_equipos_back():
+    """PERFILES → equipos_config: cuando se guarda un entrenador en U&C, sincroniza equipo/teléfono."""
+    try:
+        data = request.get_json() or {}
+        trainer_key = (data.get('trainer_key') or '').strip()
+        new_equipo_str = (data.get('equipo') or '').strip()
+        new_telefono = (data.get('telefono') or '').strip()
+
+        if not trainer_key:
+            return jsonify({'status': 'ok'})
+
+        try:
+            with open(EQUIPOS_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                ec = _json.load(f)
+        except Exception:
+            return jsonify({'status': 'ok', 'msg': 'equipos_config not found'})
+
+        parts = trainer_key.strip().split(' ', 1)
+        nombre = parts[0].strip()
+        apellido = parts[1].strip() if len(parts) > 1 else ''
+
+        # Comprobar si este usuario es entrenador en algún equipo
+        current_teams = set()
+        for eq in ec.get('equipos', []):
+            for ent in (eq.get('entrenadores') or []):
+                if isinstance(ent, dict):
+                    if ent.get('nombre','').strip() == nombre and ent.get('apellido','').strip() == apellido:
+                        current_teams.add((eq.get('nombre') or '').strip())
+
+        if not current_teams:
+            return jsonify({'status': 'ok', 'msg': 'not a trainer'})
+
+        # Actualizar teléfono en todos los equipos donde está
+        for eq in ec.get('equipos', []):
+            for ent in (eq.get('entrenadores') or []):
+                if isinstance(ent, dict):
+                    if ent.get('nombre','').strip() == nombre and ent.get('apellido','').strip() == apellido:
+                        if new_telefono:
+                            ent['telefono'] = new_telefono
+
+        # Gestionar cambios de equipo
+        new_teams = {t.strip() for t in new_equipo_str.split(',') if t.strip()}
+        teams_to_remove = current_teams - new_teams
+        teams_to_add = new_teams - current_teams
+
+        for eq in ec.get('equipos', []):
+            eq_nombre = (eq.get('nombre') or '').strip()
+            if eq_nombre in teams_to_remove:
+                for i, ent in enumerate(eq.get('entrenadores') or []):
+                    if isinstance(ent, dict):
+                        if ent.get('nombre','').strip() == nombre and ent.get('apellido','').strip() == apellido:
+                            eq['entrenadores'][i] = {'nombre': '', 'apellido': '', 'telefono': ''}
+                            break
+            elif eq_nombre in teams_to_add:
+                ents = eq.setdefault('entrenadores', [{},{},{}])
+                for i, ent in enumerate(ents):
+                    if isinstance(ent, dict) and not ent.get('nombre','').strip() and not ent.get('apellido','').strip():
+                        eq['entrenadores'][i] = {'nombre': nombre, 'apellido': apellido, 'telefono': new_telefono}
+                        break
+
+        with open(EQUIPOS_CONFIG_FILE, 'w', encoding='utf-8') as f:
+            _json.dump(ec, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({'status': 'error', 'message': str(e)}), 500

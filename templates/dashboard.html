@@ -1917,8 +1917,15 @@
             const orig = btn.innerHTML;
             try {
                 const res = await fetch(`/api/perfiles/${username}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
-                if (res.ok) { btn.style.background='#16a34a'; btn.innerHTML='<i class="fas fa-check"></i> LISTO'; setTimeout(()=>{btn.style.background='#E31E24'; btn.innerHTML=orig;},2000); }
-                else alert('Error al guardar.');
+                if (res.ok) {
+                    btn.style.background='#16a34a'; btn.innerHTML='<i class="fas fa-check"></i> LISTO'; setTimeout(()=>{btn.style.background='#E31E24'; btn.innerHTML=orig;},2000);
+                    // Sincronizar de vuelta a equipos_config si es un entrenador
+                    try {
+                        await fetch('/api/sync_entrenadores_equipos_back', { method:'POST', headers:{'Content-Type':'application/json'},
+                            body: JSON.stringify({ trainer_key: username, equipo: row.querySelector('.cg-edit-equipo').value, telefono: row.querySelector('.cg-edit-telefono').value.trim() })
+                        });
+                    } catch(e) { console.warn('trainer sync back:', e); }
+                } else alert('Error al guardar.');
             } catch(e) { alert('Error de conexión.'); }
         }
 
@@ -2006,10 +2013,21 @@
                     const resL = await fetch('/api/equipos_lista');
                     const listaData = await resL.json();
                     _ecData.equipos = (listaData.equipos || []).map(nombre => ({
-                        nombre, tipo: 'F11', entrenadores: ['','',''], dias: [], horario: ''
+                        nombre, tipo: 'F11', entrenadores: [{nombre:'',apellido:'',telefono:''},{nombre:'',apellido:'',telefono:''},{nombre:'',apellido:'',telefono:''}], dias: [], horario: ''
                     }));
                 } catch(e) {}
             }
+            // Normalizar entrenadores al nuevo formato {nombre, apellido, telefono}
+            (_ecData.equipos || []).forEach(eq => {
+                const ents = (eq.entrenadores || []).concat([{},{},{}]).slice(0,3);
+                eq.entrenadores = ents.map(e => {
+                    if (typeof e === 'string') {
+                        const p = e.trim().split(/\s+/);
+                        return { nombre: p[0]||'', apellido: p.slice(1).join(' ')||'', telefono: '' };
+                    }
+                    return { nombre: (e&&e.nombre)||'', apellido: (e&&e.apellido)||'', telefono: (e&&e.telefono)||'' };
+                });
+            });
             const elTemp = document.getElementById('ecTemporada');
             if (elTemp) elTemp.textContent = _ecData.temporada || '';
             ecRenderEquipos();
@@ -2036,8 +2054,13 @@
                     </div>
                     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px;">
                         <div>
-                            <label style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; display:block; margin-bottom:8px;">Entrenadores (máx. 3)</label>
-                            ${[0,1,2].map(n => `<input type="text" class="ec-entrena" placeholder="Entrenador ${n+1}" value="${(eq.entrenadores||[])[n]||''}" style="width:100%; padding:7px 10px; border:1px solid #e2e8f0; border-radius:7px; font-size:12px; font-weight:600; box-sizing:border-box; margin-bottom:6px; font-family:inherit;">`).join('')}
+                            <label style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; display:block; margin-bottom:6px;">Entrenadores (máx. 3)</label>
+                            <div style="display:grid; grid-template-columns:1fr 1fr 110px; gap:4px; margin-bottom:4px;">
+                                <span style="font-size:9px; color:#94a3b8; font-weight:700; text-transform:uppercase;">Nombre</span>
+                                <span style="font-size:9px; color:#94a3b8; font-weight:700; text-transform:uppercase;">Apellido</span>
+                                <span style="font-size:9px; color:#94a3b8; font-weight:700; text-transform:uppercase;">Teléfono</span>
+                            </div>
+                            ${[0,1,2].map(n => { const ent=(eq.entrenadores||[])[n]||{}; return `<div class="ec-entrena-row" style="display:grid; grid-template-columns:1fr 1fr 110px; gap:4px; margin-bottom:5px;"><input type="text" class="ec-nombre-ent" placeholder="Nombre" value="${ent.nombre||''}" style="padding:6px 8px; border:1px solid #e2e8f0; border-radius:7px; font-size:11px; font-weight:600; box-sizing:border-box; font-family:inherit; min-width:0;"><input type="text" class="ec-apellido-ent" placeholder="Apellido" value="${ent.apellido||''}" style="padding:6px 8px; border:1px solid #e2e8f0; border-radius:7px; font-size:11px; font-weight:600; box-sizing:border-box; font-family:inherit; min-width:0;"><input type="tel" class="ec-tel-ent" placeholder="Tel." value="${ent.telefono||''}" style="padding:6px 8px; border:1px solid #e2e8f0; border-radius:7px; font-size:11px; font-weight:600; box-sizing:border-box; font-family:inherit; min-width:0;"></div>`; }).join('')}
                         </div>
                         <div>
                             <label style="font-size:10px; font-weight:900; color:#94a3b8; text-transform:uppercase; display:block; margin-bottom:8px;">Días de entrenamiento</label>
@@ -2070,7 +2093,7 @@
 
         function ecAgregarEquipo() {
             _ecData.equipos = _ecData.equipos || [];
-            _ecData.equipos.push({nombre:'', entrenadores:['','',''], dias:[], horario:'', tipo:'F11'});
+            _ecData.equipos.push({nombre:'', entrenadores:[{nombre:'',apellido:'',telefono:''},{nombre:'',apellido:'',telefono:''},{nombre:'',apellido:'',telefono:''}], dias:[], horario:'', tipo:'F11'});
             ecRenderEquipos();
         }
 
@@ -2092,7 +2115,11 @@
                 const cards = document.querySelectorAll('#ecEquiposList .ec-card');
                 const equipos = Array.from(cards).map(card => ({
                     nombre: (card.querySelector('.ec-nombre') || {value:''}).value.trim(),
-                    entrenadores: Array.from(card.querySelectorAll('.ec-entrena')).map(i => i.value.trim()),
+                    entrenadores: Array.from(card.querySelectorAll('.ec-entrena-row')).map(r => ({
+                        nombre: r.querySelector('.ec-nombre-ent').value.trim(),
+                        apellido: r.querySelector('.ec-apellido-ent').value.trim(),
+                        telefono: r.querySelector('.ec-tel-ent').value.trim()
+                    })),
                     dias: Array.from(card.querySelectorAll('.ec-dia:checked')).map(c => c.value),
                     horario: (card.querySelector('.ec-horario') || {value:''}).value.trim(),
                     tipo: (card.querySelector('.ec-tipo-val') || {value:'F11'}).value || 'F11'
@@ -2102,12 +2129,12 @@
                 if (res.ok) {
                     _ecData = payload;
                     try {
-                        await fetch('/api/sync_entrenadores_staff', {
+                        await fetch('/api/sync_entrenadores_perfiles', {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json'},
                             body: JSON.stringify({ equipos })
                         });
-                    } catch(e) { console.warn('sync staff:', e); }
+                    } catch(e) { console.warn('sync perfiles:', e); }
                     setBtnOK();
                     setTimeout(resetBtn, 2500);
                 } else {
