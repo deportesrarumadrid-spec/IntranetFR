@@ -934,6 +934,7 @@
             <div class="tab-item" onclick="switchSubTab(event, 'subtab-base-datos'); bdCargar();" style="font-size: 11px;">BASE DE DATOS</div>
             <div class="tab-item" onclick="switchSubTab(event, 'subtab-informes'); setTimeout(rbCargar,50); setTimeout(isCargar,80); setTimeout(imCargar,110);" style="font-size: 11px;">INFORMES</div>
             <div class="tab-item" onclick="switchSubTab(event, 'subtab-loteria'); lotInit();" style="font-size: 11px;">LOTERÍA</div>
+            <div class="tab-item" onclick="switchSubTab(event, 'subtab-material'); matCargar();" style="font-size: 11px;">MATERIAL</div>
         </div>
         
         <div id="subtab-gestion-estrategica" class="subtab-content active" style="display: grid; grid-template-columns: 1fr 350px; gap: 20px;">
@@ -2120,6 +2121,140 @@
             a.click();
         };
     })();
+    </script>
+
+    <!-- SUBTAB: MATERIAL -->
+    <div id="subtab-material" class="subtab-content" style="display:none;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; gap:8px; align-items:center;">
+                <button onclick="matAddCol()" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;">+ Columna</button>
+                <button onclick="matGuardar()" id="matBtnGuardar" style="background:#E31E24; color:white; border:none; border-radius:7px; padding:7px 16px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;">Guardar</button>
+                <span id="matEstado" style="font-size:11px; font-weight:700; color:#64748b;"></span>
+            </div>
+        </div>
+
+        <div style="overflow-x:auto; border-radius:10px; border:1.5px solid #e2e8f0;">
+            <table id="matTabla" style="border-collapse:collapse; min-width:100%; font-size:12px; font-family:inherit;">
+                <thead id="matThead"></thead>
+                <tbody id="matTbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+    // ===================== MATERIAL =====================
+    let _matHeaders = [];
+    let _matRows = [];
+
+    async function matCargar() {
+        document.getElementById('matEstado').textContent = 'Cargando...';
+        try {
+            const res = await fetch('/api/material');
+            const data = await res.json();
+            _matHeaders = data.headers || ['EQUIPO', 'MOCHILAS'];
+            _matRows = data.rows || [];
+            matRender();
+            document.getElementById('matEstado').textContent = '';
+        } catch(e) {
+            document.getElementById('matEstado').textContent = 'Error al cargar';
+        }
+    }
+
+    function matRender() {
+        const thead = document.getElementById('matThead');
+        const tbody = document.getElementById('matTbody');
+
+        // Header
+        let thHtml = '<tr>';
+        _matHeaders.forEach((h, i) => {
+            if (i === 0) {
+                thHtml += `<th style="background:#1e293b; color:white; padding:10px 14px; font-size:11px; font-weight:800; text-align:left; white-space:nowrap; position:sticky; left:0; z-index:2;">${h}</th>`;
+            } else {
+                thHtml += `<th style="background:#1e293b; color:white; padding:0; min-width:130px; position:relative;">
+                    <div style="display:flex; align-items:center; gap:0;">
+                        <span contenteditable="true" onblur="matUpdateHeader(${i}, this.textContent.trim())"
+                            style="flex:1; padding:10px 8px; font-size:11px; font-weight:800; outline:none; display:block; cursor:text; min-width:80px;"
+                            title="Haz clic para editar el nombre de la columna">${h}</span>
+                        <button onclick="matDelCol(${i})" title="Eliminar columna"
+                            style="background:rgba(255,255,255,0.15); border:none; color:white; width:22px; height:22px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:900; display:flex; align-items:center; justify-content:center; margin-right:4px; flex-shrink:0;">×</button>
+                    </div>
+                </th>`;
+            }
+        });
+        thHtml += '</tr>';
+        thead.innerHTML = thHtml;
+
+        // Rows
+        let tbHtml = '';
+        _matRows.forEach((row, ri) => {
+            tbHtml += `<tr style="border-bottom:1px solid #f1f5f9;">`;
+            _matHeaders.forEach((h, ci) => {
+                const val = (row[ci] || '').toString();
+                if (ci === 0) {
+                    tbHtml += `<td style="padding:9px 14px; font-weight:700; color:#1e293b; background:#f8fafc; white-space:nowrap; position:sticky; left:0; border-right:2px solid #e2e8f0;">${val}</td>`;
+                } else {
+                    tbHtml += `<td style="padding:0; border-right:1px solid #f1f5f9;">
+                        <div contenteditable="true" onblur="matUpdateCell(${ri}, ${ci}, this.textContent.trim())"
+                            style="padding:9px 12px; outline:none; min-height:36px; cursor:text;"
+                            onfocus="this.style.background='#fffbeb'" onblur2="this.style.background=''">${val}</div>
+                    </td>`;
+                }
+            });
+            tbHtml += '</tr>';
+        });
+        tbody.innerHTML = tbHtml;
+    }
+
+    function matUpdateHeader(colIdx, val) {
+        _matHeaders[colIdx] = val || _matHeaders[colIdx];
+    }
+
+    function matUpdateCell(rowIdx, colIdx, val) {
+        if (!_matRows[rowIdx]) _matRows[rowIdx] = [];
+        _matRows[rowIdx][colIdx] = val;
+    }
+
+    function matAddCol() {
+        const nombre = prompt('Nombre de la nueva columna:', '');
+        if (!nombre || !nombre.trim()) return;
+        _matHeaders.push(nombre.trim());
+        _matRows.forEach(r => r.push(''));
+        matRender();
+    }
+
+    function matDelCol(colIdx) {
+        if (!confirm(`¿Eliminar la columna "${_matHeaders[colIdx]}"?`)) return;
+        _matHeaders.splice(colIdx, 1);
+        _matRows.forEach(r => r.splice(colIdx, 1));
+        matRender();
+    }
+
+    async function matGuardar() {
+        const estado = document.getElementById('matEstado');
+        estado.style.color = '#64748b';
+        estado.textContent = 'Guardando...';
+        // Sync any focused contenteditable before saving
+        document.querySelectorAll('#matTabla [contenteditable]').forEach(el => el.blur());
+        try {
+            const res = await fetch('/api/material', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({headers: _matHeaders, rows: _matRows})
+            });
+            const r = await res.json();
+            if (r.status === 'ok') {
+                estado.style.color = '#16a34a';
+                estado.textContent = '✓ Guardado';
+                setTimeout(() => estado.textContent = '', 2000);
+            } else {
+                estado.style.color = '#dc2626';
+                estado.textContent = 'Error al guardar';
+            }
+        } catch(e) {
+            estado.style.color = '#dc2626';
+            estado.textContent = 'Error al guardar';
+        }
+    }
     </script>
 
     </div><!-- cierre tab-d-deportiva -->{% endif %}

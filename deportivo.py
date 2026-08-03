@@ -2735,4 +2735,54 @@ def api_informes_semanales_audio_post():
         ws.append_row([sat_str, equipo, valor])
         return jsonify({"status": "ok"})
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@deportivo_bp.route('/api/material', methods=['GET', 'POST'])
+def api_material():
+    if not session.get('usuario'):
+        return jsonify({}), 401
+    client = current_app.gs_client
+    nombre_excel = current_app.gs_name
+
+    if request.method == 'GET':
+        try:
+            try:
+                ws = client.open(nombre_excel).worksheet('MATERIAL')
+                data = ws.get_all_values()
+                if not data:
+                    return jsonify({'headers': ['EQUIPO', 'MOCHILAS'], 'rows': []})
+                return jsonify({'headers': data[0], 'rows': data[1:]})
+            except Exception:
+                # Hoja no existe — inicializar con equipos del sistema
+                try:
+                    sheet_eq = client.open(nombre_excel).worksheet("EQUIPO")
+                    rows_eq = sheet_eq.get_all_values()
+                    hdrs = normalizar_cabeceras_dep(rows_eq[0]) if rows_eq else []
+                    idx_e = hdrs.index("EQUIPO") if "EQUIPO" in hdrs else 0
+                    equipos = sorted(list(set(str(r[idx_e]).strip() for r in rows_eq[1:] if len(r) > idx_e and r[idx_e].strip())))
+                except Exception:
+                    equipos = []
+                ws = client.open(nombre_excel).add_worksheet(title='MATERIAL', rows=100, cols=20)
+                initial = [['EQUIPO', 'MOCHILAS']] + [[eq, ''] for eq in equipos]
+                if initial:
+                    ws.update('A1', initial)
+                return jsonify({'headers': ['EQUIPO', 'MOCHILAS'], 'rows': [[eq, ''] for eq in equipos]})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    elif request.method == 'POST':
+        data = request.json or {}
+        headers = data.get('headers', [])
+        rows = data.get('rows', [])
+        try:
+            try:
+                ws = client.open(nombre_excel).worksheet('MATERIAL')
+            except Exception:
+                ws = client.open(nombre_excel).add_worksheet(title='MATERIAL', rows=100, cols=20)
+            ws.clear()
+            all_data = [headers] + rows
+            if all_data:
+                ws.update('A1', all_data)
+            return jsonify({'status': 'ok'})
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
