@@ -514,8 +514,14 @@
         <label style="font-size:10px;font-weight:900;color:#94a3b8;letter-spacing:.5px;">CANTIDAD DE BALONES</label>
         <input type="number" id="mBalCant" placeholder="0" style="width:100%;padding:12px;border-radius:8px;border:1.5px solid var(--border);margin:6px 0 14px;font-size:20px;font-weight:900;text-align:center;box-sizing:border-box;font-family:inherit;">
         <label style="font-size:10px;font-weight:900;color:#94a3b8;letter-spacing:.5px;">FOTO DE EVIDENCIA</label>
-        <div id="mBalPrev" onclick="document.getElementById('mBalFile').click()" style="width:100%;height:110px;background:#fafafa;border:2px dashed #e2e8f0;border-radius:10px;margin:6px 0 12px;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;"></div>
-        <input type="file" id="mBalFile" accept="image/*" style="display:none" onchange="previewImagenBalon(this)">
+        <div id="mBalPrev" onclick="mBalAbrirOpciones()" style="width:100%;height:110px;background:#fafafa;border:2px dashed #e2e8f0;border-radius:10px;margin:6px 0 4px;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;"></div>
+        <!-- Botones cámara / galería -->
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <button onclick="document.getElementById('mBalFileCamera').click()" style="flex:1;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;background:#f8fafc;font-size:11px;font-weight:800;color:#475569;cursor:pointer;font-family:inherit;">📷 Cámara</button>
+            <button onclick="document.getElementById('mBalFileGaleria').click()" style="flex:1;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;background:#f8fafc;font-size:11px;font-weight:800;color:#475569;cursor:pointer;font-family:inherit;">🖼️ Galería</button>
+        </div>
+        <input type="file" id="mBalFileCamera" accept="image/*" capture="environment" style="display:none" onchange="previewImagenBalon(this)">
+        <input type="file" id="mBalFileGaleria" accept="image/*" style="display:none" onchange="previewImagenBalon(this)">
         <div id="mBalInfo" style="border-top:1px solid var(--border);padding-top:10px;margin-bottom:16px;"></div>
         <div style="display:flex;gap:10px;">
             <button onclick="cerrarModalBalones()" style="flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-weight:800;background:#f1f5f9;color:#475569;font-family:inherit;font-size:12px;">CANCELAR</button>
@@ -1328,6 +1334,11 @@ function abrirModalBalones(tipo) {
         ? registros.slice().reverse().map(r=>`<div style="padding:4px 0;border-bottom:1px solid #f0f0f0;font-size:11px;font-weight:700;color:#555;">${r.timestamp} <span style="color:#16a34a;">${r.cantidad} balones</span></div>`).join('')
         : '<div style="font-size:11px;color:#94a3b8;font-weight:600;">Sin registros previos</div>';
     document.getElementById('modalBalonesMov').style.display = 'flex';
+}
+
+function mBalAbrirOpciones() {
+    // Al clicar la imagen, abre galería por defecto
+    document.getElementById('mBalFileGaleria').click();
 }
 
 function cerrarModalBalones() {
