@@ -401,8 +401,7 @@
                     </div>
                 </div>
 
-                {% for d in semana[:5] %}
-                    {% if loop.index0 in dias_entreno_nums %}
+                {% for d in sem_obj.dias_entreno %}
                     {% if d %}
                     <div class="day {% if d.es_hoy %}today{% endif %}">
                         {% if d.es_hoy %}<div class="hoy-label">HOY</div>{% endif %}
@@ -434,7 +433,6 @@
                     </div>
                     {% else %}
                     <div style="visibility: hidden;"></div>
-                    {% endif %}
                     {% endif %}
                 {% endfor %}
 

@@ -261,8 +261,12 @@ def deportivo():
             if idx_cat.isdigit() and 0 <= int(idx_cat) < 4:
                 ejes_fijos[int(idx_cat)] = e
 
+        # Pre-filtrar solo los días de entrenamiento configurados (Mon=0..Fri=4)
+        dias_entreno_week = [semana_formateada[i] for i in dias_entreno_nums if i < 5]
+
         semanas.append({
             'dias': semana_formateada,
+            'dias_entreno': dias_entreno_week,
             'ejercicios': ejes_fijos
         })
 
