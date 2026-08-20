@@ -66,6 +66,24 @@ def obtener_tactico_tecnico_metodologia(client, NOMBRE_EXCEL, equipo, mes_actual
         print(f"Error vinculando metodología con los objetivos del mes: {e}")
     return tactico_str, tecnico_str
 
+_DIA_A_NUM = {'lunes':0,'martes':1,'miercoles':2,'miércoles':2,'jueves':3,'viernes':4}
+
+def _get_dias_entreno(equipo_activo):
+    """Devuelve lista de índices de días de entrenamiento (0=Lun…4=Vie) para el equipo."""
+    try:
+        cfg_path = os.path.join(os.getcwd(), 'static', 'data', 'equipos_config.json')
+        with open(cfg_path, encoding='utf-8') as f:
+            cfg = json.load(f)
+        for eq in cfg.get('equipos', []):
+            if eq.get('nombre', '').strip().upper() == (equipo_activo or '').strip().upper():
+                dias = eq.get('dias', [])
+                nums = sorted(set(_DIA_A_NUM[d.lower().replace('é','e')] for d in dias if d.lower().replace('é','e') in _DIA_A_NUM))
+                return nums if nums else [0,1,2,3,4]
+    except Exception:
+        pass
+    return [0,1,2,3,4]
+
+
 @deportivo_bp.route('/deportivo')
 def deportivo():
     # Importamos las rutas de carpetas desde la app principal
@@ -122,6 +140,9 @@ def deportivo():
 
     mes_actual = request.args.get('mes', '2026-05')
     hoy = datetime.now()
+
+    # Días de entrenamiento del equipo activo (0=Lun ... 4=Vie)
+    dias_entreno_nums = _get_dias_entreno(equipo_activo)
 
     # 3. Cargar objetivos desde Google Sheets (en lugar de JSON)
     objetivos = {"tactico": "", "tecnico": "", "completados": []}
@@ -315,7 +336,8 @@ def deportivo():
                            equipos=equipos,
                            equipo_defecto=equipo_activo,
                            jugadores_equipo=jugadores_equipo,
-                           now=hoy
+                           now=hoy,
+                           dias_entreno_nums=dias_entreno_nums
                            )
 
 @deportivo_bp.route('/api/seguimiento_coordinacion', methods=['GET', 'POST'])

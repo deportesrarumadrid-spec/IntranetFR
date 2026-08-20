@@ -574,6 +574,7 @@ document.addEventListener('click', function(e) {
 const EQUIPO = {{ equipo | tojson }};
 const EQ_FILE = EQUIPO.replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'SINEQUIPO';
 const EJERCICIOS_SEM = {{ ejercicios_semanales | tojson | safe }};
+const DIAS_ENTRENO = new Set({{ dias_entreno_nums | tojson }});
 let FOTOS = new Set({{ fotos_subidas | tojson | safe }}.map(String));
 let _fotosKey = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
 async function _actualizarFotos(lun) {
@@ -663,8 +664,12 @@ async function renderSemana() {
 
     grid.className = 'days-strip';
 
-    // LUN → JUE
-    for (let i = 0; i < 4; i++) {
+    // Días de entrenamiento LUN→VIE (filtrados por DIAS_ENTRENO)
+    const visLunVie = [0,1,2,3,4].filter(i => DIAS_ENTRENO.has(i));
+    const nCols = visLunVie.length + 1; // +1 para el grupo SÁB/DOM
+    grid.style.gridTemplateColumns = `repeat(${nCols}, 1fr)`;
+
+    for (const i of visLunVie) {
         const d = new Date(lun); d.setDate(lun.getDate()+i);
         const esHoy = d.getTime()===hoy.getTime();
         const esPasado = d < hoy;
@@ -678,11 +683,11 @@ async function renderSemana() {
         grid.appendChild(cell);
     }
 
-    // VIE, SÁB, DOM → grupo con contorno gris
+    // SÁB, DOM → siempre visibles en grupo con contorno gris
     {
         const wkWrap = document.createElement('div');
-        wkWrap.style.cssText = 'grid-column:span 3;border:1.5px solid #d1d5db;border-radius:8px;display:flex;overflow:hidden;';
-        for (let i = 4; i < 7; i++) {
+        wkWrap.style.cssText = 'border:1.5px solid #d1d5db;border-radius:8px;display:flex;overflow:hidden;';
+        for (let i = 5; i < 7; i++) {
             const d = new Date(lun); d.setDate(lun.getDate()+i);
             const esHoy = d.getTime()===hoy.getTime();
             const isSel = selectedDayIdx === i;
@@ -720,7 +725,9 @@ function _renderMesCompletoEnGrid(lun, hoy, grid) {
         strip.className = 'days-strip';
         strip.style.marginBottom = '6px';
 
-        for (let i = 0; i < 4; i++) {
+        const visLunVieM = [0,1,2,3,4].filter(i => DIAS_ENTRENO.has(i));
+        strip.style.gridTemplateColumns = `repeat(${visLunVieM.length + 1}, 1fr)`;
+        for (const i of visLunVieM) {
             const d = new Date(wMon); d.setDate(wMon.getDate()+i);
             const inM = d.getMonth() === month;
             const esHoy = d.getTime() === hoy.getTime();
@@ -735,8 +742,8 @@ function _renderMesCompletoEnGrid(lun, hoy, grid) {
         }
 
         const wkWrap = document.createElement('div');
-        wkWrap.style.cssText = 'grid-column:span 3;border:1.5px solid #d1d5db;border-radius:8px;display:flex;overflow:hidden;';
-        for (let i = 4; i < 7; i++) {
+        wkWrap.style.cssText = 'border:1.5px solid #d1d5db;border-radius:8px;display:flex;overflow:hidden;';
+        for (let i = 5; i < 7; i++) {
             const d = new Date(wMon); d.setDate(wMon.getDate()+i);
             const inM = d.getMonth() === month;
             const esHoy = d.getTime() === hoy.getTime();
@@ -772,7 +779,7 @@ function renderDayDetail(lun, hoy) {
     const detail = document.getElementById('dayDetail');
     if (selectedDayIdx === null) { detail.style.display = 'none'; return; }
 
-    const esWeekend = selectedDayIdx >= 4;
+    const esWeekend = selectedDayIdx >= 5;
     const dRef = new Date(lun); dRef.setDate(lun.getDate() + selectedDayIdx);
     const d = dRef;
     const isoDate = iso(d);
@@ -786,10 +793,10 @@ function renderDayDetail(lun, hoy) {
     const ejes = EJERCICIOS_SEM[key] || [];
     const tituloEje = (ejes[0] || {titulo:''}).titulo;
 
-    const dVie = new Date(lun); dVie.setDate(lun.getDate()+4);
+    const dSab = new Date(lun); dSab.setDate(lun.getDate()+5);
     const dDom = new Date(lun); dDom.setDate(lun.getDate()+6);
     const tituloFecha = esWeekend
-        ? `FIN DE SEMANA  ${dVie.getDate()}–${dDom.getDate()}/${p2(dDom.getMonth()+1)}`
+        ? `FIN DE SEMANA  ${dSab.getDate()}–${dDom.getDate()}/${p2(dDom.getMonth()+1)}`
         : `${DIAS_F[selectedDayIdx]} ${d.getDate()}/${p2(d.getMonth()+1)}`;
 
     let btns = '';

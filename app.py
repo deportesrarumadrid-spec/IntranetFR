@@ -564,13 +564,17 @@ def movil():
     except Exception as e:
         print(f"Error cargando fotos en movil: {e}")
 
+    from deportivo import _get_dias_entreno
+    dias_entreno_nums = _get_dias_entreno(equipo)
+
     return render_template('movil.html',
                            usuario=usuario, equipo=equipo,
                            jugadores=jugadores, perms=perms,
                            objetivos=objetivos,
                            ejercicios_semanales=ejercicios_semanales,
                            fotos_subidas=fotos_subidas,
-                           equipos_usuario=session.get('equipos_permitidos', []))
+                           equipos_usuario=session.get('equipos_permitidos', []),
+                           dias_entreno_nums=dias_entreno_nums)
 
 @app.route('/api/fotos_mes')
 def api_fotos_mes():

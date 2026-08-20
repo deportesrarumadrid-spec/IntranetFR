@@ -41,7 +41,7 @@
 .save-btn:hover { background: #f9f9f9; transform: scale(1.05); color: var(--green); }
 
         /* Calendario */
-        .grid { display: grid; grid-template-columns: repeat(5, 1.3fr) 0.55fr; gap: 8px; }
+        .grid { display: grid; grid-template-columns: repeat({{ dias_entreno_nums|length }}, 1.3fr) 0.55fr; gap: 8px; }
         .day { background: white; border: 1px solid #ddd; border-radius: 10px; padding: 8px; min-height: 140px; display: flex; flex-direction: column; position: relative; }
         .day.today { border: 2px solid var(--red); }
         .hoy-label { 
@@ -377,7 +377,7 @@
             {% for sem_obj in semanas %}
                 {% set semana = sem_obj.dias %}
                 <!-- APARTADO DE EJERCICIOS SEMANALES -->
-                <div style="grid-column: span 6; background: #ffffff; padding: 0 20px; margin-top: 5px; margin-bottom: -11px; display: flex; align-items: center; border-radius: 12px 12px 0 0; border: 1px solid #ddd; border-bottom: none; position: relative; z-index: 10; height: 50px;">
+                <div style="grid-column: span {{ dias_entreno_nums|length + 1 }}; background: #ffffff; padding: 0 20px; margin-top: 5px; margin-bottom: -11px; display: flex; align-items: center; border-radius: 12px 12px 0 0; border: 1px solid #ddd; border-bottom: none; position: relative; z-index: 10; height: 50px;">
                     <div style="display: flex; gap: 12px; width: 100%; justify-content: center; height: 100%; align-items: center;">
                         {% set slot_names = ['JUGADA COMBINATIVA', 'FISICO COORDINACIÓN', 'PIERNA NO HÁBIL', 'EDITAR...'] %}
                         {% set slot_icons = ['fas fa-project-diagram', 'fas fa-running', 'fas fa-shoe-prints', 'fas fa-plus-circle'] %}
@@ -402,6 +402,7 @@
                 </div>
 
                 {% for d in semana[:5] %}
+                    {% if loop.index0 in dias_entreno_nums %}
                     {% if d %}
                     <div class="day {% if d.es_hoy %}today{% endif %}">
                         {% if d.es_hoy %}<div class="hoy-label">HOY</div>{% endif %}
@@ -414,7 +415,7 @@
                         <div class="cat-label">TÉCNICO</div>
                         <div class="item-list list-tec"></div>
                         {% set tiene_foto = d.numero|string in fotos_subidas %}
-<button class="btn-foto {{ 'has-file' if tiene_foto }}" 
+<button class="btn-foto {{ 'has-file' if tiene_foto }}"
         style="width: 100%;
                {% if tiene_foto %}
                    /* Sin estilo extra, usa el verde de .has-file */
@@ -433,6 +434,7 @@
                     </div>
                     {% else %}
                     <div style="visibility: hidden;"></div>
+                    {% endif %}
                     {% endif %}
                 {% endfor %}
 
