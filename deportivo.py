@@ -67,6 +67,7 @@ def obtener_tactico_tecnico_metodologia(client, NOMBRE_EXCEL, equipo, mes_actual
     return tactico_str, tecnico_str
 
 _DIA_A_NUM = {'lunes':0,'martes':1,'miercoles':2,'miércoles':2,'jueves':3,'viernes':4}
+_NOMBRES_DIA = ['Lunes','Martes','Miércoles','Jueves','Viernes']
 
 def _get_dias_entreno(equipo_activo):
     """Devuelve lista de índices de días de entrenamiento (0=Lun…4=Vie) para el equipo."""
@@ -262,7 +263,13 @@ def deportivo():
                 ejes_fijos[int(idx_cat)] = e
 
         # Pre-filtrar solo los días de entrenamiento configurados (Mon=0..Fri=4)
-        dias_entreno_week = [semana_formateada[i] for i in dias_entreno_nums if i < 5]
+        dias_entreno_week = []
+        for _i in dias_entreno_nums:
+            if _i < 5:
+                _cell = semana_formateada[_i]
+                if _cell is not None:
+                    _cell = {**_cell, 'nombre_dia': _NOMBRES_DIA[_i]}
+                dias_entreno_week.append(_cell)
 
         semanas.append({
             'dias': semana_formateada,
