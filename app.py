@@ -448,6 +448,20 @@ def seleccionar_equipo():
         print(f"Error recuperando equipos para selección: {e}")
         equipos = []
 
+    # Auto-seleccionar el primer equipo sin mostrar la pantalla de selección
+    if equipos:
+        session['equipo_defecto'] = equipos[0]
+        perms = session.get('permisos', {})
+        if session.get('_version') == 'MOVIL':
+            return redirect(url_for('movil'))
+        if session.get('usuario', '').lower() == 'admin': target = url_for('deportivo_bp.direccion_deportiva')
+        elif perms.get('D.DEPORTIVA') == 'SI': target = url_for('deportivo_bp.direccion_deportiva')
+        elif perms.get('ENTRENAMIENTOS') == 'SI': target = url_for('deportivo_bp.deportivo')
+        elif perms.get('ASISTENCIAS') == 'SI': target = url_for('asistencias')
+        elif perms.get('FINANCIERO') == 'SI': target = url_for('financiero.financiero')
+        else: target = url_for('index')
+        return redirect(target)
+
     return render_template('seleccionar_equipo.html', equipos=equipos, usuario=session.get('usuario'))
 
 @app.route('/logout')
@@ -555,7 +569,8 @@ def movil():
                            jugadores=jugadores, perms=perms,
                            objetivos=objetivos,
                            ejercicios_semanales=ejercicios_semanales,
-                           fotos_subidas=fotos_subidas)
+                           fotos_subidas=fotos_subidas,
+                           equipos_usuario=session.get('equipos_permitidos', []))
 
 @app.route('/api/fotos_mes')
 def api_fotos_mes():
