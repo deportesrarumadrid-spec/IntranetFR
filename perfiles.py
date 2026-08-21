@@ -3,6 +3,13 @@ import gspread
 import os
 import json as _json
 
+def _invalidar_cache_perfiles():
+    try:
+        import app as _app
+        _app._PERFILES_CACHE['records'] = None
+    except Exception:
+        pass
+
 perfiles_bp = Blueprint('perfiles_bp', __name__)
 
 EQUIPOS_CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'equipos_config.json')
@@ -108,6 +115,7 @@ def add_perfil():
             str(data.get('TIPO', '')).strip()
         ]
         sheet.append_row(new_row)
+        _invalidar_cache_perfiles()
         return jsonify({"status": "success", "message": "Perfil añadido correctamente."})
     except Exception as e:
         print(f"Error al añadir perfil: {e}")
@@ -169,7 +177,7 @@ def update_perfil(username):
         
         # Usamos keyword arguments para evitar problemas de orden entre versiones de gspread
         sheet.update(values=[nuevos_valores_fila], range_name=rango_a_actualizar, value_input_option='USER_ENTERED')
-        
+        _invalidar_cache_perfiles()
         return jsonify({"status": "success", "message": "Perfil actualizado correctamente."})
     except Exception as e:
         print(f"Error al actualizar perfil: {e}")
@@ -201,6 +209,7 @@ def delete_perfil(username):
         tipo = str(row_data[idx_tipo]).strip().upper() if idx_tipo >= 0 and idx_tipo < len(row_data) else ''
 
         sheet.delete_rows(row_index)
+        _invalidar_cache_perfiles()
 
         # Si era un entrenador auto-generado, limpiar también equipos_config.json
         if tipo == 'ENTRENADOR':

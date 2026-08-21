@@ -46,6 +46,19 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 
 from perfiles import get_perfiles_sheet # Importamos la función para obtener la hoja de perfiles
 
+_PERFILES_CACHE = {'records': None, 'ts': 0}
+_PERFILES_TTL = 300  # 5 minutos
+
+def _get_perfiles_records():
+    now = time.time()
+    if _PERFILES_CACHE['records'] is None or now - _PERFILES_CACHE['ts'] > _PERFILES_TTL:
+        _PERFILES_CACHE['records'] = get_perfiles_sheet().get_all_records()
+        _PERFILES_CACHE['ts'] = now
+    return _PERFILES_CACHE['records']
+
+def _invalidar_cache_perfiles():
+    _PERFILES_CACHE['records'] = None
+
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 _secret = os.environ.get('FLASK_SECRET_KEY')
@@ -714,10 +727,9 @@ def login():
         }
         return redirect(url_for('deportivo_bp.direccion_deportiva'))
 
-    # 2. Otros usuarios - Consultar la pestaña PERFILES
+    # 2. Otros usuarios - Consultar la pestaña PERFILES (caché 5 min)
     try:
-        sheet = get_perfiles_sheet()
-        records = sheet.get_all_records()
+        records = _get_perfiles_records()
         
         # Búsqueda ultra-precisa: normalizamos el target y los registros
         from werkzeug.security import check_password_hash as _chk, generate_password_hash as _gen
