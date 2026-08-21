@@ -48,8 +48,45 @@ def formulario_partido():
 
         equipo_default = request.args.get('equipo', '').strip()
         fecha_default  = request.args.get('fecha', '').strip()
+
+        # Buscar datos existentes para ese equipo + fin de semana
+        datos_existentes = {}
+        if equipo_default and fecha_default:
+            try:
+                from datetime import timedelta
+                dt_ref = datetime.strptime(fecha_default, "%Y-%m-%d")
+                targets = {(dt_ref + timedelta(days=d)).strftime("%d/%m/%Y") for d in (0, 1)}
+                sh = client.open(main_app.gs_name)
+                ws_fp = sh.worksheet('FORMULARIO_PARTIDOS')
+                all_fp = ws_fp.get_all_values()
+                if all_fp:
+                    hdrs = [str(h).strip() for h in all_fp[0]]
+                    col_map = {
+                        'RIVAL': 'rival', 'EVAL_GLOBAL': 'eval_global',
+                        'EVAL_INTENSIDAD': 'eval_intensidad', 'EVAL_FISICO': 'eval_fisico',
+                        'FALLOS_EQUIPO': 'fallos_equipo', 'MEJORAR_FISICO': 'mejorar_fisico',
+                        'PORT_NOTA': 'port_nota', 'PORT_FALLOS': 'port_fallos',
+                        'RIVAL_DESTACADO': 'rival_destacado', 'NUESTROS_MEJORES': 'nuestros_mejores',
+                        'NUESTROS_FLOJOS': 'nuestros_flojos', 'AUDIO_ENVIADO': 'audio_enviado',
+                    }
+                    idx_f = hdrs.index('MARCA TEMPORAL') if 'MARCA TEMPORAL' in hdrs else -1
+                    idx_e = hdrs.index('EQUIPO') if 'EQUIPO' in hdrs else -1
+                    for row in reversed(all_fp[1:]):
+                        eq_r = row[idx_e].strip() if idx_e >= 0 and idx_e < len(row) else ''
+                        if eq_r != equipo_default:
+                            continue
+                        fecha_r = row[idx_f].strip().split(' ')[0] if idx_f >= 0 and idx_f < len(row) else ''
+                        if fecha_r in targets:
+                            for col, field in col_map.items():
+                                if col in hdrs:
+                                    datos_existentes[field] = row[hdrs.index(col)]
+                            break
+            except Exception as e:
+                print(f"Error buscando datos existentes formulario: {e}")
+
         return render_template('formulario_partido.html', equipos=equipos,
-                               equipo_default=equipo_default, fecha_default=fecha_default)
+                               equipo_default=equipo_default, fecha_default=fecha_default,
+                               datos_existentes=datos_existentes)
 
     # En POST, guarda en Google Sheets
     if request.method == 'POST':

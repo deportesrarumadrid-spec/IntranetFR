@@ -72,6 +72,16 @@
         <div class="subtitle">FORMULARIO DE PARTIDO</div>
     </div>
 
+    {% if datos_existentes %}
+    <div style="background:#dcfce7;border:1.5px solid #86efac;border-radius:12px;margin:12px 15px 0;padding:14px 18px;display:flex;align-items:center;gap:12px;">
+        <i class="fas fa-check-circle" style="color:#15803d;font-size:22px;flex-shrink:0;"></i>
+        <div>
+            <div style="font-family:'Archivo Black';font-size:13px;color:#14532d;text-transform:uppercase;">Formulario ya enviado</div>
+            <div style="font-size:11px;font-weight:700;color:#166534;margin-top:2px;">Estos son los datos guardados para este partido.</div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="form-container">
         <form id="partidoForm" onsubmit="enviarFormulario(event)">
             
@@ -90,7 +100,7 @@
                 
                 <div class="form-group">
                     <label>RIVAL <span class="req">*</span></label>
-                    <input type="text" name="rival" placeholder="Nombre del equipo rival" required>
+                    <input type="text" name="rival" placeholder="Nombre del equipo rival" value="{{ datos_existentes.get('rival','') }}" required>
                 </div>
 
                 <div class="form-group">
@@ -105,38 +115,38 @@
                 <div class="form-group">
                     <label>Valoración Global <span class="req">*</span></label>
                     <div class="radio-group">
-                        <label class="radio-label"><input type="radio" name="eval_global" value="Bien" required><div class="radio-custom"></div> Bien</label>
-                        <label class="radio-label"><input type="radio" name="eval_global" value="Regular"><div class="radio-custom"></div> Regular</label>
-                        <label class="radio-label"><input type="radio" name="eval_global" value="Mal"><div class="radio-custom"></div> Mal</label>
+                        <label class="radio-label"><input type="radio" name="eval_global" value="Bien" required {% if datos_existentes.get('eval_global')=='Bien' %}checked{% endif %}><div class="radio-custom"></div> Bien</label>
+                        <label class="radio-label"><input type="radio" name="eval_global" value="Regular" {% if datos_existentes.get('eval_global')=='Regular' %}checked{% endif %}><div class="radio-custom"></div> Regular</label>
+                        <label class="radio-label"><input type="radio" name="eval_global" value="Mal" {% if datos_existentes.get('eval_global')=='Mal' %}checked{% endif %}><div class="radio-custom"></div> Mal</label>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label>Intensidad <span class="req">*</span></label>
                     <div class="radio-group">
-                        <label class="radio-label"><input type="radio" name="eval_intensidad" value="Bien" required><div class="radio-custom"></div> Bien</label>
-                        <label class="radio-label"><input type="radio" name="eval_intensidad" value="Regular"><div class="radio-custom"></div> Regular</label>
-                        <label class="radio-label"><input type="radio" name="eval_intensidad" value="Mal"><div class="radio-custom"></div> Mal</label>
+                        <label class="radio-label"><input type="radio" name="eval_intensidad" value="Bien" required {% if datos_existentes.get('eval_intensidad')=='Bien' %}checked{% endif %}><div class="radio-custom"></div> Bien</label>
+                        <label class="radio-label"><input type="radio" name="eval_intensidad" value="Regular" {% if datos_existentes.get('eval_intensidad')=='Regular' %}checked{% endif %}><div class="radio-custom"></div> Regular</label>
+                        <label class="radio-label"><input type="radio" name="eval_intensidad" value="Mal" {% if datos_existentes.get('eval_intensidad')=='Mal' %}checked{% endif %}><div class="radio-custom"></div> Mal</label>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label>Físico <span class="req">*</span></label>
                     <div class="radio-group">
-                        <label class="radio-label"><input type="radio" name="eval_fisico" value="Bien" required><div class="radio-custom"></div> Bien</label>
-                        <label class="radio-label"><input type="radio" name="eval_fisico" value="Regular"><div class="radio-custom"></div> Regular</label>
-                        <label class="radio-label"><input type="radio" name="eval_fisico" value="Mal"><div class="radio-custom"></div> Mal</label>
+                        <label class="radio-label"><input type="radio" name="eval_fisico" value="Bien" required {% if datos_existentes.get('eval_fisico')=='Bien' %}checked{% endif %}><div class="radio-custom"></div> Bien</label>
+                        <label class="radio-label"><input type="radio" name="eval_fisico" value="Regular" {% if datos_existentes.get('eval_fisico')=='Regular' %}checked{% endif %}><div class="radio-custom"></div> Regular</label>
+                        <label class="radio-label"><input type="radio" name="eval_fisico" value="Mal" {% if datos_existentes.get('eval_fisico')=='Mal' %}checked{% endif %}><div class="radio-custom"></div> Mal</label>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label>Fallos a trabajar del equipo <span class="req">*</span></label>
-                    <textarea name="fallos_equipo" placeholder="Ej: Salida de balón, repliegue defensivo..." required></textarea>
+                    <textarea name="fallos_equipo" placeholder="Ej: Salida de balón, repliegue defensivo..." required>{{ datos_existentes.get('fallos_equipo','') }}</textarea>
                 </div>
 
                 <div class="form-group">
                     <label>Qué mejorar Físicamente <span class="req">*</span></label>
-                    <textarea name="mejorar_fisico" placeholder="Ej: Resistencia en la 2ª parte..." required></textarea>
+                    <textarea name="mejorar_fisico" placeholder="Ej: Resistencia en la 2ª parte..." required>{{ datos_existentes.get('mejorar_fisico','') }}</textarea>
                 </div>
             </div>
 
@@ -146,15 +156,15 @@
                 <div class="form-group">
                     <label>Nota <span class="req">*</span></label>
                     <div class="radio-group">
-                        <label class="radio-label"><input type="radio" name="port_nota" value="Bien" required><div class="radio-custom"></div> Bien</label>
-                        <label class="radio-label"><input type="radio" name="port_nota" value="Regular"><div class="radio-custom"></div> Regular</label>
-                        <label class="radio-label"><input type="radio" name="port_nota" value="Mal"><div class="radio-custom"></div> Mal</label>
+                        <label class="radio-label"><input type="radio" name="port_nota" value="Bien" required {% if datos_existentes.get('port_nota')=='Bien' %}checked{% endif %}><div class="radio-custom"></div> Bien</label>
+                        <label class="radio-label"><input type="radio" name="port_nota" value="Regular" {% if datos_existentes.get('port_nota')=='Regular' %}checked{% endif %}><div class="radio-custom"></div> Regular</label>
+                        <label class="radio-label"><input type="radio" name="port_nota" value="Mal" {% if datos_existentes.get('port_nota')=='Mal' %}checked{% endif %}><div class="radio-custom"></div> Mal</label>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label>Fallos porteros <span class="req">*</span></label>
-                    <textarea name="port_fallos" placeholder="Ej: Salidas en saques de esquina..." required></textarea>
+                    <textarea name="port_fallos" placeholder="Ej: Salidas en saques de esquina..." required>{{ datos_existentes.get('port_fallos','') }}</textarea>
                 </div>
             </div>
 
@@ -163,23 +173,23 @@
                 
                 <div class="form-group">
                     <label>(Nº) Jugador/es Rival destacado <span class="req">*</span></label>
-                    <input type="text" name="rival_destacado" placeholder="Ej: El 9 y el extremo izquierdo" required>
+                    <input type="text" name="rival_destacado" placeholder="Ej: El 9 y el extremo izquierdo" value="{{ datos_existentes.get('rival_destacado','') }}" required>
                 </div>
 
                 <div class="form-group">
                     <label>2 Mejores jugadores nuestros <span class="req">*</span></label>
-                    <input type="text" name="nuestros_mejores" placeholder="Ej: Lucas y Marcos" required>
+                    <input type="text" name="nuestros_mejores" placeholder="Ej: Lucas y Marcos" value="{{ datos_existentes.get('nuestros_mejores','') }}" required>
                 </div>
 
                 <div class="form-group">
                     <label>2 Jugador más flojos nuestros <span class="req">*</span></label>
-                    <input type="text" name="nuestros_flojos" placeholder="Ej: Pedro y Juan" required>
+                    <input type="text" name="nuestros_flojos" placeholder="Ej: Pedro y Juan" value="{{ datos_existentes.get('nuestros_flojos','') }}" required>
                 </div>
             </div>
 
             <div class="card" style="background: transparent; box-shadow: none; padding: 0; border: none;">
                 <label class="check-container">
-                    <input type="checkbox" name="audio_enviado" value="SI" required>
+                    <input type="checkbox" name="audio_enviado" value="SI" required {% if datos_existentes.get('audio_enviado')=='SI' %}checked{% endif %}>
                     <div class="check-custom"><i class="fas fa-check"></i></div>
                     <div>
                         <div style="font-family:'Archivo Black'; font-size:14px; text-transform:uppercase; margin-bottom: 2px;">Envía audio resumen</div>
@@ -205,6 +215,11 @@
     </div>
 
     <script>
+        // Marcar visualmente radios/checkboxes pre-seleccionados al cargar
+        document.querySelectorAll('input[type="radio"]:checked').forEach(r => r.closest('.radio-label').classList.add('checked'));
+        const _cbAudio = document.querySelector('input[name="audio_enviado"]');
+        if (_cbAudio && _cbAudio.checked) _cbAudio.closest('.check-container').classList.add('checked');
+
         // Logica para estilos de radios
         document.querySelectorAll('input[type="radio"]').forEach(radio => {
             radio.addEventListener('change', function() {

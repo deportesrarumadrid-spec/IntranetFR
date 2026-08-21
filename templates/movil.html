@@ -826,8 +826,11 @@ function renderDayDetail(lun, hoy) {
 
     let btns = '';
     if (esWeekend) {
-        const btnLabel = tienePartidoWk ? 'VER FORMULARIO' : 'FORMULARIO DE PARTIDO';
-        btns = `<button class="ddb-form" onclick="abrirFormPartido('${isoDate}')">${btnLabel}</button>`;
+        if (tienePartidoWk) {
+            btns = `<button class="ddb-ver" onclick="abrirFormPartido('${isoDate}')">VER FORMULARIO</button>`;
+        } else {
+            btns = `<button class="ddb-form" onclick="abrirFormPartido('${isoDate}')">FORMULARIO DE PARTIDO</button>`;
+        }
     } else {
         btns += tienePhoto
             ? `<button class="ddb-ver" onclick="verFoto('${isoDate}')">VER foto</button>`
