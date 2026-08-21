@@ -1187,22 +1187,33 @@
                         <button onclick="document.getElementById('modalPizarra').style.display='none'" style="background:#f1f5f9; color:#64748b; width:34px; height:34px; border-radius:50%; font-weight:900; border:1px solid #e2e8f0; cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">&times;</button>
                     </div>
                 </div>
-                <!-- Fila 2: OBJ -->
+                <!-- Fila 2: OBJ + botón Descripción -->
                 <div style="display:flex; align-items:center; padding:6px 12px; background:#f0f0f0; gap:8px;">
                     <span style="font-size:13px; font-weight:900; color:#1e293b; white-space:nowrap; flex-shrink:0;">OBJ:</span>
                     <button type="button" onclick="abrirObjMesBocadillo(this)"
                         style="font-size:11px; font-weight:900; padding:3px 10px; border:1px solid #cbd5e1; border-radius:10px; background:white; cursor:pointer; white-space:nowrap; color:#475569; flex-shrink:0;">elegir obj del mes</button>
                     <input type="text" id="objEjercicioPizarra" placeholder="escribir objetivos separados por comas"
                         style="flex:1; border:none; background:transparent; font-weight:700; font-size:12px; padding:0 4px; outline:none; color:#1e293b; min-width:0;">
+                    <button type="button" onclick="abrirDescModal()" id="btnDesc"
+                        style="font-size:11px; font-weight:900; padding:3px 10px; border:1px solid #cbd5e1; border-radius:10px; background:white; cursor:pointer; white-space:nowrap; color:#475569; flex-shrink:0;">DESCRIPCIÓN</button>
                 </div>
             </div>
-            
-            <div style="padding: 10px 14px; display: grid; grid-template-columns: 210px 1fr 210px; gap: 12px; flex: 1; overflow-y: auto;">
-                <!-- Izquierda: Notas adicionales (Opcional) -->
-                <div style="background: white; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-                    <label style="font-size: 10px; font-weight: 900; color: #999; text-transform: uppercase; letter-spacing: 1px;">Descripción detallada</label>
-                    <textarea id="descEjercicioPizarra" style="flex: 1; border: 1px solid #eee; border-radius: 12px; padding: 15px; font-family: inherit; font-size: 13px; font-weight: 600; color: #555; resize: none; background: #fafafa; outline: none;" placeholder="Descripción detallada..."></textarea>
+
+            <!-- Modal flotante descripción -->
+            <div id="descModal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.5); justify-content:center; align-items:center;">
+                <div style="background:white; border-radius:16px; padding:20px; width:min(480px,90vw); display:flex; flex-direction:column; gap:12px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-weight:900; font-size:14px; color:#1e293b; text-transform:uppercase; letter-spacing:1px;">Descripción detallada</span>
+                        <button onclick="cerrarDescModal()" style="background:none; border:none; font-size:22px; cursor:pointer; color:#94a3b8; line-height:1;">&times;</button>
+                    </div>
+                    <textarea id="descEjercicioPizarra" rows="8"
+                        style="border:1px solid #eee; border-radius:12px; padding:14px; font-family:inherit; font-size:13px; font-weight:600; color:#555; resize:vertical; background:#fafafa; outline:none; width:100%; box-sizing:border-box;"
+                        placeholder="Descripción detallada del ejercicio..."></textarea>
+                    <button onclick="cerrarDescModal()" style="background:#1e293b; color:white; border:none; border-radius:10px; padding:10px; font-weight:900; font-size:13px; cursor:pointer;">GUARDAR</button>
                 </div>
+            </div>
+
+            <div style="padding: 10px 14px; display: grid; grid-template-columns: 1fr 210px; gap: 12px; flex: 1; overflow-y: auto;">
 
                 <!-- Centro: Campo -->
                 <div style="display: flex; flex-direction: column; flex: 1; position: relative;">
@@ -1914,6 +1925,18 @@
             drawHistory = [];
             redrawHistory();
             document.querySelectorAll('.item-pizarra').forEach(el => el.remove());
+        }
+
+        function abrirDescModal() {
+            document.getElementById('descModal').style.display = 'flex';
+            document.getElementById('descEjercicioPizarra').focus();
+        }
+        function cerrarDescModal() {
+            document.getElementById('descModal').style.display = 'none';
+            // Indicador visual en el botón si hay texto
+            const btn = document.getElementById('btnDesc');
+            const val = (document.getElementById('descEjercicioPizarra').value || '').trim();
+            if (btn) btn.style.background = val ? '#dcfce7' : 'white';
         }
 
         async function confirmarDibujo() {
