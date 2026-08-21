@@ -1462,18 +1462,24 @@ async function guardarControlBalones() {
     const [y,m] = val.split('-');
     const btn = document.getElementById('mBalGuardar');
     btn.disabled = true; btn.textContent = 'Guardando...';
+    // Si la foto supera ~8MB en base64, no la enviamos para evitar límite de tamaño
+    const fotoEnviar = (fotoBalonBase64 && fotoBalonBase64.length < 8 * 1024 * 1024) ? fotoBalonBase64 : null;
     try {
         const res = await fetch(`/api/control_balones?equipo=${encodeURIComponent(EQUIPO)}&mes=${parseInt(m)}`, {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({dia: diaBalonActivo, tipo: tipoBalonActivo, cantidad: cant, foto: fotoBalonBase64, equipo: EQUIPO, mes: parseInt(m)})
+            body: JSON.stringify({dia: diaBalonActivo, tipo: tipoBalonActivo, cantidad: cant, foto: fotoEnviar, equipo: EQUIPO, mes: parseInt(m)})
         });
         if (res.ok) {
             _balonesMesCargado = '';
             await _cargarYMostrarBalones(parseInt(m), diaBalonActivo);
             cerrarModalBalones();
             toast(`Balones ${tipoBalonActivo === 'inicio' ? 'INICIO' : 'FINAL'} guardados`);
-        } else { toast('Error al guardar', true); }
+        } else {
+            let msg = 'Error al guardar';
+            try { const j = await res.json(); msg = j.message || msg; } catch(e2) {}
+            toast(msg, true);
+        }
     } catch(e) { toast('Error de conexión', true); }
     btn.disabled = false; btn.textContent = 'GUARDAR';
 }
