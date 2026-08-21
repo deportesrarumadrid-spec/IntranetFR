@@ -46,7 +46,10 @@ def formulario_partido():
             print(f"Error al cargar equipos para el formulario: {e}")
             equipos = ["PRIMER EQUIPO", "BENJAMIN A", "ALEVIN A", "INFANTIL A"] # Fallback
 
-        return render_template('formulario_partido.html', equipos=equipos)
+        equipo_default = request.args.get('equipo', '').strip()
+        fecha_default  = request.args.get('fecha', '').strip()
+        return render_template('formulario_partido.html', equipos=equipos,
+                               equipo_default=equipo_default, fecha_default=fecha_default)
 
     # En POST, guarda en Google Sheets
     if request.method == 'POST':

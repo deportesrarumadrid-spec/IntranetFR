@@ -83,7 +83,7 @@
                     <select name="equipo" required>
                         <option value="">Elige tu equipo...</option>
                         {% for eq in equipos %}
-                        <option value="{{ eq }}">{{ eq }}</option>
+                        <option value="{{ eq }}" {% if eq == equipo_default %}selected{% endif %}>{{ eq }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -95,7 +95,7 @@
 
                 <div class="form-group">
                     <label>FECHA <span style="font-size: 10px; color:#94a3b8; font-weight:600;">(Opcional - Por defecto: Hoy)</span></label>
-                    <input type="date" name="fecha_partido" style="color: #64748b;">
+                    <input type="date" name="fecha_partido" value="{{ fecha_default }}" style="color: #64748b;">
                 </div>
             </div>
 

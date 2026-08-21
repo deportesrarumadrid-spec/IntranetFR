@@ -803,7 +803,7 @@ function renderDayDetail(lun, hoy) {
 
     let btns = '';
     if (esWeekend) {
-        btns = `<button class="ddb-form" onclick="abrirFormPartido()">Formulario de partido</button>`;
+        btns = `<button class="ddb-form" onclick="abrirFormPartido('${isoDate}')">Formulario de partido</button>`;
     } else {
         btns += tienePhoto
             ? `<button class="ddb-ver" onclick="verFoto('${isoDate}')">VER foto</button>`
@@ -1600,10 +1600,12 @@ function guardar() {
 }
 
 // ─── FORMULARIO PARTIDO ───
-function abrirFormPartido() {
+function abrirFormPartido(isoDate) {
     const ov = document.getElementById('formPartidoOverlay');
     const fr = document.getElementById('formPartidoFrame');
-    if (!fr.src || fr.src === window.location.href) fr.src = '/formulario-partido';
+    const params = new URLSearchParams({ equipo: EQUIPO });
+    if (isoDate) params.set('fecha', isoDate);
+    fr.src = '/formulario-partido?' + params.toString();
     ov.style.display = 'flex';
     document.body.style.overflow = 'hidden';
 }
