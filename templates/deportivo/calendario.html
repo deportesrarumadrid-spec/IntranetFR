@@ -270,8 +270,8 @@
     .pizarra-canvas { position: absolute; top: 0; left: 0; z-index: 50; }
 
     #modalPizarra .modal-content {
-        width: 95vw; height: 92vh; border-radius: 30px;
-        background: #f4f7f6; display: flex; flex-direction: column; padding: 0;
+        width: 95vw; max-height: 92vh; border-radius: 30px;
+        background: #f4f7f6; padding: 0; overflow-y: auto;
     }
 
         /* Botón Circular Cronograma */
@@ -1213,11 +1213,11 @@
                 </div>
             </div>
 
-            <div style="padding: 10px 14px; display: grid; grid-template-columns: 1fr 210px; gap: 12px; flex: 1; overflow-y: auto;">
+            <div style="padding: 10px 14px; display: grid; grid-template-columns: 1fr 210px; gap: 12px;">
 
                 <!-- Centro: Campo -->
                 <div style="display: flex; flex-direction: column; flex: 1; position: relative;">
-                    <div id="pizarraDropArea" class="pizarra-container" style="height: 100%; width: 100%;">
+                    <div id="pizarraDropArea" class="pizarra-container" style="width: 100%;">
                         <canvas id="mainCanvasPizarra" class="pizarra-canvas"></canvas>
                         <!-- ½ F11 elements -->
                         <div class="field-lines"></div>
@@ -1695,38 +1695,47 @@
             document.querySelectorAll('.item-pizarra').forEach(el => el.remove());
             ctx.clearRect(0,0, canvas.width, canvas.height);
             
+            canvas.style.touchAction = 'none';
             canvas.onpointerdown = startDraw;
             canvas.onpointermove = draw;
             canvas.onpointerup = stopDraw;
+            canvas.onpointerleave = stopDraw;
             
             containerPizarra.ondragover = (e) => e.preventDefault();
             containerPizarra.ondrop = dropItem;
         }
 
+        function _canvasXY(e) {
+            const r = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / r.width;
+            const scaleY = canvas.height / r.height;
+            return [(e.clientX - r.left) * scaleX, (e.clientY - r.top) * scaleY];
+        }
+
         function startDraw(e) {
-            if (drawingMode === 'none' || e.button !== 0) return;
+            if (drawingMode === 'none') return;
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+            e.preventDefault();
+            canvas.setPointerCapture(e.pointerId);
             isDrawing = true;
-            [lastX, lastY] = [e.offsetX, e.offsetY];
+            [lastX, lastY] = _canvasXY(e);
             ctx.strokeStyle = brushColor;
             ctx.lineWidth = 2;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
-            
             if (drawingMode === 'dashed') ctx.setLineDash([5, 5]);
             else ctx.setLineDash([]);
-
             if (drawingMode === 'straight' || drawingMode === 'dashed') {
                 drawHistory.push({ type: 'straight-start', x: lastX, y: lastY, color: brushColor, width: 2 });
             } else if (drawingMode === 'rect') {
                 drawHistory.push({ type: 'rect-start', x: lastX, y: lastY, color: brushColor, width: 2 });
             }
         }
-        
+
         function draw(e) {
             if (!isDrawing) return;
-            const curX = e.offsetX;
-            const curY = e.offsetY;
-
+            e.preventDefault();
+            const [curX, curY] = _canvasXY(e);
             if (drawingMode === 'freehand') {
                 ctx.beginPath();
                 ctx.moveTo(lastX, lastY);
@@ -1742,13 +1751,14 @@
         function stopDraw(e) {
             if (!isDrawing) return;
             isDrawing = false;
+            const [ex, ey] = _canvasXY(e);
             if (drawingMode === 'straight' || drawingMode === 'dashed' || drawingMode === 'rect') {
                 const startPoint = drawHistory.pop();
                 if (startPoint) {
                     if (drawingMode === 'rect') {
-                        drawHistory.push({ type: 'rect', x: startPoint.x, y: startPoint.y, w: e.offsetX - startPoint.x, h: e.offsetY - startPoint.y, color: brushColor, width: 2 });
+                        drawHistory.push({ type: 'rect', x: startPoint.x, y: startPoint.y, w: ex - startPoint.x, h: ey - startPoint.y, color: brushColor, width: 2 });
                     } else {
-                        drawHistory.push({ type: 'straight-line', x1: startPoint.x, y1: startPoint.y, x2: e.offsetX, y2: e.offsetY, color: brushColor, width: 2, dash: drawingMode === 'dashed' });
+                        drawHistory.push({ type: 'straight-line', x1: startPoint.x, y1: startPoint.y, x2: ex, y2: ey, color: brushColor, width: 2, dash: drawingMode === 'dashed' });
                     }
                 }
                 redrawHistory();
