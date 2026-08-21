@@ -152,13 +152,11 @@
             const input = document.getElementById('versionInput');
             const isMovil = input.value === 'MOVIL';
             if (isMovil) {
-                // Volver a Web
                 input.value = 'WEB';
                 pill.style.background = '#e60000';
                 web.style.background = 'white'; web.style.color = '#1e293b';
                 mov.style.background = 'transparent'; mov.style.color = 'rgba(255,255,255,0.7)';
             } else {
-                // Pasar a Móvil
                 input.value = 'MOVIL';
                 pill.style.background = '#e60000';
                 mov.style.background = 'white'; mov.style.color = '#1e293b';
@@ -170,11 +168,28 @@
             const btn = document.getElementById('btnAcceder');
             const form = document.querySelector('form');
             if (!form.checkValidity()) { form.reportValidity(); return; }
+            // Guardar para la próxima vez
+            try {
+                localStorage.setItem('login_usuario',  document.querySelector('input[name="usuario"]').value);
+                localStorage.setItem('login_password', document.querySelector('input[name="password"]').value);
+                localStorage.setItem('login_version',  document.getElementById('versionInput').value);
+            } catch(e) {}
             btn.disabled = true;
             btn.style.opacity = '0.7';
             btn.innerHTML = 'ACCEDIENDO...';
             form.submit();
         }
+        // Pre-rellenar con la última sesión guardada
+        window.addEventListener('DOMContentLoaded', () => {
+            try {
+                const u = localStorage.getItem('login_usuario');
+                const p = localStorage.getItem('login_password');
+                const v = localStorage.getItem('login_version');
+                if (u) document.querySelector('input[name="usuario"]').value = u;
+                if (p) document.querySelector('input[name="password"]').value = p;
+                if (v === 'MOVIL' && document.getElementById('versionInput').value !== 'MOVIL') toggleVersion();
+            } catch(e) {}
+        });
     </script>
 </body>
 </html>
