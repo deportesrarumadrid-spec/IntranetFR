@@ -933,23 +933,49 @@ function elegirFuente(fuente) {
     document.getElementById(fuente === 'camera' ? 'inputFotoCamera' : 'inputFotoFile').click();
 }
 
-function _handleFotoInput(file) {
+function _comprimirImagen(dataUrl, maxW, quality) {
+    return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+            const scale = Math.min(1, maxW / img.width);
+            const canvas = document.createElement('canvas');
+            canvas.width  = Math.round(img.width  * scale);
+            canvas.height = Math.round(img.height * scale);
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = dataUrl;
+    });
+}
+
+async function _handleFotoInput(file) {
     if (!file || !activeFotoDate) return;
     const [y,m,d] = activeFotoDate.split('-');
-    const reader = new FileReader();
-    reader.onload = async e => {
-        toast('Subiendo foto...');
-        try {
-            const res = await fetch('/api/guardar_sesion_img', {
-                method:'POST', headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({ equipo:EQUIPO, fecha:`${d}/${m}/${y}`, image:e.target.result, usuario:{{ usuario|tojson }}, notas:'', ejercicios:[] })
-            });
-            const data = await res.json();
-            if (data.status==='success') { FOTOS.add(String(parseInt(d))); toast('Foto guardada'); renderSemana(); }
-            else toast('Error al subir', true);
-        } catch(err) { toast('Error de conexión', true); }
-    };
-    reader.readAsDataURL(file);
+    toast('Subiendo foto...');
+    try {
+        const raw = await new Promise((res, rej) => {
+            const r = new FileReader();
+            r.onload = e => res(e.target.result);
+            r.onerror = rej;
+            r.readAsDataURL(file);
+        });
+        const compressed = await _comprimirImagen(raw, 1600, 0.75);
+        const res = await fetch('/upload_foto', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ equipo:EQUIPO, fecha:`${d}/${m}/${y}`, image:compressed, usuario:{{ usuario|tojson }} })
+        });
+        const data = await res.json();
+        if (data.status==='success') {
+            FOTOS.add(String(parseInt(d)));
+            toast('Foto guardada ✓');
+            renderSemana();
+        } else {
+            toast('Error al guardar', true);
+        }
+    } catch(err) {
+        console.error('Error foto:', err);
+        toast('Error de conexión', true);
+    }
 }
 document.getElementById('inputFotoCamera').addEventListener('change', function() { _handleFotoInput(this.files[0]); this.value=''; });
 document.getElementById('inputFotoFile').addEventListener('change',   function() { _handleFotoInput(this.files[0]); this.value=''; });
