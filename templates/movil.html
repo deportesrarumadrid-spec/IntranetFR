@@ -514,7 +514,7 @@
         <textarea id="mCharlaTexto" placeholder="Escribe comentario..." rows="4" style="width:100%;border:1.5px solid #3b82f6;border-radius:10px;padding:10px;font-size:13px;font-family:inherit;resize:none;box-sizing:border-box;outline:none;"></textarea>
         <div style="display:flex;gap:10px;margin-top:14px;">
             <button onclick="cerrarCharlaModal()" style="flex:1;padding:11px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;font-weight:800;background:white;color:#64748b;font-family:inherit;font-size:12px;">Cerrar</button>
-            <button onclick="cerrarCharlaModal()" style="flex:1;padding:11px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;font-weight:800;background:white;color:#64748b;font-family:inherit;font-size:12px;">Cancelar</button>
+            <button onclick="borrarCharlaModal()" style="flex:1;padding:11px;border:1.5px solid #fca5a5;border-radius:10px;cursor:pointer;font-weight:800;background:white;color:#dc2626;font-family:inherit;font-size:12px;">Borrar</button>
             <button onclick="guardarCharlaModal()" style="flex:1;padding:11px;background:#3b82f6;color:white;border:none;border-radius:10px;cursor:pointer;font-weight:800;font-family:inherit;font-size:12px;">Guardar</button>
         </div>
     </div>
@@ -1398,6 +1398,34 @@ function abrirCharlaModal(icoEl) {
 function cerrarCharlaModal() {
     document.getElementById('modalCharlaMov').style.display = 'none';
     _charlaRowActiva = null;
+}
+
+async function borrarCharlaModal() {
+    const val = document.getElementById('fechaAsis').value;
+    const row = _charlaRowActiva;
+    if (!val || !row) { cerrarCharlaModal(); return; }
+    const [y,m,d] = val.split('-');
+    const nombre = row.dataset.nombre;
+    const estado = row.dataset.estado || '';
+    const tr = row.querySelector('.npr-trend');
+    const valoracion = tr ? (tr.dataset.valor || '-') : '-';
+
+    row.dataset.charla = 'NO';
+    row.dataset.charlaNote = '';
+    const ico = row.querySelector('.npr-ico-charla');
+    if (ico) ico.classList.remove('charla-activa');
+
+    cerrarCharlaModal();
+
+    try {
+        const r = await fetch('/guardar_asistencia_masiva', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({cambios:[{dia:parseInt(d),nombre,equipo:EQUIPO,estado,valoracion,motivo:'',charla:'NO'}], mes:parseInt(m)})
+        });
+        const data = await r.json();
+        if (data.status==='success') { _patchAsis(d, m, nombre, estado, valoracion, '', 'NO'); toast(`Charla borrada: ${nombre}`); }
+        else toast('Error al borrar',true);
+    } catch(e) { toast('Error de conexión',true); }
 }
 
 async function guardarCharlaModal() {
