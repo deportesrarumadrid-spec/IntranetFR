@@ -372,18 +372,14 @@
             </div>
             <button class="month-arr" onclick="cambiarMes(1)">&#8250;</button>
         </div>
-        <!-- Nav de semana -->
-        <div class="wk-nav">
-            <button class="nav-btn" onclick="cambiarSemana(-1)">&#8249;</button>
-            <div class="wk-info">
-                <div class="wk-range" id="weekSub">–</div>
-            </div>
-            <button class="nav-btn" onclick="cambiarSemana(1)">&#8250;</button>
-        </div>
         <div style="padding:0 14px 6px;">
             <button id="btnMesCompleto" onclick="toggleMesCompleto()" style="width:100%;padding:9px;border-radius:8px;border:1.5px solid var(--border);background:white;color:var(--mid);font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;cursor:pointer;font-family:inherit;">Ver mes completo</button>
         </div>
-        <div id="daysGrid"></div>
+        <div style="display:flex;align-items:stretch;gap:0;padding-bottom:0;">
+            <button class="nav-btn" onclick="cambiarSemana(-1)" style="flex-shrink:0;align-self:center;">&#8249;</button>
+            <div id="daysGrid" style="flex:1;min-width:0;"></div>
+            <button class="nav-btn" onclick="cambiarSemana(1)" style="flex-shrink:0;align-self:center;">&#8250;</button>
+        </div>
         <!-- Detalle del día seleccionado -->
         <div id="dayDetail" class="day-detail" style="display:none;"></div>
     </div>
@@ -657,8 +653,6 @@ async function renderSemana() {
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     const fin = new Date(lun); fin.setDate(lun.getDate()+6);
 
-    document.getElementById('weekSub').textContent =
-        `${lun.getDate()} ${MESES[lun.getMonth()]} — ${fin.getDate()} ${MESES[fin.getMonth()]} ${fin.getFullYear()}`;
     document.getElementById('monthLabel').textContent =
         `${MESES_L[lun.getMonth()]} ${lun.getFullYear()}`;
 
