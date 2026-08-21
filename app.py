@@ -616,6 +616,48 @@ def api_fotos_mes():
         print(f"Error en api_fotos_mes: {e}")
     return jsonify(fotos)
 
+@app.route('/api/partidos_mes')
+def api_partidos_mes():
+    if not session.get('usuario'):
+        return jsonify([])
+    equipo = session.get('equipo_defecto', '')
+    try:
+        mes  = int(request.args.get('mes',  datetime.now().month))
+        anio = int(request.args.get('anio', datetime.now().year))
+    except Exception:
+        mes, anio = datetime.now().month, datetime.now().year
+    dias = []
+    try:
+        sh = client.open(NOMBRE_EXCEL)
+        try:
+            ws = sh.worksheet('FORMULARIO_PARTIDOS')
+            all_v = ws.get_all_values()
+        except Exception:
+            return jsonify([])
+        if not all_v:
+            return jsonify([])
+        headers = [str(h).strip() for h in all_v[0]]
+        idx_fecha  = headers.index('MARCA TEMPORAL') if 'MARCA TEMPORAL' in headers else -1
+        idx_equipo = headers.index('EQUIPO') if 'EQUIPO' in headers else -1
+        if idx_fecha < 0 or idx_equipo < 0:
+            return jsonify([])
+        mes_str  = f"{mes:02d}"
+        anio_str = str(anio)
+        for row in all_v[1:]:
+            eq = row[idx_equipo].strip() if idx_equipo < len(row) else ''
+            if eq != equipo:
+                continue
+            fecha_str = row[idx_fecha].strip() if idx_fecha < len(row) else ''
+            try:
+                parts = fecha_str.split(' ')[0].split('/')
+                if len(parts) == 3 and parts[1].zfill(2) == mes_str and parts[2] == anio_str:
+                    dias.append(str(int(parts[0])))
+            except Exception:
+                pass
+    except Exception as e:
+        print(f"Error en api_partidos_mes: {e}")
+    return jsonify(dias)
+
 @app.route('/OneSignalSDKWorker.js')
 def onesignal_worker():
     # Necesario para que OneSignal funcione. El archivo debe estar en la carpeta /static/

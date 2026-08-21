@@ -86,6 +86,7 @@
         .dc{display:flex;flex-direction:column;align-items:center;padding:clamp(6px,2vw,11px) 1px;border-radius:10px;cursor:pointer;border:1.5px solid transparent;transition:all .1s;}
         .dc.has-foto{border-color:#bbf7d0;background:#f0fdf4;}
         .dc.sin-foto{border-color:#fecdd3;background:#fff1f2;}
+        .dc.has-partido{border-color:#bfdbfe;background:#eff6ff;}
         .dc.is-today{border-color:#111827;background:#f3f4f6;}
         .dc.selected{border-color:#1e40af;background:#eff6ff;}
         .dc.selected.is-today{border-color:var(--red);background:#fff1f2;}
@@ -96,6 +97,7 @@
         .dc.selected:not(.is-today) .dc-name{color:#1e40af;}
         .dc.has-foto .dc-name{color:var(--green);}
         .dc.sin-foto .dc-name{color:var(--red);}
+        .dc.has-partido .dc-name{color:#1e40af;}
         .dc-num{font-size:clamp(13px,4.1vw,19px);font-weight:700;color:var(--text);line-height:1;}
         .dc.is-today .dc-num{color:#111827;}
         .dc-dot{display:none;}
@@ -589,6 +591,18 @@ async function _actualizarFotos(lun) {
     } catch(e) { FOTOS = new Set(); }
 }
 
+let PARTIDOS = new Set();
+let _partidosKey = '';
+async function _actualizarPartidos(lun) {
+    const key = `${lun.getFullYear()}-${p2(lun.getMonth()+1)}`;
+    if (key === _partidosKey) return;
+    _partidosKey = key;
+    try {
+        const r = await fetch(`/api/partidos_mes?mes=${lun.getMonth()+1}&anio=${lun.getFullYear()}`);
+        PARTIDOS = new Set((await r.json()).map(String));
+    } catch(e) { PARTIDOS = new Set(); }
+}
+
 let activeFotoDate = null;
 let weekOffset = 0;
 let selectedDayIdx = null; // 0-6
@@ -642,6 +656,7 @@ function cargarHistorial() {
 async function renderSemana() {
     const lun = getLunes(weekOffset);
     await _actualizarFotos(lun);
+    await _actualizarPartidos(lun);
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     const fin = new Date(lun); fin.setDate(lun.getDate()+6);
 
@@ -687,16 +702,19 @@ async function renderSemana() {
 
     // SÁB, DOM → siempre visibles en grupo con contorno gris
     {
+        const dSab = new Date(lun); dSab.setDate(lun.getDate()+5);
+        const dDom = new Date(lun); dDom.setDate(lun.getDate()+6);
+        const tienePartido = PARTIDOS.has(String(dSab.getDate())) || PARTIDOS.has(String(dDom.getDate()));
         const wkWrap = document.createElement('div');
-        wkWrap.style.cssText = 'border:1.5px solid #d1d5db;border-radius:8px;display:flex;overflow:hidden;';
+        wkWrap.style.cssText = `border:1.5px solid ${tienePartido?'#bfdbfe':'#d1d5db'};border-radius:8px;display:flex;overflow:hidden;${tienePartido?'background:#eff6ff;':''}`;
         for (let i = 5; i < 7; i++) {
             const d = new Date(lun); d.setDate(lun.getDate()+i);
             const esHoy = d.getTime()===hoy.getTime();
             const isSel = selectedDayIdx === i;
-            const cls = ['dc', esHoy?'is-today':'', isSel?'selected':''].filter(Boolean).join(' ');
+            const cls = ['dc', esHoy?'is-today':'', isSel?'selected':'', tienePartido?'has-partido':''].filter(Boolean).join(' ');
             const cell = document.createElement('div');
             cell.className = cls;
-            cell.style.cssText = 'flex:1;border:none;border-radius:0;min-width:0;';
+            cell.style.cssText = 'flex:1;border:none;border-radius:0;min-width:0;background:transparent;';
             cell.innerHTML = `<div class="dc-name">${DIAS[i]}</div><div class="dc-num">${d.getDate()}</div>${esHoy?'<div class="dc-hoy">HOY</div>':''}`;
             cell.onclick = () => seleccionarDia(i, lun, hoy);
             wkWrap.appendChild(cell);
@@ -743,16 +761,19 @@ function _renderMesCompletoEnGrid(lun, hoy, grid) {
             strip.appendChild(cell);
         }
 
+        const _dSabM = new Date(wMon); _dSabM.setDate(wMon.getDate()+5);
+        const _dDomM = new Date(wMon); _dDomM.setDate(wMon.getDate()+6);
+        const tienePartidoM = PARTIDOS.has(String(_dSabM.getDate())) || PARTIDOS.has(String(_dDomM.getDate()));
         const wkWrap = document.createElement('div');
-        wkWrap.style.cssText = 'border:1.5px solid #d1d5db;border-radius:8px;display:flex;overflow:hidden;';
+        wkWrap.style.cssText = `border:1.5px solid ${tienePartidoM?'#bfdbfe':'#d1d5db'};border-radius:8px;display:flex;overflow:hidden;${tienePartidoM?'background:#eff6ff;':''}`;
         for (let i = 5; i < 7; i++) {
             const d = new Date(wMon); d.setDate(wMon.getDate()+i);
             const inM = d.getMonth() === month;
             const esHoy = d.getTime() === hoy.getTime();
-            const cls = ['dc', !inM?'dc-outm':'', esHoy?'is-today':''].filter(Boolean).join(' ');
+            const cls = ['dc', !inM?'dc-outm':'', esHoy?'is-today':'', (tienePartidoM&&inM)?'has-partido':''].filter(Boolean).join(' ');
             const cell = document.createElement('div');
             cell.className = cls;
-            cell.style.cssText = 'flex:1;border:none;border-radius:0;min-width:0;';
+            cell.style.cssText = 'flex:1;border:none;border-radius:0;min-width:0;background:transparent;';
             cell.innerHTML = `<div class="dc-name">${DIAS[i]}</div><div class="dc-num">${d.getDate()}</div>${esHoy?'<div class="dc-hoy">HOY</div>':''}`;
             cell.onclick = () => { weekOffset=wOff; selectedDayIdx=i; mesCompleto=false; renderSemana(); };
             wkWrap.appendChild(cell);
@@ -1612,6 +1633,10 @@ function abrirFormPartido(isoDate) {
 function cerrarFormPartido() {
     document.getElementById('formPartidoOverlay').style.display = 'none';
     document.body.style.overflow = '';
+    // Refrescar marcadores de partidos en el calendario
+    const lun = getLunes(weekOffset);
+    _partidosKey = ''; // forzar recarga
+    _actualizarPartidos(lun).then(() => renderSemana()).catch(() => {});
 }
 
 // ─── CREAR SESIÓN OVERLAY ───
