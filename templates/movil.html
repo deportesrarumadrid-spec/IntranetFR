@@ -168,8 +168,8 @@
         .asis-hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
         .asis-hdr-center{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;}
         .asis-badge{display:inline-flex;align-items:center;font-size:clamp(11px,3.3vw,15px);font-weight:900;padding:clamp(6px,2vw,10px) clamp(10px,3.6vw,16px);border-radius:20px;}
-        .asis-badge-si{background:#dcfce7;color:#16a34a;}
-        .asis-badge-f{background:#fee2e2;color:#dc2626;}
+        .asis-badge-si{background:#f1f5f9;color:#334155;}
+        .asis-badge-f{background:#f1f5f9;color:#334155;}
         .asis-action-btns{display:flex;gap:6px;}
         .asis-action-btn{flex:1;padding:clamp(9px,2.8vw,13px) 0;border:1.5px solid var(--border);border-radius:10px;font-size:clamp(10px,3.1vw,14px);font-weight:900;color:var(--mid);background:white;cursor:pointer;font-family:inherit;text-transform:uppercase;letter-spacing:.5px;}
         .asis-action-btn:active{background:#f1f5f9;}
@@ -442,12 +442,12 @@
     <!-- Cabecera dinámica -->
     <div id="asisHdrBox" class="asis-hdr-box" style="display:none;">
         <div class="asis-hdr-top">
-            <span class="asis-badge asis-badge-si" id="asisHdrSi" onclick="abrirModalBalones('inicio')" style="cursor:pointer;">⚽ INICIO –</span>
+            <span class="asis-badge asis-badge-si" id="asisHdrSi" onclick="abrirModalBalones('inicio')" style="cursor:pointer;">INICIO –</span>
             <div class="asis-hdr-center">
                 <div id="asisHdrDia" style="font-size:clamp(9px,2.8vw,13px);font-weight:700;color:var(--soft);letter-spacing:.5px;text-transform:uppercase;">–</div>
                 <div id="asisHdrNum" style="font-size:clamp(24px,7.7vw,36px);font-weight:900;color:var(--text);line-height:1;">–</div>
             </div>
-            <span class="asis-badge asis-badge-f" id="asisHdrFalta" onclick="abrirModalBalones('final')" style="cursor:pointer;">⚽ FINAL –</span>
+            <span class="asis-badge asis-badge-f" id="asisHdrFalta" onclick="abrirModalBalones('final')" style="cursor:pointer;">FINAL –</span>
         </div>
         <div class="asis-action-btns">
             <button class="asis-action-btn" onclick="todoSI()">TODO SI</button>
@@ -576,6 +576,7 @@ const EQUIPO = {{ equipo | tojson }};
 const EQ_FILE = EQUIPO.replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'SINEQUIPO';
 const EJERCICIOS_SEM = {{ ejercicios_semanales | tojson | safe }};
 const DIAS_ENTRENO = new Set({{ dias_entreno_nums | tojson }});
+const _BALL_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22" width="18" height="18" style="vertical-align:middle;margin-right:5px;flex-shrink:0;"><circle cx="11" cy="11" r="10" fill="#e2e8f0" stroke="#64748b" stroke-width="1.3"/><polygon points="11,3 13.8,7 11,10 8.2,7" fill="#334155"/><polygon points="19,8.5 15.5,8 13.8,11.5 16.5,14.5 20,12.5" fill="#334155"/><polygon points="3,8.5 6.5,8 8.2,11.5 5.5,14.5 2,12.5" fill="#334155"/><polygon points="6,19.5 8.2,16 11,17.5 13.8,16 16,19.5 11,21.5" fill="#334155"/></svg>`;
 function _esDiaEntreno(isoDate) {
     const val = isoDate || document.getElementById('fechaAsis').value;
     if (!val) return false;
@@ -1379,8 +1380,8 @@ function _actualizarBadgesBalones(diaNum) {
     const cantI = rI.length > 0 ? rI[rI.length-1].cantidad : '–';
     const cantF = rF.length > 0 ? rF[rF.length-1].cantidad : '–';
     const bs = document.getElementById('asisHdrSi'), bf = document.getElementById('asisHdrFalta');
-    if(bs) bs.textContent = `⚽ INICIO ${cantI}`;
-    if(bf) bf.textContent = `⚽ FINAL ${cantF}`;
+    if(bs) bs.innerHTML = `${_BALL_SVG}INICIO ${cantI}`;
+    if(bf) bf.innerHTML = `${_BALL_SVG}FINAL ${cantF}`;
 }
 
 let _charlaRowActiva = null;
