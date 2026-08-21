@@ -1345,9 +1345,9 @@ function _actualizarContadores() {
     // mantenida para compatibilidad con ciclarEstado/todoSI
 }
 
-async function _cargarYMostrarBalones(mesNum, diaNum) {
+async function _cargarYMostrarBalones(mesNum, diaNum, force) {
     const mk = `${mesNum}`;
-    if (_balonesMesCargado !== mk) {
+    if (force || _balonesMesCargado !== mk) {
         try {
             const r = await fetch(`/api/control_balones?equipo=${encodeURIComponent(EQUIPO)}&mes=${mesNum}`);
             balonesData = await r.json();
@@ -1413,7 +1413,7 @@ async function guardarCharlaModal() {
     } catch(e) { toast('Error de conexión',true); }
 }
 
-function abrirModalBalones(tipo) {
+async function abrirModalBalones(tipo) {
     const val = document.getElementById('fechaAsis').value;
     if (!val) return;
     const [y,m,d] = val.split('-');
@@ -1421,9 +1421,13 @@ function abrirModalBalones(tipo) {
     tipoBalonActivo = tipo;
     fotoBalonBase64 = null;
     _balonRehace = false;
+    // Forzar recarga de datos para tener la foto más reciente
+    await _cargarYMostrarBalones(parseInt(m), parseInt(d), true);
     const diaStr = String(diaBalonActivo);
     const registros = balonesData[diaStr]?.[tipo] || [];
     const ultimo = registros.length > 0 ? registros[registros.length-1] : null;
+    // Foto más reciente con imagen (puede no ser el último registro)
+    const fotoUrl = registros.slice().reverse().find(r => r.foto_url)?.foto_url || null;
     document.getElementById('mBalSubtitulo').textContent = `Día ${diaBalonActivo} - Balones al ${tipo==='inicio'?'INICIO':'FINAL'}`;
     const rehBtn = document.getElementById('mBalRehacer');
     const guardarBtn = document.getElementById('mBalGuardar');
@@ -1436,12 +1440,12 @@ function abrirModalBalones(tipo) {
         rehBtn.style.display = 'none';
     }
     const prev = document.getElementById('mBalPrev');
-    prev.innerHTML = ultimo?.foto_url
-        ? `<img src="${ultimo.foto_url}" style="width:100%;height:100%;object-fit:cover;">`
+    prev.innerHTML = fotoUrl
+        ? `<img src="${fotoUrl}" style="width:100%;height:100%;object-fit:cover;">`
         : '<span style="font-size:28px;color:#ccc;">📷</span>';
     const info = document.getElementById('mBalInfo');
     info.innerHTML = registros.length > 0
-        ? registros.slice().reverse().map(r=>`<div style="padding:4px 0;border-bottom:1px solid #f0f0f0;font-size:11px;font-weight:700;color:#555;">${r.timestamp} <span style="color:#16a34a;">${r.cantidad} balones</span></div>`).join('')
+        ? registros.slice().reverse().map(r=>`<div style="padding:4px 0;border-bottom:1px solid #f0f0f0;font-size:11px;font-weight:700;color:#555;">${r.timestamp} <span style="color:#16a34a;">${r.cantidad} balones</span>${r.foto_url ? ' 📷' : ''}</div>`).join('')
         : '<div style="font-size:11px;color:#94a3b8;font-weight:600;">Sin registros previos</div>';
     document.getElementById('modalBalonesMov').style.display = 'flex';
 }
