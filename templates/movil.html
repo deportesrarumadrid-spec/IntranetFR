@@ -210,6 +210,7 @@
         .lightbox img{max-width:100vw;max-height:100vh;width:auto;height:auto;display:block;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transform-origin:center center;will-change:transform;user-select:none;-webkit-user-select:none;touch-action:none;}
         .lb-close{position:fixed;top:12px;right:12px;width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.75);border:none;color:white;font-size:20px;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center;}
         .lb-hint{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.5);color:rgba(255,255,255,.8);font-size:10px;padding:5px 12px;border-radius:20px;pointer-events:none;white-space:nowrap;transition:opacity .5s;}
+        .lb-sustituir{position:fixed;bottom:20px;right:16px;background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.45);color:white;font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;padding:8px 14px;border-radius:20px;cursor:pointer;z-index:10;backdrop-filter:blur(4px);}
 
         /* MIS SESIONES */
         .overlay-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:8000;align-items:flex-end;}
@@ -327,6 +328,7 @@
     <button class="lb-close" onclick="cerrarLightbox()">&#10005;</button>
     <img id="lightboxImg" src="" alt="">
     <div class="lb-hint" id="lbHint">Pellizca para ampliar</div>
+    <button class="lb-sustituir" id="lbSustituirBtn" onclick="sustituirFoto()" style="display:none;">↺ Sustituir foto</button>
 </div>
 
 <!-- MIS SESIONES -->
@@ -1005,6 +1007,7 @@ function cerrarLightbox() {
     _lbReset();
     _lbImg().src = '';
     document.getElementById('lightbox').style.display = 'none';
+    document.getElementById('lbSustituirBtn').style.display = 'none';
 }
 // Pinch-zoom + pan
 (function(){
@@ -1048,7 +1051,15 @@ function cerrarLightbox() {
 
 function verFoto(isoDate) {
     const [y,m,d] = isoDate.split('-');
+    activeFotoDate = isoDate;
     _abrirLightbox(`/static/uploads/entreno_${EQ_FILE}_${d}-${m}-${y}.jpg`);
+    document.getElementById('lbSustituirBtn').style.display = 'block';
+}
+
+function sustituirFoto() {
+    cerrarLightbox();
+    document.getElementById('lbSustituirBtn').style.display = 'none';
+    document.getElementById('subirModal').style.display = 'flex';
 }
 function verFotoUrl(url) {
     _abrirLightbox(url);
