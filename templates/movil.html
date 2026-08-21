@@ -442,12 +442,12 @@
     <!-- Cabecera dinámica -->
     <div id="asisHdrBox" class="asis-hdr-box" style="display:none;">
         <div class="asis-hdr-top">
-            <span class="asis-badge asis-badge-si" id="asisHdrSi" onclick="abrirModalBalones('inicio')" style="cursor:pointer;">●I –</span>
+            <span class="asis-badge asis-badge-si" id="asisHdrSi" onclick="abrirModalBalones('inicio')" style="cursor:pointer;">⚽ INICIO –</span>
             <div class="asis-hdr-center">
                 <div id="asisHdrDia" style="font-size:clamp(9px,2.8vw,13px);font-weight:700;color:var(--soft);letter-spacing:.5px;text-transform:uppercase;">–</div>
                 <div id="asisHdrNum" style="font-size:clamp(24px,7.7vw,36px);font-weight:900;color:var(--text);line-height:1;">–</div>
             </div>
-            <span class="asis-badge asis-badge-f" id="asisHdrFalta" onclick="abrirModalBalones('final')" style="cursor:pointer;">●F –</span>
+            <span class="asis-badge asis-badge-f" id="asisHdrFalta" onclick="abrirModalBalones('final')" style="cursor:pointer;">⚽ FINAL –</span>
         </div>
         <div class="asis-action-btns">
             <button class="asis-action-btn" onclick="todoSI()">TODO SI</button>
@@ -1379,8 +1379,8 @@ function _actualizarBadgesBalones(diaNum) {
     const cantI = rI.length > 0 ? rI[rI.length-1].cantidad : '–';
     const cantF = rF.length > 0 ? rF[rF.length-1].cantidad : '–';
     const bs = document.getElementById('asisHdrSi'), bf = document.getElementById('asisHdrFalta');
-    if(bs) bs.textContent = `●I ${cantI}`;
-    if(bf) bf.textContent = `●F ${cantF}`;
+    if(bs) bs.textContent = `⚽ INICIO ${cantI}`;
+    if(bf) bf.textContent = `⚽ FINAL ${cantF}`;
 }
 
 let _charlaRowActiva = null;
