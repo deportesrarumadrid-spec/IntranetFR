@@ -137,6 +137,42 @@ def formulario_partido():
             print(f"Error al guardar formulario partido: {e}")
             return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@formulario_partido_bp.route('/api/borrar_partido', methods=['POST'])
+def api_borrar_partido():
+    try:
+        from app import app as main_app
+        data = request.json or {}
+        equipo = data.get('equipo', '').strip()
+        fecha  = data.get('fecha', '').strip()
+        if not equipo or not fecha:
+            return jsonify({'status': 'error', 'message': 'Faltan datos'}), 400
+        from datetime import timedelta
+        dt_ref = datetime.strptime(fecha, "%Y-%m-%d")
+        targets = {(dt_ref + timedelta(days=d)).strftime("%d/%m/%Y") for d in (0, 1)}
+        client = main_app.gs_client
+        sh = client.open(main_app.gs_name)
+        ws = sh.worksheet('FORMULARIO_PARTIDOS')
+        all_v = ws.get_all_values()
+        if not all_v:
+            return jsonify({'status': 'ok'})
+        hdrs = [str(h).strip() for h in all_v[0]]
+        idx_f = hdrs.index('MARCA TEMPORAL') if 'MARCA TEMPORAL' in hdrs else -1
+        idx_e = hdrs.index('EQUIPO') if 'EQUIPO' in hdrs else -1
+        # Recorrer de abajo hacia arriba para borrar sin desplazar índices
+        for i in range(len(all_v) - 1, 0, -1):
+            row = all_v[i]
+            eq_r = row[idx_e].strip() if idx_e >= 0 and idx_e < len(row) else ''
+            if eq_r != equipo:
+                continue
+            fecha_r = row[idx_f].strip().split(' ')[0] if idx_f >= 0 and idx_f < len(row) else ''
+            if fecha_r in targets:
+                ws.delete_rows(i + 1)  # Sheets es 1-indexado, +1 por la cabecera
+                return jsonify({'status': 'ok'})
+        return jsonify({'status': 'ok', 'message': 'No encontrado'})
+    except Exception as e:
+        print(f"Error en api_borrar_partido: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 @formulario_partido_bp.route('/api/formularios_partido', methods=['GET'])
 def api_formularios_partido():
     try:

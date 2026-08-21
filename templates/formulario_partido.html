@@ -75,10 +75,11 @@
     {% if datos_existentes %}
     <div style="background:#dcfce7;border:1.5px solid #86efac;border-radius:12px;margin:12px 15px 0;padding:14px 18px;display:flex;align-items:center;gap:12px;">
         <i class="fas fa-check-circle" style="color:#15803d;font-size:22px;flex-shrink:0;"></i>
-        <div>
+        <div style="flex:1;">
             <div style="font-family:'Archivo Black';font-size:13px;color:#14532d;text-transform:uppercase;">Formulario ya enviado</div>
             <div style="font-size:11px;font-weight:700;color:#166534;margin-top:2px;">Estos son los datos guardados para este partido.</div>
         </div>
+        <button onclick="borrarYRehacerFormulario()" style="background:#15803d;color:white;border:none;border-radius:8px;padding:8px 12px;font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;white-space:nowrap;font-family:inherit;">↺ REHACER</button>
     </div>
     {% endif %}
 
@@ -215,6 +216,21 @@
     </div>
 
     <script>
+        async function borrarYRehacerFormulario() {
+            const equipo = '{{ equipo_default }}';
+            const fecha  = '{{ fecha_default }}';
+            try {
+                await fetch('/api/borrar_partido', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({equipo, fecha})
+                });
+            } catch(e) {}
+            // Recargar sin datos existentes (el formulario ya fue borrado de Sheets)
+            const params = new URLSearchParams({equipo, fecha});
+            window.location.href = '/formulario-partido?' + params.toString();
+        }
+
         // Marcar visualmente radios/checkboxes pre-seleccionados al cargar
         document.querySelectorAll('input[type="radio"]:checked').forEach(r => r.closest('.radio-label').classList.add('checked'));
         const _cbAudio = document.querySelector('input[name="audio_enviado"]');
