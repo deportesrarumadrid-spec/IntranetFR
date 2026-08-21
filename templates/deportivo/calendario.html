@@ -1197,7 +1197,7 @@
                 </div>
             </div>
             
-            <div style="padding: 10px 14px; display: grid; grid-template-columns: 210px 1fr 210px; gap: 12px; flex: 1; overflow: hidden;">
+            <div style="padding: 10px 14px; display: grid; grid-template-columns: 210px 1fr 210px; gap: 12px; flex: 1; overflow-y: auto;">
                 <!-- Izquierda: Notas adicionales (Opcional) -->
                 <div style="background: white; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
                     <label style="font-size: 10px; font-weight: 900; color: #999; text-transform: uppercase; letter-spacing: 1px;">Descripción detallada</label>
@@ -1246,8 +1246,8 @@
                 <div class="herramientas-pizarra-side">
                     <label style="font-size: 8px; font-weight: 900; color: var(--red); text-transform: uppercase;">Material</label>
                     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%;">
-                        <div class="herramienta-pizarra" draggable="true" ondragstart="dragItem(event, 'ball')"><i class="fas fa-futbol" style="color: #333;"></i></div>
-                        <div id="prevCono" class="herramienta-pizarra" draggable="true" ondragstart="dragItem(event, 'cone')" style="display:flex;align-items:flex-end;justify-content:center;">
+                        <div class="herramienta-pizarra" draggable="true" ondragstart="dragItem(event, 'ball')" data-tool-type="ball"><i class="fas fa-futbol" style="color: #333;"></i></div>
+                        <div id="prevCono" class="herramienta-pizarra" draggable="true" ondragstart="dragItem(event, 'cone')" data-tool-type="cone" style="display:flex;align-items:flex-end;justify-content:center;">
                             <div style="width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:18px solid #ff0000;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.3));"></div>
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1px;">
@@ -1260,25 +1260,25 @@
 
                     <label style="font-size: 8px; font-weight: 900; color: #2563eb; text-transform: uppercase;">Jugadores</label>
                     <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; width: 100%;">
-                        <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="dragItem(event, 'player-red')"><div style="width:10px; height:10px; background:red; border-radius:50%;"></div></div>
-                        <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="dragItem(event, 'player-green')"><div style="width:10px; height:10px; background:#DFFF00; border-radius:50%;"></div></div>
-                        <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="dragItem(event, 'player-white')"><div style="width:10px; height:10px; background:white; border-radius:50%; border:1px solid #ccc;"></div></div>
-                        <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="dragItem(event, 'player-blue')"><div style="width:10px; height:10px; background:blue; border-radius:50%;"></div></div>
-                        <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="dragItem(event, 'player-yellow')"><div style="width:10px; height:10px; background:yellow; border-radius:50%;"></div></div>
+                        <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="dragItem(event, 'player-red')" data-tool-type="player-red"><div style="width:10px; height:10px; background:red; border-radius:50%;"></div></div>
+                        <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="dragItem(event, 'player-green')" data-tool-type="player-green"><div style="width:10px; height:10px; background:#DFFF00; border-radius:50%;"></div></div>
+                        <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="dragItem(event, 'player-white')" data-tool-type="player-white"><div style="width:10px; height:10px; background:white; border-radius:50%; border:1px solid #ccc;"></div></div>
+                        <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="dragItem(event, 'player-blue')" data-tool-type="player-blue"><div style="width:10px; height:10px; background:blue; border-radius:50%;"></div></div>
+                        <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="dragItem(event, 'player-yellow')" data-tool-type="player-yellow"><div style="width:10px; height:10px; background:yellow; border-radius:50%;"></div></div>
                     </div>
 
                     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; margin-top: 5px;">
-                        <div class="herramienta-pizarra" draggable="true" ondragstart="dragItem(event, 'pica')"><div style="width: 2px; height: 20px; background: #333;"></div></div>
-                        <div class="herramienta-pizarra" draggable="true" ondragstart="dragItem(event, 'goal-mini')"><div style="width:16px; height:10px; border:1.5px solid #333; border-bottom:none;"></div></div>
-                        <div class="herramienta-pizarra" draggable="true" ondragstart="dragItem(event, 'text')"><span style="font-weight:900; font-size:10px;">ABC</span></div>
+                        <div class="herramienta-pizarra" draggable="true" ondragstart="dragItem(event, 'pica')" data-tool-type="pica"><div style="width: 2px; height: 20px; background: #333;"></div></div>
+                        <div class="herramienta-pizarra" draggable="true" ondragstart="dragItem(event, 'goal-mini')" data-tool-type="goal-mini"><div style="width:16px; height:10px; border:1.5px solid #333; border-bottom:none;"></div></div>
+                        <div class="herramienta-pizarra" draggable="true" ondragstart="dragItem(event, 'text')" data-tool-type="text"><span style="font-weight:900; font-size:10px;">ABC</span></div>
                     </div>
                     
                     <label style="font-size: 8px; font-weight: 900; color: var(--red); text-transform: uppercase;">Pincel</label>
                     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%;">
-                        <div class="herramienta-pizarra tool-btn-pincel" onclick="setDrawingMode('freehand', this)" title="Dibujo libre"><i class="fas fa-pencil-alt"></i></div>
-                        <div class="herramienta-pizarra tool-btn-pincel" onclick="setDrawingMode('straight', this)" title="Flecha"><i class="fas fa-long-arrow-alt-right"></i></div>
-                        <div class="herramienta-pizarra tool-btn-pincel" onclick="setDrawingMode('dashed', this)" title="Dashed"><i class="fas fa-arrow-right" style="border-bottom: 2px dashed;"></i></div>
-                        <div class="herramienta-pizarra tool-btn-pincel" onclick="setDrawingMode('rect', this)" title="Zona"><i class="far fa-square"></i></div>
+                        <div class="herramienta-pizarra tool-btn-pincel" onclick="setDrawingMode('freehand', this)" title="Dibujo libre" data-tool-type="draw-freehand"><i class="fas fa-pencil-alt"></i></div>
+                        <div class="herramienta-pizarra tool-btn-pincel" onclick="setDrawingMode('straight', this)" title="Flecha" data-tool-type="draw-straight"><i class="fas fa-long-arrow-alt-right"></i></div>
+                        <div class="herramienta-pizarra tool-btn-pincel" onclick="setDrawingMode('dashed', this)" title="Dashed" data-tool-type="draw-dashed"><i class="fas fa-arrow-right" style="border-bottom: 2px dashed;"></i></div>
+                        <div class="herramienta-pizarra tool-btn-pincel" onclick="setDrawingMode('rect', this)" title="Zona" data-tool-type="draw-rect"><i class="far fa-square"></i></div>
                     </div>
                     
                     <div style="display: flex; gap: 8px; margin-top: 8px; justify-content: center; width: 100%;">
@@ -1671,7 +1671,8 @@
             }
             
             document.getElementById('modalPizarra').style.display = 'flex';
-            
+            _initTouchTools();
+
             canvas = document.getElementById('mainCanvasPizarra');
             ctx = canvas.getContext('2d');
             
@@ -1792,7 +1793,7 @@
         }
 
         function dragItem(ev, type) { ev.dataTransfer.setData("type", type); }
-        
+
         function dropItem(ev) {
             ev.preventDefault();
             const type = ev.dataTransfer.getData("type");
@@ -1800,6 +1801,46 @@
             const x = ev.clientX - rect.left;
             const y = ev.clientY - rect.top;
             crearObjetoPizarra(type, x, y);
+        }
+
+        // ── Touch drag para herramientas (móvil) ──
+        let _tdType = null, _tdGhost = null;
+        function _initTouchTools() {
+            document.querySelectorAll('#modalPizarra [data-tool-type]').forEach(el => {
+                const type = el.dataset.toolType;
+                if (!type || type.startsWith('draw-')) return; // pincel usa onclick
+                el.addEventListener('touchstart', e => {
+                    e.preventDefault();
+                    _tdType = type;
+                    _tdGhost = document.createElement('div');
+                    _tdGhost.innerHTML = el.innerHTML;
+                    _tdGhost.style.cssText = 'position:fixed;z-index:99999;pointer-events:none;opacity:0.75;background:white;border-radius:8px;padding:4px;box-shadow:0 4px 12px rgba(0,0,0,0.3);min-width:28px;min-height:28px;display:flex;align-items:center;justify-content:center;';
+                    document.body.appendChild(_tdGhost);
+                    const t = e.touches[0];
+                    _tdGhost.style.left = (t.clientX - 14) + 'px';
+                    _tdGhost.style.top  = (t.clientY - 14) + 'px';
+                }, { passive: false });
+                el.addEventListener('touchmove', e => {
+                    e.preventDefault();
+                    if (!_tdGhost) return;
+                    const t = e.touches[0];
+                    _tdGhost.style.left = (t.clientX - 14) + 'px';
+                    _tdGhost.style.top  = (t.clientY - 14) + 'px';
+                }, { passive: false });
+                el.addEventListener('touchend', e => {
+                    if (_tdGhost) { _tdGhost.remove(); _tdGhost = null; }
+                    if (!_tdType) return;
+                    const t = e.changedTouches[0];
+                    const drop = document.getElementById('pizarraDropArea');
+                    if (drop) {
+                        const r = drop.getBoundingClientRect();
+                        if (t.clientX >= r.left && t.clientX <= r.right && t.clientY >= r.top && t.clientY <= r.bottom) {
+                            crearObjetoPizarra(_tdType, t.clientX - r.left, t.clientY - r.top);
+                        }
+                    }
+                    _tdType = null;
+                });
+            });
         }
 
         function crearObjetoPizarra(type, x, y) {
@@ -1863,20 +1904,6 @@
                 el.style.transform = `scale(${scale})`;
             };
 
-            el.onpointerdown = (e) => {
-                if(el.contentEditable === "true") return;
-                let shiftX = e.clientX - el.getBoundingClientRect().left;
-                let shiftY = e.clientY - el.getBoundingClientRect().top;
-                function moveAt(pageX, pageY) {
-                    const pRect = document.getElementById('pizarraDropArea').getBoundingClientRect();
-                    el.style.left = (pageX - pRect.left - shiftX) + 'px';
-                    el.style.top = (pageY - pRect.top - shiftY) + 'px';
-                }
-                function onMouseMove(e) { moveAt(e.pageX, e.pageY); }
-                document.addEventListener('mousemove', onMouseMove);
-                el.onpointerup = () => { document.removeEventListener('mousemove', onMouseMove); el.onpointerup = null; };
-            };
-            
             el.ondragstart = () => false;
             el.ondblclick = () => el.remove(); // Doble clic para borrar
 
