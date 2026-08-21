@@ -533,7 +533,8 @@
         </div>
         <input type="file" id="mBalFileCamera" accept="image/*" capture="environment" style="display:none" onchange="previewImagenBalon(this)">
         <input type="file" id="mBalFileGaleria" accept="image/*" style="display:none" onchange="previewImagenBalon(this)">
-        <div id="mBalInfo" style="border-top:1px solid var(--border);padding-top:10px;margin-bottom:16px;"></div>
+        <div id="mBalInfo" style="border-top:1px solid var(--border);padding-top:10px;margin-bottom:12px;"></div>
+        <button id="mBalRehacer" onclick="rehacerBalones()" style="display:none;width:100%;padding:10px;border:none;border-radius:10px;cursor:pointer;font-weight:800;background:#f59e0b;color:white;font-family:inherit;font-size:12px;margin-bottom:10px;">↺ REHACER</button>
         <div style="display:flex;gap:10px;">
             <button onclick="cerrarModalBalones()" style="flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-weight:800;background:#f1f5f9;color:#475569;font-family:inherit;font-size:12px;">CANCELAR</button>
             <button id="mBalGuardar" onclick="guardarControlBalones()" style="flex:1;padding:12px;background:var(--red);color:white;border:none;border-radius:10px;cursor:pointer;font-weight:800;font-family:inherit;font-size:12px;">GUARDAR</button>
@@ -1188,7 +1189,7 @@ const _DIAS_SEMANA = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 const _MESES_LABEL_A = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
 let balonesData = {};
 let _balonesMesCargado = '';
-let diaBalonActivo = null, tipoBalonActivo = null, fotoBalonBase64 = null;
+let diaBalonActivo = null, tipoBalonActivo = null, fotoBalonBase64 = null, _balonRehace = false;
 
 function irDia(isoDate) {
     const d = new Date(isoDate + 'T00:00:00');
@@ -1419,11 +1420,21 @@ function abrirModalBalones(tipo) {
     diaBalonActivo = parseInt(d);
     tipoBalonActivo = tipo;
     fotoBalonBase64 = null;
+    _balonRehace = false;
     const diaStr = String(diaBalonActivo);
     const registros = balonesData[diaStr]?.[tipo] || [];
     const ultimo = registros.length > 0 ? registros[registros.length-1] : null;
     document.getElementById('mBalSubtitulo').textContent = `Día ${diaBalonActivo} - Balones al ${tipo==='inicio'?'INICIO':'FINAL'}`;
-    document.getElementById('mBalCant').value = '';
+    const rehBtn = document.getElementById('mBalRehacer');
+    const guardarBtn = document.getElementById('mBalGuardar');
+    guardarBtn.textContent = 'GUARDAR';
+    if (ultimo) {
+        document.getElementById('mBalCant').value = ultimo.cantidad || '';
+        rehBtn.style.display = 'block';
+    } else {
+        document.getElementById('mBalCant').value = '';
+        rehBtn.style.display = 'none';
+    }
     const prev = document.getElementById('mBalPrev');
     prev.innerHTML = ultimo?.foto_url
         ? `<img src="${ultimo.foto_url}" style="width:100%;height:100%;object-fit:cover;">`
@@ -1433,6 +1444,15 @@ function abrirModalBalones(tipo) {
         ? registros.slice().reverse().map(r=>`<div style="padding:4px 0;border-bottom:1px solid #f0f0f0;font-size:11px;font-weight:700;color:#555;">${r.timestamp} <span style="color:#16a34a;">${r.cantidad} balones</span></div>`).join('')
         : '<div style="font-size:11px;color:#94a3b8;font-weight:600;">Sin registros previos</div>';
     document.getElementById('modalBalonesMov').style.display = 'flex';
+}
+
+function rehacerBalones() {
+    _balonRehace = true;
+    document.getElementById('mBalCant').value = '';
+    fotoBalonBase64 = null;
+    document.getElementById('mBalPrev').innerHTML = '<span style="font-size:28px;color:#ccc;">📷</span>';
+    document.getElementById('mBalRehacer').style.display = 'none';
+    document.getElementById('mBalGuardar').textContent = 'GUARDAR NUEVO';
 }
 
 function mBalAbrirOpciones() {
@@ -1468,9 +1488,10 @@ async function guardarControlBalones() {
         const res = await fetch(`/api/control_balones?equipo=${encodeURIComponent(EQUIPO)}&mes=${parseInt(m)}`, {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({dia: diaBalonActivo, tipo: tipoBalonActivo, cantidad: cant, foto: fotoEnviar, equipo: EQUIPO, mes: parseInt(m)})
+            body: JSON.stringify({dia: diaBalonActivo, tipo: tipoBalonActivo, cantidad: cant, foto: fotoEnviar, equipo: EQUIPO, mes: parseInt(m), reset: _balonRehace})
         });
         if (res.ok) {
+            _balonRehace = false;
             _balonesMesCargado = '';
             await _cargarYMostrarBalones(parseInt(m), diaBalonActivo);
             cerrarModalBalones();
@@ -1481,7 +1502,7 @@ async function guardarControlBalones() {
             toast(msg, true);
         }
     } catch(e) { toast('Error de conexión', true); }
-    btn.disabled = false; btn.textContent = 'GUARDAR';
+    btn.disabled = false; btn.textContent = _balonRehace ? 'GUARDAR NUEVO' : 'GUARDAR';
 }
 
 const _CICLO_VAL = {

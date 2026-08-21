@@ -977,6 +977,7 @@ def api_control_balones():
         tipo     = data.get('tipo', '')
         cantidad = data.get('cantidad', '')
         foto     = data.get('foto')
+        reset    = bool(data.get('reset', False))
 
         if not dia or not tipo or not cantidad:
             return jsonify({"status": "error", "message": "Datos incompletos"}), 400
@@ -991,7 +992,9 @@ def api_control_balones():
         if dia not in current_data:
             current_data[dia] = {}
 
-        if tipo in current_data[dia] and not isinstance(current_data[dia][tipo], list):
+        if reset:
+            current_data[dia][tipo] = []
+        elif tipo in current_data[dia] and not isinstance(current_data[dia][tipo], list):
             current_data[dia][tipo] = [current_data[dia][tipo]]
 
         if tipo not in current_data[dia]:
