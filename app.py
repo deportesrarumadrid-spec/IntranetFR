@@ -953,57 +953,70 @@ def asistencias():
 
 @app.route('/api/control_balones', methods=['GET', 'POST'])
 def api_control_balones():
-    equipo = request.args.get('equipo')
-    mes = request.args.get('mes')
+    if not session.get('usuario'):
+        return jsonify({"status": "error", "message": "No autenticado"}), 401
+    equipo = request.args.get('equipo', '').strip()
+    mes    = request.args.get('mes', '').strip()
+    if not equipo or not mes:
+        return jsonify({"status": "error", "message": "Faltan parámetros"}), 400
     path = os.path.join(DATA_FOLDER, f'balones_{equipo}_{mes}.json')
-    
+
     if request.method == 'GET':
+        try:
+            if os.path.exists(path):
+                with open(path, 'r', encoding='utf-8') as f:
+                    return jsonify(json.load(f))
+            return jsonify({})
+        except Exception as e:
+            print(f"Error GET control_balones: {e}")
+            return jsonify({}), 200
+
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        dia      = str(data.get('dia', ''))
+        tipo     = data.get('tipo', '')
+        cantidad = data.get('cantidad', '')
+        foto     = data.get('foto')
+
+        if not dia or not tipo or not cantidad:
+            return jsonify({"status": "error", "message": "Datos incompletos"}), 400
+
+        timestamp = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+        current_data = {}
         if os.path.exists(path):
             with open(path, 'r', encoding='utf-8') as f:
-                return jsonify(json.load(f))
-        return jsonify({})
-    
-    data = request.json
-    dia = str(data.get('dia'))
-    tipo = data.get('tipo')  # 'inicio' o 'final'
-    cantidad = data.get('cantidad')
-    foto = data.get('foto')  # base64
-    timestamp = datetime.now().strftime("%d/%m/%Y %H:%M")
-    
-    current_data = {}
-    if os.path.exists(path):
-        with open(path, 'r', encoding='utf-8') as f:
-            current_data = json.load(f)
-    
-    if dia not in current_data:
-        current_data[dia] = {}
+                current_data = json.load(f)
 
-    # Si el dato existente no es una lista (datos antiguos), lo convertimos
-    if tipo in current_data[dia] and not isinstance(current_data[dia][tipo], list):
-        current_data[dia][tipo] = [current_data[dia][tipo]]
-    
-    if tipo not in current_data[dia]:
-        current_data[dia][tipo] = []
+        if dia not in current_data:
+            current_data[dia] = {}
 
-    nuevo_registro = {
-        "cantidad": cantidad,
-        "timestamp": timestamp
-    }
-    
-    if foto and "," in foto:
-        # Nombre de archivo único usando el índice de la lista
-        foto_filename = f"balones_{equipo}_{mes}_{dia}_{tipo}_{len(current_data[dia][tipo])}.jpg"
-        foto_path = os.path.join(UPLOAD_FOLDER, foto_filename)
-        img_data = base64.b64decode(foto.split(",")[1])
-        with open(foto_path, "wb") as f:
-            f.write(img_data)
-        nuevo_registro["foto_url"] = f"/static/uploads/{foto_filename}"
+        if tipo in current_data[dia] and not isinstance(current_data[dia][tipo], list):
+            current_data[dia][tipo] = [current_data[dia][tipo]]
 
-    current_data[dia][tipo].append(nuevo_registro)
+        if tipo not in current_data[dia]:
+            current_data[dia][tipo] = []
 
-    with open(path, 'w', encoding='utf-8') as f:
-        json.dump(current_data, f)
-    return jsonify({"status": "success"})
+        nuevo_registro = {"cantidad": cantidad, "timestamp": timestamp}
+
+        if foto and "," in foto:
+            eq_safe = re.sub(r'[^A-Za-z0-9]+', '_', equipo)
+            foto_filename = f"balones_{eq_safe}_{mes}_{dia}_{tipo}_{len(current_data[dia][tipo])}.jpg"
+            foto_path = os.path.join(UPLOAD_FOLDER, foto_filename)
+            img_data = base64.b64decode(foto.split(",")[1])
+            with open(foto_path, "wb") as f:
+                f.write(img_data)
+            nuevo_registro["foto_url"] = f"/static/uploads/{foto_filename}"
+
+        current_data[dia][tipo].append(nuevo_registro)
+
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(current_data, f, ensure_ascii=False)
+
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error POST control_balones: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/recuento_balones_analisis')
 def api_recuento_balones_analisis():
