@@ -1131,8 +1131,18 @@ function _renderSesiones() {
     const q = (document.getElementById('shSearch').value||'').toLowerCase().trim();
     let lista = _sesSrc.filter(s => {
         if (_sesMesFiltro !== null) {
-            const parts = (s.fecha||'').split('-');
-            if (parts.length!==3 || parseInt(parts[1],10)-1!==_sesMesFiltro) return false;
+            const f = s.fecha || '';
+            let mesIdx = -1;
+            if (f.includes('-')) {
+                // YYYY-MM-DD
+                const p = f.split('-');
+                if (p.length === 3) mesIdx = parseInt(p[1], 10) - 1;
+            } else if (f.includes('/')) {
+                // DD/MM/YYYY
+                const p = f.split('/');
+                if (p.length === 3) mesIdx = parseInt(p[1], 10) - 1;
+            }
+            if (mesIdx !== _sesMesFiltro) return false;
         }
         if (q) {
             const txt = ((s.fecha||'')+' '+(s.tipo||'')+' '+JSON.stringify(s.ejercicios||[])).toLowerCase();
