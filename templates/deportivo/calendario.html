@@ -1255,8 +1255,12 @@
                 
                 <!-- Derecha: Herramientas (Material y Pincel) -->
                 <div class="herramientas-pizarra-side">
-                    <label style="font-size: 8px; font-weight: 900; color: var(--red); text-transform: uppercase;">Material</label>
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%;">
+                    <div style="display:flex;align-items:center;gap:3px;width:100%;">
+                        <label style="font-size: 8px; font-weight: 900; color: var(--red); text-transform: uppercase; flex:1; margin:0;">Material</label>
+                        <button onclick="cambiarTamanoPiz('mat',-0.25)" style="width:16px;height:16px;border:1px solid var(--red);border-radius:3px;background:#fff;color:var(--red);font-weight:900;font-size:13px;cursor:pointer;padding:0;line-height:1;display:flex;align-items:center;justify-content:center;">−</button>
+                        <button onclick="cambiarTamanoPiz('mat',0.25)" style="width:16px;height:16px;border:1px solid var(--red);border-radius:3px;background:#fff;color:var(--red);font-weight:900;font-size:13px;cursor:pointer;padding:0;line-height:1;display:flex;align-items:center;justify-content:center;">+</button>
+                    </div>
+                    <div id="gridMat" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%;">
                         <div class="herramienta-pizarra" draggable="true" ondragstart="dragItem(event, 'ball')" data-tool-type="ball"><i class="fas fa-futbol" style="color: #333;"></i></div>
                         <div id="prevCono" class="herramienta-pizarra" draggable="true" ondragstart="dragItem(event, 'cone')" data-tool-type="cone" style="display:flex;align-items:flex-end;justify-content:center;">
                             <div style="width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:18px solid #ff0000;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.3));"></div>
@@ -1269,8 +1273,12 @@
                         </div>
                     </div>
 
-                    <label style="font-size: 8px; font-weight: 900; color: #2563eb; text-transform: uppercase;">Jugadores</label>
-                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; width: 100%;">
+                    <div style="display:flex;align-items:center;gap:3px;width:100%;margin-top:4px;">
+                        <label style="font-size: 8px; font-weight: 900; color: #2563eb; text-transform: uppercase; flex:1; margin:0;">Jugadores</label>
+                        <button onclick="cambiarTamanoPiz('jug',-0.25)" style="width:16px;height:16px;border:1px solid #2563eb;border-radius:3px;background:#fff;color:#2563eb;font-weight:900;font-size:13px;cursor:pointer;padding:0;line-height:1;display:flex;align-items:center;justify-content:center;">−</button>
+                        <button onclick="cambiarTamanoPiz('jug',0.25)" style="width:16px;height:16px;border:1px solid #2563eb;border-radius:3px;background:#fff;color:#2563eb;font-weight:900;font-size:13px;cursor:pointer;padding:0;line-height:1;display:flex;align-items:center;justify-content:center;">+</button>
+                    </div>
+                    <div id="gridJug" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; width: 100%;">
                         <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="dragItem(event, 'player-red')" data-tool-type="player-red"><div style="width:10px; height:10px; background:red; border-radius:50%;"></div></div>
                         <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="dragItem(event, 'player-green')" data-tool-type="player-green"><div style="width:10px; height:10px; background:#DFFF00; border-radius:50%;"></div></div>
                         <div class="herramienta-pizarra" style="width:22px; height:22px;" draggable="true" ondragstart="dragItem(event, 'player-white')" data-tool-type="player-white"><div style="width:10px; height:10px; background:white; border-radius:50%; border:1px solid #ccc;"></div></div>
@@ -1297,6 +1305,10 @@
                         <div onclick="setBrushColor('#E31E24', this)" style="width: 15px; height: 15px; background: red; border-radius: 50%; cursor: pointer;" class="color-opt"></div>
                         <div onclick="setBrushColor('#2563eb', this)" style="width: 15px; height: 15px; background: blue; border-radius: 50%; cursor: pointer;" class="color-opt"></div>
                         <div onclick="setBrushColor('#28a745', this)" style="width: 15px; height: 15px; background: green; border-radius: 50%; cursor: pointer;" class="color-opt"></div>
+                    </div>
+
+                    <div style="font-size:7px;color:#94a3b8;text-align:center;line-height:1.3;padding:4px 2px;width:100%;">
+                        <i class="fas fa-hand-pointer" style="margin-right:3px;"></i>Doble clic en elemento para eliminar
                     </div>
 
                     <div style="display: flex; gap: 5px; width: 100%; margin-top: auto; border-top: 1px solid #eee; padding-top: 10px;">
@@ -1639,8 +1651,24 @@
         let drawingMode = 'none'; // 'none', 'freehand', 'straight', 'dashed', 'rect'
         let brushColor = '#ffffff';
         let conoColorActivo = '#ff0000';
+        let pizSizeMat = 1.0;
+        let pizSizeJug = 1.0;
         let lastX = 0, lastY = 0;
         let drawHistory = [];
+
+        function cambiarTamanoPiz(tipo, delta) {
+            if (tipo === 'mat') {
+                pizSizeMat = Math.max(0.5, Math.min(3, pizSizeMat + delta));
+                document.querySelectorAll('#gridMat .herramienta-pizarra').forEach(el => {
+                    el.style.transform = `scale(${pizSizeMat})`;
+                });
+            } else {
+                pizSizeJug = Math.max(0.5, Math.min(3, pizSizeJug + delta));
+                document.querySelectorAll('#gridJug .herramienta-pizarra').forEach(el => {
+                    el.style.transform = `scale(${pizSizeJug})`;
+                });
+            }
+        }
 
         function cambiarColorCono(color) {
             conoColorActivo = color;
@@ -1871,15 +1899,17 @@
             el.style.top = (y - 15) + 'px';
 
             let html = '';
-            if(type === 'ball') html = '<i class="fas fa-futbol" style="font-size:24px;"></i>';
-            else if(type === 'cone') html = '<div style="width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-bottom:28px solid ' + conoColorActivo + ';filter:drop-shadow(0 2px 4px rgba(0,0,0,0.35));"></div>';
+            const sm = pizSizeMat, sj = pizSizeJug;
+            if(type === 'ball') html = `<i class="fas fa-futbol" style="font-size:${Math.round(24*sm)}px;"></i>`;
+            else if(type === 'cone') { const bl=Math.round(14*sm),bb=Math.round(28*sm); html = `<div style="width:0;height:0;border-left:${bl}px solid transparent;border-right:${bl}px solid transparent;border-bottom:${bb}px solid ${conoColorActivo};filter:drop-shadow(0 2px 4px rgba(0,0,0,0.35));"></div>`; }
             else if(type.startsWith('player')) {
                 const color = type.split('-')[1];
-                html = `<div style="width:25px; height:25px; background:${color}; border-radius:50%; border:2px solid white; box-shadow:0 2px 4px rgba(0,0,0,0.3);"></div>`;
+                const sz = Math.round(25*sj);
+                html = `<div style="width:${sz}px; height:${sz}px; background:${color}; border-radius:50%; border:2px solid white; box-shadow:0 2px 4px rgba(0,0,0,0.3);"></div>`;
             } else if(type === 'pica') {
-                html = '<div style="width: 4px; height: 35px; background: #333; position: relative;"><div style="width: 14px; height: 5px; background: #333; position: absolute; bottom: 0; left: -5px; border-radius: 2px;"></div></div>';
+                const ph=Math.round(35*sm); html = `<div style="width:4px;height:${ph}px;background:#333;position:relative;"><div style="width:14px;height:5px;background:#333;position:absolute;bottom:0;left:-5px;border-radius:2px;"></div></div>`;
             } else if(type === 'goal-mini') {
-                html = '<div style="width: 30px; height: 18px; border: 2px solid white; border-bottom: none; background: rgba(255,255,255,0.2);"></div>';
+                const gw=Math.round(30*sm),gh=Math.round(18*sm); html = `<div style="width:${gw}px;height:${gh}px;border:2px solid white;border-bottom:none;background:rgba(255,255,255,0.2);"></div>`;
             } else if(type === 'text') {
                 el.className += ' rect-texto';
                 el.contentEditable = true;
