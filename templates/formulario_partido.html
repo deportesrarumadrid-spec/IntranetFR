@@ -201,7 +201,7 @@
         <i class="fas fa-check-circle"></i>
         <h2>¡ENVIADO!</h2>
         <p>El informe de partido se ha guardado correctamente y ya está sincronizado en la Intranet.</p>
-        <button onclick="window.location.reload()" class="btn-submit" style="max-width: 200px;">NUEVO REGISTRO</button>
+        <button onclick="window.parent.cerrarFormPartido ? window.parent.cerrarFormPartido() : window.location.href='/movil'" class="btn-submit" style="max-width: 200px;">VOLVER A INICIO</button>
     </div>
 
     <script>
