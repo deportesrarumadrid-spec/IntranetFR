@@ -809,6 +809,7 @@
 
     <script>
         const JUGADORES_EQUIPO = {{ jugadores_equipo|tojson|safe if jugadores_equipo else '[]' }};
+        const EQUIPOS_DIAS_CONFIG = {{ equipos_dias_config|tojson|safe }};
         let currentFormationImgName = "";
 
         function abrirSelectorFormaciones() {
@@ -2080,6 +2081,21 @@
             const fechaRaw = document.getElementById('sheetFecha').value; // YYYY-MM-DD
             
             if(!equipo || !fechaRaw || equipo === "") return alert("Por favor, selecciona equipo y fecha.");
+
+            // Validar que el día elegido corresponde con los días de entrenamiento del equipo
+            const _diasEq = EQUIPOS_DIAS_CONFIG[equipo.trim().toUpperCase()] || [];
+            if (_diasEq.length > 0) {
+                const _DIAS_NOMBRE = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+                const _norm = s => s.toLowerCase().replace(/é/g,'e').replace(/á/g,'a').replace(/ó/g,'o').replace(/ú/g,'u').replace(/í/g,'i');
+                const [_yy, _mm, _dd] = fechaRaw.split('-').map(Number);
+                const _diaSem = new Date(_yy, _mm - 1, _dd).getDay();
+                const _diaActual = _DIAS_NOMBRE[_diaSem];
+                if (!_diasEq.map(_norm).includes(_norm(_diaActual))) {
+                    const _diasStr = _diasEq.join(' y ');
+                    const _ok = confirm(`⚠️ El ${_diaActual} no es día de entrenamiento de ${equipo}.\nDías configurados: ${_diasStr}.\n\n¿Guardar igualmente?`);
+                    if (!_ok) return;
+                }
+            }
             const [y, m, d] = fechaRaw.split('-');
             const fechaFormatted = `${d}/${m}/${y}`;
 

@@ -145,6 +145,20 @@ def deportivo():
     # Días de entrenamiento del equipo activo (0=Lun ... 4=Vie)
     dias_entreno_nums = _get_dias_entreno(equipo_activo)
 
+    # Mapa equipo→días para validación en el frontend
+    equipos_dias_config = {}
+    try:
+        cfg_path = os.path.join(os.getcwd(), 'static', 'data', 'equipos_config.json')
+        with open(cfg_path, encoding='utf-8') as _cf:
+            _cfg = json.load(_cf)
+        for _eq in _cfg.get('equipos', []):
+            _nom = _eq.get('nombre', '').strip().upper()
+            _dias = _eq.get('dias', [])
+            if _nom and _dias:
+                equipos_dias_config[_nom] = _dias
+    except Exception:
+        pass
+
     # 3. Cargar objetivos desde Google Sheets (en lugar de JSON)
     objetivos = {"tactico": "", "tecnico": "", "completados": []}
     try:
@@ -348,7 +362,8 @@ def deportivo():
                            equipo_defecto=equipo_activo,
                            jugadores_equipo=jugadores_equipo,
                            now=hoy,
-                           dias_entreno_nums=dias_entreno_nums
+                           dias_entreno_nums=dias_entreno_nums,
+                           equipos_dias_config=equipos_dias_config
                            )
 
 @deportivo_bp.route('/api/seguimiento_coordinacion', methods=['GET', 'POST'])
