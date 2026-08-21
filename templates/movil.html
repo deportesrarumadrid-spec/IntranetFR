@@ -453,6 +453,9 @@
             <button class="asis-action-btn" onclick="todoSI()">TODO SI</button>
             <button class="asis-action-btn" onclick="todoNota()">NOTA →</button>
         </div>
+        <div id="asisNoDiaEntreno" style="display:none;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:8px;padding:8px 12px;margin-top:8px;font-size:11px;font-weight:800;color:#92400e;text-align:center;">
+            ⚠️ Este día no es de entrenamiento. No se puede guardar.
+        </div>
     </div>
     <!-- Lista jugadores nueva vista -->
     <div class="card" style="padding:0;overflow:hidden;">
@@ -573,6 +576,14 @@ const EQUIPO = {{ equipo | tojson }};
 const EQ_FILE = EQUIPO.replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'SINEQUIPO';
 const EJERCICIOS_SEM = {{ ejercicios_semanales | tojson | safe }};
 const DIAS_ENTRENO = new Set({{ dias_entreno_nums | tojson }});
+function _esDiaEntreno(isoDate) {
+    const val = isoDate || document.getElementById('fechaAsis').value;
+    if (!val) return false;
+    const [y,m,d] = val.split('-').map(Number);
+    const jsDay = new Date(y, m-1, d).getDay(); // 0=Dom,1=Lun,...,6=Sab
+    if (jsDay === 0 || jsDay === 6) return false;
+    return DIAS_ENTRENO.has(jsDay - 1); // DIAS_ENTRENO: 0=Lun,...,4=Vie
+}
 let FOTOS = new Set({{ fotos_subidas | tojson | safe }}.map(String));
 let _fotosKey = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
 async function _actualizarFotos(lun) {
@@ -1218,6 +1229,10 @@ async function cargarEstado() {
     const [y,m,d] = val.split('-');
     const mesNum = parseInt(m), diaNum = parseInt(d), anioNum = parseInt(y);
 
+    // Aviso si el día no es de entrenamiento
+    const avisoEl = document.getElementById('asisNoDiaEntreno');
+    if (avisoEl) avisoEl.style.display = _esDiaEntreno(val) ? 'none' : 'block';
+
     const data = await _fetchTodosAsis();
 
     // Estado de hoy
@@ -1416,6 +1431,7 @@ async function guardarCharlaModal() {
 async function abrirModalBalones(tipo) {
     const val = document.getElementById('fechaAsis').value;
     if (!val) return;
+    if (!_esDiaEntreno(val)) { toast('Este día no es de entrenamiento', true); return; }
     const [y,m,d] = val.split('-');
     diaBalonActivo = parseInt(d);
     tipoBalonActivo = tipo;
@@ -1591,6 +1607,7 @@ async function _autoGuardar(row, estado) {
 function todoSI() {
     const val = document.getElementById('fechaAsis').value;
     if (!val) return;
+    if (!_esDiaEntreno(val)) { toast('Este día no es de entrenamiento', true); return; }
     const [y,m,d] = val.split('-');
     const cambios = [];
     document.querySelectorAll('.new-prow').forEach(row => {
@@ -1655,6 +1672,7 @@ function todoCharla() {
 function guardar() {
     const val = document.getElementById('fechaAsis').value;
     if (!val) return;
+    if (!_esDiaEntreno(val)) { toast('Este día no es de entrenamiento', true); return; }
     const [y,m,d] = val.split('-');
     const cambios=[];
     document.querySelectorAll('.new-prow').forEach(row=>{
