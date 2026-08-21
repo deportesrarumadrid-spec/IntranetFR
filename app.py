@@ -319,42 +319,44 @@ def listar_sesiones():
     path_base = os.path.join(app.config['DATA_FOLDER'], 'sesiones')
     if os.path.exists(path_base):
         for eq_folder in os.listdir(path_base):
-            # Si hay filtro de equipo, saltamos las carpetas que no coincidan
             if equipo_req and eq_folder.upper() != equipo_req.upper():
                 continue
-            
             full_path = os.path.join(path_base, eq_folder)
             if not os.path.isdir(full_path): continue
-            
             for f in os.listdir(full_path):
                 if f.endswith('.json'):
                     try:
                         with open(os.path.join(full_path, f), 'r', encoding='utf-8') as file:
                             meta = json.load(file)
-                            if usuario != 'admin' and meta.get('usuario') != usuario:
+                            # Si hay filtro de equipo, mostrar todas las sesiones del equipo
+                            # Si no hay filtro, admin ve todo y el resto solo las suyas
+                            if not equipo_req and usuario != 'admin' and meta.get('usuario') != usuario:
                                 continue
                             meta['img_url'] = f"/static/data/sesiones/{eq_folder}/{f.replace('.json', '.jpg')}"
                             meta['tipo'] = 'ONLINE'
                             sesiones.append(meta)
                     except: continue
 
-    # 2. Escanear Sesiones Subidas (Evidencias directas del calendario)
+    # 2. Escanear fotos de entrenamiento subidas desde el calendario (por equipo)
     if os.path.exists(UPLOAD_FOLDER):
+        clave_eq = sanitizar_equipo_archivo(equipo_req) if equipo_req else ''
+        prefijo = f"entreno_{clave_eq}_" if clave_eq else f"entreno_{sanitizar_equipo_archivo(usuario)}_"
         for f in os.listdir(UPLOAD_FOLDER):
-            if f.startswith(f"entreno_{usuario}_") and f.endswith('.jpg'):
+            if f.startswith(prefijo) and f.endswith('.jpg'):
+                # Extraer fecha del nombre: entreno_EQ_DD-MM-YYYY.jpg
                 try:
-                    file_path = os.path.join(UPLOAD_FOLDER, f)
-                    # Obtener la fecha de modificación del archivo
-                    timestamp = os.path.getmtime(file_path)
-                    fecha_dt = datetime.fromtimestamp(timestamp)
-                    fecha_str = fecha_dt.strftime("%d/%m/%Y")
+                    parte_fecha = f[len(prefijo):-4]  # DD-MM-YYYY
+                    partes = parte_fecha.split('-')
+                    if len(partes) == 3:
+                        fecha_str = f"{partes[0]}/{partes[1]}/{partes[2]}"
+                    else:
+                        fecha_str = datetime.fromtimestamp(os.path.getmtime(os.path.join(UPLOAD_FOLDER, f))).strftime("%d/%m/%Y")
                 except:
-                    dia = f.split('_')[-1].split('.')[0]
-                    fecha_str = f"{dia.zfill(2)}/05/2026" # Fallback
+                    fecha_str = datetime.fromtimestamp(os.path.getmtime(os.path.join(UPLOAD_FOLDER, f))).strftime("%d/%m/%Y")
 
                 sesiones.append({
                     "fecha": fecha_str,
-                    "equipo": "Archivo Adjunto",
+                    "equipo": equipo_req or usuario,
                     "usuario": usuario,
                     "notas": "",
                     "ejercicios": [],
