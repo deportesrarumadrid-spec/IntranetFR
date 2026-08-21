@@ -86,7 +86,7 @@
         .dc{display:flex;flex-direction:column;align-items:center;padding:clamp(6px,2vw,11px) 1px;border-radius:10px;cursor:pointer;border:1.5px solid transparent;transition:all .1s;}
         .dc.has-foto{border-color:#bbf7d0;background:#f0fdf4;}
         .dc.sin-foto{border-color:#fecdd3;background:#fff1f2;}
-        .dc.has-partido{border-color:#bfdbfe;background:#eff6ff;}
+        .dc.has-partido{border-color:#bbf7d0;background:#f0fdf4;}
         .dc.is-today{border-color:#111827;background:#f3f4f6;}
         .dc.selected{border-color:#1e40af;background:#eff6ff;}
         .dc.selected.is-today{border-color:var(--red);background:#fff1f2;}
@@ -97,7 +97,7 @@
         .dc.selected:not(.is-today) .dc-name{color:#1e40af;}
         .dc.has-foto .dc-name{color:var(--green);}
         .dc.sin-foto .dc-name{color:var(--red);}
-        .dc.has-partido .dc-name{color:#1e40af;}
+        .dc.has-partido .dc-name{color:var(--green);}
         .dc-num{font-size:clamp(13px,4.1vw,19px);font-weight:700;color:var(--text);line-height:1;}
         .dc.is-today .dc-num{color:#111827;}
         .dc-dot{display:none;}
@@ -706,7 +706,7 @@ async function renderSemana() {
         const dDom = new Date(lun); dDom.setDate(lun.getDate()+6);
         const tienePartido = PARTIDOS.has(String(dSab.getDate())) || PARTIDOS.has(String(dDom.getDate()));
         const wkWrap = document.createElement('div');
-        wkWrap.style.cssText = `border:1.5px solid ${tienePartido?'#bfdbfe':'#d1d5db'};border-radius:8px;display:flex;overflow:hidden;${tienePartido?'background:#eff6ff;':''}`;
+        wkWrap.style.cssText = `border:1.5px solid ${tienePartido?'#bbf7d0':'#d1d5db'};border-radius:8px;display:flex;overflow:hidden;${tienePartido?'background:#f0fdf4;':''}`;
         for (let i = 5; i < 7; i++) {
             const d = new Date(lun); d.setDate(lun.getDate()+i);
             const esHoy = d.getTime()===hoy.getTime();
@@ -765,7 +765,7 @@ function _renderMesCompletoEnGrid(lun, hoy, grid) {
         const _dDomM = new Date(wMon); _dDomM.setDate(wMon.getDate()+6);
         const tienePartidoM = PARTIDOS.has(String(_dSabM.getDate())) || PARTIDOS.has(String(_dDomM.getDate()));
         const wkWrap = document.createElement('div');
-        wkWrap.style.cssText = `border:1.5px solid ${tienePartidoM?'#bfdbfe':'#d1d5db'};border-radius:8px;display:flex;overflow:hidden;${tienePartidoM?'background:#eff6ff;':''}`;
+        wkWrap.style.cssText = `border:1.5px solid ${tienePartidoM?'#bbf7d0':'#d1d5db'};border-radius:8px;display:flex;overflow:hidden;${tienePartidoM?'background:#f0fdf4;':''}`;
         for (let i = 5; i < 7; i++) {
             const d = new Date(wMon); d.setDate(wMon.getDate()+i);
             const inM = d.getMonth() === month;
@@ -822,9 +822,12 @@ function renderDayDetail(lun, hoy) {
         ? `FIN DE SEMANA  ${dSab.getDate()}–${dDom.getDate()}/${p2(dDom.getMonth()+1)}`
         : `${DIAS_F[selectedDayIdx]} ${d.getDate()}/${p2(d.getMonth()+1)}`;
 
+    const tienePartidoWk = PARTIDOS.has(String(dSab.getDate())) || PARTIDOS.has(String(dDom.getDate()));
+
     let btns = '';
     if (esWeekend) {
-        btns = `<button class="ddb-form" onclick="abrirFormPartido('${isoDate}')">Formulario de partido</button>`;
+        const btnLabel = tienePartidoWk ? 'VER FORMULARIO' : 'FORMULARIO DE PARTIDO';
+        btns = `<button class="ddb-form" onclick="abrirFormPartido('${isoDate}')">${btnLabel}</button>`;
     } else {
         btns += tienePhoto
             ? `<button class="ddb-ver" onclick="verFoto('${isoDate}')">VER foto</button>`
