@@ -438,6 +438,9 @@
             <div class="wk-info"><div class="wk-range" id="asisWeekSub">–</div></div>
             <button class="nav-btn" onclick="_asisCambiarSemana(1)">&#8250;</button>
         </div>
+        <div style="padding:0 14px 6px;">
+            <button id="btnAsisMesCompleto" onclick="toggleAsisMesCompleto()" style="width:100%;padding:9px;border-radius:8px;border:1.5px solid var(--border);background:white;color:var(--mid);font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;cursor:pointer;font-family:inherit;">Ver mes completo</button>
+        </div>
         <div id="asisDaysGrid" style="padding-bottom:8px;"></div>
         <input type="hidden" id="fechaAsis" value="">
     </div>
@@ -1285,8 +1288,9 @@ async function cargarEstado() {
         if (sg && st) {
             const pM = st.totalMes>0 ? Math.round(st.siExcMes/st.totalMes*100)+'%' : '–';
             const pT = st.totalTemp>0 ? Math.round(st.siExcTemp/st.totalTemp*100)+'%' : '–';
-            const ml = _MESES_LABEL_A[mesNum-1]||'';
-            sg.innerHTML = `<span class="npr-stlbl" style="color:#16a34a;">${pM} <small>%${ml}</small></span><span class="npr-stlbl" style="color:#2563eb;">${pT} <small>%TEMP</small></span><span class="npr-stlbl" style="color:#7c3aed;">${st.charlas} <small>Charlas</small></span><span class="npr-stlbl" style="color:#dc2626;">${st.faltasMes} <small>FALTAS</small></span>`;
+            const _DIAS_ABREV = ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'];
+            const diasLabel = [...DIAS_ENTRENO].sort().map(i=>_DIAS_ABREV[i]).join('-') || (_MESES_LABEL_A[mesNum-1]||'');
+            sg.innerHTML = `<span class="npr-stlbl" style="color:#16a34a;">${pM} <small>${diasLabel}</small></span><span class="npr-stlbl" style="color:#2563eb;">${pT} <small>%TEMP</small></span><span class="npr-stlbl" style="color:#7c3aed;">${st.charlas} <small>Charlas</small></span><span class="npr-stlbl" style="color:#dc2626;">${st.faltasMes} <small>FALTAS</small></span>`;
         }
         const tr = document.getElementById(`ntr-${idx}`);
         if (tr) {
@@ -1799,6 +1803,60 @@ window.addEventListener('orientationchange', _onOrientationOrResize);
 // ─── ASISTENCIAS SEMANA ───
 let asisWeekOffset = 0;
 let asisSelDay = null;
+let asisMesCompleto = false;
+
+function toggleAsisMesCompleto() {
+    asisMesCompleto = !asisMesCompleto;
+    if (asisMesCompleto) { asisSelDay = null; document.getElementById('asisHdrBox').style.display='none'; }
+    _renderAsisSemana();
+}
+
+function _renderAsisMesCompletoEnGrid(lun, hoy, grid) {
+    const year = lun.getFullYear(), month = lun.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const dow = (firstDay.getDay()+6)%7;
+    const firstMon = new Date(firstDay); firstMon.setDate(firstDay.getDate()-dow);
+    const lastDay = new Date(year, month+1, 0);
+    const lunHoy = getLunes(0);
+    const visLunVieM = [0,1,2,3,4].filter(i => DIAS_ENTRENO.has(i));
+    let cur = new Date(firstMon);
+    while (cur <= lastDay) {
+        const wMon = new Date(cur);
+        const wOff = Math.round((wMon - lunHoy)/(7*24*60*60*1000));
+        const strip = document.createElement('div');
+        strip.className = 'days-strip';
+        strip.style.cssText = `margin-bottom:6px;grid-template-columns:repeat(${visLunVieM.length+1},1fr);`;
+        for (const i of visLunVieM) {
+            const d = new Date(wMon); d.setDate(wMon.getDate()+i);
+            const inM = d.getMonth()===month;
+            const esHoy = d.getTime()===hoy.getTime();
+            const cls = ['dc', !inM?'dc-outm':'', esHoy?'is-today':''].filter(Boolean).join(' ');
+            const cell = document.createElement('div');
+            cell.className = cls;
+            cell.innerHTML = `<div class="dc-name">${DIAS[i]}</div><div class="dc-num">${d.getDate()}</div>${esHoy?'<div class="dc-hoy">HOY</div>':''}`;
+            const _d = new Date(d);
+            cell.onclick = () => { asisWeekOffset=wOff; asisSelDay=i; asisMesCompleto=false; document.getElementById('fechaAsis').value=iso(_d); _renderAsisSemana(); cargarEstado(); };
+            strip.appendChild(cell);
+        }
+        // SAB/DOM mini-grupo
+        const ww = document.createElement('div');
+        ww.style.cssText = 'border:1.5px solid #d1d5db;border-radius:8px;display:flex;overflow:hidden;';
+        for (let i = 5; i < 7; i++) {
+            const d = new Date(wMon); d.setDate(wMon.getDate()+i);
+            const inM = d.getMonth()===month;
+            const esHoy = d.getTime()===hoy.getTime();
+            const cls = ['dc', !inM?'dc-outm':'', esHoy?'is-today':''].filter(Boolean).join(' ');
+            const cell = document.createElement('div');
+            cell.className = cls;
+            cell.style.cssText = 'flex:1;border:none;border-radius:0;min-width:0;background:transparent;';
+            cell.innerHTML = `<div class="dc-name">${DIAS[i]}</div><div class="dc-num">${d.getDate()}</div>`;
+            ww.appendChild(cell);
+        }
+        strip.appendChild(ww);
+        grid.appendChild(strip);
+        cur.setDate(cur.getDate()+7);
+    }
+}
 
 function _renderAsisSemana() {
     const lun = getLunes(asisWeekOffset);
@@ -1809,11 +1867,23 @@ function _renderAsisSemana() {
     document.getElementById('asisMonthLabel').textContent =
         `${MESES_L[lun.getMonth()]} ${lun.getFullYear()}`;
 
+    const btnMes = document.getElementById('btnAsisMesCompleto');
+    if (btnMes) btnMes.textContent = asisMesCompleto ? 'Ver semana' : 'Ver mes completo';
+
     const grid = document.getElementById('asisDaysGrid');
-    grid.className = 'days-strip';
     grid.innerHTML = '';
 
-    for (let i = 0; i < 4; i++) {
+    if (asisMesCompleto) {
+        grid.className = '';
+        _renderAsisMesCompletoEnGrid(lun, hoy, grid);
+        return;
+    }
+
+    grid.className = 'days-strip';
+    const visLunVie = [0,1,2,3,4].filter(i => DIAS_ENTRENO.has(i));
+    grid.style.gridTemplateColumns = `repeat(${visLunVie.length+1}, 1fr)`;
+
+    for (const i of visLunVie) {
         const d = new Date(lun); d.setDate(lun.getDate()+i);
         const esHoy = d.getTime()===hoy.getTime();
         const isSel = asisSelDay === i;
@@ -1825,9 +1895,10 @@ function _renderAsisSemana() {
         cell.onclick = () => { asisSelDay=i; document.getElementById('fechaAsis').value=iso(_d); _renderAsisSemana(); cargarEstado(); };
         grid.appendChild(cell);
     }
+
     const wkWrap = document.createElement('div');
-    wkWrap.style.cssText = 'grid-column:span 3;border:1.5px solid #d1d5db;border-radius:8px;display:flex;overflow:hidden;';
-    for (let i = 4; i < 7; i++) {
+    wkWrap.style.cssText = 'border:1.5px solid #d1d5db;border-radius:8px;display:flex;overflow:hidden;';
+    for (let i = 5; i < 7; i++) {
         const d = new Date(lun); d.setDate(lun.getDate()+i);
         const esHoy = d.getTime()===hoy.getTime();
         const isSel = asisSelDay === i;
@@ -1843,7 +1914,7 @@ function _renderAsisSemana() {
     grid.appendChild(wkWrap);
 }
 function _asisCambiarSemana(dir) {
-    asisWeekOffset += dir; asisSelDay = null;
+    asisWeekOffset += dir; asisSelDay = null; asisMesCompleto = false;
     const hdr = document.getElementById('asisHdrBox');
     if (hdr) hdr.style.display = 'none';
     _renderAsisSemana();
