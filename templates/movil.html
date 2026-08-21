@@ -685,9 +685,10 @@ async function renderSemana() {
         const d = new Date(lun); d.setDate(lun.getDate()+i);
         const esHoy = d.getTime()===hoy.getTime();
         const esPasado = d < hoy;
-        const tieneFoto = esPasado && FOTOS.has(String(d.getDate()));
+        const tieneFoto = FOTOS.has(String(d.getDate()));
         const isSel = selectedDayIdx === i;
-        const cls = ['dc', esHoy?'is-today':'', esPasado?(tieneFoto?'has-foto':'sin-foto'):'', isSel?'selected':''].filter(Boolean).join(' ');
+        const dcExtra = tieneFoto ? 'has-foto' : (esPasado ? 'sin-foto' : '');
+        const cls = ['dc', esHoy?'is-today':'', dcExtra, isSel?'selected':''].filter(Boolean).join(' ');
         const cell = document.createElement('div');
         cell.className = cls;
         cell.innerHTML = `<div class="dc-name">${DIAS[i]}</div><div class="dc-num">${d.getDate()}</div>${esHoy?'<div class="dc-hoy">HOY</div>':''}`;
@@ -747,8 +748,9 @@ function _renderMesCompletoEnGrid(lun, hoy, grid) {
             const inM = d.getMonth() === month;
             const esHoy = d.getTime() === hoy.getTime();
             const esPas = d < hoy;
-            const foto = esPas && inM && FOTOS.has(String(d.getDate()));
-            const cls = ['dc', !inM?'dc-outm':'', esHoy?'is-today':'', esPas&&inM?(foto?'has-foto':'sin-foto'):''].filter(Boolean).join(' ');
+            const foto = inM && FOTOS.has(String(d.getDate()));
+            const dcExtraM = foto ? 'has-foto' : (esPas && inM ? 'sin-foto' : '');
+            const cls = ['dc', !inM?'dc-outm':'', esHoy?'is-today':'', dcExtraM].filter(Boolean).join(' ');
             const cell = document.createElement('div');
             cell.className = cls;
             cell.innerHTML = `<div class="dc-name">${DIAS[i]}</div><div class="dc-num">${d.getDate()}</div>${esHoy?'<div class="dc-hoy">HOY</div>':''}`;
@@ -1714,11 +1716,8 @@ function _csoOnFrameLoad() {
         _csoFrameLoaded = false;
         cerrarCrearSesion();
         toast('Sesión guardada ✓');
-        // Actualizar FOTOS sin recargar la página
-        fetch('/api/fotos_mes').then(r => r.json()).then(dias => {
-            FOTOS = new Set(dias.map(String));
-            renderSemana();
-        }).catch(() => {});
+        // Actualizar FOTOS y redibujar (renderSemana llama a _actualizarFotos con el mes correcto)
+        renderSemana();
     }
 }
 
