@@ -983,68 +983,7 @@
         </div>
     </div>
 
-    <div id="_navDbgHtml" style="position:fixed;bottom:0;left:0;right:0;background:#7c3aed;color:#fff;font-family:monospace;font-size:12px;padding:4px 10px;z-index:2147483647;pointer-events:none;">DASHBOARD HTML OK</div>
-    <script>document.getElementById('_navDbgHtml').textContent='DASHBOARD JS OK';</script>
     <script>
-        // ── DIAGNÓSTICO + RESCATE INMEDIATO (no espera load) ────────────────
-        (function() {
-            var _dbg = document.createElement('div');
-            _dbg.id = '_navDbg';
-            _dbg.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#0f172a;color:#22d3ee;font-family:monospace;font-size:11px;padding:3px 8px;z-index:2147483647;pointer-events:none;white-space:pre;';
-            _dbg.textContent = '[A] SCRIPT:OK — dashboard.html ejecutando';
-            document.body.appendChild(_dbg);
-            window._dbgSet = function(t) { var d = document.getElementById('_navDbg'); if(d) d.textContent = t; };
-
-            var _testBtn = document.createElement('button');
-            _testBtn.textContent = '🔴 TEST';
-            _testBtn.style.cssText = 'position:fixed;bottom:22px;right:10px;z-index:2147483647;background:#E31E24;color:white;padding:6px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:900;font-size:13px;';
-            _testBtn.onclick = function() { window._dbgSet('[T] ONCLICK OK — los onclicks básicos responden'); };
-            document.body.appendChild(_testBtn);
-
-            document.addEventListener('DOMContentLoaded', function() { window._dbgSet('[B] DOM:OK — DOM completado'); });
-            window.addEventListener('load', function() { window._dbgSet('[C] LOAD:OK — página completamente cargada'); });
-
-            // FIX: rescate de botones de navegación — captura antes que cualquier overlay
-            var _BTNS = [
-                { cls: 'btn-quickconfig-fixed', fn: function() {
-                    {% if usuario|lower == 'admin' %}
-                    if (typeof abrirConfigGeneral === 'function') abrirConfigGeneral();
-                    {% else %}
-                    if (typeof abrirConfigAccesosRapidos === 'function') abrirConfigAccesosRapidos();
-                    {% endif %}
-                }},
-                { cls: 'btn-archivos-fixed', fn: function() { if (typeof abrirPopupArchivos === 'function') abrirPopupArchivos(); } },
-                { cls: 'btn-ia-fixed', fn: function() { if (typeof abrirAsistenteIA === 'function') abrirAsistenteIA(); } },
-                { cls: 'btn-search-fixed', fn: function() { if (typeof toggleBuscadorIntranet === 'function') toggleBuscadorIntranet(null); } },
-                { cls: 'btn-cronograma-fixed', fn: function() { if (typeof openCronogramaAuth === 'function') openCronogramaAuth(); } }
-            ];
-            window.addEventListener('click', function(e) {
-                window._dbgSet('[2] CLK: ' + (e.target.tagName||'?') + ' id=' + (e.target.id||'-') + ' cls=' + (String(e.target.className||'').slice(0,40)) + ' xy=' + e.clientX + ',' + e.clientY);
-                var match = null;
-                for (var i = 0; i < _BTNS.length; i++) {
-                    var b = document.querySelector('.' + _BTNS[i].cls);
-                    if (!b) continue;
-                    var el = e.target;
-                    while (el && el !== document) {
-                        if (el === b) { match = _BTNS[i]; break; }
-                        el = el.parentElement;
-                    }
-                    if (match) break;
-                    var r = b.getBoundingClientRect();
-                    if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
-                        match = _BTNS[i]; break;
-                    }
-                }
-                if (match) {
-                    window._dbgSet('[3] MATCH:' + match.cls + ' — disparando...');
-                    e.stopPropagation();
-                    var fn = match.fn;
-                    setTimeout(function() { window._dbgSet('[4] FN:OK — ejecutada (si no hay modal: error interno)'); fn(); }, 0);
-                }
-            }, true);
-        })();
-        // ────────────────────────────────────────────────────────────────────
-
         // === ÍNDICE DE NAVEGACIÓN (buscador + accesos rápidos) ===
         const INDICE_NAVEGACION = [
             { label: 'Mi Equipo', ruta: '/mi-equipo', keywords: 'jugadores plantilla' },
@@ -2766,7 +2705,6 @@
             if (btnIA) btnIA.style.display = 'flex';
             hideLoader();
 
-            // (rescate y diagnóstico ya registrados al inicio del script)
         });
 
         document.addEventListener('DOMContentLoaded', function() {
