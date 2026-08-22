@@ -300,11 +300,22 @@ class _TemporadaSpreadsheet:
         self._ss = ss
     def worksheet(self, title):
         real = get_ws_name(title)
+        if real == title:  # hoja no es por temporada, acceso directo
+            return self._ss.worksheet(title)
         try:
             return self._ss.worksheet(real)
         except Exception:
-            # Fallback a nombre original (datos pre-migración)
-            return self._ss.worksheet(title)
+            # 2025/2026 todavía usa nombres originales (sin sufijo) → fallback legítimo
+            if get_temporada_safe() == '2025_2026':
+                return self._ss.worksheet(title)
+            # Temporadas nuevas: crear hoja vacía en lugar de mostrar datos antiguos
+            try:
+                return self._ss.add_worksheet(title=real, rows=1000, cols=26)
+            except Exception:
+                try:
+                    return self._ss.worksheet(real)  # ya fue creada por otra petición
+                except Exception:
+                    return self._ss.worksheet(title)  # último recurso
     def add_worksheet(self, title, rows=1000, cols=26, **kw):
         return self._ss.add_worksheet(title=title, rows=rows, cols=cols, **kw)
     def __getattr__(self, name):
