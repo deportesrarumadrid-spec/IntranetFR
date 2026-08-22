@@ -2276,7 +2276,8 @@ def api_checklist_equipacion_guardar():
 
 
 def _get_or_crear_sheet_horarios_temporada():
-    client = current_app.gs_client
+    # Usa el cliente RAW (sin caché) para garantizar datos frescos
+    client = current_app.gs_client._client
     NOMBRE_EXCEL = current_app.gs_name
     try:
         return client.open(NOMBRE_EXCEL).worksheet("HORARIOS_TEMPORADA")
