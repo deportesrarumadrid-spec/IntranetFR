@@ -7826,8 +7826,9 @@
     // --- LÓGICA HORARIOS TEMPORADA ---
     const HORTEMP_COLUMNAS = ['F7-1', 'F7-2', 'F11-CAMPO 1 1', 'F-11-CAMPO 1 2', 'F11-CAMPO 2 1', 'F11-CAMPO 2 2'];
     const HORTEMP_GRUPOS = [
-        { id: 'lunes_miercoles', tituloDefecto: 'LUNES Y MIÉRCOLES (Temporada 2025-26)', subtituloDefecto: 'DEBUTANTES MINICAMPO' },
-        { id: 'martes_jueves', tituloDefecto: 'MARTES Y JUEVES (Temporada 2025-26)', subtituloDefecto: '' },
+        { id: 'lunes_miercoles', tituloDefecto: 'LUNES Y MIÉRCOLES (Temporada {{ temporada_activa }})', subtituloDefecto: 'DEBUTANTES MINICAMPO' },
+        { id: 'martes_jueves', tituloDefecto: 'MARTES Y JUEVES (Temporada {{ temporada_activa }})', subtituloDefecto: '' },
+        { id: 'viernes', tituloDefecto: 'VIERNES (Temporada {{ temporada_activa }})', subtituloDefecto: '' },
     ];
     let horTempDatos = {};
     let horTempContexto = null;
