@@ -2684,10 +2684,18 @@
         }
 
         // Fallback de seguridad: Ocultar el cargador cuando la página esté lista
+        function _forzarOcultarLoaders() {
+            // Ocultar #loader-wrapper (dashboard) con fuerza bruta
+            const lw = document.getElementById('loader-wrapper');
+            if (lw) { lw.classList.add('loader-hidden'); lw.style.display = 'none'; lw.style.pointerEvents = 'none'; }
+            // Ocultar #loaderGlobal si existe (Financiero, Fisioterapia, etc.)
+            const lg = document.getElementById('loaderGlobal');
+            if (lg) lg.style.display = 'none';
+        }
+
         window.addEventListener('load', () => {
+            _forzarOcultarLoaders();
             // Ensure cronograma and change team buttons are visible by default on page load
-            // This fixes the issue where they might be hidden if cronograma was opened
-            // on a previous page and then navigated away without closing/minimizing.
             const btnCrono = document.querySelector('.btn-cronograma-fixed');
             const btnTeam = document.querySelector('.btn-change-team-fixed');
             const btnIA = document.querySelector('.btn-ia-fixed');
@@ -2699,6 +2707,7 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => {
+                _forzarOcultarLoaders();
                 hideLoader();
             }, 2500); // Failsafe agresivo: 2.5s máximo
         });
