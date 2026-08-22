@@ -1003,8 +1003,19 @@ def asistencias():
         equipo_activo = equipos[0]
     session['equipo_defecto'] = equipo_activo 
 
-    meses = ["Enero 2026", "Febrero 2026", "Marzo 2026", "Abril 2026", "Mayo 2026", "Junio 2026"]
-    
+    # Años de la temporada activa para el calendario de asistencias
+    try:
+        _t_asis = get_temporada_activa()
+        _p_asis = _t_asis.split('/')
+        t_ini_asis = int(_p_asis[0])
+        t_fin_asis = int(_p_asis[1]) if len(_p_asis) > 1 else t_ini_asis + 1
+    except Exception:
+        from datetime import datetime as _dt2
+        _h2 = _dt2.now()
+        t_ini_asis = _h2.year - 1 if _h2.month < 9 else _h2.year
+        t_fin_asis = t_ini_asis + 1
+    meses = []  # ya no se usa en el template, se calcula en JS con t_ini/t_fin
+
     # También cargamos el Staff para saber quiénes son los entrenadores
     try:
         staff_sheet = client.open(NOMBRE_EXCEL).worksheet("STAFF")
@@ -1022,11 +1033,13 @@ def asistencias():
     except:
         staff_datos = []
 
-    return render_template('asistencias/lista.html', 
-                           usuario=usuario, 
+    return render_template('asistencias/lista.html',
+                           usuario=usuario,
                            equipos=equipos,
-                           equipo_defecto=equipo_activo, # Pasar el equipo activo a la plantilla
-                           meses=meses, 
+                           equipo_defecto=equipo_activo,
+                           t_ini=t_ini_asis,
+                           t_fin=t_fin_asis,
+                           meses=meses,
                            jugadores_raw=datos,
                            staff_raw=staff_datos)
 

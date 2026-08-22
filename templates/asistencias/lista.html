@@ -75,12 +75,14 @@
         <div id="wrapperMes" style="flex: 1; min-width: 150px; position: relative;">
             <label style="font-size: 10px; font-weight: 900; color: #444;">MES</label>
             <select id="selectMes" onchange="onCambioMesAsist()" style="display:none;">
-                <option value="1">ENERO 2026</option><option value="2">FEBRERO 2026</option>
-                <option value="3">MARZO 2026</option><option value="4">ABRIL 2026</option>
-                <option value="5" selected>MAYO 2026</option><option value="6">JUNIO 2026</option>
-                <option value="7">JULIO 2026</option><option value="8">AGOSTO 2026</option>
-                <option value="9">SEPTIEMBRE 2026</option><option value="10">OCTUBRE 2026</option>
-                <option value="11">NOVIEMBRE 2026</option><option value="12">DICIEMBRE 2026</option>
+                {% set _hm = namespace(sel=false) %}
+                {% for m, nom, anio in [
+                    (9,'SEPTIEMBRE',t_ini),(10,'OCTUBRE',t_ini),(11,'NOVIEMBRE',t_ini),(12,'DICIEMBRE',t_ini),
+                    (1,'ENERO',t_fin),(2,'FEBRERO',t_fin),(3,'MARZO',t_fin),(4,'ABRIL',t_fin),
+                    (5,'MAYO',t_fin),(6,'JUNIO',t_fin)
+                ] %}
+                <option value="{{ m }}" data-anio="{{ anio }}"{% if not _hm.sel %} selected{% set _hm.sel = true %}{% endif %}>{{ nom }} {{ anio }}</option>
+                {% endfor %}
             </select>
             <!-- Trigger -->
             <div id="customMesTrigger" onclick="toggleMesDropdown()"
@@ -88,7 +90,7 @@
                 onmouseover="this.style.borderColor='#E31E24'" onmouseout="this.style.borderColor='#e2e8f0'">
                 <span style="display:flex;align-items:center;gap:8px;">
                     <i class="fas fa-calendar-days" style="color:#E31E24;font-size:15px;"></i>
-                    <span id="customMesLabel" style="font-weight:900;font-size:14px;color:#1e293b;letter-spacing:.5px;">MAYO 2026</span>
+                    <span id="customMesLabel" style="font-weight:900;font-size:14px;color:#1e293b;letter-spacing:.5px;">SEPTIEMBRE {{ t_ini }}</span>
                 </span>
                 <i id="customMesArrow" class="fas fa-chevron-down" style="color:#94a3b8;font-size:11px;transition:transform .2s;"></i>
             </div>
@@ -99,26 +101,40 @@
         </div>
         <script>
         (function(){
+            const T_INI = {{ t_ini }};
+            const T_FIN = {{ t_fin }};
+            window._TINI_ASIS = T_INI;
+            window._TFIN_ASIS = T_FIN;
             const meses = [
-                {v:'1',t:'ENERO'},{v:'2',t:'FEBRERO'},{v:'3',t:'MARZO'},{v:'4',t:'ABRIL'},
-                {v:'5',t:'MAYO'},{v:'6',t:'JUNIO'},{v:'7',t:'JULIO'},{v:'8',t:'AGOSTO'},
-                {v:'9',t:'SEPTIEMBRE'},{v:'10',t:'OCTUBRE'},{v:'11',t:'NOVIEMBRE'},{v:'12',t:'DICIEMBRE'}
+                {v:'9',t:'SEPTIEMBRE',año:T_INI},{v:'10',t:'OCTUBRE',año:T_INI},
+                {v:'11',t:'NOVIEMBRE',año:T_INI},{v:'12',t:'DICIEMBRE',año:T_INI},
+                {v:'1',t:'ENERO',año:T_FIN},{v:'2',t:'FEBRERO',año:T_FIN},
+                {v:'3',t:'MARZO',año:T_FIN},{v:'4',t:'ABRIL',año:T_FIN},
+                {v:'5',t:'MAYO',año:T_FIN},{v:'6',t:'JUNIO',año:T_FIN}
             ];
-            const AÑO = '2026';
-            let mesActual = '5';
+            window._MESES_ASIS = meses;
+            // Mes por defecto: mes actual si está en la temporada, si no Sep del inicio
+            const _hM = new Date().getMonth() + 1;
+            const _defM = meses.find(m => parseInt(m.v) === _hM) || meses[0];
+            let mesActual = _defM.v;
+            // Actualizar select y label al valor por defecto
+            const _sel0 = document.getElementById('selectMes');
+            if (_sel0) { _sel0.value = mesActual; }
+            const _lbl0 = document.getElementById('customMesLabel');
+            if (_lbl0) _lbl0.textContent = `${_defM.t} ${_defM.año}`;
             const cont = document.getElementById('customMesOptions');
             function renderOpciones(){
                 cont.innerHTML = '';
                 meses.forEach(m => {
                     const sel = m.v === mesActual;
                     const el = document.createElement('div');
-                    el.innerHTML = `<span style="font-weight:900;font-size:11px;">${m.t}</span><span style="font-size:10px;color:#94a3b8;margin-left:6px;">${AÑO}</span>${sel?'<i class="fas fa-check" style="margin-left:auto;color:#E31E24;font-size:9px;"></i>':''}`;
+                    el.innerHTML = `<span style="font-weight:900;font-size:11px;">${m.t}</span><span style="font-size:10px;color:#94a3b8;margin-left:6px;">${m.año}</span>${sel?'<i class="fas fa-check" style="margin-left:auto;color:#E31E24;font-size:9px;"></i>':''}`;
                     el.style.cssText = `display:flex;align-items:center;padding:9px 14px;border-radius:8px;cursor:pointer;font-weight:900;color:${sel?'#E31E24':'#1e293b'};background:${sel?'#fff1f2':''};border-left:3px solid ${sel?'#E31E24':'transparent'};transition:.15s;`;
                     el.onmouseover = ()=>{ if(!sel) el.style.background='#f8fafc'; };
                     el.onmouseout  = ()=>{ if(!sel) el.style.background=''; };
                     el.onclick = ()=>{
                         mesActual = m.v;
-                        document.getElementById('customMesLabel').textContent = `${m.t} ${AÑO}`;
+                        document.getElementById('customMesLabel').textContent = `${m.t} ${m.año}`;
                         const s = document.getElementById('selectMes');
                         s.value = m.v;
                         renderOpciones();
@@ -784,6 +800,11 @@ function cambiarVistaAsistConv(vista) {
     }
 }
 
+function _añoParaMes(mesNum) {
+    const T = window._TINI_ASIS || {{ t_ini }};
+    const F = window._TFIN_ASIS || {{ t_fin }};
+    return mesNum >= 9 ? T : F;
+}
 async function generarCalendario() {
     const equipo = document.getElementById('selectEquipo').value;
     if (!equipo) return;
@@ -816,11 +837,12 @@ async function generarCalendario() {
     const filtroDias = document.getElementById('selectDias').value;
 
     cambiosPendientes = []; 
-    const totalDias = new Date(2026, mes + 1, 0).getDate();
+    const _añoMes = _añoParaMes(mes + 1);
+    const totalDias = new Date(_añoMes, mes + 1, 0).getDate();
     const diasValidos = [];
 
     for (let d = 1; d <= totalDias; d++) {
-        const fecha = new Date(2026, mes, d);
+        const fecha = new Date(_añoMes, mes, d);
         const numDiaSemana = fecha.getDay();
         if ((filtroDias === 'LX' && [1,3].includes(numDiaSemana)) || (filtroDias === 'MJ' && [2,4].includes(numDiaSemana)) || filtroDias === 'ALL') {
             diasValidos.push({ num: d, label: nombresDias[numDiaSemana], fechaFull: fecha });
@@ -1589,8 +1611,9 @@ function actualizarAlertasVisuales() {
     const mes = parseInt(document.getElementById('selectMes').value) - 1;
     const filtroDias = document.getElementById('selectDias').value;
     const diasValidos = [];
-    for (let d = 1; d <= new Date(2026, mes + 1, 0).getDate(); d++) {
-        const f = new Date(2026, mes, d);
+    const _añoM2 = _añoParaMes(mes + 1);
+    for (let d = 1; d <= new Date(_añoM2, mes + 1, 0).getDate(); d++) {
+        const f = new Date(_añoM2, mes, d);
         const ns = f.getDay();
         if ((filtroDias === 'LX' && [1,3].includes(ns)) || (filtroDias === 'MJ' && [2,4].includes(ns)) || filtroDias === 'ALL') {
             diasValidos.push({ num: d, label: nombresDias[ns], fechaFull: f });
@@ -1999,16 +2022,13 @@ let _staffDiasConfig = []; // ['lunes','miercoles',...]
 
 // Temporada: Sep→Ago (años calculados dinámicamente)
 const _STAFF_TEMPORADA = (function() {
-    const hoy = new Date();
-    const ac = hoy.getFullYear();
-    const base = hoy.getMonth() >= 8 ? ac : ac - 1;
+    const base = window._TINI_ASIS || {{ t_ini }};
     return [
         {mes:9,anio:base,   label:'SEP'}, {mes:10,anio:base,   label:'OCT'},
         {mes:11,anio:base,  label:'NOV'}, {mes:12,anio:base,   label:'DIC'},
         {mes:1, anio:base+1,label:'ENE'}, {mes:2, anio:base+1, label:'FEB'},
         {mes:3, anio:base+1,label:'MAR'}, {mes:4, anio:base+1, label:'ABR'},
         {mes:5, anio:base+1,label:'MAY'}, {mes:6, anio:base+1, label:'JUN'},
-        {mes:7, anio:base+1,label:'JUL'}, {mes:8, anio:base+1, label:'AGO'},
     ];
 })();
 
