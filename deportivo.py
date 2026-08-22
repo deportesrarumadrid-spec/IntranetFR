@@ -150,8 +150,28 @@ def deportivo():
             equipo_activo = equipos[0]
             session['equipo_defecto'] = equipo_activo
 
-    mes_actual = request.args.get('mes', '2026-05')
     hoy = datetime.now()
+
+    # Meses de la temporada activa (Sep año1 → Jun año2)
+    try:
+        from app import get_temporada_activa as _gta
+        _t = _gta()
+        _partes = _t.split('/')
+        _t_ini = int(_partes[0])
+        _t_fin = int(_partes[1]) if len(_partes) > 1 else _t_ini + 1
+    except Exception:
+        _t_ini = hoy.year - 1 if hoy.month < 9 else hoy.year
+        _t_fin = _t_ini + 1
+
+    _NOM_MES = {9:'SEPTIEMBRE',10:'OCTUBRE',11:'NOVIEMBRE',12:'DICIEMBRE',
+                1:'ENERO',2:'FEBRERO',3:'MARZO',4:'ABRIL',5:'MAYO',6:'JUNIO'}
+    meses_temporada = (
+        [(f'{_t_ini}-{m:02d}', _NOM_MES[m]) for m in [9,10,11,12]] +
+        [(f'{_t_fin}-{m:02d}', _NOM_MES[m]) for m in [1,2,3,4,5,6]]
+    )
+    _hoy_val = f'{hoy.year}-{hoy.month:02d}'
+    _default_mes = _hoy_val if any(v == _hoy_val for v, _ in meses_temporada) else meses_temporada[0][0]
+    mes_actual = request.args.get('mes', _default_mes)
 
     # Días de entrenamiento del equipo activo (0=Lun ... 4=Vie)
     dias_entreno_nums = _get_dias_entreno(equipo_activo)
@@ -364,6 +384,7 @@ def deportivo():
     return render_template('deportivo/calendario.html',
                            usuario=usuario,
                            mes_actual=mes_actual,
+                           meses_temporada=meses_temporada,
                            objetivos=objetivos,
                            semanas=semanas,
                            archivos_subidos=len(archivos_reales),
