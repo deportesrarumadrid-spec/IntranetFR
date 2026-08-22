@@ -302,7 +302,7 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        .loader-hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        #loader-wrapper.loader-hidden { opacity: 0; visibility: hidden; pointer-events: none; display: none; }
 
 /* Botón Cronograma Universal Mejorado */
 .btn-cronograma-fixed {
@@ -497,7 +497,7 @@
 </head>
 <body>
     <!-- Pantalla de Carga -->
-    <div id="loader-wrapper" class="loader-hidden">
+    <div id="loader-wrapper" class="loader-hidden" style="display:none;">
         <div class="loader-container">
             <div class="loader-spinner"></div>
             <img src="{{ url_for('static', filename='ESCUDO SIN FONDO.png') }}" class="loader-escudo" alt="Cargando...">
