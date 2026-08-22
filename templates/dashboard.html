@@ -847,11 +847,11 @@
             </div>
             <div id="fixedBtnsWrapper" style="display:flex; align-items:center; gap:8px; flex-wrap:nowrap; flex-shrink:0;">
             <div id="contenedorAccesosRapidos" style="display:contents;"></div>
-            <button class="btn-quickconfig-fixed" onclick="{% if usuario|lower == 'admin' %}abrirConfigGeneral(){% else %}abrirConfigAccesosRapidos(){% endif %}" title="{% if usuario|lower == 'admin' %}Configuración General{% else %}Configurar accesos rápidos{% endif %}">
+            <button class="btn-quickconfig-fixed" onclick="{% if usuario|lower == 'admin' %}_testBtnClick('Config'); abrirConfigGeneral(){% else %}_testBtnClick('Accesos'); abrirConfigAccesosRapidos(){% endif %}" title="{% if usuario|lower == 'admin' %}Configuración General{% else %}Configurar accesos rápidos{% endif %}">
                 <i class="fas fa-gear"></i>
             </button>
             {% if usuario|lower == 'admin' or session.get('permisos', {}).get('ARCHIVOS') == 'SI' %}
-            <button class="btn-archivos-fixed" title="Carpetas y Documentos" onclick="abrirPopupArchivos()">
+            <button class="btn-archivos-fixed" title="Carpetas y Documentos" onclick="_testBtnClick('Archivos'); abrirPopupArchivos()">
                 <i class="fas fa-folder-open"></i>
             </button>
             <a href="/editor-excel" class="btn-excel-fixed" title="Editor de hojas de cálculo" target="_blank">
@@ -862,7 +862,7 @@
                 <i class="fab fa-dropbox"></i>
             </a>
             {% if usuario|lower == 'admin' %}
-            <button class="btn-ia-fixed" onclick="abrirAsistenteIA()" title="Preguntar a la IA">
+            <button class="btn-ia-fixed" onclick="_testBtnClick('IA'); abrirAsistenteIA()" title="Preguntar a la IA">
                 <img src="{{ url_for('static', filename='ai-icon.png') }}" alt="IA">
             </button>
             {% else %}
@@ -876,7 +876,7 @@
             </a>
             {% endif %}
             {% if usuario|lower == 'admin' or session.get('permisos', {}).get('CRONOGRAMA') == 'SI' %}
-            <button class="btn-cronograma-fixed" onclick="openCronogramaAuth()" title="Ver Cronograma (Alt+1)">
+            <button class="btn-cronograma-fixed" onclick="_testBtnClick('Cronograma'); openCronogramaAuth()" title="Ver Cronograma (Alt+1)">
                 <i class="fas fa-calendar-days"></i>
                 <span id="badgeCronoGlobal" class="badge-crono">1</span>
             </button>
@@ -2681,6 +2681,15 @@
                 // Forzado de seguridad por si falla la transición CSS
                 setTimeout(() => { loader.style.display = 'none'; }, 600);
             }
+        }
+
+        // DEBUG TEMPORAL: toast visible para confirmar si onclick se ejecuta
+        function _testBtnClick(nombre) {
+            const t = document.createElement('div');
+            t.textContent = '✓ CLICK: ' + nombre;
+            t.style.cssText = 'position:fixed;top:70px;right:20px;background:#16a34a;color:white;padding:10px 18px;border-radius:10px;font-weight:900;font-size:14px;z-index:999999;box-shadow:0 4px 15px rgba(0,0,0,0.3);pointer-events:none;';
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
         }
 
         // Fallback de seguridad: Ocultar el cargador cuando la página esté lista
