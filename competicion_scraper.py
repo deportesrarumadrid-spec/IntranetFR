@@ -18,7 +18,19 @@ os.makedirs(SHIELDS_DIR, exist_ok=True)
 KIT_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'kit_colors_cache.json')
 KIT_REPORT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'kit_clash_report.json')
 
-CONVOCATORIAS_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'convocatorias_cache.json')
+def _conv_data_folder():
+    try:
+        from app import get_data_folder
+        return get_data_folder()
+    except Exception:
+        return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data')
+
+def _conv_cache_file():   return os.path.join(_conv_data_folder(), 'convocatorias_cache.json')
+def _conv_report_file():  return os.path.join(_conv_data_folder(), 'convocatorias_report.json')
+def _conv_anot_file():    return os.path.join(_conv_data_folder(), 'convocatorias_anotaciones.json')
+
+# Aliases para compatibilidad con módulos externos que importan las constantes
+CONVOCATORIAS_CACHE_FILE  = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'convocatorias_cache.json')
 CONVOCATORIAS_REPORT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'convocatorias_report.json')
 
 # --- Auto-sincronización en segundo plano ---
@@ -1407,9 +1419,10 @@ def fetch_codacta_map(session, club_id=CLUB_FUENTELARREYNA_ID, cod_temporada=Non
 
 
 def _load_convocatorias_cache():
-    if os.path.exists(CONVOCATORIAS_CACHE_FILE):
+    f_path = _conv_cache_file()
+    if os.path.exists(f_path):
         try:
-            with open(CONVOCATORIAS_CACHE_FILE, 'r', encoding='utf-8') as f:
+            with open(f_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception:
             pass
@@ -1417,8 +1430,9 @@ def _load_convocatorias_cache():
 
 
 def _save_convocatorias_cache(cache):
-    os.makedirs(os.path.dirname(CONVOCATORIAS_CACHE_FILE), exist_ok=True)
-    with open(CONVOCATORIAS_CACHE_FILE, 'w', encoding='utf-8') as f:
+    f_path = _conv_cache_file()
+    os.makedirs(os.path.dirname(f_path), exist_ok=True)
+    with open(f_path, 'w', encoding='utf-8') as f:
         json.dump(cache, f, ensure_ascii=False, indent=2)
 
 
@@ -1729,8 +1743,9 @@ def build_convocatorias_report(username, password):
             "temporada": f"{fecha_desde} a {fecha_hasta}",
             "entries": report_entries
         }
-        os.makedirs(os.path.dirname(CONVOCATORIAS_REPORT_FILE), exist_ok=True)
-        with open(CONVOCATORIAS_REPORT_FILE, 'w', encoding='utf-8') as f:
+        rpt_path = _conv_report_file()
+        os.makedirs(os.path.dirname(rpt_path), exist_ok=True)
+        with open(rpt_path, 'w', encoding='utf-8') as f:
             json.dump(report_data, f, ensure_ascii=False, indent=2)
 
         con_datos = sum(1 for e in report_entries if not e['sin_datos'])
@@ -1743,9 +1758,10 @@ def build_convocatorias_report(username, password):
 
 
 def load_convocatorias_report():
-    if os.path.exists(CONVOCATORIAS_REPORT_FILE):
+    rpt_path = _conv_report_file()
+    if os.path.exists(rpt_path):
         try:
-            with open(CONVOCATORIAS_REPORT_FILE, 'r', encoding='utf-8') as f:
+            with open(rpt_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception:
             pass
@@ -1777,12 +1793,11 @@ def guardar_checklist_equipacion(match_key, datos):
 
 # --- ANOTACIONES MANUALES DE CONVOCATORIA (editar convocado/no convocado + comentario por celda) ---
 
-CONVOCATORIA_ANOTACIONES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'convocatorias_anotaciones.json')
-
 def load_convocatoria_anotaciones():
-    if os.path.exists(CONVOCATORIA_ANOTACIONES_FILE):
+    anot_path = _conv_anot_file()
+    if os.path.exists(anot_path):
         try:
-            with open(CONVOCATORIA_ANOTACIONES_FILE, 'r', encoding='utf-8') as f:
+            with open(anot_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception:
             pass
@@ -1794,8 +1809,9 @@ def guardar_convocatoria_anotacion(clave, datos):
     actual = anotaciones.get(clave, {})
     actual.update(datos)
     anotaciones[clave] = actual
-    os.makedirs(os.path.dirname(CONVOCATORIA_ANOTACIONES_FILE), exist_ok=True)
-    with open(CONVOCATORIA_ANOTACIONES_FILE, 'w', encoding='utf-8') as f:
+    anot_path = _conv_anot_file()
+    os.makedirs(os.path.dirname(anot_path), exist_ok=True)
+    with open(anot_path, 'w', encoding='utf-8') as f:
         json.dump(anotaciones, f, ensure_ascii=False, indent=2)
     return actual
 

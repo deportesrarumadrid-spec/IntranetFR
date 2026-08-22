@@ -7,7 +7,12 @@ from deportivo import limpiar_texto_robusto as _norm
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DISCREPANCIAS_REVISADAS_FILE = os.path.join(BASE_DIR, 'static', 'data', 'discrepancias_jugadores_revisadas.json')
-CONVOCATORIAS_REPORT_FILE = os.path.join(BASE_DIR, 'static', 'data', 'convocatorias_report.json')
+def _get_conv_report_file():
+    try:
+        from competicion_scraper import _conv_report_file
+        return _conv_report_file()
+    except Exception:
+        return os.path.join(BASE_DIR, 'static', 'data', 'convocatorias_report.json')
 
 DISCREPANCIAS_MIN_INTERVAL_MINUTES = 60
 
@@ -148,10 +153,11 @@ def cargar_tokens_globales(client, nombre_excel, hoja, col_nombre):
 
 def cargar_tokens_convocatorias():
     """{equipo_norm: set(tokens)} de jugadores convocados, leído del reporte ya scrapeado de la RFFM."""
-    if not os.path.exists(CONVOCATORIAS_REPORT_FILE):
+    _rpt = _get_conv_report_file()
+    if not os.path.exists(_rpt):
         return None
     try:
-        with open(CONVOCATORIAS_REPORT_FILE, 'r', encoding='utf-8') as f:
+        with open(_rpt, 'r', encoding='utf-8') as f:
             data = json.load(f)
     except Exception:
         return None

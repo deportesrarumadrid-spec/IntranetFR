@@ -8,7 +8,12 @@ import threading
 from datetime import datetime
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONVOCATORIAS_REPORT_FILE = os.path.join(BASE_DIR, 'static', 'data', 'convocatorias_report.json')
+def _get_conv_report_file():
+    try:
+        from competicion_scraper import _conv_report_file
+        return _conv_report_file()
+    except Exception:
+        return os.path.join(BASE_DIR, 'static', 'data', 'convocatorias_report.json')
 MOTIVOS_FILE = os.path.join(BASE_DIR, 'static', 'data', 'ausencias_motivos.json')
 
 MIN_INTERVAL_MINUTES = 30
@@ -179,7 +184,7 @@ def _detectar_convocatorias():
     alertas = []
     motivos = _load_motivos()
     try:
-        with open(CONVOCATORIAS_REPORT_FILE, 'r', encoding='utf-8') as f:
+        with open(_get_conv_report_file(), 'r', encoding='utf-8') as f:
             report = json.load(f)
     except Exception as e:
         print(f"[ausencias_monitor] Error leyendo convocatorias_report.json: {e}")
