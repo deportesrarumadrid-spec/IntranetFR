@@ -259,6 +259,7 @@ _HOJAS_POR_TEMPORADA = {
     'INFORMES_SEMANALES','VIDEOANALISIS','ALQUILERES','HORARIOS_TEMPORADA',
     'DETALLES_EQUIPO','ROPA','ROPA_LOG','PEDIDOS_ROPA','PEDIDOS_ROPA_ITEMS',
     'GPS','EJERCICIOS','TECNIFICACIONES','SUBVENCIONES','FISIOTERAPIA',
+    'EQUIPO',
 }
 
 def _load_temporadas_config():
@@ -2459,6 +2460,16 @@ def api_equipos_config():
         # Mantener también copia legacy para compatibilidad con otros módulos
         with open(EQUIPOS_CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+        # Sincronizar hoja EQUIPO en Google Sheets (ya pasa por el proxy de temporada)
+        try:
+            nombres = [e['nombre'] for e in data.get('equipos', []) if e.get('nombre')]
+            sheet_eq = client.open(NOMBRE_EXCEL).worksheet('EQUIPO')
+            sheet_eq.clear()
+            sheet_eq.append_row(['EQUIPO'])
+            for nombre in nombres:
+                sheet_eq.append_row([nombre])
+        except Exception as _e:
+            print(f"[equipos_config] Error sync hoja EQUIPO: {_e}")
         return jsonify({"status": "ok"})
     try:
         with open(cfg_file, 'r', encoding='utf-8') as f:
@@ -2619,6 +2630,7 @@ def api_cerrar_temporada():
             'ASISTENCIAS':    ['FECHA', 'EQUIPO', 'NOMBRE', 'DIA', 'ESTADO', 'VALORACION', 'OBSERVACIONES', 'CHARLA'],
             'JUGADORES':      ['NOMBRE', 'EQUIPO', 'POSICION', 'DORSAL', 'BAJA_DESDE', 'ALTA_DESDE', 'OBSERVACIONES'],
             'MI EQUIPO':      ['NOMBRE', 'EQUIPO', 'POSICION'],
+            'EQUIPO':         ['EQUIPO'],
             'COORDINACION':   ['FECHA', 'EQUIPO', 'JUGADOR', 'REUNION', 'TIPO', 'OBSERVACIONES'],
             'GPS_POSICIONES': ['FECHA', 'EQUIPO', 'JUGADOR', 'POSICION'],
             'PAGOS JUGADORES':['FECHA', 'NOMBRE', 'EQUIPO', 'CONCEPTO', 'IMPORTE', 'ESTADO'],
