@@ -2705,9 +2705,10 @@
             if (btnIA) btnIA.style.display = 'flex';
             hideLoader();
 
-            // FIX: rescate por coordenadas — activa botones aunque un overlay invisible
-            // intercepte el evento antes de que llegue al onclick del botón
+            // FIX: rescate de botones de navegación — activa la acción desde window-capture
+            // (primer listener en disparar, antes que cualquier cosa que bloquee el onclick)
             (function() {
+                var _lastFired = 0;
                 var _BTNS = [
                     { cls: 'btn-quickconfig-fixed', fn: function() {
                         {% if usuario|lower == 'admin' %}
@@ -2717,29 +2718,36 @@
                         {% endif %}
                     }},
                     { cls: 'btn-archivos-fixed', fn: function() { if (typeof abrirPopupArchivos === 'function') abrirPopupArchivos(); } },
-                    { cls: 'btn-ia-fixed', fn: function() {
-                        {% if usuario|lower == 'admin' %}
-                        if (typeof abrirAsistenteIA === 'function') abrirAsistenteIA();
-                        {% else %}
-                        if (typeof toggleBuscadorIntranet === 'function') toggleBuscadorIntranet();
-                        {% endif %}
-                    }},
+                    { cls: 'btn-ia-fixed', fn: function() { if (typeof abrirAsistenteIA === 'function') abrirAsistenteIA(); } },
+                    { cls: 'btn-search-fixed', fn: function() { if (typeof toggleBuscadorIntranet === 'function') toggleBuscadorIntranet(null); } },
                     { cls: 'btn-cronograma-fixed', fn: function() { if (typeof openCronogramaAuth === 'function') openCronogramaAuth(); } }
                 ];
                 window.addEventListener('click', function(e) {
-                    // Si el target ya está dentro de nuestros botones, el onclick nativo lo gestiona
-                    if (e.target && e.target.closest && e.target.closest('#fixedBtnsWrapper')) return;
-                    // Comprobar si las coordenadas del click están sobre alguno de nuestros botones
+                    var match = null;
                     for (var i = 0; i < _BTNS.length; i++) {
                         var b = document.querySelector('.' + _BTNS[i].cls);
                         if (!b) continue;
+                        // 1) ¿El target es el botón o un hijo suyo?
+                        var el = e.target;
+                        while (el && el !== document) {
+                            if (el === b) { match = _BTNS[i]; break; }
+                            el = el.parentElement;
+                        }
+                        if (match) break;
+                        // 2) ¿El click cayó en el área del botón? (overlay invisible)
                         var r = b.getBoundingClientRect();
                         if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
-                            _BTNS[i].fn();
-                            break;
+                            match = _BTNS[i]; break;
                         }
                     }
-                }, true); // fase de captura: se ejecuta antes que cualquier otro listener
+                    if (match) {
+                        var now = Date.now();
+                        if (now - _lastFired > 300) { // evita doble disparo con onclick
+                            _lastFired = now;
+                            match.fn();
+                        }
+                    }
+                }, true); // capture: el primero en dispararse
             })();
         });
 
