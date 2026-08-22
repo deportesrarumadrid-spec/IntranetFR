@@ -847,6 +847,7 @@
             </div>
             <div id="fixedBtnsWrapper" style="display:flex; align-items:center; gap:8px; flex-wrap:nowrap; flex-shrink:0;">
             <div id="contenedorAccesosRapidos" style="display:contents;"></div>
+            <span id="badgeTemporada" title="Temporada activa" style="font-size:11px;font-weight:900;color:#E31E24;letter-spacing:0.5px;white-space:nowrap;cursor:default;">{{ temporada_activa }}</span>
             <button class="btn-quickconfig-fixed" onclick="{% if usuario|lower == 'admin' %}abrirConfigGeneral(){% else %}abrirConfigAccesosRapidos(){% endif %}" title="{% if usuario|lower == 'admin' %}Configuración General{% else %}Configurar accesos rápidos{% endif %}">
                 <i class="fas fa-gear"></i>
             </button>

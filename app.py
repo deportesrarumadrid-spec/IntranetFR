@@ -331,6 +331,10 @@ client.open = _season_open
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['DATA_FOLDER'] = DATA_FOLDER
 
+@app.context_processor
+def inject_temporada():
+    return {'temporada_activa': get_temporada_activa()}
+
 def normalizar_cabecera_universal(h):
     """Limpia cabeceras de forma agresiva para comparaciones seguras."""
     s = "".join(c for c in unicodedata.normalize('NFD', str(h).upper().strip()) if unicodedata.category(c) != 'Mn')
