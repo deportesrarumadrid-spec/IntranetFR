@@ -2705,6 +2705,21 @@
             if (btnIA) btnIA.style.display = 'flex';
             hideLoader();
 
+            // ── DIAGNÓSTICO TEMPORAL ──────────────────────────────────────────
+            var _dbg = document.createElement('div');
+            _dbg.id = '_navDbg';
+            _dbg.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#0f172a;color:#22d3ee;font-family:monospace;font-size:11px;padding:3px 8px;z-index:9999999;pointer-events:none;white-space:pre;';
+            _dbg.textContent = '[1] LOAD:OK — carga ventana completada';
+            document.body.appendChild(_dbg);
+            var _dbgSet = function(t) { var d = document.getElementById('_navDbg'); if(d) d.textContent = t; };
+
+            var _testBtnDbg = document.createElement('button');
+            _testBtnDbg.textContent = '🔴 TEST';
+            _testBtnDbg.style.cssText = 'position:fixed;bottom:22px;right:10px;z-index:9999999;background:#E31E24;color:white;padding:6px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:900;font-size:13px;';
+            _testBtnDbg.onclick = function() { _dbgSet('[T] TEST ONCLICK FUNCIONA — los onclicks básicos responden'); };
+            document.body.appendChild(_testBtnDbg);
+            // ────────────────────────────────────────────────────────────────
+
             // FIX: rescate de botones de navegación — activa la acción desde window-capture
             // (primer listener en disparar, antes que cualquier cosa que bloquee el onclick)
             (function() {
@@ -2723,6 +2738,7 @@
                     { cls: 'btn-cronograma-fixed', fn: function() { if (typeof openCronogramaAuth === 'function') openCronogramaAuth(); } }
                 ];
                 window.addEventListener('click', function(e) {
+                    _dbgSet('[2] CLK: ' + (e.target.tagName||'?') + ' id=' + (e.target.id||'-') + ' cls=' + (String(e.target.className||'').slice(0,40)) + ' xy=' + e.clientX + ',' + e.clientY);
                     var match = null;
                     for (var i = 0; i < _BTNS.length; i++) {
                         var b = document.querySelector('.' + _BTNS[i].cls);
@@ -2741,11 +2757,12 @@
                         }
                     }
                     if (match) {
+                        _dbgSet('[3] MATCH:' + match.cls + ' — disparando acción...');
                         // stopPropagation: evita que handlers de burbuja (modal_clickout.js)
                         // cierren el modal que la acción va a abrir en el mismo evento
                         e.stopPropagation();
                         var fn = match.fn;
-                        setTimeout(fn, 0); // diferir hasta que el evento termine
+                        setTimeout(function() { _dbgSet('[4] FN EJECUTADA — si no ves el modal, error silencioso en la función'); fn(); }, 0);
                     }
                 }, true); // capture: el primero en dispararse
             })();
