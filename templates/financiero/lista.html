@@ -1919,6 +1919,7 @@ function actualizarVisualCeldaRopa(td, talla, estado, pedidoId, fecha) {
 
 async function cargarDatosRopa() {
     showLoader();
+    try {
     await Promise.all([cargarPackRopaConfig(), cargarJugadoresPackCache()]); // necesario antes de renderRopaStructure() para saber qué columnas agrupar
     const res = await fetch('/api/ropa');
     const result = await res.json();
@@ -1980,7 +1981,7 @@ async function cargarDatosRopa() {
     inicializarCeldasPagoPrendas();
     if (Array.isArray(presupuestoData) && presupuestoData.length) cargarPagosEnTabla();
     await cargarEstadoPagosJugadores();
-    hideLoader();
+    } catch(e) { console.error('cargarDatosRopa:', e); } finally { hideLoader(); }
 }
 
 // =====================================================================
