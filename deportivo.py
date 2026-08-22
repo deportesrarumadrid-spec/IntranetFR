@@ -69,10 +69,21 @@ def obtener_tactico_tecnico_metodologia(client, NOMBRE_EXCEL, equipo, mes_actual
 _DIA_A_NUM = {'lunes':0,'martes':1,'miercoles':2,'miércoles':2,'jueves':3,'viernes':4}
 _NOMBRES_DIA = ['Lunes','Martes','Miércoles','Jueves','Viernes']
 
+def _get_equipos_config_path():
+    """Ruta al equipos_config.json de la temporada activa (con fallback al legacy)."""
+    try:
+        from app import get_equipos_config_file, EQUIPOS_CONFIG_FILE
+        path = get_equipos_config_file()
+        if os.path.exists(path):
+            return path
+        return EQUIPOS_CONFIG_FILE
+    except Exception:
+        return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'equipos_config.json')
+
 def _get_dias_entreno(equipo_activo):
     """Devuelve lista de índices de días de entrenamiento (0=Lun…4=Vie) para el equipo."""
     try:
-        cfg_path = os.path.join(os.getcwd(), 'static', 'data', 'equipos_config.json')
+        cfg_path = _get_equipos_config_path()
         with open(cfg_path, encoding='utf-8') as f:
             cfg = json.load(f)
         for eq in cfg.get('equipos', []):
@@ -148,7 +159,7 @@ def deportivo():
     # Mapa equipo→días para validación en el frontend
     equipos_dias_config = {}
     try:
-        cfg_path = os.path.join(os.getcwd(), 'static', 'data', 'equipos_config.json')
+        cfg_path = _get_equipos_config_path()
         with open(cfg_path, encoding='utf-8') as _cf:
             _cfg = json.load(_cf)
         for _eq in _cfg.get('equipos', []):
@@ -1168,8 +1179,12 @@ def api_kpis_deportivos():
 
         # Count training sessions done (JSON evidence files)
         entrenos_hechos_dict = defaultdict(int)
-        data_folder = current_app.config.get('DATA_FOLDER', os.path.join(os.getcwd(), 'static', 'data'))
-        sesiones_dir = os.path.join(data_folder, 'sesiones')
+        try:
+            from app import get_data_folder as _gdf
+            sesiones_dir = os.path.join(_gdf(), 'sesiones')
+        except Exception:
+            data_folder = current_app.config.get('DATA_FOLDER', os.path.join(os.getcwd(), 'static', 'data'))
+            sesiones_dir = os.path.join(data_folder, 'sesiones')
         if os.path.exists(sesiones_dir):
             for eq_dir_name in os.listdir(sesiones_dir):
                 eq_path = os.path.join(sesiones_dir, eq_dir_name)

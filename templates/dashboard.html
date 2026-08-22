@@ -675,7 +675,11 @@
             <button class="confgen-tab-btn active" onclick="confGenTab('usuarios',this)" style="padding:12px 20px; border:none; background:none; font-weight:900; font-size:11px; text-transform:uppercase; cursor:pointer; color:#E31E24; border-bottom:2px solid #E31E24; margin-bottom:-2px; white-space:nowrap; font-family:inherit; letter-spacing:0.3px;"><i class="fas fa-user-lock" style="margin-right:6px;"></i>Usuarios y Contraseñas</button>
             <button class="confgen-tab-btn" onclick="confGenTab('accesos',this)" style="padding:12px 20px; border:none; background:none; font-weight:900; font-size:11px; text-transform:uppercase; cursor:pointer; color:#64748b; border-bottom:2px solid transparent; margin-bottom:-2px; white-space:nowrap; font-family:inherit; letter-spacing:0.3px;"><i class="fas fa-bolt" style="margin-right:6px;"></i>Accesos Directos</button>
             <button class="confgen-tab-btn" onclick="confGenTab('equipos',this)" style="padding:12px 20px; border:none; background:none; font-weight:900; font-size:11px; text-transform:uppercase; cursor:pointer; color:#64748b; border-bottom:2px solid transparent; margin-bottom:-2px; white-space:nowrap; font-family:inherit; letter-spacing:0.3px;"><i class="fas fa-shield-halved" style="margin-right:6px;"></i>Configuración de Equipos</button>
-            <button id="btnCerrarTemporadaTab" onclick="abrirCerrarTemporadaModal()" style="margin-left:auto; margin-bottom:2px; background:#7c2d12; color:white; border:none; border-radius:8px; padding:7px 14px; font-weight:900; font-size:10px; cursor:pointer; font-family:inherit; white-space:nowrap; display:none;"><i class="fas fa-arrow-right" style="margin-right:5px;"></i>CERRAR Y ABRIR SIGUIENTE TEMPORADA</button>
+            <div id="tempBotonesBar" style="display:none;margin-left:auto;display:none;align-items:center;gap:6px;flex-wrap:wrap;">
+                <span style="font-size:10px;font-weight:700;color:#94a3b8;white-space:nowrap;">TEMPORADA:</span>
+                <div id="tempBotonesList" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+                <button id="btnCerrarTemporadaTab" onclick="abrirCerrarTemporadaModal()" style="background:#7c2d12;color:white;border:none;border-radius:8px;padding:7px 14px;font-weight:900;font-size:10px;cursor:pointer;font-family:inherit;white-space:nowrap;"><i class="fas fa-arrow-right" style="margin-right:5px;"></i>→ SIGUIENTE</button>
+            </div>
         </div>
         <!-- Tab content -->
         <div style="flex:1; overflow-y:auto; padding:28px;">
@@ -1760,11 +1764,11 @@
             if (btn) { btn.style.color = '#E31E24'; btn.style.borderBottomColor = '#E31E24'; }
             document.querySelectorAll('.confgen-tabcontent').forEach(t => t.style.display = 'none');
             document.getElementById('confgen-tab-' + tab).style.display = '';
-            const btnCerrar = document.getElementById('btnCerrarTemporadaTab');
-            if (btnCerrar) btnCerrar.style.display = tab === 'equipos' ? 'inline-flex' : 'none';
+            const tempBar = document.getElementById('tempBotonesBar');
+            if (tempBar) tempBar.style.display = tab === 'equipos' ? 'flex' : 'none';
             if (tab === 'usuarios') cargarPerfilesCG();
             if (tab === 'accesos') cgCargarListaAccesos();
-            if (tab === 'equipos') ecCargar();
+            if (tab === 'equipos') { ecCargar(); tempCargarBotones(); }
         }
 
         // -- Tab Usuarios --
@@ -2176,11 +2180,12 @@
                 const res = await fetch('/api/cerrar_temporada', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nueva_temporada: nuevaTemp }) });
                 const data = await res.json();
                 if (data.status === 'ok') {
-                    if (st) { st.style.color = '#16a34a'; st.innerHTML = `<i class="fas fa-check-circle"></i> Temporada <b>${data.temporada}</b> archivada. ${data.jugadores_archivados} jugadores en histórico. ¡Nueva temporada lista!`; }
+                    if (st) { st.style.color = '#16a34a'; st.innerHTML = `<i class="fas fa-check-circle"></i> Temporada <b>${data.temporada_cerrada}</b> archivada. ${data.jugadores_archivados || 0} jugadores en histórico. ¡Nueva temporada <b>${data.nueva_temporada}</b> lista!`; }
                     if (btn) { btn.style.background = '#16a34a'; btn.innerHTML = '<i class="fas fa-check-circle" style="margin-right:5px;"></i>¡NUEVA TEMPORADA ABIERTA!'; }
                     const campTemp = document.getElementById('ecTemporada');
-                    if (campTemp) campTemp.textContent = nuevaTemp;
-                    setTimeout(() => { document.getElementById('cerrarTemporadaModal').style.display = 'none'; }, 3000);
+                    if (campTemp) campTemp.textContent = data.nueva_temporada || nuevaTemp;
+                    await tempCargarBotones();
+                    setTimeout(() => { document.getElementById('cerrarTemporadaModal').style.display = 'none'; location.reload(); }, 3000);
                 } else {
                     if (st) { st.style.color = '#dc2626'; st.innerHTML = `Error: ${data.message || 'Error desconocido'}`; }
                     if (btn) { btn.disabled = false; btn.style.background = '#7c2d12'; btn.innerHTML = '<i class="fas fa-arrow-right" style="margin-right:5px;"></i>CONFIRMAR Y ABRIR SIGUIENTE'; }
@@ -2191,6 +2196,44 @@
                 if (btn) { btn.disabled = false; btn.style.background = '#7c2d12'; btn.innerHTML = '<i class="fas fa-arrow-right" style="margin-right:5px;"></i>CONFIRMAR Y ABRIR SIGUIENTE'; }
                 if (inp) inp.disabled = false;
             }
+        }
+
+        // === TEMPORADAS ===
+        async function tempCargarBotones() {
+            const lista = document.getElementById('tempBotonesList');
+            if (!lista) return;
+            try {
+                const res = await fetch('/api/temporadas');
+                const data = await res.json();
+                if (!data.activa) return;
+                const activa = data.activa;
+                lista.innerHTML = '';
+                (data.lista || []).forEach(t => {
+                    const btn = document.createElement('button');
+                    const esActiva = t === activa;
+                    btn.textContent = t;
+                    btn.title = esActiva ? 'Temporada activa' : 'Cambiar a esta temporada';
+                    btn.style.cssText = `border:none;border-radius:8px;padding:5px 11px;font-weight:900;font-size:10px;cursor:${esActiva ? 'default' : 'pointer'};font-family:inherit;white-space:nowrap;transition:all .2s;` +
+                        (esActiva
+                            ? 'background:#16a34a;color:white;box-shadow:0 0 0 2px #bbf7d0;'
+                            : 'background:#1e293b;color:#94a3b8;border:1px solid #334155;');
+                    if (!esActiva) btn.onclick = () => cambiarTemporada(t);
+                    lista.appendChild(btn);
+                });
+            } catch(e) { console.error('tempCargarBotones', e); }
+        }
+
+        async function cambiarTemporada(nombre) {
+            if (!confirm(`¿Cambiar a temporada ${nombre}?\n\nTodos los datos se actualizarán para esa temporada.`)) return;
+            try {
+                const res = await fetch('/api/temporadas/cambiar', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({temporada: nombre}) });
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    location.reload();
+                } else {
+                    alert('Error al cambiar temporada: ' + (data.message || 'Error desconocido'));
+                }
+            } catch(e) { alert('Error de conexión: ' + e.message); }
         }
 
         // === CONVOCATORIAS (compartido entre Asistencias, Mi Equipo y D.Deportiva-Coordinación) ===

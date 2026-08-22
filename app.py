@@ -248,6 +248,74 @@ _asis_cache = {}  # {equipo_lower: {'data': list, 'ts': float}}
 _ASIS_CACHE_TTL = 60  # segundos
 # ----------------------------------
 
+# ===================== SISTEMA MULTI-TEMPORADA =====================
+TEMPORADAS_CONFIG_FILE = os.path.join(BASE_DIR, 'static', 'data', 'temporadas_config.json')
+
+# Hojas de Google Sheets que son POR TEMPORADA (el resto son globales)
+_HOJAS_POR_TEMPORADA = {
+    'ASISTENCIAS','JUGADORES','MI EQUIPO','COORDINACION','GPS_POSICIONES',
+    'PAGOS JUGADORES','FINANCIERO','PAGOS STAFF','ASISTENCIAS_STAFF',
+    'OBJ TACTEC','KPIS','FORMULARIO_PARTIDOS','TAREAS CRONOGRAMA','MATERIAL',
+    'INFORMES_SEMANALES','VIDEOANALISIS','ALQUILERES','HORARIOS_TEMPORADA',
+    'DETALLES_EQUIPO','ROPA','ROPA_LOG','PEDIDOS_ROPA','PEDIDOS_ROPA_ITEMS',
+    'GPS','EJERCICIOS','TECNIFICACIONES','SUBVENCIONES','FISIOTERAPIA',
+}
+
+def _load_temporadas_config():
+    try:
+        with open(TEMPORADAS_CONFIG_FILE, encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return {'activa': '2025/2026', 'lista': ['2025/2026']}
+
+def _save_temporadas_config(cfg):
+    os.makedirs(os.path.dirname(TEMPORADAS_CONFIG_FILE), exist_ok=True)
+    with open(TEMPORADAS_CONFIG_FILE, 'w', encoding='utf-8') as f:
+        json.dump(cfg, f, ensure_ascii=False, indent=2)
+
+def get_temporada_activa():
+    return _load_temporadas_config().get('activa', '2025/2026')
+
+def get_temporada_safe(temporada=None):
+    t = temporada or get_temporada_activa()
+    return t.replace('/', '_').replace(' ', '_').replace('-', '_')
+
+def get_data_folder(temporada=None):
+    """Carpeta de datos JSON para la temporada activa."""
+    t_safe = get_temporada_safe(temporada)
+    folder = os.path.join(BASE_DIR, 'static', 'data', 'temporadas', t_safe)
+    os.makedirs(folder, exist_ok=True)
+    return folder
+
+def get_ws_name(base_name, temporada=None):
+    """Nombre real de la hoja Google Sheets para la temporada dada."""
+    if base_name.upper() not in _HOJAS_POR_TEMPORADA:
+        return base_name
+    t_safe = get_temporada_safe(temporada)
+    return f"{base_name}_{t_safe}"
+
+class _TemporadaSpreadsheet:
+    """Proxy sobre gspread.Spreadsheet que redirige worksheet() a la hoja de la temporada activa."""
+    def __init__(self, ss):
+        self._ss = ss
+    def worksheet(self, title):
+        real = get_ws_name(title)
+        try:
+            return self._ss.worksheet(real)
+        except Exception:
+            # Fallback a nombre original (datos pre-migración)
+            return self._ss.worksheet(title)
+    def add_worksheet(self, title, rows=1000, cols=26, **kw):
+        return self._ss.add_worksheet(title=title, rows=rows, cols=cols, **kw)
+    def __getattr__(self, name):
+        return getattr(self._ss, name)
+
+_orig_client_open = client.open
+def _season_open(name, *a, **kw):
+    return _TemporadaSpreadsheet(_orig_client_open(name, *a, **kw))
+client.open = _season_open
+# ===================================================================
+
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['DATA_FOLDER'] = DATA_FOLDER
 
@@ -269,8 +337,8 @@ def guardar_sesion_img():
         if not data.get('image'): return jsonify({"status":"error"}), 400
         img_base64 = data.get('image').split(',')[1]
         
-        # 1. Guardar en la carpeta del equipo (DATA_FOLDER/sesiones/EQUIPO)
-        folder_equipo = os.path.join(app.config['DATA_FOLDER'], 'sesiones', equipo)
+        # 1. Guardar en la carpeta del equipo (por temporada)
+        folder_equipo = os.path.join(get_data_folder(), 'sesiones', equipo)
         os.makedirs(folder_equipo, exist_ok=True)
         filename_base = f"Sesion_{fecha.replace('/', '-')}"
         filename_equipo = f"{filename_base}.jpg"
@@ -315,8 +383,8 @@ def listar_sesiones():
     
     sesiones = []
     
-    # 1. Escanear Sesiones Online (JSON + JPG)
-    path_base = os.path.join(app.config['DATA_FOLDER'], 'sesiones')
+    # 1. Escanear Sesiones Online (JSON + JPG) — carpeta de la temporada activa
+    path_base = os.path.join(get_data_folder(), 'sesiones')
     if os.path.exists(path_base):
         for eq_folder in os.listdir(path_base):
             if equipo_req and eq_folder.upper() != equipo_req.upper():
@@ -959,7 +1027,7 @@ def api_control_balones():
     mes    = request.args.get('mes', '').strip()
     if not equipo or not mes:
         return jsonify({"status": "error", "message": "Faltan parámetros"}), 400
-    path = os.path.join(DATA_FOLDER, f'balones_{equipo}_{mes}.json')
+    path = os.path.join(get_data_folder(), f'balones_{equipo}_{mes}.json')
 
     if request.method == 'GET':
         try:
@@ -1045,7 +1113,7 @@ def api_recuento_balones_analisis():
     registros = []
     for equipo in equipos:
         for mes in sorted(meses, key=int):
-            path = os.path.join(DATA_FOLDER, f'balones_{equipo}_{mes}.json')
+            path = os.path.join(get_data_folder(), f'balones_{equipo}_{mes}.json')
             if not os.path.exists(path):
                 continue
             with open(path, 'r', encoding='utf-8') as f:
@@ -2321,8 +2389,10 @@ def api_ausencias_motivo():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-EQUIPOS_CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'equipos_config.json')
-HISTORICO_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'historico_jugadores.json')
+def get_equipos_config_file(temporada=None):
+    return os.path.join(get_data_folder(temporada), 'equipos_config.json')
+EQUIPOS_CONFIG_FILE = os.path.join(BASE_DIR, 'static', 'data', 'equipos_config.json')  # ruta legacy (fallback)
+HISTORICO_FILE = os.path.join(BASE_DIR, 'static', 'data', 'historico_jugadores.json')
 
 @app.route('/api/equipos_lista')
 def api_equipos_lista():
@@ -2356,17 +2426,25 @@ def api_equipos_lista():
 def api_equipos_config():
     if not session.get('usuario'): return jsonify({"status": "error"}), 401
     if session.get('usuario', '').lower() != 'admin': return jsonify({"status": "error", "message": "No autorizado"}), 403
+    cfg_file = get_equipos_config_file()
     if request.method == 'POST':
         data = request.json or {}
-        os.makedirs(os.path.dirname(EQUIPOS_CONFIG_FILE), exist_ok=True)
+        os.makedirs(os.path.dirname(cfg_file), exist_ok=True)
+        with open(cfg_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        # Mantener también copia legacy para compatibilidad con otros módulos
         with open(EQUIPOS_CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         return jsonify({"status": "ok"})
     try:
-        with open(EQUIPOS_CONFIG_FILE, 'r', encoding='utf-8') as f:
+        with open(cfg_file, 'r', encoding='utf-8') as f:
             return jsonify(json.load(f))
     except Exception:
-        return jsonify({"temporada": "", "equipos": []})
+        try:
+            with open(EQUIPOS_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                return jsonify(json.load(f))
+        except Exception:
+            return jsonify({"temporada": get_temporada_activa(), "equipos": []})
 
 
 PRESUPUESTO_OBJETIVO_FILE = 'static/data/presupuesto_objetivo.json'
@@ -2436,81 +2514,169 @@ def api_historico_jugadores():
         return jsonify({"temporadas": {}, "error": str(e)})
 
 
+@app.route('/api/temporadas', methods=['GET'])
+def api_temporadas_get():
+    """Devuelve la lista de temporadas y la activa."""
+    if not session.get('usuario'): return jsonify({"status": "error"}), 401
+    cfg = _load_temporadas_config()
+    return jsonify(cfg)
+
+@app.route('/api/temporadas/cambiar', methods=['POST'])
+def api_temporadas_cambiar():
+    """Cambia la temporada activa (admin only). Afecta a todos los usuarios."""
+    if not session.get('usuario'): return jsonify({"status": "error"}), 401
+    if session.get('usuario', '').lower() != 'admin':
+        return jsonify({"status": "error", "message": "No autorizado"}), 403
+    nueva = (request.json or {}).get('temporada', '').strip()
+    if not nueva: return jsonify({"status": "error", "message": "Temporada vacía"}), 400
+    cfg = _load_temporadas_config()
+    if nueva not in cfg.get('lista', []):
+        return jsonify({"status": "error", "message": "Temporada no existe"}), 400
+    cfg['activa'] = nueva
+    _save_temporadas_config(cfg)
+    return jsonify({"status": "ok", "activa": nueva})
+
 @app.route('/api/cerrar_temporada', methods=['POST'])
 def api_cerrar_temporada():
-    """Archiva la temporada actual y limpia todos los datos de la intranet."""
+    """Archiva la temporada actual y abre una nueva (sin borrar datos)."""
     if not session.get('usuario'): return jsonify({"status": "error"}), 401
     if session.get('usuario', '').lower() != 'admin':
         return jsonify({"status": "error", "message": "No autorizado"}), 403
     try:
-        # 1. Leer temporada actual
-        try:
-            with open(EQUIPOS_CONFIG_FILE, 'r', encoding='utf-8') as f:
-                ec = json.load(f)
-        except Exception:
-            ec = {"temporada": "", "equipos": []}
-        temporada = (ec.get('temporada') or '').strip() or 'sin-temporada'
+        nueva_temporada = (request.json or {}).get('nueva_temporada', '').strip()
+        if not nueva_temporada:
+            return jsonify({"status": "error", "message": "Indica el nombre de la nueva temporada"}), 400
 
-        # 2. Leer DATOS JUGADORES y archivar
-        wb = client.open(NOMBRE_EXCEL)
+        cfg = _load_temporadas_config()
+        temporada_actual = cfg.get('activa', '2025/2026')
+
+        # 1. Leer config de equipos de la temporada actual
         try:
-            sheet_datos = wb.worksheet("DATOS JUGADORES")
+            with open(get_equipos_config_file(temporada_actual), 'r', encoding='utf-8') as f:
+                ec_actual = json.load(f)
+        except Exception:
+            try:
+                with open(EQUIPOS_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                    ec_actual = json.load(f)
+            except Exception:
+                ec_actual = {"equipos": []}
+
+        # 2. Archivar jugadores en histórico (sigue existiendo como ahora)
+        wb_raw = _orig_client_open(NOMBRE_EXCEL)
+        try:
+            sheet_datos = wb_raw.worksheet("DATOS JUGADORES")
             records = sheet_datos.get_all_records()
         except Exception:
             records = []
-
         jugadores_archivo = []
         for r in records:
             fecha_nac = str(r.get('JUGADOR_FECHA_NACIMIENTO', '')).strip()
             año_nac = None
             if fecha_nac:
-                m = re.search(r'\b(19|20)\d{2}\b', fecha_nac)
-                if m:
-                    año_nac = int(m.group(0))
+                m2 = re.search(r'\b(19|20)\d{2}\b', fecha_nac)
+                if m2: año_nac = int(m2.group(0))
             jugadores_archivo.append({**{k: str(v).strip() for k, v in r.items()}, 'AÑO_NACIMIENTO': año_nac})
-
-        # 3. Guardar en historico
         try:
             with open(HISTORICO_FILE, 'r', encoding='utf-8') as f:
                 historico = json.load(f)
         except Exception:
             historico = {"temporadas": {}}
-        if 'temporadas' not in historico:
-            historico['temporadas'] = {}
-        historico['temporadas'][temporada] = {
+        historico.setdefault('temporadas', {})[temporada_actual] = {
             'fecha_cierre': datetime.now().strftime('%Y-%m-%d'),
             'jugadores': jugadores_archivo
         }
-        os.makedirs(os.path.dirname(HISTORICO_FILE), exist_ok=True)
         with open(HISTORICO_FILE, 'w', encoding='utf-8') as f:
             json.dump(historico, f, ensure_ascii=False, indent=2)
 
-        # 4. Limpiar hojas de Google Sheets (mantener fila de cabeceras)
+        # 3. Crear hojas Google Sheets para la nueva temporada (vacías con cabeceras)
         errores_hojas = []
-        for hoja_nombre in ["JUGADORES", "MI EQUIPO", "ASISTENCIAS", "DATOS JUGADORES", "GPS_POSICIONES", "PAGOS JUGADORES", "COORDINACION"]:
+        t_safe_nueva = nueva_temporada.replace('/', '_').replace(' ', '_').replace('-', '_')
+        hojas_con_cabeceras = {
+            'ASISTENCIAS':    ['FECHA', 'EQUIPO', 'NOMBRE', 'DIA', 'ESTADO', 'VALORACION', 'OBSERVACIONES', 'CHARLA'],
+            'JUGADORES':      ['NOMBRE', 'EQUIPO', 'POSICION', 'DORSAL', 'BAJA_DESDE', 'ALTA_DESDE', 'OBSERVACIONES'],
+            'MI EQUIPO':      ['NOMBRE', 'EQUIPO', 'POSICION'],
+            'COORDINACION':   ['FECHA', 'EQUIPO', 'JUGADOR', 'REUNION', 'TIPO', 'OBSERVACIONES'],
+            'GPS_POSICIONES': ['FECHA', 'EQUIPO', 'JUGADOR', 'POSICION'],
+            'PAGOS JUGADORES':['FECHA', 'NOMBRE', 'EQUIPO', 'CONCEPTO', 'IMPORTE', 'ESTADO'],
+        }
+        for hoja_base, cabeceras in hojas_con_cabeceras.items():
+            nuevo_nombre = f"{hoja_base}_{t_safe_nueva}"
             try:
-                hoja = wb.worksheet(hoja_nombre)
-                all_vals = hoja.get_all_values()
-                if len(all_vals) > 1:
-                    hoja.delete_rows(2, len(all_vals))
+                try:
+                    wb_raw.worksheet(nuevo_nombre)
+                except Exception:
+                    nueva_hoja = wb_raw.add_worksheet(title=nuevo_nombre, rows=1000, cols=len(cabeceras)+5)
+                    nueva_hoja.append_row(cabeceras)
             except Exception as e:
-                errores_hojas.append(f"{hoja_nombre}: {e}")
+                errores_hojas.append(f"{nuevo_nombre}: {e}")
 
-        # 5. Limpiar JSON de formaciones
-        for fpath in [FORMACIONES_FILE, FORMACIONES_CONFIG_FILE]:
-            try:
-                with open(fpath, 'w', encoding='utf-8') as f:
-                    json.dump({}, f)
-            except Exception:
-                pass
+        # 4. Crear carpeta JSON para nueva temporada y equipos_config vacío
+        nueva_folder = get_data_folder(nueva_temporada)
+        os.makedirs(os.path.join(nueva_folder, 'sesiones'), exist_ok=True)
+        nueva_ec = {'temporada': nueva_temporada, 'equipos': []}
+        with open(get_equipos_config_file(nueva_temporada), 'w', encoding='utf-8') as f:
+            json.dump(nueva_ec, f, ensure_ascii=False, indent=2)
 
-        # 6. Establecer nueva temporada (mantener equipos configurados)
-        nueva_temporada = (request.json or {}).get('nueva_temporada', '').strip()
-        ec['temporada'] = nueva_temporada
+        # 5. Actualizar config de temporadas
+        if nueva_temporada not in cfg.get('lista', []):
+            cfg.setdefault('lista', []).append(nueva_temporada)
+        cfg['activa'] = nueva_temporada
+        _save_temporadas_config(cfg)
+
+        # 6. Actualizar copia legacy para compatibilidad
         with open(EQUIPOS_CONFIG_FILE, 'w', encoding='utf-8') as f:
-            json.dump(ec, f, ensure_ascii=False, indent=2)
+            json.dump(nueva_ec, f, ensure_ascii=False, indent=2)
 
-        return jsonify({"status": "ok", "temporada": temporada, "jugadores_archivados": len(jugadores_archivo), "errores": errores_hojas})
+        return jsonify({
+            "status": "ok",
+            "temporada_cerrada": temporada_actual,
+            "nueva_temporada": nueva_temporada,
+            "jugadores_archivados": len(jugadores_archivo),
+            "errores": errores_hojas
+        })
+    except Exception as e:
+        print(f"Error cerrar_temporada: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/temporadas/migrar', methods=['POST'])
+def api_temporadas_migrar():
+    """Migración única: crea carpeta 2025_2026 y mueve sesiones y balones existentes."""
+    if not session.get('usuario'): return jsonify({"status": "error"}), 401
+    if session.get('usuario', '').lower() != 'admin':
+        return jsonify({"status": "error", "message": "No autorizado"}), 403
+    try:
+        import shutil
+        t = '2025/2026'
+        dest = get_data_folder(t)
+
+        # Mover sesiones/
+        src_ses = os.path.join(DATA_FOLDER, 'sesiones')
+        dst_ses = os.path.join(dest, 'sesiones')
+        if os.path.exists(src_ses) and not os.path.exists(dst_ses):
+            shutil.copytree(src_ses, dst_ses)
+
+        # Copiar balones_*.json
+        import glob
+        for f in glob.glob(os.path.join(DATA_FOLDER, 'balones_*.json')):
+            dst_f = os.path.join(dest, os.path.basename(f))
+            if not os.path.exists(dst_f):
+                shutil.copy2(f, dst_f)
+
+        # Copiar equipos_config.json
+        src_ec = EQUIPOS_CONFIG_FILE
+        dst_ec = get_equipos_config_file(t)
+        if os.path.exists(src_ec) and not os.path.exists(dst_ec):
+            shutil.copy2(src_ec, dst_ec)
+
+        # Asegurar que temporadas_config.json existe
+        cfg = _load_temporadas_config()
+        if t not in cfg.get('lista', []):
+            cfg.setdefault('lista', []).append(t)
+        if not cfg.get('activa'):
+            cfg['activa'] = t
+        _save_temporadas_config(cfg)
+
+        return jsonify({"status": "ok", "destino": dest})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
