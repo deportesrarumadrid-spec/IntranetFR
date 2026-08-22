@@ -3003,18 +3003,11 @@
             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                 <select id="selectEquipoRevision" onchange="cargarRevisionObjetivos()" style="padding: 8px 14px; border-radius: 8px; border: none; font-weight: 800; font-size: 12px;"></select>
                 <select id="selectMesRevision" onchange="cargarRevisionObjetivos()" style="padding: 8px 14px; border-radius: 8px; border: none; font-weight: 800; font-size: 12px;">
-                    <option value="2026-01">Enero 2026</option>
-                    <option value="2026-02">Febrero 2026</option>
-                    <option value="2026-03">Marzo 2026</option>
-                    <option value="2026-04">Abril 2026</option>
-                    <option value="2026-05" selected>Mayo 2026</option>
-                    <option value="2026-06">Junio 2026</option>
-                    <option value="2026-07">Julio 2026</option>
-                    <option value="2026-08">Agosto 2026</option>
-                    <option value="2026-09">Septiembre 2026</option>
-                    <option value="2026-10">Octubre 2026</option>
-                    <option value="2026-11">Noviembre 2026</option>
-                    <option value="2026-12">Diciembre 2026</option>
+                    {% set _mn = {9:'Septiembre',10:'Octubre',11:'Noviembre',12:'Diciembre',1:'Enero',2:'Febrero',3:'Marzo',4:'Abril',5:'Mayo',6:'Junio'} %}
+                    {% for m, anio in [(9,t_ini),(10,t_ini),(11,t_ini),(12,t_ini),(1,t_fin),(2,t_fin),(3,t_fin),(4,t_fin),(5,t_fin),(6,t_fin)] %}
+                    {% set val = anio|string + '-' + '%02d'|format(m) %}
+                    <option value="{{ val }}"{% if val == mes_defecto %} selected{% endif %}>{{ _mn[m] }} {{ anio }}</option>
+                    {% endfor %}
                 </select>
                 <button onclick="document.getElementById('modalRevisionObjetivos').style.display='none'" style="width:34px;height:34px;border-radius:50%;border:1px solid #e2e8f0;background:#f1f5f9;color:#64748b;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;">&times;</button>
             </div>
@@ -3042,23 +3035,17 @@
             <div style="display: flex; align-items: center; gap: 15px;">
                 <label style="font-size: 11px; font-weight: 800; color: white; text-transform: uppercase;">Mes:</label>
                 <div class="custom-mes-wrapper" id="customMesWrapper" onclick="this.classList.toggle('open')">
-                    <div class="custom-mes-trigger" id="mesSelectedText">Mayo 2026</div>
+                    <div class="custom-mes-trigger" id="mesSelectedText">{% set _mn2 = {9:'Septiembre',10:'Octubre',11:'Noviembre',12:'Diciembre',1:'Enero',2:'Febrero',3:'Marzo',4:'Abril',5:'Mayo',6:'Junio'} %}{% for m, anio in [(9,t_ini),(10,t_ini),(11,t_ini),(12,t_ini),(1,t_fin),(2,t_fin),(3,t_fin),(4,t_fin),(5,t_fin),(6,t_fin)] %}{% set val = anio|string + '-' + '%02d'|format(m) %}{% if val == mes_defecto %}{{ _mn2[m] }} {{ anio }}{% endif %}{% endfor %}</div>
                     <div class="custom-mes-options">
-                        <div class="custom-mes-option" onclick="updateCustomMes('2026-01', 'Enero 2026')" data-value="2026-01">Enero 2026</div>
-                        <div class="custom-mes-option" onclick="updateCustomMes('2026-02', 'Febrero 2026')" data-value="2026-02">Febrero 2026</div>
-                        <div class="custom-mes-option" onclick="updateCustomMes('2026-03', 'Marzo 2026')" data-value="2026-03">Marzo 2026</div>
-                        <div class="custom-mes-option" onclick="updateCustomMes('2026-04', 'Abril 2026')" data-value="2026-04">Abril 2026</div>
-                        <div class="custom-mes-option selected" onclick="updateCustomMes('2026-05', 'Mayo 2026')" data-value="2026-05">Mayo 2026</div>
-                        <div class="custom-mes-option" onclick="updateCustomMes('2026-06', 'Junio 2026')" data-value="2026-06">Junio 2026</div>
-                        <div class="custom-mes-option" onclick="updateCustomMes('2026-07', 'Julio 2026')" data-value="2026-07">Julio 2026</div>
-                        <div class="custom-mes-option" onclick="updateCustomMes('2026-08', 'Agosto 2026')" data-value="2026-08">Agosto 2026</div>
-                        <div class="custom-mes-option" onclick="updateCustomMes('2026-09', 'Septiembre 2026')" data-value="2026-09">Septiembre 2026</div>
-                        <div class="custom-mes-option" onclick="updateCustomMes('2026-10', 'Octubre 2026')" data-value="2026-10">Octubre 2026</div>
-                        <div class="custom-mes-option" onclick="updateCustomMes('2026-11', 'Noviembre 2026')" data-value="2026-11">Noviembre 2026</div>
-                        <div class="custom-mes-option" onclick="updateCustomMes('2026-12', 'Diciembre 2026')" data-value="2026-12">Diciembre 2026</div>
+                        {% set _mn3 = {9:'Septiembre',10:'Octubre',11:'Noviembre',12:'Diciembre',1:'Enero',2:'Febrero',3:'Marzo',4:'Abril',5:'Mayo',6:'Junio'} %}
+                        {% for m, anio in [(9,t_ini),(10,t_ini),(11,t_ini),(12,t_ini),(1,t_fin),(2,t_fin),(3,t_fin),(4,t_fin),(5,t_fin),(6,t_fin)] %}
+                        {% set val = anio|string + '-' + '%02d'|format(m) %}
+                        {% set nom = _mn3[m]|string + ' ' + anio|string %}
+                        <div class="custom-mes-option{% if val == mes_defecto %} selected{% endif %}" onclick="updateCustomMes('{{ val }}', '{{ nom }}')" data-value="{{ val }}">{{ nom }}</div>
+                        {% endfor %}
                     </div>
                 </div>
-                <input type="hidden" id="selectMesObjetivos" value="2026-05">
+                <input type="hidden" id="selectMesObjetivos" value="{{ mes_defecto }}">
             </div>
         </div>
         
@@ -5525,8 +5512,8 @@
 
     function generarFinesDeSemana() {
         let fines = [];
-        // Empezamos el primer viernes de Septiembre 2026 (4 de Sep)
-        let d = new Date(2026, 8, 4); 
+        // Primer viernes de Septiembre del año de inicio de temporada
+        let d = (() => { let dt = new Date({{ t_ini }}, 8, 1); while (dt.getDay() !== 5) dt.setDate(dt.getDate() + 1); return dt; })();
         let mesAnterior = null;
         for(let i=0; i<42; i++) { // 42 semanas ~ 10 meses
             let fDate = new Date(d); // Viernes

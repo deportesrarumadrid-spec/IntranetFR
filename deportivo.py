@@ -606,7 +606,17 @@ def direccion_deportiva():
             equipo_activo = equipos[0]
             session['equipo_defecto'] = equipo_activo
 
-        return render_template('direccion.html', usuario=usuario, equipos=equipos, jugadores_raw=jugadores, equipo_defecto=equipo_activo, tiene_ddep=tiene_ddep)
+        try:
+            from app import get_temporada_activa as _gta_dir
+            _t_dir = _gta_dir().split('/')
+            t_ini_dir = int(_t_dir[0]); t_fin_dir = int(_t_dir[1]) if len(_t_dir) > 1 else t_ini_dir + 1
+        except Exception:
+            _h_dir = datetime.now(); t_ini_dir = _h_dir.year - 1 if _h_dir.month < 9 else _h_dir.year; t_fin_dir = t_ini_dir + 1
+        _hdir = datetime.now()
+        _meses_dir = [f'{t_ini_dir}-{m:02d}' for m in [9,10,11,12]] + [f'{t_fin_dir}-{m:02d}' for m in [1,2,3,4,5,6]]
+        _mes_def_dir = f'{_hdir.year}-{_hdir.month:02d}'
+        if _mes_def_dir not in _meses_dir: _mes_def_dir = _meses_dir[0]
+        return render_template('direccion.html', usuario=usuario, equipos=equipos, jugadores_raw=jugadores, equipo_defecto=equipo_activo, tiene_ddep=tiene_ddep, t_ini=t_ini_dir, t_fin=t_fin_dir, mes_defecto=_mes_def_dir, meses_temporada=_meses_dir)
     except Exception as e:
         print(f"Error en direccion_deportiva: {e}")
         return str(e), 500
