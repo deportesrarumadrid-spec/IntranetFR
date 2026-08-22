@@ -1329,7 +1329,7 @@
 
         // === CUMPLEAÑOS (widget sidebar, todos los usuarios) ===
         let _cumpleannosCache = null;
-        const MESES_ES = ['','enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+        const _MESES_ES = ['','enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
         async function cargarCumpleannosSidebar() {
             const estado = document.getElementById('estadoCumpleannosSidebar');
@@ -1373,7 +1373,7 @@
             body.innerHTML = lista.map(dia => {
                 const lbl = dia.es_hoy
                     ? `<span style="color:#E31E24;">🎂 HOY · ${dia.fecha}</span>`
-                    : `<span style="color:#64748b;">${dia.dia} de ${MESES_ES[dia.mes]}</span>`;
+                    : `<span style="color:#64748b;">${dia.dia} de ${_MESES_ES[dia.mes]}</span>`;
                 return `<div style="margin-bottom:16px;">
                     <div style="font-size:11px;font-weight:800;text-transform:uppercase;margin-bottom:6px;">${lbl}</div>
                     ${dia.jugadores.map(j => `
