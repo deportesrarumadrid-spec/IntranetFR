@@ -2741,11 +2741,11 @@
                         }
                     }
                     if (match) {
-                        var now = Date.now();
-                        if (now - _lastFired > 300) { // evita doble disparo con onclick
-                            _lastFired = now;
-                            match.fn();
-                        }
+                        // stopPropagation: evita que handlers de burbuja (modal_clickout.js)
+                        // cierren el modal que la acción va a abrir en el mismo evento
+                        e.stopPropagation();
+                        var fn = match.fn;
+                        setTimeout(fn, 0); // diferir hasta que el evento termine
                     }
                 }, true); // capture: el primero en dispararse
             })();
