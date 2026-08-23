@@ -235,7 +235,11 @@ def detect_categoria_y_letra(comp_name):
         else:
             letra = "A"
     elif cat == "JUVENIL":
-        if "GRUPO 28" in name:
+        if "PRIMERA" in name and "SEGUNDA" not in name:
+            letra = "A"
+        elif "SEGUNDA" in name:
+            letra = "C" if "GRUPO 22" in name else "B"
+        elif "GRUPO 28" in name:
             letra = "B"
         elif "GRUPO 22" in name:
             letra = "C"
@@ -244,6 +248,8 @@ def detect_categoria_y_letra(comp_name):
     elif cat == "CADETE":
         if "PREFERENTE" in name or "GRUPO 2" in name:
             letra = "A"
+        elif "PRIMERA" in name and "SEGUNDA" not in name:
+            letra = "B"
         elif "GRUPO 11" in name:
             letra = "B"
         elif "GRUPO 8" in name:
@@ -253,7 +259,9 @@ def detect_categoria_y_letra(comp_name):
         elif "GRUPO 18" in name:
             letra = "E"
     elif cat == "INFANTIL":
-        if "GRUPO 9" in name:
+        if "PRIMERA" in name and "SEGUNDA" not in name:
+            letra = "A"
+        elif "GRUPO 9" in name:
             letra = "A"
         elif "GRUPO 21" in name:
             letra = "B"
@@ -1587,11 +1595,18 @@ def build_kit_clash_report(username, password):
             # (el rival, que juega en casa, es quien debe adaptar su color si coincide con el nuestro)
             warning = es_visitante and bool(casa) and (_es_color_rojo(casa.get('camiseta')) or _es_color_rojo(casa.get('pantalon')))
 
-            cat, letra = detect_categoria_y_letra(match['competicion'])
+            cat, letra_heur = detect_categoria_y_letra(match['competicion'])
             nuestro_lado = fuera if es_visitante else casa
             rival_lado = casa if es_visitante else fuera
             nuestro_nombre = (nuestro_lado.get('nombre') if nuestro_lado else '') or match['nombre_fuera' if es_visitante else 'nombre_casa']
             rival_nombre = (rival_lado.get('nombre') if rival_lado else '') or match['nombre_casa' if es_visitante else 'nombre_fuera']
+            _m = re.search(r'"([^"]+)"', nuestro_nombre or '')
+            if _m:
+                letra = _m.group(1)
+            else:
+                _w = (nuestro_nombre or '').strip().upper().split()
+                _l = _w[-1] if _w else ''
+                letra = _l if (_l and len(_l) <= 2 and all(c in 'ABCDE' for c in _l)) else letra_heur
             nuestro_equipo = nuestro_nombre or f"{cat or ''} {letra or ''}".strip()
 
             match_key = f"{match['fecha']}_{match['hora']}_{match['cod_equipo_casa']}_{match['cod_equipo_fuera']}"
@@ -1707,7 +1722,12 @@ def build_convocatorias_report(username, password):
             # (grupo, fase...) y NO distingue entre nuestros propios sub-equipos (Fuentelarreyna "A" vs "B" vs "C"...).
             # Para identificar el equipo real usamos el sufijo entre comillas del nombre RFFM de nuestro equipo.
             m_letra_real = re.search(r'"([^"]+)"', nuestro_nombre or '')
-            letra = m_letra_real.group(1) if m_letra_real else letra_heuristica
+            if m_letra_real:
+                letra = m_letra_real.group(1)
+            else:
+                _words = (nuestro_nombre or '').strip().upper().split()
+                _last = _words[-1] if _words else ''
+                letra = _last if (_last and len(_last) <= 2 and all(c in 'ABCDE' for c in _last)) else letra_heuristica
             nuestro_equipo = nuestro_nombre or f"{cat or ''} {letra or ''}".strip()
 
             report_entries.append({
