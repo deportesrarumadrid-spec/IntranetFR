@@ -835,12 +835,6 @@
                             <div id="adminEquipoList" style="padding:4px 0;"></div>
                         </div>
                     </div>
-                    {% elif equipo_defecto %}
-                    <span id="topbarEquipoBadge" style="background: #E31E24; color: white; border-radius: 999px; padding: 3px 10px; font-size: 0.78rem; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase;">
-                        {{ equipo_defecto }}
-                    </span>
-                    {% else %}
-                    <span id="topbarEquipoBadge" style="background: #E31E24; color: white; border-radius: 999px; padding: 3px 10px; font-size: 0.78rem; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; display:none;"></span>
                     {% endif %}
                 </span>
             </div>
@@ -858,9 +852,11 @@
                 <i class="fas fa-file-excel"></i>
             </a>
             {% endif %}
+            {% if usuario|lower == 'admin' %}
             <a href="https://www.dropbox.com" class="btn-dropbox-fixed" title="Abrir Dropbox" target="_blank">
                 <i class="fab fa-dropbox"></i>
             </a>
+            {% endif %}
             {% if usuario|lower == 'admin' %}
             <button class="btn-ia-fixed" onclick="abrirAsistenteIA()" title="Preguntar a la IA">
                 <img src="{{ url_for('static', filename='ai-icon.png') }}" alt="IA">
