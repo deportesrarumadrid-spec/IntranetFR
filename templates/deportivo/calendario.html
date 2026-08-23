@@ -57,6 +57,7 @@
     font-weight: bold; 
     z-index: 20; 
 }
+        .festivo-label { position:absolute; top:-8px; left:10px; background:#f59e0b; color:white; font-size:9px; padding:2px 5px; border-radius:4px; font-weight:900; z-index:20; letter-spacing:.3px; }
         .day-num { font-size: 15px; font-weight: 800; margin-bottom: 2px; }
 
         .cat-label { font-size: 8.5px; font-weight: 800; color: #333; margin-top: 3px; margin-bottom: 1px; text-transform: uppercase; letter-spacing: 0.3px; }
@@ -2425,11 +2426,28 @@ function viewPhoto(dia) {
     }
 }
 
+function marcarFestivos2627() {
+    if (!window.FESTIVOS_2627) return;
+    const selectorMes = document.getElementById('monthSelect');
+    if (!selectorMes) return;
+    const [añoV, mesV] = selectorMes.value.split('-');
+    document.querySelectorAll('.day').forEach(function(div) {
+        const numEl = div.querySelector('.day-num');
+        if (!numEl) return;
+        const dd = String(parseInt(numEl.innerText)).padStart(2, '0');
+        const ds = `${añoV}-${mesV}-${dd}`;
+        if (window.FESTIVOS_2627.has(ds) && !div.querySelector('.festivo-label')) {
+            div.insertAdjacentHTML('afterbegin', '<div class="festivo-label">FESTIVO</div>');
+        }
+    });
+}
+
 // Usamos addEventListener para no pisar dashboard.html
 window.addEventListener('load', function() {
     try {
         syncInputs();
         aplicarResaltadoAutomatico();
+        marcarFestivos2627();
     } catch(e) { console.error("Error en inicialización:", e); }
     if (typeof hideLoader === 'function') hideLoader();
 
