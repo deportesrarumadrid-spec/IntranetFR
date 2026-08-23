@@ -1180,7 +1180,21 @@ def load_cached_data():
                         cat, letra = detect_categoria_y_letra(eq.get("nombre", ""))
                         if cat:
                             eq["categoria"] = cat
-                            eq["letra"] = letra
+                            # Intentar extraer la letra real del nombre del equipo (más fiable que la competición)
+                            letra_real = None
+                            up = eq.get("ultimo_partido") or {}
+                            nuestro_nombre_up = up.get("local") if up.get("es_local") else up.get("visitante")
+                            for nombre_candidato in [nuestro_nombre_up] + [e.get("equipo","") for e in eq.get("clasificacion",[]) if "FUENTELARREYNA" in (e.get("equipo","")).upper()]:
+                                if not nombre_candidato:
+                                    continue
+                                m_q = re.search(r'"([^"]+)"', nombre_candidato)
+                                if m_q:
+                                    letra_real = m_q.group(1); break
+                                words = nombre_candidato.strip().upper().split()
+                                last = words[-1] if words else ''
+                                if last and len(last) <= 2 and all(c in 'ABCDE' for c in last):
+                                    letra_real = last; break
+                            eq["letra"] = letra_real if letra_real else letra
                         if "calendario" not in eq or not eq["calendario"]:
                             eq["calendario"] = generate_calendario_demo(eq["nombre"], eq["clasificacion"])
                             eq["calendario"] = enrich_calendar_with_shields(eq["calendario"], eq["clasificacion"])
