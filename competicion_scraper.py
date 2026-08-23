@@ -1174,11 +1174,11 @@ def load_cached_data():
             with open(CACHE_FILE, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 
-                # Inyectar dinámicamente categoría, letra y calendario si faltan
+                # Re-aplicar detección siempre (para corregir letras desactualizadas en caché)
                 if data and "equipos" in data:
                     for eq in data["equipos"]:
-                        if "categoria" not in eq or "letra" not in eq:
-                            cat, letra = detect_categoria_y_letra(eq["nombre"])
+                        cat, letra = detect_categoria_y_letra(eq.get("nombre", ""))
+                        if cat:
                             eq["categoria"] = cat
                             eq["letra"] = letra
                         if "calendario" not in eq or not eq["calendario"]:
