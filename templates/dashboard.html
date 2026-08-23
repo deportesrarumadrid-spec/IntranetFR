@@ -10,6 +10,31 @@
     <!-- OneSignal SDK -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
+      // Festivos y jornada intensiva 2026-2027
+      window.FESTIVOS_2627 = new Set([
+        '2026-10-12','2026-11-02','2026-12-08',
+        '2026-12-22','2026-12-23','2026-12-24','2026-12-25',
+        '2026-12-28','2026-12-29','2026-12-30','2026-12-31',
+        '2027-01-01','2027-01-04','2027-01-05','2027-01-06','2027-01-07',
+        '2027-02-12','2027-02-15',
+        '2027-03-19','2027-03-29','2027-03-30','2027-03-31',
+        '2027-04-01','2027-04-02','2027-04-05','2027-04-06','2027-04-07','2027-04-08','2027-04-09',
+        '2027-05-03'
+      ]);
+      window.INTENSIVA_2627 = new Set([
+        '2027-06-01','2027-06-02','2027-06-03','2027-06-04',
+        '2027-06-07','2027-06-08','2027-06-09','2027-06-10','2027-06-11',
+        '2027-06-14','2027-06-15','2027-06-16','2027-06-17','2027-06-18'
+      ]);
+      window.isFestivo2627 = function(dateStr) {
+        return window.FESTIVOS_2627.has(dateStr);
+      };
+      window.festivoLabel2627 = function(dateStr) {
+        if (window.FESTIVOS_2627.has(dateStr)) return 'FESTIVO';
+        if (window.INTENSIVA_2627.has(dateStr)) return 'J.INTENSIVA';
+        return '';
+      };
+
       var _OS_USUARIO = "{{ usuario }}";
       var _OS_ES_ADMIN = (_OS_USUARIO === 'admin');
 

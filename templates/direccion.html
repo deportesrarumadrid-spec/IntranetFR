@@ -566,6 +566,7 @@
         {% if tiene_ddep %}<div class="tab-item" onclick="switchTab(event, 'tab-d-deportiva')">D. DEPORTIVA</div>{% endif %}
         <div class="tab-item" onclick="switchTab(event, 'tab-push')">PUSH</div>
         <div class="tab-item" onclick="switchTab(event, 'tab-horarios-temp')">HORARIOS TEMP.</div>
+        <div class="tab-item" onclick="switchTab(event, 'tab-calendario-2627')">CALENDARIO 26-27</div>
         <div class="tab-item" onclick="switchTab(event, 'tab-obj-semanales')">OBJ FINES DE SEMANA</div>
     </div>
 
@@ -2533,6 +2534,85 @@
         </div>
     </div>
 
+    <!-- TAB CALENDARIO 26-27 -->
+    <div id="tab-calendario-2627" class="tab-content">
+        <div class="card-coord" style="padding:22px;">
+            <h3 style="margin:0 0 14px;font-size:14px;font-weight:900;color:#1e293b;"><i class="fas fa-calendar-alt" style="color:#E31E24;margin-right:6px;"></i> Calendario Escolar 2026-2027</h3>
+            <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px;font-size:11px;font-weight:700;">
+                <span><span style="display:inline-block;width:12px;height:12px;background:#3b82f6;border-radius:2px;margin-right:4px;vertical-align:middle;"></span>Inicio/fin periodo escolar</span>
+                <span><span style="display:inline-block;width:12px;height:12px;background:#fef08a;border:1px solid #ca8a04;border-radius:2px;margin-right:4px;vertical-align:middle;"></span>Jornada intensiva</span>
+                <span><span style="display:inline-block;width:12px;height:12px;background:#E31E24;border-radius:2px;margin-right:4px;vertical-align:middle;"></span>Festivo / No lectivo</span>
+            </div>
+            <div id="cal2627Container" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;"></div>
+            <p style="margin-top:14px;font-size:10px;color:#94a3b8;">* Inicio periodo: E.Inf/E.Prim 07/09/2026 · ESO 08/09/2026 · Bach. 09/09/2026 &nbsp;|&nbsp; Fin periodo: 18/06/2027</p>
+        </div>
+        <style>
+            .cal27-month{border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);}
+            .cal27-head{background:#0e7490;color:white;text-align:center;padding:7px 4px;font-size:12px;font-weight:900;letter-spacing:.3px;}
+            .cal27-tbl{width:100%;border-collapse:collapse;font-size:11px;}
+            .cal27-tbl th{background:#155e75;color:white;padding:4px 2px;text-align:center;font-size:10px;font-weight:700;}
+            .cal27-tbl td{text-align:center;padding:3px 1px;border:1px solid #e5e7eb;background:white;min-width:22px;}
+            .cal27-tbl td.cwe{background:#fce7f3;color:#be185d;}
+            .cal27-tbl td.cfest{background:#E31E24;color:white;font-weight:700;}
+            .cal27-tbl td.cint{background:#fef08a;color:#713f12;font-weight:600;}
+            .cal27-tbl td.cinicio{background:#3b82f6;color:white;font-weight:700;}
+            @media(max-width:900px){#cal2627Container{grid-template-columns:repeat(2,1fr)!important;}}
+            @media(max-width:560px){#cal2627Container{grid-template-columns:1fr!important;}}
+        </style>
+        <script>
+        (function(){
+            const FEST = new Set([
+                '2026-10-12','2026-11-02','2026-12-08',
+                '2026-12-22','2026-12-23','2026-12-24','2026-12-25',
+                '2026-12-28','2026-12-29','2026-12-30','2026-12-31',
+                '2027-01-01','2027-01-04','2027-01-05','2027-01-06','2027-01-07',
+                '2027-02-12','2027-02-15',
+                '2027-03-19','2027-03-29','2027-03-30','2027-03-31',
+                '2027-04-01','2027-04-02','2027-04-05','2027-04-06','2027-04-07','2027-04-08','2027-04-09',
+                '2027-05-03'
+            ]);
+            const INTENS = new Set([
+                '2027-06-01','2027-06-02','2027-06-03','2027-06-04',
+                '2027-06-07','2027-06-08','2027-06-09','2027-06-10','2027-06-11',
+                '2027-06-14','2027-06-15','2027-06-16','2027-06-17','2027-06-18'
+            ]);
+            const INICIO = new Set(['2026-09-07','2026-09-08','2026-09-09']);
+            const FIN    = new Set(['2027-06-18']);
+            const MESES  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+            function renderMes(y, m) {
+                const dias = new Date(y, m+1, 0).getDate();
+                let dow = (new Date(y,m,1).getDay()+6)%7; // Lun=0
+                let html = `<div class="cal27-month"><div class="cal27-head">${MESES[m]} ${y}</div>
+                    <table class="cal27-tbl"><thead><tr><th>L</th><th>M</th><th>X</th><th>J</th><th>V</th><th>S</th><th>D</th></tr></thead><tbody><tr>`;
+                for(let i=0;i<dow;i++) html+='<td></td>';
+                for(let d=1;d<=dias;d++){
+                    const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                    const wd=(new Date(y,m,d).getDay()+6)%7;
+                    const we=wd>=5;
+                    let cls='';
+                    if(FEST.has(ds)) cls='cfest';
+                    else if(FIN.has(ds)) cls='cinicio';
+                    else if(INICIO.has(ds)) cls='cinicio';
+                    else if(INTENS.has(ds)) cls='cint';
+                    else if(we) cls='cwe';
+                    html+=`<td class="${cls}">${d}</td>`;
+                    if(wd===6&&d<dias) html+='</tr><tr>';
+                }
+                html+='</tr></tbody></table></div>';
+                return html;
+            }
+
+            window.cal2627Init = function(){
+                const c=document.getElementById('cal2627Container');
+                if(!c) return;
+                const meses=[[2026,8],[2026,9],[2026,10],[2026,11],[2027,0],[2027,1],[2027,2],[2027,3],[2027,4],[2027,5]];
+                c.innerHTML=meses.map(([y,m])=>renderMes(y,m)).join('');
+            };
+        })();
+        </script>
+    </div>
+
     <!-- TAB OBJ SEMANALES -->
     <div id="tab-obj-semanales" class="tab-content">
         <div class="card-coord" style="padding:18px 22px;">
@@ -4348,6 +4428,9 @@
             }
             if (tabId === 'tab-obj-semanales') {
                 objSemanalesCargar();
+            }
+            if (tabId === 'tab-calendario-2627') {
+                if (typeof window.cal2627Init === 'function') window.cal2627Init();
             }
         } catch (err) { console.error("Error switchTab:", err); }
     }
