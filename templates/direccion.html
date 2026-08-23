@@ -8100,10 +8100,11 @@
                 if (!fila) return;
                 COLS_SEG.forEach(function(c) {
                     var txt = ((fila[c] && fila[c].texto) || '').trim();
-                    if (txt && !txt.startsWith('_') && !visto[txt]) {
-                        visto[txt] = true;
-                        lista.push(txt);
-                    }
+                    if (!txt || txt.startsWith('_')) return;
+                    var partes = txt.includes(' - ') ? txt.split(' - ').map(function(p) { return p.trim(); }) : [txt];
+                    partes.forEach(function(t) {
+                        if (t && !visto[t]) { visto[t] = true; lista.push(t); }
+                    });
                 });
             });
             return lista;
