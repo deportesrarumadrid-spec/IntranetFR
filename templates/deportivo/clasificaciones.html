@@ -1100,6 +1100,20 @@
                 </div>
             </div>
         `;
+
+        if (partido.fecha) {
+            var parts = partido.fecha.split('-');
+            if (parts.length === 3) {
+                var fechaPartido = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                var hoy = new Date(); hoy.setHours(0,0,0,0);
+                if (fechaPartido > hoy) {
+                    var scoreEl = container.querySelector('.score-nums');
+                    var statusEl = container.querySelector('.partido-status');
+                    if (scoreEl) scoreEl.textContent = '- - -';
+                    if (statusEl) { statusEl.textContent = 'PDTE JUGAR'; statusEl.style.background = '#64748b'; }
+                }
+            }
+        }
     }
 
     function renderClasificacion(tabla) {
