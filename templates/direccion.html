@@ -753,6 +753,19 @@
             </div>
         </div>
 
+        <!-- Popup edición SEGUIMIENTO -->
+        <div id="segPopover" style="display:none;position:fixed;z-index:9999;background:white;border:1.5px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.13);padding:14px 16px;min-width:220px;">
+            <div style="font-size:11px;font-weight:900;color:#1e293b;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Editar celda</div>
+            <input id="segPopNombre" type="text" placeholder="Nombre" style="width:100%;box-sizing:border-box;border:1.5px solid #e2e8f0;border-radius:6px;padding:5px 8px;font-size:12px;font-weight:700;margin-bottom:8px;">
+            <input id="segPopColorActual" type="hidden" value="">
+            <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px;">COLOR FONDO</div>
+            <div id="segPopPaleta" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;"></div>
+            <div style="display:flex;gap:6px;">
+                <button onclick="segGuardar()" style="flex:1;background:#1e293b;color:white;border:none;border-radius:6px;padding:6px 0;font-size:11px;font-weight:900;cursor:pointer;">Guardar</button>
+                <button onclick="segEliminar()" style="background:#fee2e2;color:#E31E24;border:none;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:900;cursor:pointer;" title="Ocultar de esta lista">Eliminar</button>
+            </div>
+        </div>
+
         <div id="coord-sub-metodologia" class="coord-subvista">
         <!-- Panel Formulario Partidos -->
         <div style="margin-top: 0; border-top: 3px solid #E31E24; padding-top: 20px;">
@@ -8065,7 +8078,13 @@
     }, true);
 
     // --- SEGUIMIENTO ENTRENAMIENTOS COORD (dinámico desde Horarios Temporada) ---
+    var _segConfig = {};
+    var _segHorTempDatos = {};
+
+    var _SEG_COLORES = ['','#fee2e2','#fef3c7','#d1fae5','#dbeafe','#ede9fe','#fce7f3','#e0f2fe','#f1f5f9','#1e293b','#E31E24'];
+
     function seguimientoEntrenamientosRender(datos) {
+        _segHorTempDatos = datos;
         var grid = document.getElementById('seguimientoEntrenamientosGrid');
         if (!grid) return;
 
@@ -8102,30 +8121,107 @@
         }
 
         var DIAS = [
-            { label: 'LUNES',     teams: lmTeams },
-            { label: 'MARTES',    teams: mjTeams },
-            { label: 'MIÉRCOLES', teams: lmTeams },
-            { label: 'JUEVES',    teams: mjTeams },
+            { label: 'LUNES',     key: 'lunes',     teams: lmTeams },
+            { label: 'MARTES',    key: 'martes',    teams: mjTeams },
+            { label: 'MIÉRCOLES', key: 'miercoles', teams: lmTeams },
+            { label: 'JUEVES',    key: 'jueves',    teams: mjTeams },
         ];
 
         grid.innerHTML = DIAS.map(function(d) {
-            var items = d.teams.length
-                ? d.teams.map(function(t) {
-                    return '<span onclick="abrirSeguimientoCoord(\'' + t.replace(/'/g, "\\'") + '\')" title="Clic para añadir observación" style="font-size:11px;font-weight:700;color:#1e293b;padding:3px 6px;background:#f8fafc;border-radius:5px;cursor:pointer;">' + t + '</span>';
-                }).join('')
-                : '<span style="font-size:11px;color:#cbd5e1;padding:3px 6px;font-weight:700;">—</span>';
+            var diaConfig = _segConfig[d.key] || {};
+            var items = d.teams
+                .filter(function(t) { return !(diaConfig[t] && diaConfig[t].oculto); })
+                .map(function(t) {
+                    var cfg = diaConfig[t] || {};
+                    var nombre = cfg.nombre || t;
+                    var color = cfg.color || '';
+                    var bgStyle = color ? 'background:' + color + ';' : 'background:#f8fafc;';
+                    var textColor = color && (color === '#1e293b' || color === '#E31E24') ? 'color:white;' : 'color:#1e293b;';
+                    var esc = t.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    var escDia = d.key;
+                    return '<span onclick="abrirSeguimientoCoord(\'' + nombre.replace(/'/g, "\\'") + '\')" oncontextmenu="return segAbrirEditor(event,\'' + escDia + '\',\'' + esc + '\')" title="Clic: observación · Clic derecho: editar" style="font-size:11px;font-weight:700;' + textColor + 'padding:3px 6px;border-radius:5px;cursor:pointer;' + bgStyle + '">' + nombre + '</span>';
+                });
+            if (!items.length) items = ['<span style="font-size:11px;color:#cbd5e1;padding:3px 6px;font-weight:700;">—</span>'];
             return '<div style="background:white;border-radius:10px;border:1px solid #e2e8f0;overflow:hidden;">' +
                 '<div style="background:#1e293b;color:white;font-size:11px;font-weight:900;text-align:center;padding:8px;letter-spacing:.5px;">' + d.label + '</div>' +
-                '<div style="padding:6px 8px;display:flex;flex-direction:column;gap:4px;">' + items + '</div>' +
+                '<div style="padding:6px 8px;display:flex;flex-direction:column;gap:4px;">' + items.join('') + '</div>' +
                 '</div>';
         }).join('');
     }
 
+    function segAbrirEditor(e, dia, equipoOriginal) {
+        e.preventDefault();
+        var diaConfig = _segConfig[dia] || {};
+        var cfg = diaConfig[equipoOriginal] || {};
+        var pop = document.getElementById('segPopover');
+        pop.dataset.dia = dia;
+        pop.dataset.equipo = equipoOriginal;
+        document.getElementById('segPopNombre').value = cfg.nombre || equipoOriginal;
+        document.getElementById('segPopColorActual').value = cfg.color || '';
+        segRenderPaleta();
+        pop.style.display = 'block';
+        var x = Math.min(e.clientX, window.innerWidth - 240);
+        var y = Math.min(e.clientY, window.innerHeight - 200);
+        pop.style.left = x + 'px';
+        pop.style.top = y + 'px';
+        pop.style.position = 'fixed';
+        return false;
+    }
+
+    function segRenderPaleta() {
+        var actual = document.getElementById('segPopColorActual').value;
+        document.getElementById('segPopPaleta').innerHTML = _SEG_COLORES.map(function(c) {
+            var border = c === actual ? '2px solid #E31E24' : '2px solid #e2e8f0';
+            var bg = c || '#ffffff';
+            return '<span onclick="segSelColor(\'' + c + '\')" style="display:inline-block;width:22px;height:22px;border-radius:4px;background:' + bg + ';border:' + border + ';cursor:pointer;' + (c==='' ? 'background:linear-gradient(135deg,#fff 45%,#f87171 45%,#f87171 55%,#fff 55%);' : '') + '"></span>';
+        }).join('');
+    }
+
+    function segSelColor(c) {
+        document.getElementById('segPopColorActual').value = c;
+        segRenderPaleta();
+    }
+
+    async function segGuardar() {
+        var pop = document.getElementById('segPopover');
+        var dia = pop.dataset.dia;
+        var equipo = pop.dataset.equipo;
+        var nombre = document.getElementById('segPopNombre').value.trim() || equipo;
+        var color = document.getElementById('segPopColorActual').value;
+        if (!_segConfig[dia]) _segConfig[dia] = {};
+        _segConfig[dia][equipo] = { nombre, color, oculto: false };
+        pop.style.display = 'none';
+        await fetch('/api/seguimiento_config', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ dia, equipo, config: { nombre, color, oculto: false } }) });
+        seguimientoEntrenamientosRender(_segHorTempDatos);
+    }
+
+    async function segEliminar() {
+        var pop = document.getElementById('segPopover');
+        var dia = pop.dataset.dia;
+        var equipo = pop.dataset.equipo;
+        if (!_segConfig[dia]) _segConfig[dia] = {};
+        _segConfig[dia][equipo] = Object.assign(_segConfig[dia][equipo] || {}, { oculto: true });
+        pop.style.display = 'none';
+        await fetch('/api/seguimiento_config', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ dia, equipo, config: _segConfig[dia][equipo] }) });
+        seguimientoEntrenamientosRender(_segHorTempDatos);
+    }
+
+    document.addEventListener('click', function(e) {
+        var pop = document.getElementById('segPopover');
+        if (pop && pop.style.display === 'block' && !pop.contains(e.target)) pop.style.display = 'none';
+    });
+
     function seguimientoEntrenamientosCargar() {
-        fetch('/api/horarios_temporada')
+        fetch('/api/seguimiento_config')
             .then(function(r) { return r.json(); })
-            .then(function(data) { seguimientoEntrenamientosRender(data.datos || {}); })
-            .catch(function() { seguimientoEntrenamientosRender({}); });
+            .then(function(d) { _segConfig = d.data || {}; })
+            .catch(function() { _segConfig = {}; })
+            .finally(function() {
+                fetch('/api/horarios_temporada')
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) { seguimientoEntrenamientosRender(data.datos || {}); })
+                    .catch(function() { seguimientoEntrenamientosRender({}); });
+            });
     }
 
     seguimientoEntrenamientosCargar();

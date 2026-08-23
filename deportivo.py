@@ -2335,6 +2335,39 @@ def api_horarios_temporada_guardar():
     return jsonify({"status": "success"})
 
 
+# --- SEGUIMIENTO CONFIG ---
+
+@deportivo_bp.route('/api/seguimiento_config', methods=['GET'])
+def api_seguimiento_config_get():
+    path = os.path.join(current_app.root_path, 'static', 'data', 'seguimiento_config.json')
+    try:
+        with open(path, encoding='utf-8') as f:
+            return jsonify({"status": "success", "data": json.load(f)})
+    except (FileNotFoundError, json.JSONDecodeError):
+        return jsonify({"status": "success", "data": {}})
+
+@deportivo_bp.route('/api/seguimiento_config', methods=['POST'])
+def api_seguimiento_config_post():
+    if not session.get('usuario'):
+        return jsonify({"status": "error"}), 401
+    data = request.json or {}
+    dia = (data.get('dia') or '').strip()
+    equipo = (data.get('equipo') or '').strip()
+    cfg_item = data.get('config', {})
+    if not dia or not equipo:
+        return jsonify({"status": "error", "message": "Faltan datos"}), 400
+    path = os.path.join(current_app.root_path, 'static', 'data', 'seguimiento_config.json')
+    try:
+        with open(path, encoding='utf-8') as f:
+            cfg = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        cfg = {}
+    cfg.setdefault(dia, {})[equipo] = cfg_item
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(cfg, f, ensure_ascii=False, indent=2)
+    return jsonify({"status": "success"})
+
+
 # --- OBJ SEMANALES ---
 
 @deportivo_bp.route('/api/obj_semanales/resumen')
