@@ -1066,17 +1066,6 @@
         const cleanLocal = partido.local.replace(/['”””]/g, '').trim().toUpperCase();
         const cleanVisitante = partido.visitante.replace(/['”””]/g, '').trim().toUpperCase();
 
-        // Partido futuro si la fecha aún no ha llegado
-        let esFuturo = false;
-        if (partido.fecha) {
-            const parts = partido.fecha.split('-');
-            if (parts.length === 3) {
-                const fechaPartido = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-                const hoy = new Date(); hoy.setHours(0,0,0,0);
-                esFuturo = fechaPartido > hoy;
-            }
-        }
-
         container.innerHTML = `
             <div class=”partido-card”>
                 <div class=”partido-header”>
@@ -1096,9 +1085,9 @@
                     <!-- Marcador -->
                     <div class=”score-box”>
                         <div class=”score-nums”>
-                            ${esFuturo ? '0 - 0' : (partido.resultado || '-')}
+                            ${partido.resultado || '-'}
                         </div>
-                        <span class=”partido-status”>${esFuturo ? 'PDTE JUGAR' : 'Finalizado'}</span>
+                        <span class=”partido-status”>Finalizado</span>
                     </div>
 
                     <!-- Visitante -->
@@ -1111,6 +1100,21 @@
                 </div>
             </div>
         `;
+
+        // Ajustar estado según si el partido es futuro (sin tocar el template literal)
+        if (partido.fecha) {
+            const parts = partido.fecha.split('-');
+            if (parts.length === 3) {
+                const fechaPartido = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                const hoy = new Date(); hoy.setHours(0,0,0,0);
+                if (fechaPartido > hoy) {
+                    const statusEl = container.querySelector('.partido-status');
+                    const scoreEl = container.querySelector('.score-nums');
+                    if (statusEl) statusEl.textContent = 'PDTE JUGAR';
+                    if (scoreEl) scoreEl.textContent = '0 - 0';
+                }
+            }
+        }
     }
 
     function renderClasificacion(tabla) {
