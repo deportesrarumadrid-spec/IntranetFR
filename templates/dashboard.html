@@ -1244,15 +1244,22 @@
         (function() {
             const btn = document.getElementById('adminEquipoBtn');
             if (!btn) return;
-            fetch('/api/equipos_lista').then(r => r.json()).then(data => {
+            const equipoActual = document.getElementById('adminEquipoLabel').textContent.trim();
+            fetch('/api/equipos_config').then(r => r.json()).then(data => {
+                const nombres = (data.equipos || []).map(e => typeof e === 'string' ? e : (e.nombre || '')).filter(Boolean);
                 const list = document.getElementById('adminEquipoList');
-                (data.equipos || []).forEach(eq => {
+                if (!nombres.length) {
+                    list.innerHTML = '<div style="padding:10px 16px;font-size:0.78rem;color:#94a3b8;font-weight:700;">Sin equipos configurados</div>';
+                    return;
+                }
+                nombres.forEach(eq => {
                     const item = document.createElement('div');
                     item.textContent = eq;
-                    item.style.cssText = 'padding:8px 16px; cursor:pointer; font-size:0.82rem; font-weight:700; text-transform:uppercase; color:#333; white-space:nowrap;';
-                    item.onmouseenter = () => item.style.background = '#fef2f2';
-                    item.onmouseleave = () => item.style.background = '';
-                    item.onclick = () => { showLoader(); window.location.href = '/direccion_deportiva?equipo=' + encodeURIComponent(eq); };
+                    const esActual = eq.toUpperCase() === equipoActual.toUpperCase();
+                    item.style.cssText = 'padding:8px 16px; cursor:pointer; font-size:0.82rem; font-weight:700; text-transform:uppercase; color:#333; white-space:nowrap;' + (esActual ? 'background:#fef2f2; color:#E31E24;' : '');
+                    item.onmouseenter = () => { if (!esActual) item.style.background = '#f8fafc'; };
+                    item.onmouseleave = () => { if (!esActual) item.style.background = ''; };
+                    item.onclick = () => { showLoader(); window.location.href = '/seleccionar_equipo?equipo=' + encodeURIComponent(eq); };
                     list.appendChild(item);
                 });
             }).catch(() => {});
