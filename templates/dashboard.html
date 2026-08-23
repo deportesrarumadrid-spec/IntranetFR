@@ -779,7 +779,6 @@
                 <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px; flex-wrap:wrap;">
                     <label style="font-size:11px; font-weight:900; color:#64748b; text-transform:uppercase; white-space:nowrap;">Temporada</label>
                     <div id="ecTemporada" style="padding:8px 14px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; font-weight:900; width:100px; text-align:center; font-family:inherit; background:#f8fafc; color:#1e293b; display:inline-block;"></div>
-                    <button onclick="ecAgregarEquipo()" style="background:#1e293b; color:white; border:none; border-radius:8px; padding:9px 16px; font-weight:900; font-size:11px; cursor:pointer; font-family:inherit; white-space:nowrap;"><i class="fas fa-plus" style="margin-right:5px;"></i>AÑADIR EQUIPO</button>
                 </div>
 
                 <!-- Modal Cerrar Temporada -->
@@ -2047,8 +2046,9 @@
             const cont = document.getElementById('ecEquiposList');
             if (!cont) return;
             const equipos = _ecData.equipos || [];
+            const btnAnadir = `<div style="margin-top:16px; text-align:center;"><button onclick="ecAgregarEquipo()" style="background:#1e293b; color:white; border:none; border-radius:8px; padding:10px 20px; font-weight:900; font-size:11px; cursor:pointer; font-family:inherit; white-space:nowrap;"><i class="fas fa-plus" style="margin-right:6px;"></i>AÑADIR EQUIPO</button></div>`;
             if (equipos.length === 0) {
-                cont.innerHTML = '<div style="text-align:center; padding:30px; color:#94a3b8; font-size:12px;">Sin equipos configurados. Pulsa AÑADIR EQUIPO para comenzar.</div>';
+                cont.innerHTML = '<div style="text-align:center; padding:30px; color:#94a3b8; font-size:12px;">Sin equipos configurados.</div>' + btnAnadir;
                 return;
             }
             cont.innerHTML = equipos.map((eq, i) => `
@@ -2086,7 +2086,7 @@
                             <input type="text" class="ec-horario" value="${eq.horario||''}" placeholder="Ej: 18:00 - 19:30" style="width:100%; padding:7px 10px; border:1px solid #e2e8f0; border-radius:7px; font-size:12px; font-weight:600; box-sizing:border-box; font-family:inherit;">
                         </div>
                     </div>
-                </div>`).join('');
+                </div>`).join('') + btnAnadir;
         }
 
         function ecToggleTipo(btn) {
