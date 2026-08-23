@@ -1066,7 +1066,7 @@
         const cleanLocal = partido.local.replace(/['”””]/g, '').trim().toUpperCase();
         const cleanVisitante = partido.visitante.replace(/['”””]/g, '').trim().toUpperCase();
 
-        // Determinar si el partido es futuro comparando fecha con hoy
+        // Partido futuro si la fecha aún no ha llegado
         let esFuturo = false;
         if (partido.fecha) {
             const parts = partido.fecha.split('-');
@@ -1076,15 +1076,11 @@
                 esFuturo = fechaPartido > hoy;
             }
         }
-        const badgeLabel = esFuturo ? 'PRÓXIMA JORNADA' : (partido.jornada || 'Última Jornada');
-        const scoreHtml = esFuturo ? '<span style=”font-size:1.6rem;color:#94a3b8;”>vs</span>' : (partido.resultado || '-');
-        const statusLabel = esFuturo ? 'PDTE JUGAR' : 'FINALIZADO';
-        const statusColor = esFuturo ? '#f59e0b' : '#16a34a';
 
         container.innerHTML = `
             <div class=”partido-card”>
                 <div class=”partido-header”>
-                    <span class=”jornada-badge”>${badgeLabel}</span>
+                    <span class=”jornada-badge”>${partido.jornada || 'Último Partido'}</span>
                     <span class=”partido-fecha”>${partido.fecha || ''}</span>
                 </div>
 
@@ -1100,9 +1096,9 @@
                     <!-- Marcador -->
                     <div class=”score-box”>
                         <div class=”score-nums”>
-                            ${scoreHtml}
+                            ${esFuturo ? '0 - 0' : (partido.resultado || '-')}
                         </div>
-                        <span class=”partido-status” style=”background:${statusColor};”>${statusLabel}</span>
+                        <span class=”partido-status”>${esFuturo ? 'PDTE JUGAR' : 'Finalizado'}</span>
                     </div>
 
                     <!-- Visitante -->
