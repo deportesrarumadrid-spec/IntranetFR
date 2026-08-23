@@ -325,9 +325,12 @@
     }
 
     .match-shield-img {
-        width: 100%;
-        height: 100%;
+        max-width: 50px;
+        max-height: 50px;
+        width: auto;
+        height: auto;
         object-fit: contain;
+        display: block;
     }
 
     /* Tarjeta del Último Partido */
@@ -398,6 +401,8 @@
         font-size: 24px;
         color: #94a3b8;
         border: 1px solid #e2e8f0;
+        overflow: hidden;
+        flex-shrink: 0;
     }
 
     .team-shield.fuentelarreyna {
