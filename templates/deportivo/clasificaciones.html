@@ -325,12 +325,9 @@
     }
 
     .match-shield-img {
-        max-width: 50px;
-        max-height: 50px;
-        width: auto;
-        height: auto;
+        width: 100%;
+        height: 100%;
         object-fit: contain;
-        display: block;
     }
 
     /* Tarjeta del Último Partido */
@@ -401,8 +398,6 @@
         font-size: 24px;
         color: #94a3b8;
         border: 1px solid #e2e8f0;
-        overflow: hidden;
-        flex-shrink: 0;
     }
 
     .team-shield.fuentelarreyna {
@@ -1067,59 +1062,44 @@
         const esFuentelarreynaLocal = partido.es_local;
         const shieldLocalHtml = getShieldHtml(partido.local, partido.local_shield, esFuentelarreynaLocal);
         const shieldVisHtml = getShieldHtml(partido.visitante, partido.visitante_shield, !esFuentelarreynaLocal);
-
-        const cleanLocal = partido.local.replace(/['”””]/g, '').trim().toUpperCase();
-        const cleanVisitante = partido.visitante.replace(/['”””]/g, '').trim().toUpperCase();
-
+        
+        const cleanLocal = partido.local.replace(/['"“”]/g, '').trim().toUpperCase();
+        const cleanVisitante = partido.visitante.replace(/['"“”]/g, '').trim().toUpperCase();
+        
         container.innerHTML = `
-            <div class=”partido-card”>
-                <div class=”partido-header”>
-                    <span class=”jornada-badge”>${partido.jornada || 'Último Partido'}</span>
-                    <span class=”partido-fecha”>${partido.fecha || ''}</span>
+            <div class="partido-card">
+                <div class="partido-header">
+                    <span class="jornada-badge">${partido.jornada || 'Último Partido'}</span>
+                    <span class="partido-fecha">${partido.fecha || ''}</span>
                 </div>
-
-                <div class=”partido-equipos”>
+                
+                <div class="partido-equipos">
                     <!-- Local -->
-                    <div class=”team-box”>
-                        <div class=”team-shield ${esFuentelarreynaLocal ? 'fuentelarreyna' : ''}”>
+                    <div class="team-box">
+                        <div class="team-shield ${esFuentelarreynaLocal ? 'fuentelarreyna' : ''}">
                             ${shieldLocalHtml}
                         </div>
-                        <div class=”team-name”>${cleanLocal}</div>
+                        <div class="team-name">${cleanLocal}</div>
                     </div>
-
+ 
                     <!-- Marcador -->
-                    <div class=”score-box”>
-                        <div class=”score-nums”>
+                    <div class="score-box">
+                        <div class="score-nums">
                             ${partido.resultado || '-'}
                         </div>
-                        <span class=”partido-status”>Finalizado</span>
+                        <span class="partido-status">Finalizado</span>
                     </div>
-
+ 
                     <!-- Visitante -->
-                    <div class=”team-box”>
-                        <div class=”team-shield ${!esFuentelarreynaLocal ? 'fuentelarreyna' : ''}”>
+                    <div class="team-box">
+                        <div class="team-shield ${!esFuentelarreynaLocal ? 'fuentelarreyna' : ''}">
                             ${shieldVisHtml}
                         </div>
-                        <div class=”team-name”>${cleanVisitante}</div>
+                        <div class="team-name">${cleanVisitante}</div>
                     </div>
                 </div>
             </div>
         `;
-
-        // Ajustar estado según si el partido es futuro (sin tocar el template literal)
-        if (partido.fecha) {
-            const parts = partido.fecha.split('-');
-            if (parts.length === 3) {
-                const fechaPartido = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-                const hoy = new Date(); hoy.setHours(0,0,0,0);
-                if (fechaPartido > hoy) {
-                    const statusEl = container.querySelector('.partido-status');
-                    const scoreEl = container.querySelector('.score-nums');
-                    if (statusEl) statusEl.textContent = 'PDTE JUGAR';
-                    if (scoreEl) scoreEl.textContent = '0 - 0';
-                }
-            }
-        }
     }
 
     function renderClasificacion(tabla) {
