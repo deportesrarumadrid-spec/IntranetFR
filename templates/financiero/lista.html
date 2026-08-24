@@ -1289,7 +1289,8 @@
 
 <!-- MODAL EDITAR FICHA JUGADOR -->
 <div id="modalEditarFicha" class="modal">
-    <div class="modal-content" style="width: 560px; max-height: 85vh; overflow-y: auto;">
+    <div class="modal-content" style="width: 560px; max-height: 85vh; overflow-y: auto; position:relative;">
+        <span onclick="document.getElementById('modalEditarFicha').style.display='none'" style="position:absolute;top:14px;right:16px;font-size:22px;color:#94a3b8;cursor:pointer;font-weight:700;line-height:1;" title="Cerrar">&times;</span>
         <h3 style="font-size: 14px; font-weight: 900; margin-bottom: 20px; border-bottom: 2px solid #E31E24; padding-bottom: 10px;">
             <i class="fas fa-pencil-alt"></i> EDITAR FICHA DEL JUGADOR
         </h3>
@@ -4630,7 +4631,9 @@ async function guardarEdicionFicha(btn) {
     const campos = {};
     document.querySelectorAll('.input-editar-ficha').forEach(inp => { campos[inp.dataset.key] = inp.value; });
 
+    const textoOrig = btn.textContent;
     btn.disabled = true;
+    btn.textContent = 'Guardando...';
     try {
         const res = await fetch('/api/jugadores_datos/actualizar', {
             method: 'POST',
@@ -4639,14 +4642,28 @@ async function guardarEdicionFicha(btn) {
         });
         const data = await res.json();
         if (data.status === 'success') {
-            document.getElementById('modalEditarFicha').style.display = 'none';
-            await cargarTablaDatosJugadores();
+            // Actualizar cache local al instante sin re-fetch
+            const entrada = datosJugadoresCache.find(j => j._idx === fichaEditandoIdx);
+            if (entrada) Object.assign(entrada, campos);
+            filtrarTablaDatos();
+            btn.textContent = '✓ Guardado';
+            btn.style.background = '#28a745';
+            setTimeout(() => {
+                document.getElementById('modalEditarFicha').style.display = 'none';
+                btn.textContent = textoOrig;
+                btn.style.background = '#E31E24';
+                btn.disabled = false;
+                // Refresco silencioso en background para sincronizar con Sheets
+                cargarTablaDatosJugadores();
+            }, 800);
         } else {
             alert('Error al guardar: ' + (data.message || 'desconocido'));
+            btn.textContent = textoOrig;
+            btn.disabled = false;
         }
     } catch (e) {
         alert('Error de conexión al guardar la ficha.');
-    } finally {
+        btn.textContent = textoOrig;
         btn.disabled = false;
     }
 }
@@ -4785,7 +4802,9 @@ async function vincularFichaManual(idx, btn) {
     const nombre = document.getElementById('vincularJugador_' + idx).value;
     if (!equipo || !nombre) { alert('Selecciona primero el equipo y el jugador real al que pertenece esta hoja.'); return; }
 
+    const textoOrig = btn.textContent;
     btn.disabled = true;
+    btn.textContent = 'Vinculando...';
     try {
         const res = await fetch('/api/jugadores_datos/actualizar', {
             method: 'POST',
@@ -4794,14 +4813,27 @@ async function vincularFichaManual(idx, btn) {
         });
         const data = await res.json();
         if (data.status === 'success') {
-            await cargarTablaDatosJugadores();
+            // Actualizar cache local al instante
+            const entrada = datosJugadoresCache.find(j => j._idx === idx);
+            if (entrada) { entrada.JUGADOR_NOMBRE = nombre; entrada.JUGADOR_EQUIPO_LETRA = equipo; }
+            filtrarTablaDatos();
             renderRevisionHojas();
+            btn.textContent = '✓ Vinculado';
+            btn.style.background = '#28a745';
+            setTimeout(() => {
+                btn.textContent = textoOrig;
+                btn.style.background = '';
+                btn.disabled = false;
+                cargarTablaDatosJugadores();
+            }, 1200);
         } else {
             alert('Error al vincular: ' + (data.message || 'desconocido'));
+            btn.textContent = textoOrig;
             btn.disabled = false;
         }
     } catch (e) {
         alert('Error de conexión al vincular la ficha.');
+        btn.textContent = textoOrig;
         btn.disabled = false;
     }
 }
