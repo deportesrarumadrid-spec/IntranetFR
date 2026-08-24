@@ -522,6 +522,7 @@
     .sticky-col { position: sticky; left: 0; background: white; z-index: 10; width: 110px; min-width: 110px; padding: 8px 10px; text-align: left; font-weight: 900; color: #E31E24; border-right: 2px solid #f0f0f0; }
     .th-dia { background: #f8f5f0; color: #333; border: 1px solid #eee; text-align: center; }
     .th-dia.alerta-pendiente { background: #E31E24 !important; color: white !important; }
+    .festivo-asis-label { display:block; font-size:8px; font-weight:900; color:#f59e0b; letter-spacing:.5px; line-height:1; margin-bottom:2px; }
     /* Zebra stripes */
     #cuerpoTabla tr:nth-child(even) td:not(.sticky-col) { background: #f9fafb; }
     /* Celda vacía más sutil */
@@ -800,6 +801,21 @@ function cambiarVistaAsistConv(vista) {
     }
 }
 
+function marcarFestivosAsistencias(diasValidos) {
+    if (!window.FESTIVOS_2627 || !diasValidos) return;
+    diasValidos.forEach(function(d, i) {
+        const th = document.getElementById('th-col-' + i);
+        if (!th) return;
+        const año = d.fechaFull.getFullYear();
+        const mes = String(d.fechaFull.getMonth() + 1).padStart(2, '0');
+        const dia = String(d.fechaFull.getDate()).padStart(2, '0');
+        const ds = año + '-' + mes + '-' + dia;
+        if (window.FESTIVOS_2627.has(ds) && !th.querySelector('.festivo-asis-label')) {
+            th.insertAdjacentHTML('afterbegin', '<div class="festivo-asis-label">FESTIVO</div>');
+        }
+    });
+}
+
 function _añoParaMes(mesNum) {
     const T = window._TINI_ASIS || {{ t_ini }};
     const F = window._TFIN_ASIS || {{ t_fin }};
@@ -850,13 +866,9 @@ async function generarCalendario() {
     }
 
     document.getElementById('cabeceraDias').innerHTML = `<th class="sticky-col" style="background:white;"></th>` +
-        diasValidos.map((d, i) => {
-            const _ds = `${d.fechaFull.getFullYear()}-${String(d.fechaFull.getMonth()+1).padStart(2,'0')}-${String(d.fechaFull.getDate()).padStart(2,'0')}`;
-            const _fest = window.FESTIVOS_2627 && window.FESTIVOS_2627.has(_ds);
-            return `
-            <th class="th-dia${_fest ? ' th-dia-festivo' : ''}" id="th-col-${i}" style="position: relative; min-width: 110px; height: ${_fest ? '74px' : '62px'}; padding: 5px 5px;">
+        diasValidos.map((d, i) => `
+            <th class="th-dia" id="th-col-${i}" style="position: relative; min-width: 110px; height: 62px; padding: 5px 5px;">
                 <div class="warning-icon"><i class="fas fa-exclamation"></i></div>
-                ${_fest ? '<div style="font-size:8px;font-weight:900;color:#f59e0b;letter-spacing:.5px;line-height:1;margin-bottom:1px;">FESTIVO</div>' : ''}
                 <div style="font-size: 10px; opacity: 0.8;">${d.label}</div>
                 <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 2px; padding: 0 2px;">
                     <div class="btn-balon-ctrl" id="balon-i-${d.num}" onclick="event.stopPropagation(); abrirModalBalones(${d.num}, 'inicio')" title="Inicio" style="padding:2px 4px; font-size:10px; width:38px; max-width:38px; overflow:hidden; white-space:nowrap; gap:2px; flex-shrink:0; height:22px; display:flex; align-items:center; justify-content:center;">
@@ -867,8 +879,8 @@ async function generarCalendario() {
                         <i class="fas fa-futbol"></i>&nbsp;F
                     </div>
                 </div>
-            </th>`;
-        }).join('');
+            </th>`).join('');
+    marcarFestivosAsistencias(diasValidos);
 
     document.getElementById('filaMarcarTodo').innerHTML = `<td class="sticky-col fila-todo-si-estilo"></td>` +
     diasValidos.map((_, i) => `
