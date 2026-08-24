@@ -1989,7 +1989,11 @@ function calcularStats() {
 window.onload = async function() {
     const hoyReal = new Date();
     const selectorMes = document.getElementById('selectMes');
-    if (selectorMes) selectorMes.value = hoyReal.getMonth() + 1;
+    if (selectorMes) {
+        const mesNum = hoyReal.getMonth() + 1;
+        selectorMes.value = mesNum;
+        if (!selectorMes.value) selectorMes.value = selectorMes.options[0].value;
+    }
 
     // 1. Prioridad: Equipo en URL, luego Sesión
     const urlParams = new URLSearchParams(window.location.search);
