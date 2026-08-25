@@ -586,14 +586,32 @@ def movil():
         all_values = sheet_jug.get_all_values()
         if all_values:
             headers = [normalizar_cabecera_universal(h) for h in all_values[0]]
-            idx_eq = next((headers.index(c) for c in ["EQUIPO","CATEGORIA","GRUPO","EQUIPOS","EQUIPOACTIVO"] if c in headers), -1)
+            idx_eq  = next((headers.index(c) for c in ["EQUIPO","CATEGORIA","GRUPO","EQUIPOS","EQUIPOACTIVO"] if c in headers), -1)
             idx_nom = headers.index('NOMBRE') if 'NOMBRE' in headers else 0
+            idx_baja = next((headers.index(c) for c in ["BAJASDESDE","BAJADESDE","BAJA_DESDE"] if c in headers), -1)
+            idx_alta = next((headers.index(c) for c in ["ALTADESDE","ALTA_DESDE"] if c in headers), -1)
             for row in all_values[1:]:
                 if not any(row): continue
-                eq = row[idx_eq].strip() if idx_eq >= 0 and idx_eq < len(row) else ''
+                eq  = row[idx_eq].strip() if idx_eq >= 0 and idx_eq < len(row) else ''
                 nom = row[idx_nom].strip() if idx_nom < len(row) else ''
                 if eq.upper() == equipo.upper() and nom:
-                    jugadores.append(nom)
+                    baja_str = row[idx_baja].strip() if idx_baja >= 0 and idx_baja < len(row) else ''
+                    alta_str = row[idx_alta].strip() if idx_alta >= 0 and idx_alta < len(row) else ''
+                    es_baja = False
+                    if baja_str:
+                        try:
+                            from datetime import date
+                            def _parse_fecha(s):
+                                for fmt in ('%d/%m/%Y','%Y-%m-%d','%d-%m-%Y'):
+                                    try: return datetime.strptime(s, fmt).date()
+                                    except: pass
+                                return None
+                            fd = _parse_fecha(baja_str)
+                            fa = _parse_fecha(alta_str) if alta_str else None
+                            if fd and fd <= hoy.date():
+                                es_baja = not fa or fa > hoy.date()
+                        except: pass
+                    jugadores.append({'nombre': nom, 'baja': es_baja})
     except Exception as e:
         print(f"Error cargando jugadores en movil: {e}")
 
