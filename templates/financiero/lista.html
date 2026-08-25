@@ -4441,6 +4441,7 @@ async function fpAsignarConfirmar() {
     btn.textContent = 'Guardando...';
     const campos = {
         JUGADOR_NOMBRE: _fpAsignarSeleccionado.nombre,
+        JUGADOR_APELLIDOS: '',
         JUGADOR_EQUIPO_LETRA: _fpAsignarSeleccionado.equipo
     };
     try {
@@ -4686,7 +4687,8 @@ function tieneHojaRegistro(equipoOficial, nombreOficial) {
     const nOf = normalizarNombreRevision(nombreOficial);
     const eOf = normalizarNombreRevision(equipoOficial);
     return datosJugadoresCache.some(j => {
-        const nReg = normalizarNombreRevision(j.JUGADOR_NOMBRE);
+        const nombreCompleto = ((j.JUGADOR_NOMBRE || '') + ' ' + (j.JUGADOR_APELLIDOS || '')).trim();
+        const nReg = normalizarNombreRevision(nombreCompleto);
         const eReg = normalizarNombreRevision(j.JUGADOR_EQUIPO_LETRA);
         return nReg === nOf && (eReg.includes(eOf) || eOf.includes(eReg));
     });
@@ -4818,7 +4820,7 @@ async function vincularFichaManual(idx, btn) {
         const res = await fetch('/api/jugadores_datos/actualizar', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ idx, campos: { JUGADOR_NOMBRE: nombre, JUGADOR_EQUIPO_LETRA: equipo } })
+            body: JSON.stringify({ idx, campos: { JUGADOR_NOMBRE: nombre, JUGADOR_APELLIDOS: '', JUGADOR_EQUIPO_LETRA: equipo } })
         });
         const data = await res.json();
         if (data.status === 'success') {
