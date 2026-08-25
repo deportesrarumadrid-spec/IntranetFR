@@ -950,9 +950,9 @@ async function generarCalendario() {
         let _toggleHtml = '';
         if (esBajaStyle && !_bajaToggleInserted) {
             _bajaToggleInserted = true;
-            _toggleHtml = `<tr id="fila-toggle-bajas" onclick="toggleGrupoBajas()" style="cursor:pointer; background:#fef3c7; border-top:2px solid #f59e0b; user-select:none;">
-                <td colspan="999" style="padding:8px 16px; font-size:12px; font-weight:900; color:#92400e;">
-                    <span id="icon-bajas-toggle">▶</span>&nbsp; BAJAS — ${_nBajas} jugador${_nBajas !== 1 ? 'es' : ''} &nbsp;<span style="font-weight:400; font-size:11px; color:#b45309;">(clic para ver)</span>
+            _toggleHtml = `<tr id="fila-toggle-bajas" onclick="toggleGrupoBajas()" style="cursor:pointer; background:#f1f5f9; border-top:2px solid #cbd5e1; user-select:none;">
+                <td colspan="999" style="padding:8px 16px; font-size:12px; font-weight:900; color:#64748b;">
+                    <span id="icon-bajas-toggle">▶</span>&nbsp; BAJAS — ${_nBajas} jugador${_nBajas !== 1 ? 'es' : ''} &nbsp;<span style="font-weight:400; font-size:11px; color:#94a3b8;">(clic para ver)</span>
                 </td>
             </tr>`;
         }
