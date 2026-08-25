@@ -1624,7 +1624,10 @@ async function _agruparBajasMovil() {
             return null;
         }
 
-        const bajas = [];
+        const lista = document.getElementById('listaJug');
+        if (!lista) return;
+
+        const bajasRows = [];
         document.querySelectorAll('.new-prow').forEach(row => {
             const nombre = row.dataset.nombre || '';
             const info = data[nombre] || {};
@@ -1634,25 +1637,37 @@ async function _agruparBajasMovil() {
             if (esBaja) {
                 row.dataset.baja = 'si';
                 row.classList.add('fila-baja-movil');
-                row.style.display = 'none';
                 const nameEl = row.querySelector('.npr-name');
                 if (nameEl && !nameEl.querySelector('.baja-tag')) {
                     nameEl.style.color = '#dc2626';
                     nameEl.insertAdjacentHTML('beforeend', '<span class="baja-tag" style="font-size:9px;font-weight:500;opacity:0.75;"> (BAJA)</span>');
                 }
-                bajas.push(row);
+                bajasRows.push(row);
             }
         });
 
-        if (bajas.length === 0) return;
+        if (bajasRows.length === 0) return;
 
-        // Insertar fila toggle antes de la primera baja
-        const primeraBaja = bajas[0];
+        // Mover bajas al final del contenedor y ocultarlas
+        bajasRows.forEach(row => {
+            lista.appendChild(row);
+            row.style.display = 'none';
+        });
+
+        // Renumerar activos (los que quedan visibles)
+        let num = 1;
+        document.querySelectorAll('.new-prow:not(.fila-baja-movil)').forEach(row => {
+            const numEl = row.querySelector('.npr-num');
+            if (numEl) numEl.textContent = num++;
+        });
+
+        // Insertar fila toggle justo antes del primer baja (al final de los activos)
         const toggleRow = document.createElement('div');
         toggleRow.onclick = function() { toggleBajasMovil(this); };
         toggleRow.style.cssText = 'cursor:pointer;padding:10px 16px;background:#f1f5f9;border-top:2px solid #cbd5e1;display:flex;align-items:center;gap:8px;user-select:none;';
-        toggleRow.innerHTML = `<span class="icon-bajas-mov" style="font-size:12px;font-weight:900;color:#64748b;">▶</span><span style="font-size:12px;font-weight:900;color:#64748b;">BAJAS — ${bajas.length} jugador${bajas.length !== 1 ? 'es' : ''}</span><span style="font-size:11px;font-weight:400;color:#94a3b8;"> (toca para ver)</span>`;
-        primeraBaja.parentNode.insertBefore(toggleRow, primeraBaja);
+        toggleRow.innerHTML = `<span class="icon-bajas-mov" style="font-size:12px;font-weight:900;color:#64748b;">▶</span><span style="font-size:12px;font-weight:900;color:#64748b;">BAJAS — ${bajasRows.length} jugador${bajasRows.length !== 1 ? 'es' : ''}</span><span style="font-size:11px;font-weight:400;color:#94a3b8;"> (toca para ver)</span>`;
+        lista.insertBefore(toggleRow, bajasRows[0]);
+
     } catch(e) { console.error('Error agrupando bajas:', e); }
 }
 
