@@ -1236,7 +1236,7 @@ async function cargarAsistenciasGuardadas(preloadedData) {
         {
             const _dbg = document.getElementById('_dbg_asis') || document.createElement('div');
             _dbg.id = '_dbg_asis';
-            _dbg.style = 'position:fixed;bottom:80px;right:10px;background:#1e293b;color:#fff;padding:8px 12px;border-radius:8px;z-index:99999;font-size:11px;max-width:340px;word-break:break-all;box-shadow:0 4px 12px rgba(0,0,0,0.5);';
+            _dbg.style = 'position:fixed;top:60px;right:10px;background:#dc2626;color:#fff;padding:10px 14px;border-radius:8px;z-index:99999;font-size:12px;max-width:360px;word-break:break-all;box-shadow:0 4px 12px rgba(0,0,0,0.5);border:2px solid #fff;';
             const _primerNombre = datosGuardados[0] ? datosGuardados[0].nombre : 'ninguno';
             _dbg.innerHTML = `<b>DEBUG ASIS</b><br>preloaded: ${Array.isArray(preloadedData)}<br>registros mes ${mes}: ${datosGuardados.length}<br>1er nombre: ${_primerNombre}`;
             document.body.appendChild(_dbg);
