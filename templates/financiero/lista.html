@@ -4640,8 +4640,7 @@ async function eliminarFicha(idx, nombre) {
         });
         const data = await res.json();
         if (data.status === 'success') {
-            datosJugadoresCache = datosJugadoresCache.filter(j => j._idx !== idx);
-            filtrarTablaDatos();
+            await cargarTablaDatosJugadores(); // recarga _idx correctos tras desplazamiento de filas
             await cargarFichasPendientes();
             renderRevisionHojas();
         } else {
