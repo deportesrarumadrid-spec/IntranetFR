@@ -385,7 +385,13 @@
     <div class="modal-content">
         <h3 style="margin-top: 0; color: #E31E24; font-size: 14px; font-weight: 900;">PROCESAR BAJA</h3>
         <p style="font-size: 11px; color: #666; margin-bottom: 10px;">Selecciona la fecha a partir de la cual el jugador no estará disponible:</p>
-        <input type="date" id="fechaBajaInput" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px;">
+        <input type="date" id="fechaBajaInput" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 12px;">
+        <label style="font-size: 10px; font-weight: 900; color: #999; display: block; margin-bottom: 5px;">TEMPORADA DE LA BAJA <span style="color:#E31E24;">*</span></label>
+        <select id="temporadaBajaSelect" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-size: 13px; font-weight: 700; margin-bottom: 12px; box-sizing: border-box;">
+            <option value="">-- Seleccionar temporada --</option>
+            <option value="{{ t_ini }}/{{ t_fin }}">{{ t_ini }}/{{ t_fin }} (Temporada actual)</option>
+            <option value="Temporadas anteriores">Temporadas anteriores</option>
+        </select>
         <textarea id="motivoBaja" placeholder="Motivo de la baja (Obligatorio)..." style="width: 100%; height: 70px; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-family: inherit; font-size: 13px; resize: none; box-sizing: border-box; margin-bottom: 20px;"></textarea>
         <div style="display: flex; gap: 10px;">
             <button onclick="document.getElementById('modalBaja').style.display='none'" style="flex: 1; padding: 12px; border: none; border-radius: 8px; background: #eee; font-weight: 700; cursor: pointer;">CANCELAR</button>
@@ -738,6 +744,7 @@
 <script>
 let cambiosPendientes = [];
 let jugadoresRaw = {{ jugadores_raw | tojson | safe }};
+const _temporadaActiStr = '{{ t_ini }}/{{ t_fin }}';
 let staffRaw = {{ staff_raw | tojson | safe }}; // Aseguramos que siempre sea un array y se escape correctamente
 const nombresDias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 let isSaving = false;
@@ -957,53 +964,58 @@ async function generarCalendario() {
 
     const filtrados = jugadoresRaw.filter(j => j.EQUIPO === equipo);
 
-    // Pre-calculamos el estado de baja para cada jugador en este mes para el estilo y el orden
+    // Pre-calculamos el estado de baja y tipo para cada jugador
     filtrados.forEach(j => {
         const fBaja = parsearFechaLocal(j.BAJA_DESDE);
         const fAlta = parsearFechaLocal(j.ALTA_DESDE);
-        // Un jugador se considera "de baja" en este mes si tiene alguna "X" en los días mostrados
         j._esBajaEnMes = diasValidos.some(d => {
             if (!fBaja) return false;
             const dFull = d.fechaFull;
             return dFull >= fBaja && (!fAlta || dFull < fAlta);
         });
+        // Baja de temporada actual: aparece al final tachado, sin agrupar
+        j._esBajaActual = j._esBajaEnMes && ((j.TEMPORADA_BAJA || '') === _temporadaActiStr);
+        // Baja de temporadas anteriores: se agrupa colapsado (comportamiento existente)
+        j._esBajaAnterior = j._esBajaEnMes && !j._esBajaActual;
     });
 
-    // ORDENAR: Activos arriba, bajas al final
+    // ORDENAR: Activos → Baja temporada actual → Baja temporadas anteriores
     filtrados.sort((a, b) => {
-        return a._esBajaEnMes - b._esBajaEnMes;
+        const ord = j => j._esBajaAnterior ? 2 : j._esBajaActual ? 1 : 0;
+        return ord(a) - ord(b);
     });
 
-    const _nBajas = filtrados.filter(j => j._esBajaEnMes).length;
+    const _nBajasAnteriores = filtrados.filter(j => j._esBajaAnterior).length;
     let _bajaToggleInserted = false;
     document.getElementById('cuerpoTabla').innerHTML = filtrados.map((j, _numJugador) => {
         const arr = getArrayObservaciones(j.NOMBRE);
         const hasObs = arr.length > 0;
-        const esBajaStyle = j._esBajaEnMes;
+        const esBajaActual = j._esBajaActual;
+        const esBajaAnterior = j._esBajaAnterior;
         const fBajaJug = parsearFechaLocal(j.BAJA_DESDE);
         const fAltaJug = parsearFechaLocal(j.ALTA_DESDE);
 
         const nombreEscapado = j.NOMBRE.replace(/'/g, "\\'");
 
         let _toggleHtml = '';
-        if (esBajaStyle && !_bajaToggleInserted) {
+        if (esBajaAnterior && !_bajaToggleInserted) {
             _bajaToggleInserted = true;
             _toggleHtml = `<tr id="fila-toggle-bajas" onclick="toggleGrupoBajas()" style="cursor:pointer; background:#f1f5f9; border-top:2px solid #cbd5e1; user-select:none;">
                 <td colspan="999" style="padding:8px 16px; font-size:12px; font-weight:900; color:#64748b;">
-                    <span id="icon-bajas-toggle">▶</span>&nbsp; BAJAS — ${_nBajas} jugador${_nBajas !== 1 ? 'es' : ''} &nbsp;<span style="font-weight:400; font-size:11px; color:#94a3b8;">(clic para ver)</span>
+                    <span id="icon-bajas-toggle">▶</span>&nbsp; BAJAS — ${_nBajasAnteriores} jugador${_nBajasAnteriores !== 1 ? 'es' : ''} &nbsp;<span style="font-weight:400; font-size:11px; color:#94a3b8;">(clic para ver)</span>
                 </td>
             </tr>`;
         }
 
         return _toggleHtml + `
-        <tr class="${esBajaStyle ? 'fila-baja-grupo' : ''}" style="${esBajaStyle ? 'display:none; height:28px;' : ''}">
-            <td class="sticky-col" ${esBajaStyle ? 'style="padding:2px 10px;"' : ''}>
+        <tr class="${esBajaAnterior ? 'fila-baja-grupo' : ''}" style="${esBajaAnterior ? 'display:none; height:28px;' : (esBajaActual ? 'opacity:0.65;' : '')}">
+            <td class="sticky-col" ${esBajaAnterior ? 'style="padding:2px 10px;"' : ''}>
                 <div style="display: flex; align-items: center; width: 100%;">
                     <span style="min-width:20px; text-align:center; font-size:11px; font-weight:700; color:#94a3b8; flex-shrink:0; margin-right:4px;">${_numJugador + 1}</span>
-                    <span data-nombre-original="${nombreEscapado}" style="flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: ${esBajaStyle ? '11px' : '15px'}; padding-right: 5px; ${esBajaStyle ? 'color: #dc3545;' : 'color: #333;'}">
-                        ${j.NOMBRE}${esBajaStyle ? ' <span style="font-size:9px;font-weight:500;opacity:0.75;">(BAJA)</span>' : ''}
+                    <span data-nombre-original="${nombreEscapado}" style="flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: ${(esBajaActual || esBajaAnterior) ? '11px' : '15px'}; padding-right: 5px; ${esBajaActual ? 'color:#888; text-decoration:line-through;' : esBajaAnterior ? 'color: #dc3545;' : 'color: #333;'}">
+                        ${j.NOMBRE}${esBajaActual ? ' <span style="font-size:9px;font-weight:500;">(BAJA TEMP. ACTUAL)</span>' : esBajaAnterior ? ' <span style="font-size:9px;font-weight:500;opacity:0.75;">(BAJA)</span>' : ''}
                     </span>
-                    <div style="display: flex; flex-direction: column; align-items: flex-end; margin-right: 12px; line-height: 1.1; min-width: 65px; flex-shrink: 0; ${esBajaStyle ? 'display:none;' : ''}">
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; margin-right: 12px; line-height: 1.1; min-width: 65px; flex-shrink: 0; ${(esBajaActual || esBajaAnterior) ? 'display:none;' : ''}">
                         <div style="display: flex; align-items: baseline; gap: 3px;">
                             <span class="perc-mes" style="font-size: 13px; color: #28a745; font-weight: 900;">0%</span>
                             <span style="font-size: 8px; color: #28a745; font-weight: 700; text-transform: uppercase;">%${mesNombre}</span>
@@ -1040,8 +1052,11 @@ async function generarCalendario() {
                     }
                 }
 
-                if (estaDeBaja) {
+                if (estaDeBaja && esBajaAnterior) {
                     return `<td class="td-asistencia" style="text-align:center;"><span style="color: #dc3545; font-weight: 900; font-size: 18px;">X</span></td>`;
+                }
+                if (estaDeBaja && esBajaActual) {
+                    return `<td class="td-asistencia" style="background:#f4f4f4; text-align:center; pointer-events:none; user-select:none;"><span style="color:#ccc; font-size:14px; text-decoration:line-through;">—</span></td>`;
                 }
                 return `
                     <td class="td-asistencia">
@@ -1236,6 +1251,7 @@ async function sincronizarTodoDesdeBackend() {
                 j.OBSERVACIONES = cleanData[key].obs || "[]";
                 j.BAJA_DESDE = cleanData[key].baja || "";
                 j.ALTA_DESDE = cleanData[key].alta || "";
+                j.TEMPORADA_BAJA = cleanData[key].temporada_baja || "";
             }
         });
     } catch (e) { console.error("Error sincronizando observaciones/bajas:", e); }
@@ -1900,7 +1916,8 @@ function abrirModalAlta() {
 async function guardarBaja(btn) {
     const fecha = document.getElementById('fechaBajaInput').value;
     const motivo = document.getElementById('motivoBaja').value.trim();
-    if (!fecha || !motivo || !jugadorObsActivo) return alert("Faltan datos obligatorios.");
+    const temporadaBaja = document.getElementById('temporadaBajaSelect').value;
+    if (!fecha || !motivo || !temporadaBaja || !jugadorObsActivo) return alert("Faltan datos obligatorios (fecha, temporada y motivo son obligatorios).");
 
     const originalText = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PROCESANDO...';
@@ -1926,7 +1943,7 @@ async function guardarBaja(btn) {
         const res = await fetch('/marcar_baja', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ nombre: jugadorObsActivo, fecha: fecha })
+            body: JSON.stringify({ nombre: jugadorObsActivo, fecha: fecha, temporada_baja: temporadaBaja })
         });
 
         if (res.ok) { location.reload(); } 

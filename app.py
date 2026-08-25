@@ -1333,15 +1333,17 @@ def obtener_observaciones_jugadores():
         idx_obs = headers.index("OBSERVACIONES") if "OBSERVACIONES" in headers else -1
         idx_baja = headers.index("BAJA_DESDE") if "BAJA_DESDE" in headers else -1
         idx_alta = headers.index("ALTA_DESDE") if "ALTA_DESDE" in headers else -1
-        
+        idx_temp_baja = headers.index("TEMPORADA_BAJA") if "TEMPORADA_BAJA" in headers else -1
+
         resultado = {}
         for fila in todo[1:]:
             nombre = fila[idx_nom].strip() if idx_nom != -1 and len(fila) > idx_nom else ""
-            if nombre: # Solo procesamos si hay nombre
+            if nombre:
                 resultado[nombre] = {
                     "obs": fila[idx_obs] if idx_obs != -1 and len(fila) > idx_obs else "",
                     "baja": fila[idx_baja] if idx_baja != -1 and len(fila) > idx_baja else "",
-                    "alta": fila[idx_alta] if idx_alta != -1 and len(fila) > idx_alta else ""
+                    "alta": fila[idx_alta] if idx_alta != -1 and len(fila) > idx_alta else "",
+                    "temporada_baja": fila[idx_temp_baja] if idx_temp_baja != -1 and len(fila) > idx_temp_baja else ""
                 }
         return jsonify(resultado)
     except Exception as e:
@@ -1625,12 +1627,13 @@ def eliminar_jugador():
 def marcar_baja():
     nombre = request.json.get('nombre')
     fecha_baja = request.json.get('fecha')
+    temporada_baja = request.json.get('temporada_baja', '')
     try:
         sheet = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
         all_rows = sheet.get_all_values()
         if not all_rows: return jsonify({"status": "error"}), 404
         headers = [h.strip().upper() for h in all_rows[0]]
-        
+
         idx_nom = headers.index("NOMBRE") if "NOMBRE" in headers else 0
 
         if "BAJA_DESDE" not in headers:
@@ -1638,7 +1641,13 @@ def marcar_baja():
             sheet.update_cell(1, idx_baja, "BAJA_DESDE")
         else:
             idx_baja = headers.index("BAJA_DESDE") + 1
-            
+
+        if "TEMPORADA_BAJA" not in headers:
+            idx_temp_baja = len(headers) + (2 if "BAJA_DESDE" not in headers else 1)
+            sheet.update_cell(1, idx_temp_baja, "TEMPORADA_BAJA")
+        else:
+            idx_temp_baja = headers.index("TEMPORADA_BAJA") + 1
+
         # Al dar de BAJA, limpiamos la fecha de ALTA si existiera
         if "ALTA_DESDE" in headers:
             idx_alta = headers.index("ALTA_DESDE") + 1
@@ -1651,10 +1660,11 @@ def marcar_baja():
             if len(fila) > idx_nom and fila[idx_nom].strip().lower() == nombre_clean:
                 fila_idx = i + 1
                 break
-        
+
         if fila_idx == -1: return jsonify({"status": "error", "message": "No se encontró al jugador"}), 404
-        
+
         sheet.update_cell(fila_idx, idx_baja, fecha_baja)
+        sheet.update_cell(fila_idx, idx_temp_baja, temporada_baja)
         if idx_alta != -1:
             sheet.update_cell(fila_idx, idx_alta, "") # Limpiamos el alta
 
@@ -1728,6 +1738,10 @@ def marcar_alta():
         sheet.update_cell(fila_idx, idx_alta, fecha_alta)
         if idx_baja != -1:
             sheet.update_cell(fila_idx, idx_baja, "") # Limpiamos la baja
+        # Limpiamos también la temporada de baja
+        headers_up = [h.strip().upper() for h in all_rows[0]]
+        if "TEMPORADA_BAJA" in headers_up:
+            sheet.update_cell(fila_idx, headers_up.index("TEMPORADA_BAJA") + 1, "")
 
         # --- AUTOMATIZACIÓN DE ELIMINAR 'X' EN ASISTENCIAS ---
         try:
