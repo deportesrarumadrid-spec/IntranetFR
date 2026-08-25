@@ -28,8 +28,10 @@
         <script>
         (function(){
             const equipos = [{% for equipo in equipos %}'{{ equipo }}'{% if not loop.last %},{% endif %}{% endfor %}];
-            const _savedEquipo = localStorage.getItem('asistencias_equipo');
-            let equipoActual = (_savedEquipo && equipos.includes(_savedEquipo)) ? _savedEquipo : (equipos.length ? equipos[0] : '');
+            const _equipoDefecto = '{{ equipo_defecto or "" }}';
+            // El equipo de sesión (badge navbar) tiene prioridad siempre
+            let equipoActual = (_equipoDefecto && equipos.includes(_equipoDefecto)) ? _equipoDefecto
+                             : (equipos.length ? equipos[0] : '');
             const cont = document.getElementById('customEquipoOptions');
             function renderEquipoOpciones(){
                 cont.innerHTML = '';
@@ -42,7 +44,6 @@
                     el.onmouseout  = function(){ if(!sel) el.style.background=''; };
                     el.onclick = function(){
                         equipoActual = eq;
-                        localStorage.setItem('asistencias_equipo', eq);
                         document.getElementById('selectEquipo').value = eq;
                         document.getElementById('customEquipoLabel').textContent = eq;
                         renderEquipoOpciones();
