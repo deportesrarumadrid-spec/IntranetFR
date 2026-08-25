@@ -1232,8 +1232,18 @@ async function cargarAsistenciasGuardadas(preloadedData) {
             await fetch(`/obtener_asistencias?equipo=${encodeURIComponent(equipo)}&mes=${mes}&_t=${Date.now()}`)
                    .then(r => r.json()).catch(() => []);
 
+        // DEBUG TEMPORAL - mostrar en pantalla qué datos hay
+        {
+            const _dbg = document.getElementById('_dbg_asis') || document.createElement('div');
+            _dbg.id = '_dbg_asis';
+            _dbg.style = 'position:fixed;bottom:60px;left:10px;background:#1e293b;color:#fff;padding:8px 12px;border-radius:8px;z-index:9999;font-size:11px;max-width:320px;word-break:break-all;';
+            const _primerNombre = datosGuardados[0] ? datosGuardados[0].nombre : 'ninguno';
+            _dbg.innerHTML = `<b>DEBUG ASIS</b><br>preloaded: ${Array.isArray(preloadedData)}<br>registros mes ${mes}: ${datosGuardados.length}<br>1er nombre: ${_primerNombre}`;
+            document.body.appendChild(_dbg);
+        }
+
         // Obtener datos de toda la temporada para el % total (sin filtro de mes)
-        const respTot = await fetch(`/obtener_asistencias?equipo=${equipo}`);
+        const respTot = await fetch(`/obtener_asistencias?equipo=${encodeURIComponent(equipo)}&_t=${Date.now()}`);
         const datosTotales = await respTot.json();
 
         const filas = document.querySelectorAll('#cuerpoTabla tr');
