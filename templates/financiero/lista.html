@@ -1187,9 +1187,12 @@
     </div>
 </div>
 
+<!-- BACKDROP para cerrar el popover de renombrar columna al clicar fuera -->
+<div id="backdropPopoverRopa" onclick="cerrarPopoverColumnaRopa()" style="display:none; position:fixed; inset:0; z-index:31999; background:transparent;"></div>
+
 <!-- BOCADILLO RENOMBRAR/BORRAR COLUMNA DE ROPA -->
 <div id="popoverEditarColumnaRopa" class="bocadillo-flotante" style="display:none; position:fixed; background:white; border:1px solid #e2e8f0; border-radius:14px; box-shadow:0 18px 40px rgba(0,0,0,0.18); z-index:32000; width:260px; padding:16px;">
-    <span onclick="document.getElementById('popoverEditarColumnaRopa').style.display='none'" style="position:absolute; top:10px; right:12px; font-size:16px; color:#94a3b8; cursor:pointer; font-weight:700;">&times;</span>
+    <span onclick="cerrarPopoverColumnaRopa()" style="position:absolute; top:10px; right:12px; font-size:16px; color:#94a3b8; cursor:pointer; font-weight:700;">&times;</span>
     <div style="font-size:9px; font-weight:800; color:#94a3b8; text-transform:uppercase; margin-bottom:8px;">Renombrar columna</div>
     <div style="display:flex; gap:6px; margin-bottom:12px;">
         <input type="text" id="inputRenombrarColumnaRopa" style="flex:1; padding:7px 9px; border-radius:8px; border:2px solid #f1f5f9; font-size:12px; font-weight:700;">
@@ -1571,7 +1574,11 @@ function renderRopaStructure() {
 }
 
 let columnaRopaContextual = null;
-let _popoverRopaJustOpened = false;
+
+function cerrarPopoverColumnaRopa() {
+    document.getElementById('popoverEditarColumnaRopa').style.display = 'none';
+    document.getElementById('backdropPopoverRopa').style.display = 'none';
+}
 
 function editarNombreColumnaRopa(idx, evt) {
     columnaRopaContextual = { realIdx: idx };
@@ -1581,14 +1588,17 @@ function editarNombreColumnaRopa(idx, evt) {
 
     const pop = document.getElementById('popoverEditarColumnaRopa');
     pop.style.display = 'block';
+    document.getElementById('backdropPopoverRopa').style.display = 'block';
     const rect = evt && evt.target ? evt.target.closest('th, td')?.getBoundingClientRect() : null;
     const popWidth = pop.offsetWidth || 260;
     let left = rect ? rect.left : (window.innerWidth - popWidth) / 2;
     if (left + popWidth > window.innerWidth - 10) left = window.innerWidth - popWidth - 10;
     pop.style.left = `${Math.max(10, left)}px`;
     pop.style.top = `${rect ? rect.bottom + 6 : 100}px`;
-    _popoverRopaJustOpened = true;
-    setTimeout(() => { _popoverRopaJustOpened = false; }, 300);
+    setTimeout(() => {
+        document.getElementById('inputRenombrarColumnaRopa').focus();
+        document.getElementById('inputRenombrarColumnaRopa').select();
+    }, 50);
 }
 
 function confirmarRenombrarColumnaRopa() {
@@ -1599,7 +1609,7 @@ function confirmarRenombrarColumnaRopa() {
     const nombreFinal = nuevoNombre.trim().toUpperCase();
     ropaColumns[idx] = nombreFinal;
     renderRopaStructure();
-    document.getElementById('popoverEditarColumnaRopa').style.display = 'none';
+    cerrarPopoverColumnaRopa();
 
     fetch('/api/ropa/header', {
         method: 'POST',
@@ -1622,7 +1632,7 @@ async function confirmarBorrarColumnaRopa() {
     if (!columnaRopaContextual) return;
     const idx = columnaRopaContextual.realIdx;
     const nombreBorrado = ropaColumns[idx];
-    document.getElementById('popoverEditarColumnaRopa').style.display = 'none';
+    cerrarPopoverColumnaRopa();
 
     showLoader();
     try {
@@ -1656,13 +1666,7 @@ async function confirmarBorrarColumnaRopa() {
     }
 }
 
-document.addEventListener('click', function(evt) {
-    if (_popoverRopaJustOpened) { _popoverRopaJustOpened = false; return; }
-    const pop = document.getElementById('popoverEditarColumnaRopa');
-    if (pop && pop.style.display === 'block' && !pop.contains(evt.target)) {
-        pop.style.display = 'none';
-    }
-}, true);
+// El popover de renombrar columna se cierra via backdrop (ver #backdropPopoverRopa)
 
 async function anadirNuevaColumnaRopa() {
     showLoader();
