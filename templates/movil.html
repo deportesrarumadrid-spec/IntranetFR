@@ -460,13 +460,11 @@
     <!-- Lista jugadores nueva vista -->
     <div class="card" style="padding:0;overflow:hidden;">
         <div id="listaJug">
-            {% set activos = jugadores | selectattr('baja', 'equalto', false) | list %}
-            {% set bajas   = jugadores | selectattr('baja', 'equalto', true)  | list %}
-            {% for jugador in activos %}
-            <div class="new-prow" data-nombre="{{ jugador.nombre }}" data-estado="" data-idx="{{ loop.index0 }}">
-                <span style="min-width:18px;text-align:center;font-size:11px;font-weight:700;color:#94a3b8;flex-shrink:0;">{{ loop.index }}</span>
+            {% for jugador in jugadores %}
+            <div class="new-prow" data-nombre="{{ jugador }}" data-estado="" data-idx="{{ loop.index0 }}" data-baja="no">
+                <span class="npr-num" style="min-width:18px;text-align:center;font-size:11px;font-weight:700;color:#94a3b8;flex-shrink:0;">{{ loop.index }}</span>
                 <div class="npr-info">
-                    <div class="npr-name">{{ jugador.nombre }}</div>
+                    <div class="npr-name">{{ jugador }}</div>
                     <div class="npr-stats-grid" id="nst-{{ loop.index0 }}">
                         <span class="npr-stlbl" style="color:#16a34a;">– <small>%MES</small></span>
                         <span class="npr-stlbl" style="color:#2563eb;">– <small>%TEMP</small></span>
@@ -474,36 +472,11 @@
                         <span class="npr-stlbl" style="color:#dc2626;">0 <small>FALTAS</small></span>
                     </div>
                 </div>
-                <button class="npr-btn nb-none" onclick="ciclarEstado(this)" data-nombre="{{ jugador.nombre }}">–</button>
+                <button class="npr-btn nb-none" onclick="ciclarEstado(this)" data-nombre="{{ jugador }}">–</button>
                 <div class="npr-trend" id="ntr-{{ loop.index0 }}" data-valor="-" onclick="ciclarValoracion(this)">–</div>
                 <div class="npr-ico npr-ico-charla" onclick="abrirCharlaModal(this)" style="font-size:14px;cursor:pointer;">💬</div>
             </div>
             {% endfor %}
-            {% if bajas %}
-            <div onclick="toggleBajasMovil(this)" style="cursor:pointer;padding:10px 16px;background:#f1f5f9;border-top:2px solid #cbd5e1;display:flex;align-items:center;gap:8px;user-select:none;">
-                <span class="icon-bajas-mov" style="font-size:12px;font-weight:900;color:#64748b;">▶</span>
-                <span style="font-size:12px;font-weight:900;color:#64748b;">BAJAS — {{ bajas|length }} jugador{{ 'es' if bajas|length != 1 else '' }}</span>
-                <span style="font-size:11px;font-weight:400;color:#94a3b8;">(toca para ver)</span>
-            </div>
-            {% for jugador in bajas %}
-            {% set real_idx = activos|length + loop.index0 %}
-            <div class="new-prow fila-baja-movil" data-nombre="{{ jugador.nombre }}" data-estado="" data-idx="{{ real_idx }}" style="display:none;">
-                <span style="min-width:18px;text-align:center;font-size:11px;font-weight:700;color:#94a3b8;flex-shrink:0;">{{ activos|length + loop.index }}</span>
-                <div class="npr-info">
-                    <div class="npr-name" style="color:#dc2626;">{{ jugador.nombre }} <span style="font-size:9px;font-weight:500;opacity:0.75;">(BAJA)</span></div>
-                    <div class="npr-stats-grid" id="nst-{{ real_idx }}">
-                        <span class="npr-stlbl" style="color:#16a34a;">– <small>%MES</small></span>
-                        <span class="npr-stlbl" style="color:#2563eb;">– <small>%TEMP</small></span>
-                        <span class="npr-stlbl" style="color:#7c3aed;">0 <small>Charlas</small></span>
-                        <span class="npr-stlbl" style="color:#dc2626;">0 <small>FALTAS</small></span>
-                    </div>
-                </div>
-                <button class="npr-btn nb-none" onclick="ciclarEstado(this)" data-nombre="{{ jugador.nombre }}">–</button>
-                <div class="npr-trend" id="ntr-{{ real_idx }}" data-valor="-" onclick="ciclarValoracion(this)">–</div>
-                <div class="npr-ico npr-ico-charla" onclick="abrirCharlaModal(this)" style="font-size:14px;cursor:pointer;">💬</div>
-            </div>
-            {% endfor %}
-            {% endif %}
             {% if not jugadores %}
             <div style="padding:32px 16px;text-align:center;color:var(--soft);font-size:12px;font-weight:600;">Sin jugadores cargados para este equipo.</div>
             {% endif %}
@@ -1637,6 +1610,52 @@ function toggleBajasMovil(el) {
     if (icono) icono.textContent = visible ? '▶' : '▼';
 }
 
+async function _agruparBajasMovil() {
+    try {
+        const res = await fetch('/obtener_observaciones_jugadores');
+        const data = await res.json();
+        const hoy = new Date(); hoy.setHours(0,0,0,0);
+
+        function parseFechaMov(s) {
+            if (!s) return null;
+            let m;
+            if ((m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/))) return new Date(+m[3], +m[2]-1, +m[1]);
+            if ((m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/))) return new Date(+m[1], +m[2]-1, +m[3]);
+            return null;
+        }
+
+        const bajas = [];
+        document.querySelectorAll('.new-prow').forEach(row => {
+            const nombre = row.dataset.nombre || '';
+            const info = data[nombre] || {};
+            const fd = parseFechaMov(info.baja || '');
+            const fa = parseFechaMov(info.alta || '');
+            const esBaja = fd && fd <= hoy && (!fa || fa > hoy);
+            if (esBaja) {
+                row.dataset.baja = 'si';
+                row.classList.add('fila-baja-movil');
+                row.style.display = 'none';
+                const nameEl = row.querySelector('.npr-name');
+                if (nameEl && !nameEl.querySelector('.baja-tag')) {
+                    nameEl.style.color = '#dc2626';
+                    nameEl.insertAdjacentHTML('beforeend', '<span class="baja-tag" style="font-size:9px;font-weight:500;opacity:0.75;"> (BAJA)</span>');
+                }
+                bajas.push(row);
+            }
+        });
+
+        if (bajas.length === 0) return;
+
+        // Insertar fila toggle antes de la primera baja
+        const primeraBaja = bajas[0];
+        const toggleRow = document.createElement('div');
+        toggleRow.onclick = function() { toggleBajasMovil(this); };
+        toggleRow.style.cssText = 'cursor:pointer;padding:10px 16px;background:#f1f5f9;border-top:2px solid #cbd5e1;display:flex;align-items:center;gap:8px;user-select:none;';
+        toggleRow.innerHTML = `<span class="icon-bajas-mov" style="font-size:12px;font-weight:900;color:#64748b;">▶</span><span style="font-size:12px;font-weight:900;color:#64748b;">BAJAS — ${bajas.length} jugador${bajas.length !== 1 ? 'es' : ''}</span><span style="font-size:11px;font-weight:400;color:#94a3b8;"> (toca para ver)</span>`;
+        primeraBaja.parentNode.insertBefore(toggleRow, primeraBaja);
+    } catch(e) { console.error('Error agrupando bajas:', e); }
+}
+
 function ciclarEstado(btn) {
     const row = btn.closest('.new-prow');
     const estadoAct = row.dataset.estado || '';
@@ -2080,6 +2099,7 @@ document.addEventListener('DOMContentLoaded', () => {
     cargarHistorial();
     cargarEstado();
     cargarObjetivos();
+    _agruparBajasMovil();
 });
 </script>
 </body>
