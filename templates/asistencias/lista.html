@@ -93,7 +93,7 @@
                 {% for m, nom, anio in [
                     (9,'SEPTIEMBRE',t_ini),(10,'OCTUBRE',t_ini),(11,'NOVIEMBRE',t_ini),(12,'DICIEMBRE',t_ini),
                     (1,'ENERO',t_fin),(2,'FEBRERO',t_fin),(3,'MARZO',t_fin),(4,'ABRIL',t_fin),
-                    (5,'MAYO',t_fin),(6,'JUNIO',t_fin),(8,'AGOSTO',t_fin)
+                    (5,'MAYO',t_fin),(6,'JUNIO',t_fin),(8,'AGOSTO',t_ini)
                 ] %}
                 <option value="{{ m }}" data-anio="{{ anio }}"{% if not _hm.sel %} selected{% set _hm.sel = true %}{% endif %}>{{ nom }} {{ anio }}</option>
                 {% endfor %}
@@ -125,7 +125,7 @@
                 {v:'1',t:'ENERO',año:T_FIN},{v:'2',t:'FEBRERO',año:T_FIN},
                 {v:'3',t:'MARZO',año:T_FIN},{v:'4',t:'ABRIL',año:T_FIN},
                 {v:'5',t:'MAYO',año:T_FIN},{v:'6',t:'JUNIO',año:T_FIN},
-                {v:'8',t:'AGOSTO',año:T_FIN}
+                {v:'8',t:'AGOSTO',año:T_INI}
             ];
             window._MESES_ASIS = meses;
             // Mes por defecto: mes actual si está en la temporada, si no Sep del inicio
@@ -834,7 +834,8 @@ function marcarFestivosAsistencias(diasValidos) {
 function _añoParaMes(mesNum) {
     const T = window._TINI_ASIS || {{ t_ini }};
     const F = window._TFIN_ASIS || {{ t_fin }};
-    return mesNum >= 9 ? T : F;
+    // Agosto (8) es pretemporada del año de inicio, igual que sep-dic
+    return mesNum >= 8 ? T : F;
 }
 async function generarCalendario() {
     const equipo = document.getElementById('selectEquipo').value;
