@@ -597,3 +597,24 @@ def actualizar_datos_jugador():
     except Exception as e:
         print(f"Error actualizando ficha de jugador: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@jugadores_datos_bp.route('/api/jugadores_datos/eliminar', methods=['POST'])
+def eliminar_datos_jugador():
+    from app import client, NOMBRE_EXCEL
+    from flask import session as flask_session
+    if not flask_session.get('usuario'):
+        return jsonify({"status": "error"}), 401
+    data = request.json or {}
+    idx = data.get('idx')
+    if idx is None:
+        return jsonify({"status": "error", "message": "Falta el índice de la ficha"}), 400
+
+    try:
+        sheet = client.open(NOMBRE_EXCEL).worksheet("DATOS JUGADORES")
+        fila_sheet = int(idx) + 2  # +1 cabecera, +1 porque idx es base 0
+        sheet.delete_rows(fila_sheet)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Error eliminando ficha de jugador: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500

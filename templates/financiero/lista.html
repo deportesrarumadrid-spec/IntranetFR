@@ -725,6 +725,7 @@
                             <th>FECHA - LOCALIDAD</th>
                             <th style="text-align:center;">FIRMA</th>
                             <th style="text-align:center;">FICHA</th>
+                            <th style="text-align:center; width:36px;"></th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -4592,6 +4593,11 @@ function renderTablaDatosJugadores(data) {
                 <td style="text-align:center;">
                     ${j.ARCHIVO_URL ? `<a href="${j.ARCHIVO_URL}" target="_blank" class="btn-fin" style="padding:5px 10px; background:#333; color:white; font-size:9px; text-decoration:none; display:inline-block;">VER FICHA</a>` : `-`}
                 </td>
+                <td style="text-align:center;">
+                    <button onclick="eliminarFicha(${j._idx}, '${((j.JUGADOR_NOMBRE || '') + ' ' + (j.JUGADOR_APELLIDOS || '')).trim().replace(/'/g, "\\'")}')" title="Eliminar ficha" style="background:none; border:none; cursor:pointer; color:#dc2626; font-size:14px; padding:4px 6px;" onmouseover="this.style.color='#991b1b'" onmouseout="this.style.color='#dc2626'">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </td>
             </tr>
         `).join('');
 }
@@ -4619,6 +4625,32 @@ const CAMPOS_EDITABLES_FICHA = [
 ];
 
 let fichaEditandoIdx = null;
+
+async function eliminarFicha(idx, nombre) {
+    const paso1 = confirm(`¿Eliminar la ficha de "${nombre}"?\n\nEsta acción borrará la fila del Google Sheet y no se puede deshacer.`);
+    if (!paso1) return;
+    const paso2 = confirm(`SEGUNDA CONFIRMACIÓN\n\n¿Seguro que quieres ELIMINAR definitivamente la ficha de "${nombre}"?`);
+    if (!paso2) return;
+
+    try {
+        const res = await fetch('/api/jugadores_datos/eliminar', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ idx })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            datosJugadoresCache = datosJugadoresCache.filter(j => j._idx !== idx);
+            filtrarTablaDatos();
+            await cargarFichasPendientes();
+            renderRevisionHojas();
+        } else {
+            alert('Error al eliminar: ' + (data.message || 'desconocido'));
+        }
+    } catch (e) {
+        alert('Error de conexión al eliminar la ficha.');
+    }
+}
 
 function abrirModalEditarFicha(idx) {
     const ficha = datosJugadoresCache.find(j => j._idx === idx);
