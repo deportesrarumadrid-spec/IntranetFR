@@ -2051,7 +2051,8 @@ window.onload = async function() {
         for (let i = 0; i < select.options.length; i++) {
             if (select.options[i].value.trim().toUpperCase() === equipoDefecto.toUpperCase()) {
                 select.selectedIndex = i;
-                await generarCalendario();
+                // Primero actualizar los días de entrenamiento del equipo, luego generar
+                await actualizarDiasDesdeConfig(equipoDefecto);
                 hideLoader();
                 return;
             }
