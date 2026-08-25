@@ -928,7 +928,7 @@ async function generarCalendario() {
         return a._esBajaEnMes - b._esBajaEnMes;
     });
 
-    document.getElementById('cuerpoTabla').innerHTML = filtrados.map(j => {
+    document.getElementById('cuerpoTabla').innerHTML = filtrados.map((j, _numJugador) => {
         const arr = getArrayObservaciones(j.NOMBRE);
         const hasObs = arr.length > 0;
         const esBajaStyle = j._esBajaEnMes;
@@ -941,6 +941,7 @@ async function generarCalendario() {
         <tr ${esBajaStyle ? 'style="height:28px;"' : ''}>
             <td class="sticky-col" ${esBajaStyle ? 'style="padding:2px 10px;"' : ''}>
                 <div style="display: flex; align-items: center; width: 100%;">
+                    <span style="min-width:20px; text-align:center; font-size:11px; font-weight:700; color:#94a3b8; flex-shrink:0; margin-right:4px;">${_numJugador + 1}</span>
                     <span data-nombre-original="${nombreEscapado}" style="flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: ${esBajaStyle ? '11px' : '15px'}; padding-right: 5px; ${esBajaStyle ? 'color: #dc3545;' : 'color: #333;'}">
                         ${j.NOMBRE}${esBajaStyle ? ' <span style="font-size:9px;font-weight:500;opacity:0.75;">(BAJA)</span>' : ''}
                     </span>
