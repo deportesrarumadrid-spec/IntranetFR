@@ -1571,6 +1571,7 @@ function renderRopaStructure() {
 }
 
 let columnaRopaContextual = null;
+let _popoverRopaJustOpened = false;
 
 function editarNombreColumnaRopa(idx, evt) {
     columnaRopaContextual = { realIdx: idx };
@@ -1586,6 +1587,8 @@ function editarNombreColumnaRopa(idx, evt) {
     if (left + popWidth > window.innerWidth - 10) left = window.innerWidth - popWidth - 10;
     pop.style.left = `${Math.max(10, left)}px`;
     pop.style.top = `${rect ? rect.bottom + 6 : 100}px`;
+    _popoverRopaJustOpened = true;
+    setTimeout(() => { _popoverRopaJustOpened = false; }, 300);
 }
 
 function confirmarRenombrarColumnaRopa() {
@@ -1654,6 +1657,7 @@ async function confirmarBorrarColumnaRopa() {
 }
 
 document.addEventListener('click', function(evt) {
+    if (_popoverRopaJustOpened) { _popoverRopaJustOpened = false; return; }
     const pop = document.getElementById('popoverEditarColumnaRopa');
     if (pop && pop.style.display === 'block' && !pop.contains(evt.target)) {
         pop.style.display = 'none';
