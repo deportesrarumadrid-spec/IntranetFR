@@ -67,6 +67,14 @@
             window._renderEquipoOpciones = renderEquipoOpciones;
             window._getEquipoActual = function(){ return equipoActual; };
         })();
+        function toggleGrupoBajas() {
+            const filas = document.querySelectorAll('.fila-baja-grupo');
+            const icono = document.getElementById('icon-bajas-toggle');
+            const visible = filas.length > 0 && filas[0].style.display !== 'none';
+            filas.forEach(f => f.style.display = visible ? 'none' : '');
+            if (icono) icono.textContent = visible ? '▶' : '▼';
+        }
+
         function toggleEquipoDropdown(){
             const dd=document.getElementById('customEquipoDropdown'), ar=document.getElementById('customEquipoArrow');
             const open=dd.style.display==='block';
@@ -928,6 +936,8 @@ async function generarCalendario() {
         return a._esBajaEnMes - b._esBajaEnMes;
     });
 
+    const _nBajas = filtrados.filter(j => j._esBajaEnMes).length;
+    let _bajaToggleInserted = false;
     document.getElementById('cuerpoTabla').innerHTML = filtrados.map((j, _numJugador) => {
         const arr = getArrayObservaciones(j.NOMBRE);
         const hasObs = arr.length > 0;
@@ -937,8 +947,18 @@ async function generarCalendario() {
 
         const nombreEscapado = j.NOMBRE.replace(/'/g, "\\'");
 
-        return `
-        <tr ${esBajaStyle ? 'style="height:28px;"' : ''}>
+        let _toggleHtml = '';
+        if (esBajaStyle && !_bajaToggleInserted) {
+            _bajaToggleInserted = true;
+            _toggleHtml = `<tr id="fila-toggle-bajas" onclick="toggleGrupoBajas()" style="cursor:pointer; background:#fef3c7; border-top:2px solid #f59e0b; user-select:none;">
+                <td colspan="999" style="padding:8px 16px; font-size:12px; font-weight:900; color:#92400e;">
+                    <span id="icon-bajas-toggle">▶</span>&nbsp; BAJAS — ${_nBajas} jugador${_nBajas !== 1 ? 'es' : ''} &nbsp;<span style="font-weight:400; font-size:11px; color:#b45309;">(clic para ver)</span>
+                </td>
+            </tr>`;
+        }
+
+        return _toggleHtml + `
+        <tr class="${esBajaStyle ? 'fila-baja-grupo' : ''}" style="${esBajaStyle ? 'display:none; height:28px;' : ''}">
             <td class="sticky-col" ${esBajaStyle ? 'style="padding:2px 10px;"' : ''}>
                 <div style="display: flex; align-items: center; width: 100%;">
                     <span style="min-width:20px; text-align:center; font-size:11px; font-weight:700; color:#94a3b8; flex-shrink:0; margin-right:4px;">${_numJugador + 1}</span>
@@ -1012,6 +1032,8 @@ async function generarCalendario() {
     document.getElementById('contenedorTabla').style.display = 'block';
     document.getElementById('areaAnadirJugador').style.display = 'flex';
     actualizarAlertasCabecera(diasValidos);
+
+
     marcarDiasPasadosSinRellenar();
 
     // Cargamos balones sin bloquear el resto de la página
