@@ -1439,6 +1439,143 @@ def guardar_asistencia_masiva():
         print(f"Error crítico al guardar: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/cambiar_equipo_jugador', methods=['POST'])
+def cambiar_equipo_jugador():
+    if session.get('usuario', '').lower() != 'admin':
+        return jsonify({"status": "error", "message": "No autorizado"}), 403
+    data = request.get_json() or {}
+    nombre = data.get('nombre', '').strip()
+    equipo_actual = data.get('equipo_actual', '').strip()
+    equipo_nuevo = data.get('equipo_nuevo', '').strip()
+    if not nombre or not equipo_actual or not equipo_nuevo or equipo_actual == equipo_nuevo:
+        return jsonify({"status": "error", "message": "Datos incompletos"}), 400
+    n_low = nombre.lower()
+    ea_low = equipo_actual.lower()
+    resultados = {}
+
+    def _actualizar_col(ws, col_letra, idx_nombre, idx_equipo, equipo_nuevo_val, multi=True):
+        rows = ws.get_all_values()
+        updates = []
+        for i, row in enumerate(rows[1:], start=2):
+            nom = row[idx_nombre].strip().lower() if len(row) > idx_nombre else ''
+            eq = row[idx_equipo].strip().lower() if len(row) > idx_equipo else ''
+            if nom == n_low and eq == ea_low:
+                updates.append({"range": f"{col_letra}{i}", "values": [[equipo_nuevo_val]]})
+                if not multi:
+                    break
+        if updates:
+            ws.batch_update(updates, value_input_option='USER_ENTERED')
+        return len(updates)
+
+    try:
+        ss = client.open(NOMBRE_EXCEL)
+
+        # 1. JUGADORES: col0=NOMBRE, EQUIPO según cabecera
+        try:
+            ws = ss.worksheet("JUGADORES")
+            rows = ws.get_all_values()
+            n_act = 0
+            if rows:
+                hdrs = [normalizar_cabecera_universal(h) for h in rows[0]]
+                idx_eq = next((hdrs.index(k) for k in ["EQUIPO","CATEGORIA","GRUPO","EQUIPOS","EQUIPOACTIVO"] if k in hdrs), -1)
+                updates = []
+                for i, row in enumerate(rows[1:], start=2):
+                    nom = row[0].strip().lower() if row else ''
+                    if nom == n_low and idx_eq != -1 and len(row) > idx_eq:
+                        updates.append({"range": f"{chr(65+idx_eq)}{i}", "values": [[equipo_nuevo]]})
+                if updates:
+                    ws.batch_update(updates, value_input_option='USER_ENTERED')
+                n_act = len(updates)
+            resultados['JUGADORES'] = n_act
+        except Exception as e:
+            resultados['JUGADORES'] = f"Error: {e}"
+
+        # 2. ASISTENCIAS: col0=FECHA, col1=EQUIPO, col2=NOMBRE
+        try:
+            ws = ss.worksheet("ASISTENCIAS")
+            resultados['ASISTENCIAS'] = _actualizar_col(ws, 'B', 2, 1, equipo_nuevo)
+        except Exception as e:
+            resultados['ASISTENCIAS'] = f"Error: {e}"
+
+        # 3. MI EQUIPO: NOMBRE y EQUIPO según cabecera
+        try:
+            ws = ss.worksheet("MI EQUIPO")
+            rows = ws.get_all_values()
+            n_act = 0
+            if rows:
+                hdrs = [normalizar_cabecera_universal(h) for h in rows[0]]
+                idx_nom = next((hdrs.index(k) for k in ["NOMBRE"] if k in hdrs), 0)
+                idx_eq = next((hdrs.index(k) for k in ["EQUIPO","CATEGORIA","GRUPO","EQUIPOS","EQUIPOACTIVO"] if k in hdrs), -1)
+                updates = []
+                for i, row in enumerate(rows[1:], start=2):
+                    nom = row[idx_nom].strip().lower() if len(row) > idx_nom else ''
+                    eq = row[idx_eq].strip().lower() if (idx_eq != -1 and len(row) > idx_eq) else ''
+                    if nom == n_low and eq == ea_low:
+                        updates.append({"range": f"{chr(65+idx_eq)}{i}", "values": [[equipo_nuevo]]})
+                if updates:
+                    ws.batch_update(updates, value_input_option='USER_ENTERED')
+                n_act = len(updates)
+            resultados['MI EQUIPO'] = n_act
+        except Exception as e:
+            resultados['MI EQUIPO'] = f"Error: {e}"
+
+        # 4. GPS_POSICIONES: col0=EQUIPO, col1=JUGADOR
+        try:
+            ws = ss.worksheet("GPS_POSICIONES")
+            resultados['GPS_POSICIONES'] = _actualizar_col(ws, 'A', 1, 0, equipo_nuevo, multi=False)
+        except Exception as e:
+            resultados['GPS_POSICIONES'] = f"Error: {e}"
+
+        # 5. ROPA: col1=EQUIPO, col2=JUGADOR
+        try:
+            ws = ss.worksheet("ROPA")
+            resultados['ROPA'] = _actualizar_col(ws, 'B', 2, 1, equipo_nuevo, multi=False)
+        except Exception as e:
+            resultados['ROPA'] = f"Error: {e}"
+
+        # 6. COORDINACION: col1=EQUIPO, col2=JUGADOR
+        try:
+            ws = ss.worksheet("COORDINACION")
+            resultados['COORDINACION'] = _actualizar_col(ws, 'B', 2, 1, equipo_nuevo)
+        except Exception as e:
+            resultados['COORDINACION'] = f"Error: {e}"
+
+        # 7. FISIOTERAPIA: col3=NOMBRE_JUGADOR, col4=EQUIPO
+        try:
+            ws = ss.worksheet("FISIOTERAPIA")
+            resultados['FISIOTERAPIA'] = _actualizar_col(ws, 'E', 3, 4, equipo_nuevo)
+        except Exception as e:
+            resultados['FISIOTERAPIA'] = f"Error: {e}"
+
+        # 8. DATOS JUGADORES (hoja global, sin temporada): col0=NOMBRE, col4=LETRA_EQUIPO
+        try:
+            ws = ss.worksheet("DATOS JUGADORES")
+            letra_nueva = equipo_nuevo.split()[-1] if equipo_nuevo.split() else equipo_nuevo
+            rows = ws.get_all_values()
+            updates = []
+            for i, row in enumerate(rows[1:], start=2):
+                nom = row[0].strip().lower() if row else ''
+                if nom == n_low:
+                    updates.append({"range": f"E{i}", "values": [[letra_nueva]]})
+                    break
+            if updates:
+                ws.batch_update(updates, value_input_option='USER_ENTERED')
+            resultados['DATOS JUGADORES'] = len(updates)
+        except Exception as e:
+            resultados['DATOS JUGADORES'] = f"Error: {e}"
+
+        # 9. PAGOS JUGADORES: col1=EQUIPO, col2=NOMBRE
+        try:
+            ws = ss.worksheet("PAGOS JUGADORES")
+            resultados['PAGOS JUGADORES'] = _actualizar_col(ws, 'B', 2, 1, equipo_nuevo)
+        except Exception as e:
+            resultados['PAGOS JUGADORES'] = f"Error: {e}"
+
+        _asis_cache.clear()
+        return jsonify({"status": "success", "nombre": nombre, "equipo_nuevo": equipo_nuevo, "resultados": resultados})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route('/anadir_jugador', methods=['POST'])
 def anadir_jugador():
     datos = request.json
