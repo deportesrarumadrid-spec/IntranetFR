@@ -579,17 +579,26 @@ def movil():
         return redirect(url_for('index'))
     equipo = session.get('equipo_defecto', '')
 
-    # Jugadores del equipo
+    # Jugadores del equipo (con info de baja desde BAJA_DESDE / ALTA_DESDE)
     jugadores = []
     try:
         sheet_jug = client.open(NOMBRE_EXCEL).worksheet("JUGADORES")
         all_values = sheet_jug.get_all_values()
         if all_values:
-            headers = [normalizar_cabecera_universal(h) for h in all_values[0]]
-            idx_eq  = next((headers.index(c) for c in ["EQUIPO","CATEGORIA","GRUPO","EQUIPOS","EQUIPOACTIVO"] if c in headers), -1)
-            idx_nom = headers.index('NOMBRE') if 'NOMBRE' in headers else 0
-            idx_baja = next((headers.index(c) for c in ["BAJASDESDE","BAJADESDE","BAJA_DESDE"] if c in headers), -1)
-            idx_alta = next((headers.index(c) for c in ["ALTADESDE","ALTA_DESDE"] if c in headers), -1)
+            # Usar headers sin normalizar para respetar BAJA_DESDE / ALTA_DESDE
+            headers_raw = [h.strip().upper() for h in all_values[0]]
+            headers_norm = [normalizar_cabecera_universal(h) for h in all_values[0]]
+            idx_eq  = next((headers_norm.index(c) for c in ["EQUIPO","CATEGORIA","GRUPO","EQUIPOS","EQUIPOACTIVO"] if c in headers_norm), -1)
+            idx_nom = headers_raw.index('NOMBRE') if 'NOMBRE' in headers_raw else 0
+            idx_baja = headers_raw.index('BAJA_DESDE') if 'BAJA_DESDE' in headers_raw else -1
+            idx_alta = headers_raw.index('ALTA_DESDE') if 'ALTA_DESDE' in headers_raw else -1
+
+            def _parse_fecha_mov(s):
+                for fmt in ('%d/%m/%Y', '%Y-%m-%d', '%d-%m-%Y'):
+                    try: return datetime.strptime(s.strip(), fmt).date()
+                    except: pass
+                return None
+
             for row in all_values[1:]:
                 if not any(row): continue
                 eq  = row[idx_eq].strip() if idx_eq >= 0 and idx_eq < len(row) else ''
@@ -599,18 +608,10 @@ def movil():
                     alta_str = row[idx_alta].strip() if idx_alta >= 0 and idx_alta < len(row) else ''
                     es_baja = False
                     if baja_str:
-                        try:
-                            from datetime import date
-                            def _parse_fecha(s):
-                                for fmt in ('%d/%m/%Y','%Y-%m-%d','%d-%m-%Y'):
-                                    try: return datetime.strptime(s, fmt).date()
-                                    except: pass
-                                return None
-                            fd = _parse_fecha(baja_str)
-                            fa = _parse_fecha(alta_str) if alta_str else None
-                            if fd and fd <= hoy.date():
-                                es_baja = not fa or fa > hoy.date()
-                        except: pass
+                        fd = _parse_fecha_mov(baja_str)
+                        fa = _parse_fecha_mov(alta_str) if alta_str else None
+                        if fd and fd <= hoy.date():
+                            es_baja = not fa or fa > hoy.date()
                     jugadores.append({'nombre': nom, 'baja': es_baja})
     except Exception as e:
         print(f"Error cargando jugadores en movil: {e}")
