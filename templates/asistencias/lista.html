@@ -1058,14 +1058,6 @@ async function generarCalendario() {
     cargarControlBalones().catch(e => console.error("Error balones:", e));
     
     calcularStats();
-    // DEBUG A - confirmar que generarCalendario llega hasta aquí
-    {
-        const _da = document.getElementById('_dbg_a') || document.createElement('div');
-        _da.id = '_dbg_a';
-        _da.style = 'position:fixed;top:60px;right:10px;background:#16a34a;color:#fff;padding:8px 12px;border-radius:8px;z-index:99999;font-size:11px;';
-        _da.textContent = `A: generarCalendario OK. mes=${document.getElementById('selectMes').value} equipo=${document.getElementById('selectEquipo').value} datos=${_asisDataMes.length}`;
-        document.body.appendChild(_da);
-    }
     setTimeout(() => cargarAsistenciasGuardadas(_asisDataMes), 100);
 }
 
@@ -1230,14 +1222,6 @@ async function sincronizarTodoDesdeBackend() {
 } // Eliminado el finally huérfano que rompía el código
 
 async function cargarAsistenciasGuardadas(preloadedData) {
-    // DEBUG B - confirmar que la función se llama
-    {
-        const _db = document.getElementById('_dbg_b') || document.createElement('div');
-        _db.id = '_dbg_b';
-        _db.style = 'position:fixed;top:110px;right:10px;background:#dc2626;color:#fff;padding:8px 12px;border-radius:8px;z-index:99999;font-size:11px;';
-        _db.textContent = `B: cargarAsistencias llamada. preloaded=${Array.isArray(preloadedData)} len=${Array.isArray(preloadedData)?preloadedData.length:'n/a'} mes=${document.getElementById('selectMes')?.value} eq=${document.getElementById('selectEquipo')?.value}`;
-        document.body.appendChild(_db);
-    }
     const equipo = document.getElementById('selectEquipo').value;
     const mes = document.getElementById('selectMes').value;
     if (!equipo || !mes) return;
@@ -1248,26 +1232,16 @@ async function cargarAsistenciasGuardadas(preloadedData) {
             await fetch(`/obtener_asistencias?equipo=${encodeURIComponent(equipo)}&mes=${mes}&_t=${Date.now()}`)
                    .then(r => r.json()).catch(() => []);
 
-        // DEBUG TEMPORAL - mostrar en pantalla qué datos hay
-        {
-            const _dbg = document.getElementById('_dbg_asis') || document.createElement('div');
-            _dbg.id = '_dbg_asis';
-            _dbg.style = 'position:fixed;top:60px;right:10px;background:#dc2626;color:#fff;padding:10px 14px;border-radius:8px;z-index:99999;font-size:12px;max-width:360px;word-break:break-all;box-shadow:0 4px 12px rgba(0,0,0,0.5);border:2px solid #fff;';
-            const _primerNombre = datosGuardados[0] ? datosGuardados[0].nombre : 'ninguno';
-            _dbg.innerHTML = `<b>DEBUG ASIS</b><br>preloaded: ${Array.isArray(preloadedData)}<br>registros mes ${mes}: ${datosGuardados.length}<br>1er nombre: ${_primerNombre}`;
-            document.body.appendChild(_dbg);
-        }
-
         // Obtener datos de toda la temporada para el % total (sin filtro de mes)
         const respTot = await fetch(`/obtener_asistencias?equipo=${encodeURIComponent(equipo)}&_t=${Date.now()}`);
         const datosTotales = await respTot.json();
 
         const filas = document.querySelectorAll('#cuerpoTabla tr');
         filas.forEach(fila => {
-            const spanNombre = fila.querySelector('.sticky-col span');
-        if (!spanNombre) return;
-        
-            const nombreJugador = spanNombre.dataset.nombreOriginal || spanNombre.innerText.trim();
+            const spanNombre = fila.querySelector('.sticky-col span[data-nombre-original]');
+            if (!spanNombre) return;
+
+            const nombreJugador = spanNombre.dataset.nombreOriginal;
 
             // Actualizar porcentaje temporada (datos históricos del servidor)
             const recsP = datosTotales.filter(d => d.nombre === nombreJugador);
