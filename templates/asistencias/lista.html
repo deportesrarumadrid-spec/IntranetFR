@@ -880,11 +880,26 @@ async function generarCalendario() {
         }
     }
 
+    // Añadir días con datos reales (p.ej. grabados desde móvil) que no estén en el filtro normal
+    try {
+        const _resExtra = await fetch(`/obtener_asistencias?equipo=${encodeURIComponent(equipo)}&mes=${mes + 1}`);
+        const _datExtra = await _resExtra.json();
+        const _diasEnData = [...new Set(_datExtra.map(r => parseInt(r.dia)))];
+        const _diasYaEnValidos = new Set(diasValidos.map(d => d.num));
+        _diasEnData.forEach(dNum => {
+            if (!isNaN(dNum) && !_diasYaEnValidos.has(dNum)) {
+                const fExtra = new Date(_añoMes, mes, dNum);
+                diasValidos.push({ num: dNum, label: nombresDias[fExtra.getDay()], fechaFull: fExtra, _extraDay: true });
+            }
+        });
+        diasValidos.sort((a, b) => a.num - b.num);
+    } catch(e) { /* sin datos extra */ }
+
     document.getElementById('cabeceraDias').innerHTML = `<th class="sticky-col" style="background:white;"></th>` +
         diasValidos.map((d, i) => `
-            <th class="th-dia" id="th-col-${i}" style="position: relative; min-width: 110px; height: 62px; padding: 5px 5px;">
+            <th class="th-dia" id="th-col-${i}" style="position: relative; min-width: 110px; height: 62px; padding: 5px 5px;${d._extraDay ? 'border-bottom:3px solid #f59e0b;' : ''}">
                 <div class="warning-icon"><i class="fas fa-exclamation"></i></div>
-                <div style="font-size: 10px; opacity: 0.8;">${d.label}</div>
+                <div style="font-size: 10px; opacity: 0.8;">${d.label}${d._extraDay ? ' <span title="Día extra (móvil)" style="color:#f59e0b;font-size:9px;">★</span>' : ''}</div>
                 <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 2px; padding: 0 2px;">
                     <div class="btn-balon-ctrl" id="balon-i-${d.num}" onclick="event.stopPropagation(); abrirModalBalones(${d.num}, 'inicio')" title="Inicio" style="padding:2px 4px; font-size:10px; width:38px; max-width:38px; overflow:hidden; white-space:nowrap; gap:2px; flex-shrink:0; height:22px; display:flex; align-items:center; justify-content:center;">
                         <i class="fas fa-futbol"></i>&nbsp;I
