@@ -1606,8 +1606,16 @@ function confirmarRenombrarColumnaRopa() {
     const idx = columnaRopaContextual.realIdx;
     const nuevoNombre = document.getElementById('inputRenombrarColumnaRopa').value;
     if (!nuevoNombre || !nuevoNombre.trim()) return;
+    const nombreAntiguo = ropaColumns[idx];
     const nombreFinal = nuevoNombre.trim().toUpperCase();
     ropaColumns[idx] = nombreFinal;
+    // Renombrar la clave en el caché para que los datos sigan visibles sin recargar
+    Object.keys(ropaDataCache).forEach(jugador => {
+        if (ropaDataCache[jugador] && nombreAntiguo in ropaDataCache[jugador]) {
+            ropaDataCache[jugador][nombreFinal] = ropaDataCache[jugador][nombreAntiguo];
+            delete ropaDataCache[jugador][nombreAntiguo];
+        }
+    });
     renderRopaStructure();
     cerrarPopoverColumnaRopa();
 
