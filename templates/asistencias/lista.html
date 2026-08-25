@@ -28,7 +28,8 @@
         <script>
         (function(){
             const equipos = [{% for equipo in equipos %}'{{ equipo }}'{% if not loop.last %},{% endif %}{% endfor %}];
-            let equipoActual = equipos.length ? equipos[0] : '';
+            const _savedEquipo = localStorage.getItem('asistencias_equipo');
+            let equipoActual = (_savedEquipo && equipos.includes(_savedEquipo)) ? _savedEquipo : (equipos.length ? equipos[0] : '');
             const cont = document.getElementById('customEquipoOptions');
             function renderEquipoOpciones(){
                 cont.innerHTML = '';
@@ -41,6 +42,7 @@
                     el.onmouseout  = function(){ if(!sel) el.style.background=''; };
                     el.onclick = function(){
                         equipoActual = eq;
+                        localStorage.setItem('asistencias_equipo', eq);
                         document.getElementById('selectEquipo').value = eq;
                         document.getElementById('customEquipoLabel').textContent = eq;
                         renderEquipoOpciones();
@@ -51,8 +53,11 @@
                 });
             }
             renderEquipoOpciones();
-            // Sincronizar label con el equipo inicial
-            if(equipoActual) document.getElementById('customEquipoLabel').textContent = equipoActual;
+            // Sincronizar label y select con el equipo inicial (puede ser el guardado en localStorage)
+            if(equipoActual) {
+                document.getElementById('customEquipoLabel').textContent = equipoActual;
+                document.getElementById('selectEquipo').value = equipoActual;
+            }
             document.addEventListener('click', function(e){
                 const t=document.getElementById('customEquipoTrigger'), d=document.getElementById('customEquipoDropdown');
                 if(t&&d&&!t.contains(e.target)&&!d.contains(e.target)) closeEquipoDropdown();
