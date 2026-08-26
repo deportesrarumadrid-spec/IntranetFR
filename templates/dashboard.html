@@ -995,7 +995,6 @@
                 <div id="cronoPwdSec" style="display: none; margin-bottom: 25px;">
                     <input type="password" id="cronoPwdInp" placeholder="****" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; text-align: center; font-size: 18px; letter-spacing: 5px;" onkeyup="if(event.key==='Enter') accederCronograma()">
                 </div>
-                <button class="btn-salir" style="width: 100%; height: 45px; border-radius: 10px; cursor:pointer;" onclick="accederCronograma()">ACCEDER</button>
             </div>
 
             <div id="cronoIframeView" style="display: none; height: 90vh; width: 100%;">
@@ -2543,11 +2542,13 @@
             const pwdSec = document.getElementById('cronoPwdSec');
             const pwdInp = document.getElementById('cronoPwdInp');
 
-            pwdSec.style.display = isProtected ? 'block' : 'none';
             if (isProtected) {
+                pwdSec.style.display = 'block';
                 setTimeout(() => pwdInp.focus(), 50);
             } else {
+                pwdSec.style.display = 'none';
                 pwdInp.value = '';
+                accederCronograma();
             }
         }
 
