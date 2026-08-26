@@ -2532,26 +2532,28 @@
 
         let selectedCronoUser = null;
 
+        const _cronoEsAdmin = '{{ usuario|lower }}' === 'admin';
+
         function selectCronoProfile(user, btn) {
             selectedCronoUser = user;
             document.querySelectorAll('.btn-profile').forEach(b => b.classList.remove('selected'));
             btn.classList.add('selected');
-            
-            const isProtected = (user === 'Raul' || user === 'Ruben');
+
+            const isProtected = !_cronoEsAdmin && (user === 'Raul' || user === 'Ruben');
             const pwdSec = document.getElementById('cronoPwdSec');
             const pwdInp = document.getElementById('cronoPwdInp');
 
             pwdSec.style.display = isProtected ? 'block' : 'none';
             if (isProtected) {
-                setTimeout(() => pwdInp.focus(), 50); // El pequeño retardo asegura que el input sea visible antes de enfocarlo
+                setTimeout(() => pwdInp.focus(), 50);
             } else {
-                pwdInp.value = ''; // Limpiamos el campo por seguridad si se cambia a un usuario sin clave
+                pwdInp.value = '';
             }
         }
 
         function accederCronograma() {
             if (!selectedCronoUser) return alert("Selecciona perfil");
-            if ((selectedCronoUser === 'Raul' || selectedCronoUser === 'Ruben') && document.getElementById('cronoPwdInp').value !== '2204') return alert("Contraseña incorrecta");
+            if (!_cronoEsAdmin && (selectedCronoUser === 'Raul' || selectedCronoUser === 'Ruben') && document.getElementById('cronoPwdInp').value !== '2204') return alert("Contraseña incorrecta");
             
             const url = `/cronograma?view=semanal&user=${encodeURIComponent(selectedCronoUser)}`;
             document.getElementById('cronoIframe').src = url;
