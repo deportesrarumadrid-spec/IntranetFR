@@ -576,7 +576,7 @@
                 </thead>
                 <tbody id="cuerpoPagos">
                     {% for j in jugadores %}
-                    <tr class="fila-jugador" data-equipo="{{ j.EQUIPO }}" data-nombre="{{ j.NOMBRE }}" onclick="manejarClickFila(event, this)">
+                    <tr class="fila-jugador" data-equipo="{{ j.EQUIPO }}" data-nombre="{{ j.NOMBRE }}" data-temporada-baja="{{ j.TEMPORADA_BAJA or '' }}" data-baja-desde="{{ j.BAJA_DESDE or '' }}" onclick="manejarClickFila(event, this)">
                         <td style="font-weight: 800;">{{ j.EQUIPO }}</td>
                         <td>
                             <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
@@ -4908,9 +4908,20 @@ function filtrarJugadores() {
         const nombre = f.cells[1].innerText.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const cumpleEquipo = !equipo || f.dataset.equipo === equipo;
         const cumpleBusqueda = !busqueda || nombre.includes(busqueda);
-        
+
         f.style.display = (cumpleEquipo && cumpleBusqueda) ? '' : 'none';
     });
+
+    // Mostrar/ocultar separador seg\u00fan si hay bajas anteriores visibles
+    const sep = document.querySelector('.separador-baja-anterior-fin');
+    if (sep) {
+        const hayBajaVisible = Array.from(document.querySelectorAll('#cuerpoPagos .fila-jugador')).some(f => {
+            const bajaDes = (f.dataset.bajaDesde || '').trim();
+            const tempBaja = (f.dataset.temporadaBaja || '').trim();
+            return bajaDes && tempBaja !== _temporadaActiStrFin && f.style.display !== 'none' && !f.querySelector('.pago-naranja');
+        });
+        sep.style.display = hayBajaVisible ? '' : 'none';
+    }
 }
 
 function abrirEstadisticas() {
@@ -7645,6 +7656,54 @@ function cargarPagosEnTabla() {
                 }
             });
         }
+    });
+
+    reagruparBajasAnteriores();
+}
+
+// ── Agrupación de bajas de temporadas anteriores al fondo ──
+const _hoyFin = new Date();
+const _anioIniFin = _hoyFin.getMonth() >= 8 ? _hoyFin.getFullYear() : _hoyFin.getFullYear() - 1;
+const _temporadaActiStrFin = `${_anioIniFin}/${_anioIniFin + 1}`;
+
+// Guardar orden original al cargar
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('#cuerpoPagos .fila-jugador').forEach((fila, idx) => {
+        fila.dataset.originalOrder = idx;
+    });
+});
+
+function reagruparBajasAnteriores() {
+    const tbody = document.getElementById('cuerpoPagos');
+    if (!tbody) return;
+
+    // Quitar separador previo y restaurar opacidad
+    tbody.querySelectorAll('.separador-baja-anterior-fin').forEach(r => r.remove());
+    const todasFilas = Array.from(tbody.querySelectorAll('.fila-jugador'));
+    todasFilas.forEach(f => { f.style.opacity = ''; });
+
+    // Reordenar a orden original
+    todasFilas.sort((a, b) => parseInt(a.dataset.originalOrder || 0) - parseInt(b.dataset.originalOrder || 0));
+    todasFilas.forEach(f => tbody.appendChild(f));
+
+    // Identificar bajas anteriores sin celda naranja (sin deuda pendiente)
+    const bajasAgrupar = todasFilas.filter(f => {
+        const bajaDes = (f.dataset.bajaDesde || '').trim();
+        const tempBaja = (f.dataset.temporadaBaja || '').trim();
+        return bajaDes && tempBaja !== _temporadaActiStrFin && !f.querySelector('.pago-naranja');
+    });
+
+    if (bajasAgrupar.length === 0) return;
+
+    // Insertar separador y mover filas al fondo
+    const sep = document.createElement('tr');
+    sep.className = 'separador-baja-anterior-fin';
+    sep.innerHTML = `<td colspan="99" style="background:#f1f5f9; color:#94a3b8; font-size:10px; font-weight:900; text-transform:uppercase; padding:6px 12px; letter-spacing:.5px; border-top:2px solid #e2e8f0;">Bajas temporadas anteriores</td>`;
+    tbody.appendChild(sep);
+
+    bajasAgrupar.forEach(f => {
+        f.style.opacity = '0.55';
+        tbody.appendChild(f);
     });
 }
 
