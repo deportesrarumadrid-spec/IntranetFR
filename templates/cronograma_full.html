@@ -1316,10 +1316,12 @@
                 const data = await res.json();
                 if (!Array.isArray(data)) return;
 
+                const _matchSuffix = (id) => suffix ? id.endsWith(suffix) : /^events-week-\d{4}-\d{2}-\d{2}$/.test(id);
+                const _matchSuffixAnual = (id) => suffix ? id.endsWith(suffix) : !/(-raul|-gonzalo)$/.test(id);
                 if (modo === 'SEMANAL') {
-                    document.querySelectorAll(`#view-semanal .lista-eventos[id$="${suffix}"]`).forEach(el => el.innerHTML = '');
+                    Array.from(document.querySelectorAll(`#view-semanal .lista-eventos`)).filter(el => _matchSuffix(el.id)).forEach(el => el.innerHTML = '');
                 } else {
-                    document.querySelectorAll(`#view-anual .lista-eventos[id$="${suffix}"]`).forEach(el => el.innerHTML = '');
+                    Array.from(document.querySelectorAll(`#view-anual .lista-eventos`)).filter(el => _matchSuffixAnual(el.id)).forEach(el => el.innerHTML = '');
                 }
 
                 data.forEach(ev => {
@@ -1335,7 +1337,7 @@
         function processTaskForUser(ev, user, suffix, tipoLimpio, tareaLimpia, diasRepeticion, modo) {
             if (modo === 'SEMANAL') {
                 const weekContainerIds = Array.from(document.querySelectorAll(`#view-semanal .lista-eventos`))
-                                            .map(el => el.id).filter(id => id.startsWith('events-week-') && id.endsWith(suffix));
+                                            .map(el => el.id).filter(id => id.startsWith('events-week-') && (suffix ? id.endsWith(suffix) : /^events-week-\d{4}-\d{2}-\d{2}$/.test(id)));
 
                 weekContainerIds.forEach(id => {
                     const isoDate = id.replace('events-week-', '').replace(suffix, '');
