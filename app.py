@@ -2252,105 +2252,70 @@ def api_cronograma_delete():
     data = request.json
     if not data: return jsonify({"status": "error"}), 400
 
-    row_num = data.get('row_num')
-    if row_num and str(row_num).isdigit() and int(row_num) > 1:
-        try:
-            rn = int(row_num)
-            spreadsheet = app.gs_client.open(app.gs_name)
-            cached_ws = spreadsheet.worksheet("TAREAS CRONOGRAMA")
-            cached_ws.delete_rows(rn)
-            return jsonify({"status": "success"})
-        except Exception as e:
-            print(f"Error delete directo por row_num: {e}")
-
     user_req = normalizar_id(data.get('user'))
     fecha_norm_req = normalizar_crono_busqueda(data.get('fecha'))
     tarea_norm_req = normalizar_crono_busqueda(data.get('tarea'))
 
+    if not user_req or not fecha_norm_req or not tarea_norm_req:
+        return jsonify({"status": "error", "message": "Datos incompletos"}), 400
+
     try:
-        client = app.gs_client
-        spreadsheet = client.open(app.gs_name)
-        sheet = spreadsheet.worksheet("TAREAS CRONOGRAMA")
-        all_v = sheet.get_all_values()
-        if not all_v: return jsonify({"status": "error"}), 404
+        raw_ws = _raw_client.open(app.gs_name).worksheet("TAREAS CRONOGRAMA")
+        all_v = raw_ws.get_all_values()
+        if not all_v:
+            return jsonify({"status": "error", "message": "Hoja vacía"}), 404
 
         headers = [normalizar_cabecera_universal(h) for h in all_v[0]]
-        
+
         def find_col(aliases):
             return next((headers.index(a) for a in aliases if a in headers), -1)
 
-        idx_user = find_col(['PERSONA', 'RESPONSABLE', 'USER', 'COACH', 'ENTRENADOR'])
+        idx_user  = find_col(['PERSONA', 'RESPONSABLE', 'USER', 'COACH', 'ENTRENADOR'])
         idx_fecha = find_col(['DIAMES', 'FECHAISO', 'FECHA', 'DATE', 'START', 'DIA', 'MES', 'DIA/MES'] + DIAS_MESES_IDENT)
         idx_tarea = find_col(['TAREA', 'TAREAS', 'TITLE', 'TITULO', 'NOMBRE', 'ACTIVIDAD', 'EVENTO', 'DESCRIPCION', 'DESCRIPTION', 'CONTENIDO', 'TEXT', 'CONTENT'])
         idx_vista = find_col(['SEMANALANUAL', 'VISTA', 'VIEW'])
-        vista_req = normalizar_id(data.get('vista'))
 
         if -1 in [idx_user, idx_fecha, idx_tarea]:
             return jsonify({"status": "error", "message": "Columnas no encontradas"}), 500
 
-        fila_idx = -1
-        for i, row in enumerate(all_v):
-            if i == 0: continue
-            if len(row) > max(idx_user, idx_fecha, idx_tarea, idx_vista):
-                u = normalizar_id(row[idx_user])
-                vista_val_row = (row[idx_vista].strip().upper() if idx_vista != -1 and idx_vista < len(row) else '') or 'SEMANAL'
-                f_raw = str(row[idx_fecha]).replace(';', ',').replace(' y ', ',')
-                raw_parts = [x.strip() for x in f_raw.split(',') if x.strip()]
-                if len(raw_parts) == 1 and ' ' in raw_parts[0]:
-                    tokens = [tk.strip() for tk in raw_parts[0].split() if tk.strip()]
-                    if tokens and all(es_dia_valido_crono(tk) for tk in tokens):
-                        raw_parts = tokens
-                parts_row = [normalizar_crono_busqueda(normalizar_dia_cronograma(x, vista=vista_val_row)) for x in raw_parts]
+        min_cols = max(idx_user, idx_fecha, idx_tarea) + 1
+        filas_a_borrar = []
+        for i, row in enumerate(all_v[1:], 2):
+            if len(row) < min_cols:
+                continue
+            if normalizar_id(row[idx_user]) != user_req:
+                continue
+            if normalizar_crono_busqueda(row[idx_tarea]) != tarea_norm_req:
+                continue
+            vista_val_row = (row[idx_vista].strip().upper() if idx_vista != -1 and idx_vista < len(row) else '') or 'SEMANAL'
+            f_raw = str(row[idx_fecha]).replace(';', ',').replace(' y ', ',')
+            raw_parts = [x.strip() for x in f_raw.split(',') if x.strip()]
+            if len(raw_parts) == 1 and ' ' in raw_parts[0]:
+                tokens = [tk.strip() for tk in raw_parts[0].split() if tk.strip()]
+                if tokens and all(es_dia_valido_crono(tk) for tk in tokens):
+                    raw_parts = tokens
+            parts_row = [normalizar_crono_busqueda(normalizar_dia_cronograma(x, vista=vista_val_row)) for x in raw_parts]
+            if fecha_norm_req in parts_row:
+                filas_a_borrar.append(i)
 
-                match_f = (fecha_norm_req in parts_row)
-                t = normalizar_crono_busqueda(row[idx_tarea])
-                v = normalizar_id(row[idx_vista]) if idx_vista != -1 else ""
+        if not filas_a_borrar:
+            print(f"[DELETE] No encontrada: user={user_req} fecha={fecha_norm_req} tarea={tarea_norm_req}")
+            return jsonify({"status": "error", "message": "Tarea no encontrada"}), 404
 
-                if u == user_req and match_f and t == tarea_norm_req and (not vista_req or v == vista_req):
-                    fila_idx = i + 1
-                    break
+        print(f"[DELETE] Borrando filas {filas_a_borrar}: user={user_req} fecha={fecha_norm_req} tarea={tarea_norm_req}")
+        for fila_idx in sorted(filas_a_borrar, reverse=True):
+            raw_ws.delete_rows(fila_idx)
 
-        if fila_idx != -1:
-            sheet.delete_rows(fila_idx)
-            return jsonify({"status": "success"})
+        from sheets_cache import invalidate
+        invalidate(f"{app.gs_name}::TAREAS CRONOGRAMA")
 
-        return jsonify({"status": "error", "message": "Tarea no encontrada"}), 404
+        return jsonify({"status": "success"})
+
     except Exception as e:
         err_str = str(e)
+        print(f"[DELETE] Error: {err_str}")
         if '429' in err_str:
-            import time as _time
-            _time.sleep(12)
-            try:
-                raw_ws = _raw_client.open(app.gs_name).worksheet("TAREAS CRONOGRAMA")
-                all_v2 = raw_ws.get_all_values()
-                headers2 = [normalizar_cabecera_universal(h) for h in all_v2[0]]
-                def find_col2(aliases):
-                    return next((headers2.index(a) for a in aliases if a in headers2), -1)
-                i2u = find_col2(['PERSONA','RESPONSABLE','USER','COACH','ENTRENADOR'])
-                i2f = find_col2(['DIAMES','FECHAISO','FECHA','DATE','START','DIA','MES','DIA/MES']+DIAS_MESES_IDENT)
-                i2t = find_col2(['TAREA','TAREAS','TITLE','TITULO','NOMBRE','ACTIVIDAD','EVENTO','DESCRIPCION','DESCRIPTION','CONTENIDO','TEXT','CONTENT'])
-                i2v = find_col2(['SEMANALANUAL','VISTA','VIEW'])
-                fila2 = -1
-                for i, row in enumerate(all_v2):
-                    if i == 0: continue
-                    if len(row) > max(i2u, i2f, i2t, max(i2v, 0)):
-                        u2 = normalizar_id(row[i2u])
-                        vvr2 = (row[i2v].strip().upper() if i2v != -1 and i2v < len(row) else '') or 'SEMANAL'
-                        fr2 = str(row[i2f]).replace(';',',').replace(' y ',',')
-                        rp2 = [x.strip() for x in fr2.split(',') if x.strip()]
-                        pr2 = [normalizar_crono_busqueda(normalizar_dia_cronograma(x, vista=vvr2)) for x in rp2]
-                        t2 = normalizar_crono_busqueda(row[i2t])
-                        if u2 == user_req and fecha_norm_req in pr2 and t2 == tarea_norm_req:
-                            fila2 = i + 1
-                            break
-                if fila2 != -1:
-                    raw_ws.delete_rows(fila2)
-                    return jsonify({"status": "success"})
-                return jsonify({"status": "error", "message": "Tarea no encontrada"}), 404
-            except Exception as e2:
-                print(f"Error en retry delete cronograma: {e2}")
-                return jsonify({"status": "error", "message": "api_429"}), 503
-        print(f"Error eliminando tarea cronograma: {e}")
+            return jsonify({"status": "error", "message": "api_429"}), 503
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/cronograma_edit', methods=['POST'])
