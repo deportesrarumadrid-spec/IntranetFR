@@ -1596,17 +1596,23 @@
         async function eliminarTareaCronograma(user, fecha, tarea, rowNum) {
             if (!confirm(`¿Seguro que quieres eliminar la tarea "${tarea}"?`)) return;
 
+            const elTarget = _ctxTarget;
             showLoader();
             try {
                 const body = { user: user || PERSONA_MOSTRADA, fecha: fecha, tarea: tarea };
-                if (rowNum) body.row_num = rowNum;
+                if (rowNum) body.row_num = parseInt(rowNum, 10);
                 const res = await fetch('/api/cronograma_delete', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(body)
                 });
                 if (res.ok) {
-                    initCargaCronograma();
+                    if (elTarget) {
+                        const section = elTarget.closest('.deportiva, .deportivo, .mk, .oficina, .otros');
+                        elTarget.remove();
+                        if (section && section.querySelectorAll('.evento').length === 0) section.remove();
+                    }
+                    setTimeout(() => initCargaCronograma(), 3000);
                 } else {
                     const dbg = await res.json().catch(() => ({}));
                     if ((dbg.message || '').includes('api_429')) {
