@@ -1610,7 +1610,8 @@
                 if (res.ok) {
                     initCargaCronograma();
                 } else {
-                    alert("No se pudo eliminar la tarea.");
+                    const dbg = await res.json().catch(() => ({}));
+                    alert("No se pudo eliminar la tarea.\n\nDEBUG:\nEnviado: user=" + (user || PERSONA_MOSTRADA) + " | fecha=" + fecha + " | tarea=" + tarea + "\nRespuesta: " + JSON.stringify(dbg));
                 }
             } catch (e) {
                 console.error("Error al eliminar:", e);

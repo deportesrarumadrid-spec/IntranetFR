@@ -2303,7 +2303,16 @@ def api_cronograma_delete():
             sheet.delete_rows(fila_idx)
             return jsonify({"status": "success"})
 
-        return jsonify({"status": "error", "message": "Tarea no encontrada"}), 404
+        debug_rows = []
+        for i, row in enumerate(all_v[1:6], 2):
+            if len(row) > max(idx_user, idx_fecha, idx_tarea, max(idx_vista, 0)):
+                vvr = (row[idx_vista].strip().upper() if idx_vista != -1 and idx_vista < len(row) else '') or 'SEMANAL'
+                fr = str(row[idx_fecha]).replace(';', ',').replace(' y ', ',')
+                rp = [x.strip() for x in fr.split(',') if x.strip()]
+                pr = [normalizar_crono_busqueda(normalizar_dia_cronograma(x, vista=vvr)) for x in rp]
+                debug_rows.append({"u": normalizar_id(row[idx_user]), "f": pr, "t": normalizar_crono_busqueda(row[idx_tarea])})
+        print(f"[DELETE DEBUG] buscando user={user_req!r} fecha={fecha_norm_req!r} tarea={tarea_norm_req!r} | headers={headers} | primeras_filas={debug_rows}")
+        return jsonify({"status": "error", "message": "Tarea no encontrada", "debug": {"user_req": user_req, "fecha_req": fecha_norm_req, "tarea_req": tarea_norm_req, "headers": headers, "rows": debug_rows}}), 404
     except Exception as e:
         print(f"Error eliminando tarea cronograma: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
