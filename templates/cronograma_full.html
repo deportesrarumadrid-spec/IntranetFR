@@ -1612,7 +1612,6 @@
                         elTarget.remove();
                         if (section && section.querySelectorAll('.evento').length === 0) section.remove();
                     }
-                    setTimeout(() => initCargaCronograma(), 3000);
                 } else {
                     const dbg = await res.json().catch(() => ({}));
                     if ((dbg.message || '').includes('api_429')) {

@@ -2258,17 +2258,7 @@ def api_cronograma_delete():
             rn = int(row_num)
             spreadsheet = app.gs_client.open(app.gs_name)
             cached_ws = spreadsheet.worksheet("TAREAS CRONOGRAMA")
-            cached_ws._ws.delete_rows(rn)
-            from sheets_cache import _cache, _lock
-            cache_key = f"{app.gs_name}::TAREAS CRONOGRAMA:values"
-            with _lock:
-                entry = _cache.get(cache_key)
-                if entry:
-                    rows = list(entry['data'])
-                    cache_idx = rn - 1
-                    if 0 < cache_idx < len(rows):
-                        rows.pop(cache_idx)
-                        _cache[cache_key] = {'data': rows, 'ts': entry['ts']}
+            cached_ws.delete_rows(rn)
             return jsonify({"status": "success"})
         except Exception as e:
             print(f"Error delete directo por row_num: {e}")
