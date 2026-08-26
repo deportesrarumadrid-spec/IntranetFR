@@ -240,7 +240,7 @@ scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/au
 creds = ServiceAccountCredentials.from_service_account_file(os.path.join(BASE_DIR, "secretos.json"), scopes=scope)
 from sheets_cache import CachedClient
 _raw_client = gspread.authorize(creds)
-client = CachedClient(_raw_client, ttl=300)  # caché 5 min — reduce llamadas API y evita quota 429
+client = CachedClient(_raw_client, ttl=600)  # caché 10 min — reduce llamadas API y evita quota 429
 NOMBRE_EXCEL = "Control Asistencia Club"
 app.gs_client = client
 app.gs_name = NOMBRE_EXCEL
@@ -2308,13 +2308,10 @@ def api_cronograma_delete():
         err_str = str(e)
         if '429' in err_str:
             import time as _time
-            _time.sleep(3)
+            _time.sleep(12)
             try:
-                from sheets_cache import invalidate as _inv
-                _inv()
-                spreadsheet2 = app.gs_client.open(app.gs_name)
-                sheet2 = spreadsheet2.worksheet("TAREAS CRONOGRAMA")
-                all_v2 = sheet2.get_all_values()
+                raw_ws = _raw_client.open(app.gs_name).worksheet("TAREAS CRONOGRAMA")
+                all_v2 = raw_ws.get_all_values()
                 headers2 = [normalizar_cabecera_universal(h) for h in all_v2[0]]
                 def find_col2(aliases):
                     return next((headers2.index(a) for a in aliases if a in headers2), -1)
@@ -2325,7 +2322,7 @@ def api_cronograma_delete():
                 fila2 = -1
                 for i, row in enumerate(all_v2):
                     if i == 0: continue
-                    if len(row) > max(i2u, i2f, i2t, i2v):
+                    if len(row) > max(i2u, i2f, i2t, max(i2v, 0)):
                         u2 = normalizar_id(row[i2u])
                         vvr2 = (row[i2v].strip().upper() if i2v != -1 and i2v < len(row) else '') or 'SEMANAL'
                         fr2 = str(row[i2f]).replace(';',',').replace(' y ',',')
@@ -2336,12 +2333,12 @@ def api_cronograma_delete():
                             fila2 = i + 1
                             break
                 if fila2 != -1:
-                    sheet2.delete_rows(fila2)
+                    raw_ws.delete_rows(fila2)
                     return jsonify({"status": "success"})
                 return jsonify({"status": "error", "message": "Tarea no encontrada"}), 404
             except Exception as e2:
                 print(f"Error en retry delete cronograma: {e2}")
-                return jsonify({"status": "error", "message": "Servidor ocupado, inténtalo de nuevo"}), 503
+                return jsonify({"status": "error", "message": "api_429"}), 503
         print(f"Error eliminando tarea cronograma: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 

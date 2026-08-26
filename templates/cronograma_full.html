@@ -1611,9 +1611,8 @@
                     initCargaCronograma();
                 } else {
                     const dbg = await res.json().catch(() => ({}));
-                    const msg = dbg.message || '';
-                    if (msg.includes('ocupado') || msg.includes('503')) {
-                        alert("El servidor está ocupado. Espera unos segundos y vuelve a intentarlo.");
+                    if ((dbg.message || '').includes('api_429')) {
+                        alert("Google Sheets está saturado. Espera 30 segundos y vuelve a intentarlo.");
                     } else {
                         alert("No se pudo eliminar la tarea.");
                     }
