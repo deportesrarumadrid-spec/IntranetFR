@@ -240,7 +240,7 @@ scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/au
 creds = ServiceAccountCredentials.from_service_account_file(os.path.join(BASE_DIR, "secretos.json"), scopes=scope)
 from sheets_cache import CachedClient
 _raw_client = gspread.authorize(creds)
-client = CachedClient(_raw_client, ttl=90)  # caché 90s — lecturas instantáneas en caliente
+client = CachedClient(_raw_client, ttl=300)  # caché 5 min — reduce llamadas API y evita quota 429
 NOMBRE_EXCEL = "Control Asistencia Club"
 app.gs_client = client
 app.gs_name = NOMBRE_EXCEL
@@ -2303,17 +2303,45 @@ def api_cronograma_delete():
             sheet.delete_rows(fila_idx)
             return jsonify({"status": "success"})
 
-        debug_rows = []
-        for i, row in enumerate(all_v[1:6], 2):
-            if len(row) > max(idx_user, idx_fecha, idx_tarea, max(idx_vista, 0)):
-                vvr = (row[idx_vista].strip().upper() if idx_vista != -1 and idx_vista < len(row) else '') or 'SEMANAL'
-                fr = str(row[idx_fecha]).replace(';', ',').replace(' y ', ',')
-                rp = [x.strip() for x in fr.split(',') if x.strip()]
-                pr = [normalizar_crono_busqueda(normalizar_dia_cronograma(x, vista=vvr)) for x in rp]
-                debug_rows.append({"u": normalizar_id(row[idx_user]), "f": pr, "t": normalizar_crono_busqueda(row[idx_tarea])})
-        print(f"[DELETE DEBUG] buscando user={user_req!r} fecha={fecha_norm_req!r} tarea={tarea_norm_req!r} | headers={headers} | primeras_filas={debug_rows}")
-        return jsonify({"status": "error", "message": "Tarea no encontrada", "debug": {"user_req": user_req, "fecha_req": fecha_norm_req, "tarea_req": tarea_norm_req, "headers": headers, "rows": debug_rows}}), 404
+        return jsonify({"status": "error", "message": "Tarea no encontrada"}), 404
     except Exception as e:
+        err_str = str(e)
+        if '429' in err_str:
+            import time as _time
+            _time.sleep(3)
+            try:
+                from sheets_cache import invalidate as _inv
+                _inv()
+                spreadsheet2 = app.gs_client.open(app.gs_name)
+                sheet2 = spreadsheet2.worksheet("TAREAS CRONOGRAMA")
+                all_v2 = sheet2.get_all_values()
+                headers2 = [normalizar_cabecera_universal(h) for h in all_v2[0]]
+                def find_col2(aliases):
+                    return next((headers2.index(a) for a in aliases if a in headers2), -1)
+                i2u = find_col2(['PERSONA','RESPONSABLE','USER','COACH','ENTRENADOR'])
+                i2f = find_col2(['DIAMES','FECHAISO','FECHA','DATE','START','DIA','MES','DIA/MES']+DIAS_MESES_IDENT)
+                i2t = find_col2(['TAREA','TAREAS','TITLE','TITULO','NOMBRE','ACTIVIDAD','EVENTO','DESCRIPCION','DESCRIPTION','CONTENIDO','TEXT','CONTENT'])
+                i2v = find_col2(['SEMANALANUAL','VISTA','VIEW'])
+                fila2 = -1
+                for i, row in enumerate(all_v2):
+                    if i == 0: continue
+                    if len(row) > max(i2u, i2f, i2t, i2v):
+                        u2 = normalizar_id(row[i2u])
+                        vvr2 = (row[i2v].strip().upper() if i2v != -1 and i2v < len(row) else '') or 'SEMANAL'
+                        fr2 = str(row[i2f]).replace(';',',').replace(' y ',',')
+                        rp2 = [x.strip() for x in fr2.split(',') if x.strip()]
+                        pr2 = [normalizar_crono_busqueda(normalizar_dia_cronograma(x, vista=vvr2)) for x in rp2]
+                        t2 = normalizar_crono_busqueda(row[i2t])
+                        if u2 == user_req and fecha_norm_req in pr2 and t2 == tarea_norm_req:
+                            fila2 = i + 1
+                            break
+                if fila2 != -1:
+                    sheet2.delete_rows(fila2)
+                    return jsonify({"status": "success"})
+                return jsonify({"status": "error", "message": "Tarea no encontrada"}), 404
+            except Exception as e2:
+                print(f"Error en retry delete cronograma: {e2}")
+                return jsonify({"status": "error", "message": "Servidor ocupado, inténtalo de nuevo"}), 503
         print(f"Error eliminando tarea cronograma: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
