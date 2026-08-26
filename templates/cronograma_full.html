@@ -620,7 +620,7 @@
         document.getElementById('ctxDelete').addEventListener('click', function() {
             const d = _evData[_ctxTarget?.dataset?.evKey]; if (!d) return;
             document.getElementById('ctxMenu').style.display = 'none';
-            eliminarTareaCronograma(d.user, d.fecha, d.tarea);
+            eliminarTareaCronograma(d.user, d.fecha, d.tarea, d.rowNum);
         });
 
         // --- Mini calendario selector de día ---
@@ -788,7 +788,7 @@
                 div.className = `evento ev-${tipo.toLowerCase()}`;
                 div.style.fontSize = small ? '9px' : '11px';
                 const evKey = ++_evCounter;
-                _evData[evKey] = { user: ev.RESPONSABLE || '', fecha: ev.FECHA_ISO || '', tarea: ev.TAREA || '', cat: tipo, freq: ev.FRECUENCIA || '', estado: ev.ESTADO || 'PENDIENTE' };
+                _evData[evKey] = { user: ev.RESPONSABLE || '', fecha: ev.FECHA_ISO || '', tarea: ev.TAREA || '', cat: tipo, freq: ev.FRECUENCIA || '', estado: ev.ESTADO || 'PENDIENTE', rowNum: ev._row_num || null };
                 div.dataset.evKey = evKey;
                 const _adjKeyA = _tareaKey(ev.FECHA_ISO || '', ev.RESPONSABLE || '', ev.TAREA || '');
                 const _hasAdjA = _adjuntosKeys.has(_adjKeyA);
@@ -1411,7 +1411,7 @@
             const estAct = (ev.ESTADO || 'PENDIENTE').toUpperCase();
 
             const evKey = ++_evCounter;
-            _evData[evKey] = { user: ownerVal, fecha: ev.FECHA_ISO || '', tarea: tareaLimpia, cat: tipoLimpio, freq: ev.FRECUENCIA || '', estado: ev.ESTADO || 'PENDIENTE' };
+            _evData[evKey] = { user: ownerVal, fecha: ev.FECHA_ISO || '', tarea: tareaLimpia, cat: tipoLimpio, freq: ev.FRECUENCIA || '', estado: ev.ESTADO || 'PENDIENTE', rowNum: ev._row_num || null };
             evDiv.dataset.evKey = evKey;
             const _adjKey1 = _tareaKey(ev.FECHA_ISO || '', ownerVal, tareaLimpia);
             const _hasAdj1 = _adjuntosKeys.has(_adjKey1);
@@ -1438,7 +1438,7 @@
             evDiv.style.gap = '5px';
 
             const evKey = ++_evCounter;
-            _evData[evKey] = { user: ev.RESPONSABLE || '', fecha: ev.FECHA_ISO || '', tarea: ev.TAREA || '', cat: ev.TIPO || '', freq: ev.FRECUENCIA || '', estado: ev.ESTADO || 'PENDIENTE' };
+            _evData[evKey] = { user: ev.RESPONSABLE || '', fecha: ev.FECHA_ISO || '', tarea: ev.TAREA || '', cat: ev.TIPO || '', freq: ev.FRECUENCIA || '', estado: ev.ESTADO || 'PENDIENTE', rowNum: ev._row_num || null };
             evDiv.dataset.evKey = evKey;
             const diaMesAnual = (ev.FRECUENCIA || '').match(/DIA:(\d+)/i);
             const diaBadge = diaMesAnual ? `<span style="font-size:8px; color:#94a3b8; flex-shrink:0; margin-left:4px;">·d${diaMesAnual[1]}</span>` : '';
@@ -1593,19 +1593,17 @@
             document.getElementById('modalTarea').style.display = 'flex';
         }
 
-        async function eliminarTareaCronograma(user, fecha, tarea) {
+        async function eliminarTareaCronograma(user, fecha, tarea, rowNum) {
             if (!confirm(`¿Seguro que quieres eliminar la tarea "${tarea}"?`)) return;
-            
+
             showLoader();
             try {
+                const body = { user: user || PERSONA_MOSTRADA, fecha: fecha, tarea: tarea };
+                if (rowNum) body.row_num = rowNum;
                 const res = await fetch('/api/cronograma_delete', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ 
-                        user: user || PERSONA_MOSTRADA,
-                        fecha: fecha,
-                        tarea: tarea
-                    })
+                    body: JSON.stringify(body)
                 });
                 if (res.ok) {
                     initCargaCronograma();

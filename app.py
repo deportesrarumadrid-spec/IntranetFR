@@ -1982,10 +1982,10 @@ def api_cronograma_data():
         date_keys_found = [h for h in raw_headers if normalizar_cabecera_universal(h) in date_headers_list_mode]
 
         records = []
-        for row in all_v[1:]:
+        for row_idx, row in enumerate(all_v[1:], 2):
             if not any(str(c).strip() for c in row): continue
-            
-            item = {}
+
+            item = {'_row_num': row_idx}
             for i, h in enumerate(raw_headers):
                 val = str(row[i]).strip() if i < len(row) else ""
                 h_norm = normalizar_cabecera_universal(h)
@@ -2251,7 +2251,17 @@ def api_cronograma_update_status():
 def api_cronograma_delete():
     data = request.json
     if not data: return jsonify({"status": "error"}), 400
-    
+
+    row_num = data.get('row_num')
+    if row_num and str(row_num).isdigit() and int(row_num) > 1:
+        try:
+            spreadsheet = app.gs_client.open(app.gs_name)
+            sheet = spreadsheet.worksheet("TAREAS CRONOGRAMA")
+            sheet.delete_rows(int(row_num))
+            return jsonify({"status": "success"})
+        except Exception as e:
+            print(f"Error delete directo por row_num: {e}")
+
     user_req = normalizar_id(data.get('user'))
     fecha_norm_req = normalizar_crono_busqueda(data.get('fecha'))
     tarea_norm_req = normalizar_crono_busqueda(data.get('tarea'))
