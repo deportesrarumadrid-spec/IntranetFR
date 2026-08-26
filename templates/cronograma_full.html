@@ -1178,9 +1178,8 @@
             const dayMapInv = { 1: 'L', 2: 'M', 3: 'X', 4: 'J', 5: 'V', 6: 'S', 0: 'D' };
             const dayChar = dayMapInv[dateObj.getDay()];
 
-            // Reset pills
-            document.querySelectorAll('.pill-opt').forEach(p => p.classList.remove('selected'));
-            document.querySelectorAll('.day-pill').forEach(p => p.classList.remove('selected'));
+            // Reset pills de categoría y días (NO el owner, que ya se fijó arriba)
+            document.querySelectorAll('#groupCat .pill-opt, .day-pill').forEach(p => p.classList.remove('selected'));
             
             // Preseleccionar DEPORTIVA por defecto
             const depBtn = Array.from(document.querySelectorAll('#groupCat .pill-opt')).find(b => b.innerText === 'DEPORTIVA');
