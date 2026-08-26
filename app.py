@@ -2221,11 +2221,15 @@ def api_cronograma_update_status():
             if i == 0: continue
             if len(row) > max(idx_user, idx_fecha, idx_tarea, idx_vista):
                 u = normalizar_id(row[idx_user])
+                vista_val_row = (row[idx_vista].strip().upper() if idx_vista != -1 and idx_vista < len(row) else '') or 'SEMANAL'
                 f_raw = str(row[idx_fecha]).replace(';', ',').replace(' y ', ',')
-                parts_row = [normalizar_crono_busqueda(x) for x in f_raw.split(',') if x.strip()]
-                if len(parts_row) == 1 and ' ' in parts_row[0]:
-                    parts_row = [x.strip() for x in parts_row[0].split() if x.strip()]
-                
+                raw_parts = [x.strip() for x in f_raw.split(',') if x.strip()]
+                if len(raw_parts) == 1 and ' ' in raw_parts[0]:
+                    tokens = [tk.strip() for tk in raw_parts[0].split() if tk.strip()]
+                    if tokens and all(es_dia_valido_crono(tk) for tk in tokens):
+                        raw_parts = tokens
+                parts_row = [normalizar_crono_busqueda(normalizar_dia_cronograma(x, vista=vista_val_row)) for x in raw_parts]
+
                 match_f = (fecha_norm_req in parts_row)
                 t = normalizar_crono_busqueda(row[idx_tarea])
                 v = normalizar_id(row[idx_vista]) if idx_vista != -1 else ""
@@ -2233,7 +2237,7 @@ def api_cronograma_update_status():
                 if u == user_norm and match_f and t == tarea_norm_req and (not vista_req or v == vista_req):
                     fila_idx = i + 1
                     break
-        
+
         if fila_idx != -1:
             sheet.update_cell(fila_idx, idx_estado + 1, nuevo_estado)
             return jsonify({"status": "success"})
@@ -2278,11 +2282,15 @@ def api_cronograma_delete():
             if i == 0: continue
             if len(row) > max(idx_user, idx_fecha, idx_tarea, idx_vista):
                 u = normalizar_id(row[idx_user])
+                vista_val_row = (row[idx_vista].strip().upper() if idx_vista != -1 and idx_vista < len(row) else '') or 'SEMANAL'
                 f_raw = str(row[idx_fecha]).replace(';', ',').replace(' y ', ',')
-                parts_row = [normalizar_crono_busqueda(x) for x in f_raw.split(',') if x.strip()]
-                if len(parts_row) == 1 and ' ' in parts_row[0]:
-                    parts_row = [x.strip() for x in parts_row[0].split() if x.strip()]
-                
+                raw_parts = [x.strip() for x in f_raw.split(',') if x.strip()]
+                if len(raw_parts) == 1 and ' ' in raw_parts[0]:
+                    tokens = [tk.strip() for tk in raw_parts[0].split() if tk.strip()]
+                    if tokens and all(es_dia_valido_crono(tk) for tk in tokens):
+                        raw_parts = tokens
+                parts_row = [normalizar_crono_busqueda(normalizar_dia_cronograma(x, vista=vista_val_row)) for x in raw_parts]
+
                 match_f = (fecha_norm_req in parts_row)
                 t = normalizar_crono_busqueda(row[idx_tarea])
                 v = normalizar_id(row[idx_vista]) if idx_vista != -1 else ""
@@ -2290,11 +2298,11 @@ def api_cronograma_delete():
                 if u == user_req and match_f and t == tarea_norm_req and (not vista_req or v == vista_req):
                     fila_idx = i + 1
                     break
-        
+
         if fila_idx != -1:
             sheet.delete_rows(fila_idx)
             return jsonify({"status": "success"})
-        
+
         return jsonify({"status": "error", "message": "Tarea no encontrada"}), 404
     except Exception as e:
         print(f"Error eliminando tarea cronograma: {e}")
@@ -2341,11 +2349,15 @@ def api_cronograma_edit():
             if i == 0: continue
             if len(row) > max(idx_user, idx_fecha, idx_tarea, idx_vista):
                 u = normalizar_id(row[idx_user])
+                vista_val_row = (row[idx_vista].strip().upper() if idx_vista != -1 and idx_vista < len(row) else '') or 'SEMANAL'
                 f_raw = str(row[idx_fecha]).replace(';', ',').replace(' y ', ',')
-                parts_row = [normalizar_crono_busqueda(x) for x in f_raw.split(',') if x.strip()]
-                if len(parts_row) == 1 and ' ' in parts_row[0]:
-                    parts_row = [x.strip() for x in parts_row[0].split() if x.strip()]
-                
+                raw_parts = [x.strip() for x in f_raw.split(',') if x.strip()]
+                if len(raw_parts) == 1 and ' ' in raw_parts[0]:
+                    tokens = [tk.strip() for tk in raw_parts[0].split() if tk.strip()]
+                    if tokens and all(es_dia_valido_crono(tk) for tk in tokens):
+                        raw_parts = tokens
+                parts_row = [normalizar_crono_busqueda(normalizar_dia_cronograma(x, vista=vista_val_row)) for x in raw_parts]
+
                 match_f = (old_f in parts_row)
                 t = normalizar_crono_busqueda(row[idx_tarea])
                 v = normalizar_id(row[idx_vista]) if idx_vista != -1 else ""
@@ -2353,7 +2365,7 @@ def api_cronograma_edit():
                 if u == old_u and match_f and t == old_t and (not old_v or v == old_v):
                     fila_idx = i + 1
                     break
-        
+
         if fila_idx == -1:
             return jsonify({"status": "error", "message": "Tarea no encontrada para editar"}), 404
 
