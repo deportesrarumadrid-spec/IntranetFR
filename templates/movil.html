@@ -485,6 +485,14 @@
             {% endif %}
         </div>
     </div>
+    <!-- Añadir jugador -->
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <input id="inputNuevoJugMovil" type="text" placeholder="Nombre..." style="flex:1;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);font-size:13px;font-weight:700;font-family:inherit;outline:none;background:white;" onkeydown="if(event.key==='Enter') anadirJugadorMovil()">
+        <button onclick="anadirJugadorMovil()" style="display:flex;align-items:center;gap:6px;padding:10px 14px;background:#1e293b;color:white;border:none;border-radius:10px;font-size:12px;font-weight:900;cursor:pointer;white-space:nowrap;font-family:inherit;">
+            <span style="font-size:14px;">👤</span> AÑADIR AL EQUIPO
+        </button>
+    </div>
+
     <!-- Stats resumen mes -->
     <div id="statsMovilAsis" style="display:none;padding:12px 14px;background:#f8fafc;border-top:1px solid var(--border);">
         <div style="display:flex;gap:10px;">
@@ -1603,6 +1611,40 @@ async function _autoGuardarValoracion(row, valoracion) {
         if (data.status==='success') { _patchAsis(d, m, nombre, estado, valoracion, motivo, charla); }
         else toast('Error al guardar',true);
     } catch(e) { toast('Error de conexión',true); }
+}
+
+async function anadirJugadorMovil() {
+    const inp = document.getElementById('inputNuevoJugMovil');
+    const nombre = inp.value.trim();
+    if (!nombre) return;
+    try {
+        const res = await fetch('/anadir_jugador', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ nombre, equipo: EQUIPO })
+        });
+        if (!res.ok) throw new Error('Error al añadir');
+        const idx = document.querySelectorAll('#listaJug .new-prow').length;
+        const partes = nombre.split(' ');
+        const fila = document.createElement('div');
+        fila.className = 'new-prow';
+        fila.dataset.nombre = nombre;
+        fila.dataset.estado = '';
+        fila.dataset.idx = idx;
+        fila.dataset.baja = 'no';
+        fila.innerHTML = `
+            <span class="npr-num" style="min-width:18px;text-align:right;font-size:11px;font-weight:700;color:#94a3b8;flex-shrink:0;">${idx + 1}</span>
+            <div class="npr-info">
+                <div class="npr-nombre-top">${partes[0]}</div>
+                ${partes.length > 1 ? `<div class="npr-apellidos">${partes.slice(1).join(' ')}</div>` : ''}
+            </div>
+            <button class="npr-btn nb-none" onclick="ciclarEstado(this)" data-nombre="${nombre}">–</button>
+        `;
+        document.getElementById('listaJug').appendChild(fila);
+        inp.value = '';
+    } catch(e) {
+        alert('No se pudo añadir el jugador.');
+    }
 }
 
 function toggleBajasMovil(el) {
