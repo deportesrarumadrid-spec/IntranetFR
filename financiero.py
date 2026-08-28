@@ -1937,13 +1937,15 @@ def _get_subvenciones_sheet():
         sh = client.open(NOMBRE_EXCEL).add_worksheet(title="SUBVENCIONES", rows="200", cols="12")
         sh.append_row(SUBVENCIONES_HEADERS)
         return sh
-    # Migración: añadir columna FECHA_APERTURA si no existe
+    # Migración: añadir cualquier header requerido que falte
     try:
         all_v = sh.get_all_values()
         if all_v:
             headers_actual = [h.strip().upper() for h in all_v[0]]
-            if 'FECHA_APERTURA' not in headers_actual:
-                sh.update_cell(1, len(headers_actual) + 1, 'FECHA_APERTURA')
+            for req_h in SUBVENCIONES_HEADERS:
+                if req_h not in headers_actual:
+                    headers_actual.append(req_h)
+                    sh.update_cell(1, len(headers_actual), req_h)
     except Exception:
         pass
     return sh
@@ -1983,17 +1985,23 @@ def api_subvenciones_guardar():
         headers = [h.strip().upper() for h in all_v[0]] if all_v else SUBVENCIONES_HEADERS
 
         sid = str(data.get('ID', '')).strip()
+        row_idx = data.get('_row_idx')
 
-        # Buscar fila existente
+        # Buscar fila existente — primero por _row_idx, luego por ID
         idx_existente = -1
-        if sid:
+        if row_idx:
+            target = int(row_idx)
+            if 2 <= target <= len(all_v):
+                idx_existente = target
+        elif sid:
+            id_col = headers.index('ID') if 'ID' in headers else 0
             for i, row in enumerate(all_v[1:], start=2):
-                if row and str(row[0]).strip() == sid:
+                if row and str(row[id_col] if id_col < len(row) else '').strip() == sid:
                     idx_existente = i
                     break
 
         # Si es nuevo, generar ID
-        if not sid or idx_existente == -1:
+        if idx_existente == -1:
             max_id = 0
             for row in all_v[1:]:
                 try:
@@ -2023,12 +2031,8 @@ def api_subvenciones_eliminar():
         from app import client, NOMBRE_EXCEL
         sh = client.open(NOMBRE_EXCEL).worksheet("SUBVENCIONES")
         if row_idx:
-            target = int(row_idx)
-            all_v = sh.get_all_values()
-            if 2 <= target <= len(all_v):
-                sh.delete_rows(target)
-                return jsonify({"status": "success"})
-            return jsonify({"status": "not_found"}), 404
+            sh.delete_rows(int(row_idx))
+            return jsonify({"status": "success"})
         # Fallback: buscar por ID en columna 0
         all_v = sh.get_all_values()
         headers = [h.strip().upper() for h in all_v[0]] if all_v else SUBVENCIONES_HEADERS

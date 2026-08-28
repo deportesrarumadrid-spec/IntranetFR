@@ -842,6 +842,7 @@
             <span onclick="cerrarModalSubvencion()" style="cursor:pointer; font-size:20px; color:#999; line-height:1; flex-shrink:0;">&times;</span>
         </div>
         <input type="hidden" id="subvId">
+        <input type="hidden" id="subvRowIdx">
         <input type="hidden" id="subvOldNombre">
         <input type="hidden" id="subvOldApertura">
         <div style="display:grid; gap:14px;">
@@ -9821,6 +9822,7 @@ function toggleFechaCobro() {
 function abrirModalSubvencion(datos) {
     adjuntosModalTemp = [];
     document.getElementById('subvId').value = datos ? (datos.ID || '') : '';
+    document.getElementById('subvRowIdx').value = datos ? (datos._row_idx || '') : '';
     document.getElementById('subvOldNombre').value = datos ? (datos.NOMBRE || '') : '';
     document.getElementById('subvOldApertura').value = datos ? isoDate(datos.FECHA_APERTURA) : '';
     document.getElementById('subvNombre').value = datos ? (datos.NOMBRE || '') : '';
@@ -9868,8 +9870,10 @@ async function guardarSubvencion() {
     const newApertura = document.getElementById('subvApertura').value;
     const oldNombreSync = document.getElementById('subvOldNombre').value;
     const oldAperturaSync = document.getElementById('subvOldApertura').value;
+    const _rowIdxVal = document.getElementById('subvRowIdx').value;
     const payload = {
         ID: document.getElementById('subvId').value,
+        _row_idx: _rowIdxVal ? parseInt(_rowIdxVal) : null,
         NOMBRE: nombre,
         DESCRIPCION: document.getElementById('subvDescripcion').value.trim(),
         FECHA_APERTURA: newApertura,
