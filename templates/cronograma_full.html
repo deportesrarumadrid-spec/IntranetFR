@@ -1300,11 +1300,50 @@
             return (p === 'RUBEN' || p === 'RAUL') ? 'Raru' : PERSONA_MOSTRADA;
         }
 
+        async function cargarAlquileresSemanal() {
+            const contenedores = Array.from(document.querySelectorAll('#main-grid-semanal .lista-eventos'));
+            const isoFechas = contenedores.map(el => el.id.replace('events-week-', '')).filter(f => /^\d{4}-\d{2}-\d{2}$/.test(f));
+            if (!isoFechas.length) return;
+            const mesesAnios = new Set(isoFechas.map(iso => { const [a,m] = iso.split('-'); return `${a}-${m}`; }));
+            const alqMap = {};
+            for (const ma of mesesAnios) {
+                const [anio, mes] = ma.split('-');
+                try {
+                    const res = await fetch(`/api/alquileres_data?anio=${anio}&mes=${parseInt(mes)}&_t=${Date.now()}`);
+                    const data = await res.json();
+                    if (!Array.isArray(data)) continue;
+                    data.forEach(al => {
+                        const iso = `${al.anio}-${String(al.mes).padStart(2,'0')}-${String(al.dia).padStart(2,'0')}`;
+                        if (!alqMap[iso]) alqMap[iso] = [];
+                        alqMap[iso].push(al);
+                    });
+                } catch(e) {}
+            }
+            document.querySelectorAll('#main-grid-semanal .alq-semanal-sec').forEach(el => el.remove());
+            isoFechas.forEach(iso => {
+                const als = alqMap[iso];
+                if (!als || !als.length) return;
+                const cont = document.getElementById(`events-week-${iso}`);
+                if (!cont) return;
+                const sec = document.createElement('div');
+                sec.className = 'alq-semanal-sec';
+                als.forEach(al => {
+                    const pagado = (al.pagado || '').toUpperCase() === 'SI';
+                    const div = document.createElement('div');
+                    div.style.cssText = 'display:flex;align-items:center;gap:4px;padding:3px 6px;margin-top:3px;background:#fef3c7;border-left:3px solid #f59e0b;border-radius:3px;font-size:10px;font-weight:700;color:#92400e;';
+                    div.innerHTML = `<i class="fas fa-key" style="font-size:9px;flex-shrink:0;opacity:0.8;"></i><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${al.horario ? al.horario+' · ' : ''}${al.nombre || 'Alquiler'}</span>${pagado ? '<span style="font-size:8px;color:#15803d;font-weight:900;flex-shrink:0;">✓</span>' : ''}`;
+                    sec.appendChild(div);
+                });
+                cont.appendChild(sec);
+            });
+        }
+
         async function initCargaCronograma() {
             await renderUserSchedule(PERSONA_MOSTRADA, '', 'SEMANAL');
             await renderUserSchedule(personaAnualEfectiva(), '', 'ANUAL');
             ordenarMesesTemporada();
             cargarTodosLosAlquileres();
+            cargarAlquileresSemanal();
             {% if persona_seleccionada|upper == 'RUBEN' %}
             inyectarTareasRrssTipo();
             {% endif %}
