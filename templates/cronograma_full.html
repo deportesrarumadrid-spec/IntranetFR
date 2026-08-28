@@ -1835,6 +1835,7 @@
         }
 
         async function eliminarAlquilerConfirmado() {
+            const rowId = alquilerDetalleActivoId;
             document.getElementById('modalDetalleAlquilerAnual').style.display = 'none';
             restaurarBotonesDetalleAlquiler();
             showLoader();
@@ -1842,15 +1843,22 @@
                 const res = await fetch('/api/alquiler_delete', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ row_id: alquilerDetalleActivoId })
+                    body: JSON.stringify({ row_id: rowId })
                 });
                 if (res.ok) {
-                    await cargarTodosLosAlquileres();
+                    // Eliminar del DOM directamente (sin esperar reload que puede traer datos obsoletos)
+                    document.querySelectorAll('#main-grid-anual .alquiler-item').forEach(el => {
+                        const oc = el.getAttribute('onclick') || '';
+                        if (oc.includes(`(${rowId})`)) el.remove();
+                    });
+                    delete alquileresCache[rowId];
                 } else {
-                    alert("No se pudo eliminar el alquiler.");
+                    const dbg = await res.json().catch(() => ({}));
+                    alert(`No se pudo eliminar el alquiler.${dbg.message ? ' (' + dbg.message + ')' : ''}`);
                 }
             } catch (e) {
                 console.error("Error al eliminar alquiler:", e);
+                alert("Error de red al eliminar el alquiler.");
             } finally { hideLoader(); }
         }
 
@@ -1864,7 +1872,11 @@
                     body: JSON.stringify({ row_id: rowId })
                 });
                 if (res.ok) {
-                    await cargarTodosLosAlquileres();
+                    document.querySelectorAll('#main-grid-anual .alquiler-item').forEach(el => {
+                        const oc = el.getAttribute('onclick') || '';
+                        if (oc.includes(`(${rowId})`)) el.remove();
+                    });
+                    delete alquileresCache[rowId];
                 } else {
                     alert("No se pudo eliminar el alquiler.");
                 }
