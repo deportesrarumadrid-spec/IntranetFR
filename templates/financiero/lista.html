@@ -9965,7 +9965,9 @@ async function confirmarEliminarSubvencion(id, rowIdx) {
             body: JSON.stringify({ID: id, _row_idx: rowIdx || null})
         });
         if (res.ok) {
-            subvencionesData = subvencionesData.filter(s => s._row_idx !== rowIdx && String(s.ID) !== String(id));
+            subvencionesData = subvencionesData.filter(s =>
+                rowIdx ? s._row_idx !== rowIdx : String(s.ID) !== String(id)
+            );
             renderTablaSubvenciones();
             actualizarBannerSubvenciones();
         } else {
