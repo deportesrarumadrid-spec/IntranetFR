@@ -882,13 +882,12 @@
                 <i class="fab fa-dropbox"></i>
             </a>
             {% endif %}
+            <button class="btn-search-fixed" onclick="toggleBuscadorIntranet(event)" title="Buscar en la intranet">
+                <i class="fas fa-magnifying-glass"></i>
+            </button>
             {% if usuario|lower == 'admin' %}
             <button class="btn-ia-fixed" onclick="abrirAsistenteIA()" title="Preguntar a la IA">
                 <img src="{{ url_for('static', filename='ai-icon.png') }}" alt="IA">
-            </button>
-            {% else %}
-            <button class="btn-search-fixed" onclick="toggleBuscadorIntranet(event)" title="Buscar en la intranet">
-                <i class="fas fa-magnifying-glass"></i>
             </button>
             {% endif %}
             {% if session.get('permisos', {}).get('SEL. EQ.') == 'SI' or usuario|lower == 'admin' %}
