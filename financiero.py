@@ -1966,8 +1966,9 @@ def api_subvenciones_get():
             if not any(str(c).strip() for c in row):
                 continue
             obj = {}
-            for i, h in enumerate(headers):
-                obj[h] = row[i] if i < len(row) else ""
+            for h in SUBVENCIONES_HEADERS:
+                idx = headers.index(h) if h in headers else -1
+                obj[h] = row[idx] if idx != -1 and idx < len(row) else ""
             result.append(obj)
         return jsonify(result)
     except Exception as e:

@@ -9712,11 +9712,14 @@ const MESES_ES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOS
 async function cargarSubvenciones() {
     try {
         const res = await fetch('/api/subvenciones');
-        subvencionesData = await res.json();
+        const data = await res.json();
+        subvencionesData = Array.isArray(data) ? data : [];
         renderTablaSubvenciones();
         actualizarBannerSubvenciones();
     } catch(e) {
         console.error('Error cargando subvenciones', e);
+        const tbody = document.getElementById('bodySubvenciones');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#dc2626;padding:30px;font-size:12px;">Error al cargar subvenciones.</td></tr>';
     }
 }
 
@@ -9736,7 +9739,7 @@ function actualizarBannerSubvenciones() {
     banner.style.display = 'block';
     banner.innerHTML = `<div style="background:#fef3c7; border:1.5px solid #f59e0b; border-radius:10px; padding:12px 16px;">
         <div style="font-size:12px; font-weight:900; color:#92400e; margin-bottom:6px;"><i class="fas fa-exclamation-triangle" style="margin-right:6px; color:#f59e0b;"></i> SUBVENCIONES CON APERTURA EN LOS PRÓXIMOS 30 DÍAS</div>
-        ${proximas.map(s => `<div style="font-size:11px; color:#78350f; margin-top:4px;">• <strong>${s.NOMBRE}</strong> — Apertura: <strong>${formatFechaDisplay(s.FECHA_APERTURA)}</strong></div>`).join('')}
+        ${proximas.map(s => `<div style="font-size:11px; color:#78350f; margin-top:4px;">• <strong>${s.NOMBRE || s.DESCRIPCION || '(Sin nombre)'}</strong> — Apertura: <strong>${formatFechaDisplay(s.FECHA_APERTURA)}</strong></div>`).join('')}
     </div>`;
 }
 
@@ -9795,7 +9798,7 @@ function renderTablaSubvenciones() {
             <td>${adjuntosHtml}</td>
             <td style="text-align:center; white-space:nowrap;">
                 <i class="fas fa-pencil-alt" style="color:#64748b; cursor:pointer; margin-right:8px;" onclick="abrirModalSubvencion(${JSON.stringify(s).replace(/"/g,'&quot;')})"></i>
-                <i class="fas fa-trash-alt" style="color:#dc2626; cursor:pointer;" onclick="eliminarSubvencion('${s.ID}')"></i>
+                <i class="fas fa-trash-alt" style="color:#dc2626; cursor:pointer;" onclick="eliminarSubvencion('${s.ID}', this)"></i>
             </td>
         </tr>`;
     }).join('');
@@ -9943,10 +9946,24 @@ async function sincronizarCronoSubvencion(nombre, apertura, oldNombre, oldApertu
     }
 }
 
-async function eliminarSubvencion(id) {
-    if (!confirm('¿Eliminar esta subvención?')) return;
-    await fetch('/api/subvenciones/eliminar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ID: id}) });
-    await cargarSubvenciones();
+function eliminarSubvencion(id, iconEl) {
+    const td = iconEl.closest('td');
+    td.innerHTML = `
+        <button onclick="confirmarEliminarSubvencion('${id}')" style="background:#dc2626;color:white;border:none;border-radius:4px;padding:3px 8px;font-size:10px;font-weight:800;cursor:pointer;margin-right:4px;">CONFIRMAR</button>
+        <button onclick="renderTablaSubvenciones()" style="background:#f1f5f9;color:#374151;border:none;border-radius:4px;padding:3px 8px;font-size:10px;font-weight:800;cursor:pointer;">Cancelar</button>
+    `;
+}
+
+async function confirmarEliminarSubvencion(id) {
+    try {
+        await fetch('/api/subvenciones/eliminar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ID: id}) });
+        subvencionesData = subvencionesData.filter(s => String(s.ID) !== String(id));
+        renderTablaSubvenciones();
+        actualizarBannerSubvenciones();
+    } catch(e) {
+        alert('Error al eliminar la subvención.');
+        renderTablaSubvenciones();
+    }
 }
 
 function subirAdjuntosSubvencion(input) {
@@ -9983,14 +10000,33 @@ function subirAdjuntosSubvencion(input) {
     input.value = '';
 }
 
-async function borrarAdjuntoSubvencion(fname, iconEl) {
-    if (!confirm('¿Eliminar este adjunto?')) return;
+function borrarAdjuntoSubvencion(fname, iconEl) {
+    const itemDiv = iconEl.closest('div');
+    itemDiv.dataset.adjFname = fname;
+    itemDiv.dataset.adjOrig = itemDiv.innerHTML;
+    itemDiv.innerHTML = `
+        <span style="font-size:10px;color:#64748b;font-weight:700;">¿Eliminar adjunto?</span>
+        <div style="display:flex;gap:4px;margin-left:auto;">
+            <button onclick="confirmarBorrarAdjunto(this.closest('[data-adj-fname]'))" style="background:#dc2626;color:white;border:none;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:800;cursor:pointer;">Sí</button>
+            <button onclick="cancelarBorrarAdjunto(this.closest('[data-adj-fname]'))" style="background:#f1f5f9;color:#374151;border:none;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:800;cursor:pointer;">No</button>
+        </div>
+    `;
+}
+
+function cancelarBorrarAdjunto(itemDiv) {
+    itemDiv.innerHTML = itemDiv.dataset.adjOrig;
+    delete itemDiv.dataset.adjFname;
+    delete itemDiv.dataset.adjOrig;
+}
+
+async function confirmarBorrarAdjunto(itemDiv) {
+    const fname = itemDiv.dataset.adjFname;
     const sid = document.getElementById('subvId').value;
     await fetch(`/api/subvenciones/adjunto/${fname}`, {
         method:'DELETE', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ ID: sid })
     });
-    iconEl.closest('div').remove();
+    itemDiv.remove();
 }
 
 // cargarSubvenciones se llama desde switchTab al activar tab-subvenciones

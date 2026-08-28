@@ -1336,12 +1336,112 @@
             });
         }
 
+        // ── SUBVENCIONES ALERTAS ─────────────────────────────────────────
+        let subvencionesAlertas = [];
+
+        async function cargarSubvencionesAlertas() {
+            try {
+                const res = await fetch('/api/subvenciones');
+                const data = await res.json();
+                subvencionesAlertas = Array.isArray(data) ? data : [];
+            } catch(e) { subvencionesAlertas = []; }
+            renderSubvencionesSemanal();
+            renderSubvencionesAnual();
+        }
+
+        function _subvAperturaFecha(s) {
+            if (!s.FECHA_APERTURA) return null;
+            const iso = s.FECHA_APERTURA.includes('/')
+                ? s.FECHA_APERTURA.split('/').reverse().join('-')
+                : s.FECHA_APERTURA;
+            const [y, m, d] = iso.split('-').map(Number);
+            if (!y || !m || !d) return null;
+            return new Date(y, m-1, d);
+        }
+
+        function renderSubvencionesSemanal() {
+            document.querySelectorAll('.subv-alert-semanal').forEach(el => el.remove());
+            const hoy = new Date(); hoy.setHours(0,0,0,0);
+            document.querySelectorAll('#main-grid-semanal .lista-eventos').forEach(cont => {
+                const match = cont.id.match(/^events-week-(\d{4}-\d{2}-\d{2})$/);
+                if (!match) return;
+                const [y, mo, d] = match[1].split('-').map(Number);
+                const diaFecha = new Date(y, mo-1, d);
+                subvencionesAlertas.forEach(s => {
+                    if ((s.COBRADO || '').trim().toUpperCase() === 'SI') return;
+                    const apertura = _subvAperturaFecha(s);
+                    if (!apertura) return;
+                    const treintaAntes = new Date(apertura.getTime() - 30 * 86400000);
+                    if (diaFecha < treintaAntes || diaFecha > apertura) return;
+                    const diasRestantes = Math.round((apertura - diaFecha) / 86400000);
+                    const esApertura = diaFecha.getTime() === apertura.getTime();
+                    const div = document.createElement('div');
+                    div.className = 'subv-alert-semanal';
+                    div.style.cssText = 'background:#fef3c7;border-left:3px solid #f59e0b;border-radius:3px;padding:3px 6px;margin-bottom:2px;font-size:9px;font-weight:700;color:#92400e;display:flex;align-items:center;gap:4px;overflow:hidden;';
+                    const nombre = s.NOMBRE || s.DESCRIPCION || 'Subvención';
+                    const txt = esApertura
+                        ? `⚡ APERTURA: ${nombre}`
+                        : `⚠ ${nombre} (${diasRestantes}d)`;
+                    div.innerHTML = `<i class="fas fa-file-invoice-dollar" style="font-size:8px;flex-shrink:0;"></i><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${txt}</span>`;
+                    cont.insertBefore(div, cont.firstChild);
+                });
+            });
+        }
+
+        function renderSubvencionesAnual() {
+            document.querySelectorAll('.subv-item-anual').forEach(el => el.remove());
+            const hoy = new Date(); hoy.setHours(0,0,0,0);
+            subvencionesAlertas.forEach(s => {
+                if ((s.COBRADO || '').trim().toUpperCase() === 'SI') return;
+                const apertura = _subvAperturaFecha(s);
+                if (!apertura) return;
+                const am = apertura.getMonth() + 1;
+                const ay = apertura.getFullYear();
+                const ad = apertura.getDate();
+                const nombre = s.NOMBRE || s.DESCRIPCION || 'Subvención';
+                const diasRestantes = Math.round((apertura - hoy) / 86400000);
+                const ddmm = `${String(ad).padStart(2,'0')}/${String(am).padStart(2,'0')}`;
+
+                // Item en el mes de apertura
+                const mesCard = document.querySelector(`.mes-card[data-mes="${am}"][data-anio="${ay}"]`);
+                if (mesCard) {
+                    const listaEvt = mesCard.querySelector('.lista-eventos');
+                    if (listaEvt) {
+                        const div = document.createElement('div');
+                        div.className = 'subv-item-anual alquiler-item';
+                        div.style.cssText = 'background:#fef3c7;border-left:3px solid #f59e0b;color:#92400e;';
+                        div.innerHTML = `<i class="fas fa-file-invoice-dollar" style="font-size:9px;flex-shrink:0;"></i><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ddmm} ${diasRestantes < 0 ? '(Vencida)' : diasRestantes === 0 ? '⚡ HOY' : `(${diasRestantes}d)`} ${nombre}</span>`;
+                        listaEvt.appendChild(div);
+                    }
+                }
+
+                // Aviso en el mes de 30 días antes si es un mes diferente
+                const treintaAntes = new Date(apertura.getTime() - 30 * 86400000);
+                const wm = treintaAntes.getMonth() + 1;
+                const wy = treintaAntes.getFullYear();
+                if (wm !== am || wy !== ay) {
+                    const warnCard = document.querySelector(`.mes-card[data-mes="${wm}"][data-anio="${wy}"]`);
+                    if (warnCard) {
+                        const warnLista = warnCard.querySelector('.lista-eventos');
+                        if (warnLista) {
+                            const warnDiv = document.createElement('div');
+                            warnDiv.className = 'subv-item-anual alquiler-item';
+                            warnDiv.style.cssText = 'background:#fef9c3;border-left:3px solid #fbbf24;color:#78350f;';
+                            warnDiv.innerHTML = `<i class="fas fa-exclamation-triangle" style="font-size:9px;flex-shrink:0;"></i><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Apertura ${ddmm}: ${nombre}</span>`;
+                            warnLista.appendChild(warnDiv);
+                        }
+                    }
+                }
+            });
+        }
+
         async function initCargaCronograma() {
             await renderUserSchedule(PERSONA_MOSTRADA, '', 'SEMANAL');
             await renderUserSchedule(personaAnualEfectiva(), '', 'ANUAL');
             ordenarMesesTemporada();
             await cargarTodosLosAlquileres();
             cargarAlquileresSemanal();
+            await cargarSubvencionesAlertas();
             {% if persona_seleccionada|upper == 'RUBEN' %}
             inyectarTareasRrssTipo();
             {% endif %}
