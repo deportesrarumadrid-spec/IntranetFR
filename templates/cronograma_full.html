@@ -409,7 +409,7 @@
                     <button onclick="guardarPagoAlquilerAnual()" style="background: #16a34a; color: white; border: none; border-radius: 8px; padding: 0 16px; height: 42px; font-weight: 900; font-size: 10px; cursor: pointer; white-space: nowrap;">GUARDAR</button>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div id="btnGridDetalleAlquiler" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <button class="btn-fin" onclick="editarAlquilerDesdeDetalle()" style="background: #f1f5f9; color: #1e3a8a;"><i class="fa-solid fa-pencil"></i> EDITAR</button>
                     <button class="btn-fin" onclick="eliminarAlquilerDesdeDetalle()" style="background: #fee2e2; color: #dc3545;"><i class="fa-solid fa-trash"></i> ELIMINAR</button>
                 </div>
@@ -1815,8 +1815,43 @@
         }
 
         function eliminarAlquilerDesdeDetalle() {
+            const grid = document.getElementById('btnGridDetalleAlquiler');
+            if (!grid) { return; }
+            grid.innerHTML = `
+                <button class="btn-fin" onclick="eliminarAlquilerConfirmado()" style="background:#dc3545;color:white;grid-column:1/-1;font-size:11px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> CONFIRMAR ELIMINACIÓN
+                </button>
+                <button class="btn-fin" onclick="restaurarBotonesDetalleAlquiler()" style="background:#f1f5f9;color:#374151;grid-column:1/-1;margin-top:4px;font-size:11px;">
+                    Cancelar
+                </button>`;
+        }
+
+        function restaurarBotonesDetalleAlquiler() {
+            const grid = document.getElementById('btnGridDetalleAlquiler');
+            if (!grid) return;
+            grid.innerHTML = `
+                <button class="btn-fin" onclick="editarAlquilerDesdeDetalle()" style="background: #f1f5f9; color: #1e3a8a;"><i class="fa-solid fa-pencil"></i> EDITAR</button>
+                <button class="btn-fin" onclick="eliminarAlquilerDesdeDetalle()" style="background: #fee2e2; color: #dc3545;"><i class="fa-solid fa-trash"></i> ELIMINAR</button>`;
+        }
+
+        async function eliminarAlquilerConfirmado() {
             document.getElementById('modalDetalleAlquilerAnual').style.display = 'none';
-            eliminarAlquiler(alquilerDetalleActivoId);
+            restaurarBotonesDetalleAlquiler();
+            showLoader();
+            try {
+                const res = await fetch('/api/alquiler_delete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ row_id: alquilerDetalleActivoId })
+                });
+                if (res.ok) {
+                    await cargarTodosLosAlquileres();
+                } else {
+                    alert("No se pudo eliminar el alquiler.");
+                }
+            } catch (e) {
+                console.error("Error al eliminar alquiler:", e);
+            } finally { hideLoader(); }
         }
 
         async function eliminarAlquiler(rowId) {

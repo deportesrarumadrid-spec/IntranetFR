@@ -3246,14 +3246,21 @@ def api_alquiler_delete():
     if not row_id:
         return jsonify({"status": "error", "message": "Falta row_id"}), 400
     try:
-        client = app.gs_client
-        nombre_excel = app.gs_name
-        sheet = client.open(nombre_excel).worksheet("ALQUILERES")
-        sheet.delete_rows(int(row_id))
+        raw_ws = _raw_client.open(app.gs_name).worksheet("ALQUILERES")
+        all_v = raw_ws.get_all_values()
+        target = int(row_id)
+        if target < 2 or target > len(all_v):
+            return jsonify({"status": "error", "message": "Fila fuera de rango"}), 404
+        raw_ws.delete_rows(target)
+        from sheets_cache import invalidate
+        invalidate(f"{app.gs_name}::ALQUILERES")
         return jsonify({"status": "success"})
     except Exception as e:
+        err = str(e)
+        if '429' in err:
+            return jsonify({"status": "error", "message": "api_429"}), 503
         print(f"Error eliminando alquiler: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": err}), 500
 
 # --- CONFIGURACIÓN DE EMAIL PARA RECIBOS ---
 def _get_config_sheet():
