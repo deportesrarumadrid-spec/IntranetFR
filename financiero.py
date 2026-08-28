@@ -1962,10 +1962,10 @@ def api_subvenciones_get():
             return jsonify([])
         headers = [h.strip().upper() for h in rows[0]]
         result = []
-        for row in rows[1:]:
+        for row_idx, row in enumerate(rows[1:], start=2):
             if not any(str(c).strip() for c in row):
                 continue
-            obj = {}
+            obj = {'_row_idx': row_idx}
             for h in SUBVENCIONES_HEADERS:
                 idx = headers.index(h) if h in headers else -1
                 obj[h] = row[idx] if idx != -1 and idx < len(row) else ""
@@ -2018,11 +2018,23 @@ def api_subvenciones_guardar():
 def api_subvenciones_eliminar():
     try:
         data = request.get_json()
+        row_idx = data.get('_row_idx')
         sid = str(data.get('ID', '')).strip()
-        sh = _get_subvenciones_sheet()
+        from app import client, NOMBRE_EXCEL
+        sh = client.open(NOMBRE_EXCEL).worksheet("SUBVENCIONES")
+        if row_idx:
+            target = int(row_idx)
+            all_v = sh.get_all_values()
+            if 2 <= target <= len(all_v):
+                sh.delete_rows(target)
+                return jsonify({"status": "success"})
+            return jsonify({"status": "not_found"}), 404
+        # Fallback: buscar por ID en columna 0
         all_v = sh.get_all_values()
+        headers = [h.strip().upper() for h in all_v[0]] if all_v else SUBVENCIONES_HEADERS
+        id_col = headers.index('ID') if 'ID' in headers else 0
         for i, row in enumerate(all_v[1:], start=2):
-            if row and str(row[0]).strip() == sid:
+            if row and str(row[id_col] if id_col < len(row) else '').strip() == sid:
                 sh.delete_rows(i)
                 return jsonify({"status": "success"})
         return jsonify({"status": "not_found"}), 404

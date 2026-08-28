@@ -9798,7 +9798,7 @@ function renderTablaSubvenciones() {
             <td>${adjuntosHtml}</td>
             <td style="text-align:center; white-space:nowrap;">
                 <i class="fas fa-pencil-alt" style="color:#64748b; cursor:pointer; margin-right:8px;" onclick="abrirModalSubvencion(${JSON.stringify(s).replace(/"/g,'&quot;')})"></i>
-                <i class="fas fa-trash-alt" style="color:#dc2626; cursor:pointer;" onclick="eliminarSubvencion('${s.ID}', this)"></i>
+                <i class="fas fa-trash-alt" style="color:#dc2626; cursor:pointer;" onclick="eliminarSubvencion('${s.ID}', ${s._row_idx || 0}, this)"></i>
             </td>
         </tr>`;
     }).join('');
@@ -9946,22 +9946,30 @@ async function sincronizarCronoSubvencion(nombre, apertura, oldNombre, oldApertu
     }
 }
 
-function eliminarSubvencion(id, iconEl) {
+function eliminarSubvencion(id, rowIdx, iconEl) {
     const td = iconEl.closest('td');
     td.innerHTML = `
-        <button onclick="this.disabled=true;this.textContent='Eliminando…';confirmarEliminarSubvencion('${id}')" style="background:#dc2626;color:white;border:none;border-radius:4px;padding:3px 8px;font-size:10px;font-weight:800;cursor:pointer;margin-right:4px;">CONFIRMAR</button>
+        <button onclick="this.disabled=true;this.textContent='Eliminando…';confirmarEliminarSubvencion('${id}', ${rowIdx})" style="background:#dc2626;color:white;border:none;border-radius:4px;padding:3px 8px;font-size:10px;font-weight:800;cursor:pointer;margin-right:4px;">CONFIRMAR</button>
         <button onclick="renderTablaSubvenciones()" style="background:#f1f5f9;color:#374151;border:none;border-radius:4px;padding:3px 8px;font-size:10px;font-weight:800;cursor:pointer;">Cancelar</button>
     `;
 }
 
-async function confirmarEliminarSubvencion(id) {
+async function confirmarEliminarSubvencion(id, rowIdx) {
     try {
-        await fetch('/api/subvenciones/eliminar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ID: id}) });
-        subvencionesData = subvencionesData.filter(s => String(s.ID) !== String(id));
-        renderTablaSubvenciones();
-        actualizarBannerSubvenciones();
+        const res = await fetch('/api/subvenciones/eliminar', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ID: id, _row_idx: rowIdx || null})
+        });
+        if (res.ok) {
+            subvencionesData = subvencionesData.filter(s => s._row_idx !== rowIdx && String(s.ID) !== String(id));
+            renderTablaSubvenciones();
+            actualizarBannerSubvenciones();
+        } else {
+            alert('Error al eliminar la subvención.');
+            renderTablaSubvenciones();
+        }
     } catch(e) {
-        alert('Error al eliminar la subvención.');
+        alert('Error de conexión.');
         renderTablaSubvenciones();
     }
 }
