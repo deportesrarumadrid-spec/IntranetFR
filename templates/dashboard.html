@@ -589,7 +589,7 @@
 
     {% if usuario|lower == 'admin' %}
     <div id="panelAlquileresSidebar" style="margin: 8px 20px 15px 20px; padding: 8px 10px; background: rgba(255,255,255,0.08); border-radius: 8px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: rgba(255,255,255,0.8); margin-bottom: 5px;">
+        <div onclick="abrirCronogramaAnual()" style="display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: rgba(255,255,255,0.8); margin-bottom: 5px; cursor: pointer;">
             <span><i class="fas fa-calendar-days" style="color: white; font-size: 0.66rem; margin-right: 4px;"></i> Alquileres · 7 días</span>
             <span id="badgeAlquileresSidebar" style="display: none; background: white; color: #E31E24; border-radius: 999px; font-size: 0.58rem; padding: 1px 6px; font-weight: 900;"></span>
         </div>
@@ -2622,6 +2622,17 @@
             } finally {
                 iaCargando = false;
             }
+        }
+
+        function abrirCronogramaAnual() {
+            openCronogramaAuth();
+            const url = `/cronograma?view=anual&user=Ruben`;
+            document.getElementById('cronoIframe').src = url;
+            document.getElementById('cronoEntryView').style.display = 'none';
+            document.getElementById('cronoIframeView').style.display = 'block';
+            document.getElementById('modalCronogramaGlobal').querySelector('.modal-content').style.width = '95vw';
+            sessionStorage.setItem('crono_active', 'true');
+            sessionStorage.setItem('crono_url', url);
         }
 
         function openCronogramaAuth() {
