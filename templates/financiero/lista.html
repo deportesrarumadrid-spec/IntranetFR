@@ -3963,6 +3963,7 @@ function switchTab(event, id) {
         target.classList.add('active');
         target.style.display = 'block';
         if (id === 'tab-datos-jugadores') cargarTablaDatosJugadores();
+    if (id === 'tab-subvenciones') cargarSubvenciones();
     }
 }
 
@@ -9992,11 +9993,7 @@ async function borrarAdjuntoSubvencion(fname, iconEl) {
     iconEl.closest('div').remove();
 }
 
-// Cargar subvenciones al abrir la pestaña
-document.addEventListener('DOMContentLoaded', () => {
-    const tabSubv = document.querySelector('[data-tab="tab-subvenciones"]');
-    if (tabSubv) tabSubv.addEventListener('click', () => { if (!subvencionesData.length) cargarSubvenciones(); });
-});
+// cargarSubvenciones se llama desde switchTab al activar tab-subvenciones
 
 // ═══════════════════════════════════════════════════
 //  MULTAS CONFIG
