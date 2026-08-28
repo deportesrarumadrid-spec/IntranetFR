@@ -1097,7 +1097,6 @@
 
         async function tareaSubirAdjuntos(files) {
             if (!files?.length) return;
-            const cont = document.getElementById('tareaAdjuntosCont');
             for (const f of files) {
                 const fd = new FormData();
                 fd.append('key', _tareaAdjKey);
@@ -1106,7 +1105,7 @@
             }
             document.getElementById('tareaFileInput').value = '';
             await _cargarAdjuntos();
-            // Actualizar badge en el calendario
+            _adjuntosKeys.add(_tareaAdjKey);
             _actualizarBadgeAdjuntos();
         }
 
@@ -1116,6 +1115,10 @@
                 body: JSON.stringify({ key: _tareaAdjKey, nombre })
             });
             await _cargarAdjuntos();
+            // Si ya no quedan archivos, quitar la key
+            const r2 = await fetch('/api/tareas/adjuntos?key=' + encodeURIComponent(_tareaAdjKey));
+            const d2 = await r2.json().catch(() => ({}));
+            if (!d2.archivos?.length) _adjuntosKeys.delete(_tareaAdjKey);
             _actualizarBadgeAdjuntos();
         }
 
@@ -1458,7 +1461,7 @@
             const _hasAdj1 = _adjuntosKeys.has(_adjKey1);
             evDiv.innerHTML = `
                 <span style="${isDone ? 'text-decoration: line-through; opacity: 0.4;' : ''} white-space: normal; word-break: break-word; line-height: 1.2; font-size: 11px; color: #1e293b; font-weight: 700; flex:1; min-width:0;">${tareaLimpia}</span>
-                ${_hasAdj1 ? `<i class="fas fa-paperclip" style="font-size:13px;color:#475569;flex-shrink:0;cursor:pointer;" title="Ver adjuntos" onclick="event.stopPropagation();abrirAdjuntosRapido('${_adjKey1.replace(/'/g,"\\'")}')" ></i>` : ''}
+                <i class="fas fa-paperclip" data-adj-key="${_adjKey1.replace(/"/g,'&quot;')}" style="font-size:13px;color:#475569;flex-shrink:0;cursor:pointer;${_hasAdj1 ? '' : 'display:none;'}" title="Ver adjuntos" onclick="event.stopPropagation();abrirAdjuntosRapido('${_adjKey1.replace(/'/g,"\\'")}')"></i>
                 ${isDone ? '<i class="fa-solid fa-check" style="font-size:13px;color:#28a745;flex-shrink:0;"></i>' : ''}
             `;
             section.appendChild(evDiv);
@@ -1488,7 +1491,7 @@
             evDiv.innerHTML = `
                 <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight: 700; ${isDone ? 'text-decoration: line-through; opacity: 0.5;' : ''}" title="${ev.TAREA}">${ev.TAREA}</span>
                 ${diaBadge}
-                ${_hasAdjB ? `<i class="fas fa-paperclip" style="font-size:13px;color:#475569;flex-shrink:0;cursor:pointer;" title="Ver adjuntos" onclick="event.stopPropagation();abrirAdjuntosRapido('${_adjKeyB.replace(/'/g,"\\'")}')" ></i>` : ''}
+                <i class="fas fa-paperclip" data-adj-key="${_adjKeyB.replace(/"/g,'&quot;')}" style="font-size:13px;color:#475569;flex-shrink:0;cursor:pointer;${_hasAdjB ? '' : 'display:none;'}" title="Ver adjuntos" onclick="event.stopPropagation();abrirAdjuntosRapido('${_adjKeyB.replace(/'/g,"\\'")}')"></i>
                 ${isDone ? '<i class="fa-solid fa-check" style="font-size:13px;color:#28a745;flex-shrink:0;"></i>' : ''}
             `;
             container.appendChild(evDiv);
