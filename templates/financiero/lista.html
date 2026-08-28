@@ -9949,7 +9949,7 @@ async function sincronizarCronoSubvencion(nombre, apertura, oldNombre, oldApertu
 function eliminarSubvencion(id, iconEl) {
     const td = iconEl.closest('td');
     td.innerHTML = `
-        <button onclick="confirmarEliminarSubvencion('${id}')" style="background:#dc2626;color:white;border:none;border-radius:4px;padding:3px 8px;font-size:10px;font-weight:800;cursor:pointer;margin-right:4px;">CONFIRMAR</button>
+        <button onclick="this.disabled=true;this.textContent='Eliminando…';confirmarEliminarSubvencion('${id}')" style="background:#dc2626;color:white;border:none;border-radius:4px;padding:3px 8px;font-size:10px;font-weight:800;cursor:pointer;margin-right:4px;">CONFIRMAR</button>
         <button onclick="renderTablaSubvenciones()" style="background:#f1f5f9;color:#374151;border:none;border-radius:4px;padding:3px 8px;font-size:10px;font-weight:800;cursor:pointer;">Cancelar</button>
     `;
 }
