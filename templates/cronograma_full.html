@@ -128,8 +128,8 @@
         .ev-otros    { border-left-color: #cbd5e1; }
 
         .btn-fin { border: none; padding: 11px; border-radius: 6px; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 11px; text-transform: uppercase; }
-        .alquiler-item { background: white; border-left: 3px solid #60a5fa; border-radius: 0; padding: 4px 8px; margin-bottom: 3px; font-size: 10px; color: #1e3a8a; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.15s; overflow: hidden; }
-        .alquiler-item:hover { background: #f0f9ff; }
+        .alquiler-item { background: #fef3c7; border-left: 3px solid #f59e0b; border-radius: 3px; padding: 4px 8px; margin-bottom: 3px; font-size: 10px; font-weight: 700; color: #92400e; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.15s; overflow: hidden; }
+        .alquiler-item:hover { background: #fde68a; }
         .alquiler-item span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .form-control { width: 100%; padding: 10px 14px; border-radius: 4px; border: 1.5px solid #e2e8f0; font-family: inherit; font-size: 13px; font-weight: 600; outline: none; transition: 0.2s; }
         .form-control:focus { border-color: #E31E24; box-shadow: 0 0 0 2px rgba(227,30,36,0.08); }
@@ -1313,6 +1313,7 @@
                     const data = await res.json();
                     if (!Array.isArray(data)) continue;
                     data.forEach(al => {
+                        alquileresCache[al.row_id] = al;
                         const iso = `${al.anio}-${String(al.mes).padStart(2,'0')}-${String(al.dia).padStart(2,'0')}`;
                         if (!alqMap[iso]) alqMap[iso] = [];
                         alqMap[iso].push(al);
@@ -1330,7 +1331,8 @@
                 als.forEach(al => {
                     const pagado = (al.pagado || '').toUpperCase() === 'SI';
                     const div = document.createElement('div');
-                    div.style.cssText = 'display:flex;align-items:center;gap:4px;padding:3px 6px;margin-top:3px;background:#fef3c7;border-left:3px solid #f59e0b;border-radius:3px;font-size:10px;font-weight:700;color:#92400e;';
+                    div.className = 'alquiler-item';
+                    div.setAttribute('onclick', `abrirDetalleAlquilerAnual(${al.row_id})`);
                     div.innerHTML = `<i class="fas fa-key" style="font-size:9px;flex-shrink:0;opacity:0.8;"></i><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${al.horario ? al.horario+' · ' : ''}${al.nombre || 'Alquiler'}</span>${pagado ? '<span style="font-size:8px;color:#15803d;font-weight:900;flex-shrink:0;">✓</span>' : ''}`;
                     sec.appendChild(div);
                 });
@@ -1886,7 +1888,7 @@
                 });
                 if (res.ok) {
                     // Eliminar del DOM directamente (sin esperar reload que puede traer datos obsoletos)
-                    document.querySelectorAll('#main-grid-anual .alquiler-item').forEach(el => {
+                    document.querySelectorAll('.alquiler-item').forEach(el => {
                         const oc = el.getAttribute('onclick') || '';
                         if (oc.includes(`(${rowId})`)) el.remove();
                     });
@@ -1911,7 +1913,7 @@
                     body: JSON.stringify({ row_id: rowId })
                 });
                 if (res.ok) {
-                    document.querySelectorAll('#main-grid-anual .alquiler-item').forEach(el => {
+                    document.querySelectorAll('.alquiler-item').forEach(el => {
                         const oc = el.getAttribute('onclick') || '';
                         if (oc.includes(`(${rowId})`)) el.remove();
                     });
