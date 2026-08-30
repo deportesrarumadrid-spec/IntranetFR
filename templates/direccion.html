@@ -1201,26 +1201,7 @@
                     <button id="btnFindeSiguiente" class="btn-fin" onclick="irAFindeRelativo(1)" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='transparent'" style="background:transparent; color:#64748b; border:none; border-radius:10px; font-size:11px; padding:10px 14px; font-weight:700; transition:0.15s;"></button>
                 </div>
 
-                <input type="date" id="inputFechaManual" onchange="irAFechaManual()" style="position:absolute; opacity:0; width:1px; height:1px;">
-
-                <!-- Picker personalizado Vie/Sáb/Dom -->
-                <div id="findeDatePicker" style="display:none; position:fixed; z-index:99999; background:white; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.22); padding:14px 12px; min-width:196px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <button onclick="fpMesCambiar(-1)" style="background:none;border:none;cursor:pointer;font-size:20px;color:#64748b;padding:0 8px;line-height:1;">‹</button>
-                        <span id="fpMesLabel" style="font-size:11px;font-weight:900;color:#1e293b;text-transform:uppercase;letter-spacing:.5px;"></span>
-                        <button onclick="fpMesCambiar(1)" style="background:none;border:none;cursor:pointer;font-size:20px;color:#64748b;padding:0 8px;line-height:1;">›</button>
-                    </div>
-                    <table style="width:100%;border-collapse:collapse;">
-                        <thead>
-                            <tr>
-                                <th style="font-size:9px;color:#94a3b8;font-weight:900;text-align:center;padding:3px 0;">VIE</th>
-                                <th style="font-size:9px;color:#94a3b8;font-weight:900;text-align:center;padding:3px 0;">SÁB</th>
-                                <th style="font-size:9px;color:#94a3b8;font-weight:900;text-align:center;padding:3px 0;">DOM</th>
-                            </tr>
-                        </thead>
-                        <tbody id="fpBody"></tbody>
-                    </table>
-                </div>
+                <input type="date" id="inputFechaManual" style="position:absolute; opacity:0; width:0; height:0; pointer-events:none;">
 
                 <button id="btnSoloCoincidencias" class="btn-fin" onclick="toggleSoloCoincidencias()" style="margin-left:auto; background:#f8f9fa; color:#64748b; border:1px solid #e2e8f0; font-size:9px; padding:8px 12px;">
                     <i class="fas fa-triangle-exclamation"></i> SOLO COINCIDENCIAS
@@ -10939,6 +10920,25 @@ async function asistMatrizCargar(equipo) {
             </button>
         </div>
     </div>
+</div>
+
+<!-- Picker personalizado Vie/Sáb/Dom — fuera de cualquier contenedor con transform -->
+<div id="findeDatePicker" style="display:none; position:fixed; z-index:99999; background:white; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.22); padding:14px 12px; min-width:196px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <button onclick="fpMesCambiar(-1)" style="background:none;border:none;cursor:pointer;font-size:20px;color:#64748b;padding:0 8px;line-height:1;">‹</button>
+        <span id="fpMesLabel" style="font-size:11px;font-weight:900;color:#1e293b;text-transform:uppercase;letter-spacing:.5px;"></span>
+        <button onclick="fpMesCambiar(1)" style="background:none;border:none;cursor:pointer;font-size:20px;color:#64748b;padding:0 8px;line-height:1;">›</button>
+    </div>
+    <table style="width:100%;border-collapse:collapse;">
+        <thead>
+            <tr>
+                <th style="font-size:9px;color:#94a3b8;font-weight:900;text-align:center;padding:3px 0;">VIE</th>
+                <th style="font-size:9px;color:#94a3b8;font-weight:900;text-align:center;padding:3px 0;">SÁB</th>
+                <th style="font-size:9px;color:#94a3b8;font-weight:900;text-align:center;padding:3px 0;">DOM</th>
+            </tr>
+        </thead>
+        <tbody id="fpBody"></tbody>
+    </table>
 </div>
 
 {% endblock %}
