@@ -1928,26 +1928,30 @@ def api_asistencias_staff_suplencia():
 #  SUBVENCIONES
 # ─────────────────────────────────────────────
 SUBVENCIONES_HEADERS = ["ID", "NOMBRE", "DESCRIPCION", "FECHA_APERTURA", "PLAZO_MAXIMO", "FECHA_PRESENTADA", "IMPORTE", "COBRADO", "FECHA_COBRO", "ADJUNTOS"]
+_subv_migrated = False  # evitar get_all_values en cada llamada
 
 def _get_subvenciones_sheet():
+    global _subv_migrated
     from app import client, NOMBRE_EXCEL
     try:
         sh = client.open(NOMBRE_EXCEL).worksheet("SUBVENCIONES")
     except gspread.exceptions.WorksheetNotFound:
         sh = client.open(NOMBRE_EXCEL).add_worksheet(title="SUBVENCIONES", rows="200", cols="12")
         sh.append_row(SUBVENCIONES_HEADERS)
+        _subv_migrated = True
         return sh
-    # Migración: añadir cualquier header requerido que falte
-    try:
-        all_v = sh.get_all_values()
-        if all_v:
-            headers_actual = [h.strip().upper() for h in all_v[0]]
-            for req_h in SUBVENCIONES_HEADERS:
-                if req_h not in headers_actual:
-                    headers_actual.append(req_h)
-                    sh.update_cell(1, len(headers_actual), req_h)
-    except Exception:
-        pass
+    if not _subv_migrated:
+        try:
+            all_v = sh.get_all_values()
+            if all_v:
+                headers_actual = [h.strip().upper() for h in all_v[0]]
+                for req_h in SUBVENCIONES_HEADERS:
+                    if req_h not in headers_actual:
+                        headers_actual.append(req_h)
+                        sh.update_cell(1, len(headers_actual), req_h)
+        except Exception:
+            pass
+        _subv_migrated = True
     return sh
 
 def _subvenciones_dir():
@@ -2028,23 +2032,11 @@ def api_subvenciones_eliminar():
         data = request.get_json()
         row_idx = data.get('_row_idx')
         sid = str(data.get('ID', '')).strip()
-        from app import _raw_client, NOMBRE_EXCEL
-        raw_ws = _raw_client.open(NOMBRE_EXCEL).worksheet("SUBVENCIONES")
+        from app import client, NOMBRE_EXCEL
+        sh = client.open(NOMBRE_EXCEL).worksheet("SUBVENCIONES")
         if row_idx:
-            raw_ws.delete_rows(int(row_idx))
-            from sheets_cache import invalidate
-            invalidate(f"{NOMBRE_EXCEL}::SUBVENCIONES")
+            sh.delete_rows(int(row_idx))  # _WRITE_METHODS auto-invalida el caché
             return jsonify({"status": "success"})
-        # Fallback: buscar por ID
-        all_v = raw_ws.get_all_values()
-        headers = [h.strip().upper() for h in all_v[0]] if all_v else SUBVENCIONES_HEADERS
-        id_col = headers.index('ID') if 'ID' in headers else 0
-        for i, row in enumerate(all_v[1:], start=2):
-            if row and str(row[id_col] if id_col < len(row) else '').strip() == sid:
-                raw_ws.delete_rows(i)
-                from sheets_cache import invalidate
-                invalidate(f"{NOMBRE_EXCEL}::SUBVENCIONES")
-                return jsonify({"status": "success"})
         return jsonify({"status": "not_found"}), 404
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
