@@ -2028,18 +2028,22 @@ def api_subvenciones_eliminar():
         data = request.get_json()
         row_idx = data.get('_row_idx')
         sid = str(data.get('ID', '')).strip()
-        from app import client, NOMBRE_EXCEL
-        sh = client.open(NOMBRE_EXCEL).worksheet("SUBVENCIONES")
+        from app import _raw_client, NOMBRE_EXCEL
+        raw_ws = _raw_client.open(NOMBRE_EXCEL).worksheet("SUBVENCIONES")
         if row_idx:
-            sh.delete_rows(int(row_idx))
+            raw_ws.delete_rows(int(row_idx))
+            from sheets_cache import invalidate
+            invalidate(f"{NOMBRE_EXCEL}::SUBVENCIONES")
             return jsonify({"status": "success"})
-        # Fallback: buscar por ID en columna 0
-        all_v = sh.get_all_values()
+        # Fallback: buscar por ID
+        all_v = raw_ws.get_all_values()
         headers = [h.strip().upper() for h in all_v[0]] if all_v else SUBVENCIONES_HEADERS
         id_col = headers.index('ID') if 'ID' in headers else 0
         for i, row in enumerate(all_v[1:], start=2):
             if row and str(row[id_col] if id_col < len(row) else '').strip() == sid:
-                sh.delete_rows(i)
+                raw_ws.delete_rows(i)
+                from sheets_cache import invalidate
+                invalidate(f"{NOMBRE_EXCEL}::SUBVENCIONES")
                 return jsonify({"status": "success"})
         return jsonify({"status": "not_found"}), 404
     except Exception as e:

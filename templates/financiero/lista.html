@@ -9971,7 +9971,8 @@ async function confirmarEliminarSubvencion(id, rowIdx) {
             renderTablaSubvenciones();
             actualizarBannerSubvenciones();
         } else {
-            alert('Error al eliminar la subvención.');
+            const dbg = await res.json().catch(() => ({}));
+            alert('Error al eliminar la subvención.' + (dbg.message ? ' (' + dbg.message + ')' : ''));
             renderTablaSubvenciones();
         }
     } catch(e) {
