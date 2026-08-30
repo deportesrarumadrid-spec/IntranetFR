@@ -1192,7 +1192,7 @@
                 <select id="selectFindeSemana" onchange="renderTablaFindeSemana()" style="display:none;"></select>
 
                 <div style="display:flex; align-items:center; gap:1px; background:#f1f5f9; border-radius:14px; padding:5px; position:absolute; left:50%; top:50%; transform:translate(-50%, -50%);">
-                    <button onclick="document.getElementById('inputFechaManual').showPicker ? document.getElementById('inputFechaManual').showPicker() : document.getElementById('inputFechaManual').click()" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='transparent'" style="background:transparent; color:#475569; border:none; border-radius:10px; font-size:17px; padding:10px 14px; cursor:pointer; transition:0.15s;" title="Elegir fecha manualmente">
+                    <button id="btnCalFindePicker" onclick="abrirFindePicker(event)" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='transparent'" style="background:transparent; color:#475569; border:none; border-radius:10px; font-size:17px; padding:10px 14px; cursor:pointer; transition:0.15s;" title="Elegir fecha manualmente">
                         <i class="fas fa-calendar-days"></i>
                     </button>
                     <div style="width:1px; height:22px; background:#e2e8f0; margin:0 2px;"></div>
@@ -1202,6 +1202,25 @@
                 </div>
 
                 <input type="date" id="inputFechaManual" onchange="irAFechaManual()" style="position:absolute; opacity:0; width:1px; height:1px;">
+
+                <!-- Picker personalizado Vie/Sáb/Dom -->
+                <div id="findeDatePicker" style="display:none; position:fixed; z-index:99999; background:white; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.22); padding:14px 12px; min-width:196px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <button onclick="fpMesCambiar(-1)" style="background:none;border:none;cursor:pointer;font-size:20px;color:#64748b;padding:0 8px;line-height:1;">‹</button>
+                        <span id="fpMesLabel" style="font-size:11px;font-weight:900;color:#1e293b;text-transform:uppercase;letter-spacing:.5px;"></span>
+                        <button onclick="fpMesCambiar(1)" style="background:none;border:none;cursor:pointer;font-size:20px;color:#64748b;padding:0 8px;line-height:1;">›</button>
+                    </div>
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead>
+                            <tr>
+                                <th style="font-size:9px;color:#94a3b8;font-weight:900;text-align:center;padding:3px 0;">VIE</th>
+                                <th style="font-size:9px;color:#94a3b8;font-weight:900;text-align:center;padding:3px 0;">SÁB</th>
+                                <th style="font-size:9px;color:#94a3b8;font-weight:900;text-align:center;padding:3px 0;">DOM</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fpBody"></tbody>
+                    </table>
+                </div>
 
                 <button id="btnSoloCoincidencias" class="btn-fin" onclick="toggleSoloCoincidencias()" style="margin-left:auto; background:#f8f9fa; color:#64748b; border:1px solid #e2e8f0; font-size:9px; padding:8px 12px;">
                     <i class="fas fa-triangle-exclamation"></i> SOLO COINCIDENCIAS
@@ -4796,6 +4815,80 @@
         actualizarLabelsFindeNav();
         renderTablaFindeSemana();
     }
+
+    // --- Picker personalizado Vie/Sáb/Dom ---
+    let _fpAnio = new Date().getFullYear();
+    let _fpMes  = new Date().getMonth();
+
+    function abrirFindePicker(evt) {
+        const picker = document.getElementById('findeDatePicker');
+        if (picker.style.display !== 'none') { picker.style.display = 'none'; return; }
+        const btn = document.getElementById('btnCalFindePicker');
+        const r = btn.getBoundingClientRect();
+        picker.style.top  = (r.bottom + 6) + 'px';
+        picker.style.left = Math.min(r.left, window.innerWidth - 220) + 'px';
+        _fpAnio = new Date().getFullYear();
+        _fpMes  = new Date().getMonth();
+        _renderFindePicker();
+        picker.style.display = 'block';
+    }
+
+    function fpMesCambiar(dir) {
+        _fpMes += dir;
+        if (_fpMes > 11) { _fpMes = 0; _fpAnio++; }
+        if (_fpMes < 0)  { _fpMes = 11; _fpAnio--; }
+        _renderFindePicker();
+    }
+
+    function _renderFindePicker() {
+        const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        document.getElementById('fpMesLabel').textContent = MESES[_fpMes] + ' ' + _fpAnio;
+        const hoy = new Date(); hoy.setHours(0,0,0,0);
+        const tbody = document.getElementById('fpBody');
+        tbody.innerHTML = '';
+
+        // Primer viernes del mes (o del anterior si el mes empieza a mitad de semana)
+        let fri = new Date(_fpAnio, _fpMes, 1);
+        while (fri.getDay() !== 5) fri.setDate(fri.getDate() + 1);
+
+        while (fri.getMonth() === _fpMes) {
+            const sat = new Date(fri); sat.setDate(sat.getDate() + 1);
+            const sun = new Date(fri); sun.setDate(sun.getDate() + 2);
+            const tr = document.createElement('tr');
+            [fri, sat, sun].forEach(d => {
+                const td = document.createElement('td');
+                const esHoy = d.getTime() === hoy.getTime();
+                const fueraDelMes = d.getMonth() !== _fpMes;
+                td.textContent = d.getDate();
+                td.style.cssText = 'text-align:center;padding:7px 6px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;'
+                    + (esHoy ? 'background:#E31E24;color:white;' : fueraDelMes ? 'color:#cbd5e1;' : 'color:#1e293b;');
+                if (!esHoy) {
+                    td.onmouseover = () => td.style.background = '#f1f5f9';
+                    td.onmouseout  = () => td.style.background = '';
+                }
+                const iso = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+                td.onclick = () => {
+                    document.getElementById('inputFechaManual').value = iso;
+                    document.getElementById('findeDatePicker').style.display = 'none';
+                    irAFechaManual();
+                };
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+            fri = new Date(fri); fri.setDate(fri.getDate() + 7);
+        }
+    }
+
+    // Cerrar picker al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        const picker = document.getElementById('findeDatePicker');
+        if (!picker || picker.style.display === 'none') return;
+        const btn = document.getElementById('btnCalFindePicker');
+        if (!picker.contains(e.target) && !btn.contains(e.target)) {
+            picker.style.display = 'none';
+        }
+    });
+    // -----------------------------------------
 
     function toggleSoloCoincidencias() {
         soloCoincidencias = !soloCoincidencias;
