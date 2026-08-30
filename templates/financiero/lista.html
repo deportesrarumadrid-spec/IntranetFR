@@ -9891,15 +9891,16 @@ async function guardarSubvencion() {
             for (const adj of adjuntosModalTemp) {
                 await fetch('/api/subvenciones/adjunto', {
                     method:'POST', headers:{'Content-Type':'application/json'},
-                    body: JSON.stringify({ ID: data.ID, nombre: adj.nombre, contenido: adj.contenido })
+                    body: JSON.stringify({ ID: data.ID, _row_idx: payload._row_idx, nombre: adj.nombre, contenido: adj.contenido })
                 });
             }
             adjuntosModalTemp = [];
             cerrarModalSubvencion();
-            // Sincronizar cronograma de Raúl y Rubén si hay fecha apertura
-            if (newApertura) {
-                await sincronizarCronoSubvencion(nombre, newApertura, oldNombreSync, oldAperturaSync);
-            }
+            try {
+                if (newApertura) {
+                    await sincronizarCronoSubvencion(nombre, newApertura, oldNombreSync, oldAperturaSync);
+                }
+            } catch(syncErr) { console.error('Error sync crono subvencion:', syncErr); }
             await cargarSubvenciones();
         } else { alert('Error: ' + data.message); }
     } catch(e) { alert('Error de conexión'); }

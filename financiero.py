@@ -2004,12 +2004,13 @@ def api_subvenciones_guardar():
                     idx_existente = i
                     break
 
-        # Si es nuevo, generar ID
-        if idx_existente == -1:
+        # Generar ID si es nuevo o si la fila existente no tiene ID
+        if idx_existente == -1 or not sid:
+            id_col = headers.index('ID') if 'ID' in headers else 0
             max_id = 0
             for row in all_v[1:]:
                 try:
-                    val = int(str(row[0]).strip())
+                    val = int(str(row[id_col] if id_col < len(row) else '').strip())
                     max_id = max(max_id, val)
                 except: pass
             sid = str(max_id + 1)
@@ -2062,15 +2063,25 @@ def api_subvenciones_adjunto():
         all_v = sh.get_all_values()
         headers = [h.strip().upper() for h in all_v[0]] if all_v else SUBVENCIONES_HEADERS
         idx_adj = headers.index('ADJUNTOS') if 'ADJUNTOS' in headers else -1
+        id_col = headers.index('ID') if 'ID' in headers else 0
+        row_idx_adj = data.get('_row_idx')
 
-        for i, row in enumerate(all_v[1:], start=2):
-            if row and str(row[0]).strip() == sid:
-                existing = row[idx_adj] if idx_adj != -1 and idx_adj < len(row) else ''
-                adjuntos_list = [a for a in existing.split(',') if a.strip()]
-                if fname not in adjuntos_list:
-                    adjuntos_list.append(fname)
-                sh.update_cell(i, idx_adj + 1, ','.join(adjuntos_list))
-                break
+        target_i = None
+        if row_idx_adj:
+            target_i = int(row_idx_adj)
+        elif sid:
+            for i, row in enumerate(all_v[1:], start=2):
+                if row and str(row[id_col] if id_col < len(row) else '').strip() == sid:
+                    target_i = i
+                    break
+
+        if target_i and idx_adj != -1:
+            row = all_v[target_i - 1] if target_i - 1 < len(all_v) else []
+            existing = row[idx_adj] if idx_adj < len(row) else ''
+            adjuntos_list = [a for a in existing.split(',') if a.strip()]
+            if fname not in adjuntos_list:
+                adjuntos_list.append(fname)
+            sh.update_cell(target_i, idx_adj + 1, ','.join(adjuntos_list))
 
         return jsonify({"status": "success", "archivo": fname})
     except Exception as e:
