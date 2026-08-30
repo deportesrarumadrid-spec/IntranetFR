@@ -4797,91 +4797,7 @@
         renderTablaFindeSemana();
     }
 
-    // --- Picker personalizado Vie/Sáb/Dom ---
-    var _fpAnio = new Date().getFullYear();
-    var _fpMes  = new Date().getMonth();
-
-    function _abrirFindePickerInterno(evt) {
-        var picker = document.getElementById('findeDatePicker');
-        if (!picker) return;
-        if (picker.style.display !== 'none') { picker.style.display = 'none'; return; }
-        var btn = document.getElementById('btnCalFindePicker');
-        var r = btn.getBoundingClientRect();
-        picker.style.top  = (r.bottom + 6) + 'px';
-        picker.style.left = Math.min(r.left, window.innerWidth - 220) + 'px';
-        _fpAnio = new Date().getFullYear();
-        _fpMes  = new Date().getMonth();
-        _renderFindePickerInterno();
-        picker.style.display = 'block';
-    }
-
-    function _fpMesCambiarInterno(dir) {
-        _fpMes += dir;
-        if (_fpMes > 11) { _fpMes = 0; _fpAnio++; }
-        if (_fpMes < 0)  { _fpMes = 11; _fpAnio--; }
-        _renderFindePickerInterno();
-    }
-
-    function _renderFindePickerInterno() {
-        var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-        var lbl = document.getElementById('fpMesLabel');
-        if (lbl) lbl.textContent = MESES[_fpMes] + ' ' + _fpAnio;
-        var hoy = new Date(); hoy.setHours(0,0,0,0);
-        var tbody = document.getElementById('fpBody');
-        if (!tbody) return;
-        tbody.innerHTML = '';
-
-        var fri = new Date(_fpAnio, _fpMes, 1);
-        while (fri.getDay() !== 5) fri.setDate(fri.getDate() + 1);
-
-        while (fri.getMonth() === _fpMes) {
-            var sat = new Date(fri); sat.setDate(sat.getDate() + 1);
-            var sun = new Date(fri); sun.setDate(sun.getDate() + 2);
-            var tr = document.createElement('tr');
-            [fri, sat, sun].forEach(function(d) {
-                var td = document.createElement('td');
-                var esHoy = d.getTime() === hoy.getTime();
-                var fueraDelMes = d.getMonth() !== _fpMes;
-                td.textContent = d.getDate();
-                td.style.cssText = 'text-align:center;padding:7px 6px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;'
-                    + (esHoy ? 'background:#E31E24;color:white;' : fueraDelMes ? 'color:#cbd5e1;' : 'color:#1e293b;');
-                if (!esHoy) {
-                    td.onmouseover = function() { td.style.background = '#f1f5f9'; };
-                    td.onmouseout  = function() { td.style.background = ''; };
-                }
-                var iso = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-                td.onclick = function() {
-                    document.getElementById('inputFechaManual').value = iso;
-                    document.getElementById('findeDatePicker').style.display = 'none';
-                    irAFechaManual();
-                };
-                tr.appendChild(td);
-            });
-            tbody.appendChild(tr);
-            fri = new Date(fri); fri.setDate(fri.getDate() + 7);
-        }
-    }
-
-    // Adjuntar listeners desde el propio scope (no depende del scope global)
-    document.addEventListener('DOMContentLoaded', function() {
-        var btnCal = document.getElementById('btnCalFindePicker');
-        if (btnCal) btnCal.addEventListener('click', _abrirFindePickerInterno);
-
-        var btnPrev = document.getElementById('fpBtnPrev');
-        if (btnPrev) btnPrev.addEventListener('click', function() { _fpMesCambiarInterno(-1); });
-        var btnNext = document.getElementById('fpBtnNext');
-        if (btnNext) btnNext.addEventListener('click', function() { _fpMesCambiarInterno(1); });
-
-        document.addEventListener('click', function(e) {
-            var picker = document.getElementById('findeDatePicker');
-            if (!picker || picker.style.display === 'none') return;
-            var btn = document.getElementById('btnCalFindePicker');
-            if (btn && !picker.contains(e.target) && !btn.contains(e.target)) {
-                picker.style.display = 'none';
-            }
-        });
-    });
-    // -----------------------------------------
+    // (picker Vie/Sáb/Dom — ver script al final del template)
 
     function toggleSoloCoincidencias() {
         soloCoincidencias = !soloCoincidencias;
@@ -10934,7 +10850,7 @@ async function asistMatrizCargar(equipo) {
     </div>
 </div>
 
-<!-- Picker personalizado Vie/Sáb/Dom — fuera de cualquier contenedor con transform -->
+<!-- Picker personalizado Vie/Sáb/Dom -->
 <div id="findeDatePicker" style="display:none; position:fixed; z-index:99999; background:white; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.22); padding:14px 12px; min-width:196px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <button id="fpBtnPrev" style="background:none;border:none;cursor:pointer;font-size:20px;color:#64748b;padding:0 8px;line-height:1;">‹</button>
@@ -10952,5 +10868,86 @@ async function asistMatrizCargar(equipo) {
         <tbody id="fpBody"></tbody>
     </table>
 </div>
+
+<script>
+(function() {
+    var fpA = new Date().getFullYear();
+    var fpM = new Date().getMonth();
+
+    function fpAbrir(e) {
+        var p = document.getElementById('findeDatePicker');
+        if (!p) return;
+        if (p.style.display !== 'none') { p.style.display = 'none'; return; }
+        var b = document.getElementById('btnCalFindePicker');
+        var r = b.getBoundingClientRect();
+        p.style.top  = (r.bottom + 6) + 'px';
+        p.style.left = Math.min(r.left, window.innerWidth - 220) + 'px';
+        fpA = new Date().getFullYear();
+        fpM = new Date().getMonth();
+        fpRender();
+        p.style.display = 'block';
+    }
+
+    function fpCambiar(dir) {
+        fpM += dir;
+        if (fpM > 11) { fpM = 0; fpA++; }
+        if (fpM < 0)  { fpM = 11; fpA--; }
+        fpRender();
+    }
+
+    function fpRender() {
+        var NM = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        var lbl = document.getElementById('fpMesLabel');
+        if (lbl) lbl.textContent = NM[fpM] + ' ' + fpA;
+        var hoy = new Date(); hoy.setHours(0,0,0,0);
+        var tb = document.getElementById('fpBody');
+        if (!tb) return;
+        tb.innerHTML = '';
+        var fri = new Date(fpA, fpM, 1);
+        while (fri.getDay() !== 5) fri.setDate(fri.getDate() + 1);
+        while (fri.getMonth() === fpM) {
+            var row = document.createElement('tr');
+            for (var i = 0; i < 3; i++) {
+                var d = new Date(fri.getTime()); d.setDate(d.getDate() + i);
+                var td = document.createElement('td');
+                var esH = d.getTime() === hoy.getTime();
+                var fuera = d.getMonth() !== fpM;
+                td.textContent = d.getDate();
+                td.style.cssText = 'text-align:center;padding:8px 6px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;'
+                    + (esH ? 'background:#E31E24;color:white;' : fuera ? 'color:#cbd5e1;' : 'color:#1e293b;');
+                if (!esH) {
+                    td.onmouseover = function() { this.style.background='#f1f5f9'; };
+                    td.onmouseout  = function() { this.style.background=''; };
+                }
+                (function(iso) {
+                    td.onclick = function() {
+                        var inp = document.getElementById('inputFechaManual');
+                        if (inp) inp.value = iso;
+                        document.getElementById('findeDatePicker').style.display = 'none';
+                        if (typeof irAFechaManual === 'function') irAFechaManual();
+                    };
+                })(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'));
+                row.appendChild(td);
+            }
+            tb.appendChild(row);
+            fri.setDate(fri.getDate() + 7);
+        }
+    }
+
+    var btnCal  = document.getElementById('btnCalFindePicker');
+    var btnPrev = document.getElementById('fpBtnPrev');
+    var btnNext = document.getElementById('fpBtnNext');
+    if (btnCal)  btnCal.addEventListener('click',  fpAbrir);
+    if (btnPrev) btnPrev.addEventListener('click', function() { fpCambiar(-1); });
+    if (btnNext) btnNext.addEventListener('click', function() { fpCambiar(1); });
+
+    document.addEventListener('click', function(e) {
+        var p = document.getElementById('findeDatePicker');
+        if (!p || p.style.display === 'none') return;
+        var b = document.getElementById('btnCalFindePicker');
+        if (b && !p.contains(e.target) && !b.contains(e.target)) p.style.display = 'none';
+    });
+})();
+</script>
 
 {% endblock %}
