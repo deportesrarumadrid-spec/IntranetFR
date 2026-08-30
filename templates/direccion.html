@@ -1192,7 +1192,7 @@
                 <select id="selectFindeSemana" onchange="renderTablaFindeSemana()" style="display:none;"></select>
 
                 <div style="display:flex; align-items:center; gap:1px; background:#f1f5f9; border-radius:14px; padding:5px; position:absolute; left:50%; top:50%; transform:translate(-50%, -50%);">
-                    <button id="btnCalFindePicker" onclick="abrirFindePicker(event)" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='transparent'" style="background:transparent; color:#475569; border:none; border-radius:10px; font-size:17px; padding:10px 14px; cursor:pointer; transition:0.15s;" title="Elegir fecha manualmente">
+                    <button id="btnCalFindePicker" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='transparent'" style="background:transparent; color:#475569; border:none; border-radius:10px; font-size:17px; padding:10px 14px; cursor:pointer; transition:0.15s;" title="Elegir fecha manualmente">
                         <i class="fas fa-calendar-days"></i>
                     </button>
                     <div style="width:1px; height:22px; background:#e2e8f0; margin:0 2px;"></div>
@@ -4798,57 +4798,59 @@
     }
 
     // --- Picker personalizado Vie/Sáb/Dom ---
-    let _fpAnio = new Date().getFullYear();
-    let _fpMes  = new Date().getMonth();
+    var _fpAnio = new Date().getFullYear();
+    var _fpMes  = new Date().getMonth();
 
-    function abrirFindePicker(evt) {
-        const picker = document.getElementById('findeDatePicker');
+    function _abrirFindePickerInterno(evt) {
+        var picker = document.getElementById('findeDatePicker');
+        if (!picker) return;
         if (picker.style.display !== 'none') { picker.style.display = 'none'; return; }
-        const btn = document.getElementById('btnCalFindePicker');
-        const r = btn.getBoundingClientRect();
+        var btn = document.getElementById('btnCalFindePicker');
+        var r = btn.getBoundingClientRect();
         picker.style.top  = (r.bottom + 6) + 'px';
         picker.style.left = Math.min(r.left, window.innerWidth - 220) + 'px';
         _fpAnio = new Date().getFullYear();
         _fpMes  = new Date().getMonth();
-        _renderFindePicker();
+        _renderFindePickerInterno();
         picker.style.display = 'block';
     }
 
-    function fpMesCambiar(dir) {
+    function _fpMesCambiarInterno(dir) {
         _fpMes += dir;
         if (_fpMes > 11) { _fpMes = 0; _fpAnio++; }
         if (_fpMes < 0)  { _fpMes = 11; _fpAnio--; }
-        _renderFindePicker();
+        _renderFindePickerInterno();
     }
 
-    function _renderFindePicker() {
-        const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-        document.getElementById('fpMesLabel').textContent = MESES[_fpMes] + ' ' + _fpAnio;
-        const hoy = new Date(); hoy.setHours(0,0,0,0);
-        const tbody = document.getElementById('fpBody');
+    function _renderFindePickerInterno() {
+        var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        var lbl = document.getElementById('fpMesLabel');
+        if (lbl) lbl.textContent = MESES[_fpMes] + ' ' + _fpAnio;
+        var hoy = new Date(); hoy.setHours(0,0,0,0);
+        var tbody = document.getElementById('fpBody');
+        if (!tbody) return;
         tbody.innerHTML = '';
 
-        // Primer viernes del mes (o del anterior si el mes empieza a mitad de semana)
-        let fri = new Date(_fpAnio, _fpMes, 1);
+        var fri = new Date(_fpAnio, _fpMes, 1);
         while (fri.getDay() !== 5) fri.setDate(fri.getDate() + 1);
 
         while (fri.getMonth() === _fpMes) {
-            const sat = new Date(fri); sat.setDate(sat.getDate() + 1);
-            const sun = new Date(fri); sun.setDate(sun.getDate() + 2);
-            const tr = document.createElement('tr');
-            [fri, sat, sun].forEach(d => {
-                const td = document.createElement('td');
-                const esHoy = d.getTime() === hoy.getTime();
-                const fueraDelMes = d.getMonth() !== _fpMes;
+            var sat = new Date(fri); sat.setDate(sat.getDate() + 1);
+            var sun = new Date(fri); sun.setDate(sun.getDate() + 2);
+            var tr = document.createElement('tr');
+            [fri, sat, sun].forEach(function(d) {
+                var td = document.createElement('td');
+                var esHoy = d.getTime() === hoy.getTime();
+                var fueraDelMes = d.getMonth() !== _fpMes;
                 td.textContent = d.getDate();
                 td.style.cssText = 'text-align:center;padding:7px 6px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;'
                     + (esHoy ? 'background:#E31E24;color:white;' : fueraDelMes ? 'color:#cbd5e1;' : 'color:#1e293b;');
                 if (!esHoy) {
-                    td.onmouseover = () => td.style.background = '#f1f5f9';
-                    td.onmouseout  = () => td.style.background = '';
+                    td.onmouseover = function() { td.style.background = '#f1f5f9'; };
+                    td.onmouseout  = function() { td.style.background = ''; };
                 }
-                const iso = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-                td.onclick = () => {
+                var iso = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+                td.onclick = function() {
                     document.getElementById('inputFechaManual').value = iso;
                     document.getElementById('findeDatePicker').style.display = 'none';
                     irAFechaManual();
@@ -4860,14 +4862,24 @@
         }
     }
 
-    // Cerrar picker al hacer clic fuera
-    document.addEventListener('click', function(e) {
-        const picker = document.getElementById('findeDatePicker');
-        if (!picker || picker.style.display === 'none') return;
-        const btn = document.getElementById('btnCalFindePicker');
-        if (!picker.contains(e.target) && !btn.contains(e.target)) {
-            picker.style.display = 'none';
-        }
+    // Adjuntar listeners desde el propio scope (no depende del scope global)
+    document.addEventListener('DOMContentLoaded', function() {
+        var btnCal = document.getElementById('btnCalFindePicker');
+        if (btnCal) btnCal.addEventListener('click', _abrirFindePickerInterno);
+
+        var btnPrev = document.getElementById('fpBtnPrev');
+        if (btnPrev) btnPrev.addEventListener('click', function() { _fpMesCambiarInterno(-1); });
+        var btnNext = document.getElementById('fpBtnNext');
+        if (btnNext) btnNext.addEventListener('click', function() { _fpMesCambiarInterno(1); });
+
+        document.addEventListener('click', function(e) {
+            var picker = document.getElementById('findeDatePicker');
+            if (!picker || picker.style.display === 'none') return;
+            var btn = document.getElementById('btnCalFindePicker');
+            if (btn && !picker.contains(e.target) && !btn.contains(e.target)) {
+                picker.style.display = 'none';
+            }
+        });
     });
     // -----------------------------------------
 
@@ -10925,9 +10937,9 @@ async function asistMatrizCargar(equipo) {
 <!-- Picker personalizado Vie/Sáb/Dom — fuera de cualquier contenedor con transform -->
 <div id="findeDatePicker" style="display:none; position:fixed; z-index:99999; background:white; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.22); padding:14px 12px; min-width:196px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <button onclick="fpMesCambiar(-1)" style="background:none;border:none;cursor:pointer;font-size:20px;color:#64748b;padding:0 8px;line-height:1;">‹</button>
+        <button id="fpBtnPrev" style="background:none;border:none;cursor:pointer;font-size:20px;color:#64748b;padding:0 8px;line-height:1;">‹</button>
         <span id="fpMesLabel" style="font-size:11px;font-weight:900;color:#1e293b;text-transform:uppercase;letter-spacing:.5px;"></span>
-        <button onclick="fpMesCambiar(1)" style="background:none;border:none;cursor:pointer;font-size:20px;color:#64748b;padding:0 8px;line-height:1;">›</button>
+        <button id="fpBtnNext" style="background:none;border:none;cursor:pointer;font-size:20px;color:#64748b;padding:0 8px;line-height:1;">›</button>
     </div>
     <table style="width:100%;border-collapse:collapse;">
         <thead>
