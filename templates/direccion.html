@@ -9535,7 +9535,11 @@
         const posEl = document.getElementById(`fpPos_${mes}_${wKey}_${dia}_${idx}`);
         if (posEl) {
             const cache = _fpPosicionesCache[equipo] || {};
-            posEl.innerHTML = ['', ...Object.keys(cache)].map(p => `<option value="${p}" ${sl.posicion===p?'selected':''}>${p||'-- Posición --'}</option>`).join('');
+            const isF7Team = _fpEquiposF7.includes(equipo);
+            const basePosiciones = isF7Team ? FP_POSICIONES_F7 : FP_POSICIONES_F11;
+            const cachePosiciones = Object.keys(cache).filter(p => p && p !== 'Sin posición' && !FP_POSICIONES_SIN_FORMACION.some(x => p.toUpperCase().startsWith(x.toUpperCase())));
+            const posiciones = [...new Set([...basePosiciones, ...cachePosiciones])];
+            posEl.innerHTML = ['', ...posiciones].map(p => `<option value="${p}" ${sl.posicion===p?'selected':''}>${p||'-- Posición --'}</option>`).join('');
         }
         fpActualizarChipsSlot(mes, wKey, dia, idx, sl.posicion||'', equipo);
     }
