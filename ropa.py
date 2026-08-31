@@ -136,3 +136,55 @@ def save_ropa():
 
     log_cambio_ropa(jugador, prenda, valor_anterior or "Vacio", valor_nuevo, usuario)
     return jsonify({"status": "success"})
+
+
+# ─── DORSALES ─────────────────────────────────────────────────────────────────
+
+def get_dorsales_sheet():
+    client = current_app.gs_client
+    name = current_app.gs_name
+    try:
+        return client.open(name).worksheet("DORSALES")
+    except gspread.exceptions.WorksheetNotFound:
+        sheet = client.open(name).add_worksheet(title="DORSALES", rows="500", cols="3")
+        sheet.append_row(["EQUIPO", "JUGADOR", "DORSAL"])
+        return sheet
+
+@ropa_bp.route('/api/dorsal', methods=['GET'])
+def get_dorsales():
+    sheet = get_dorsales_sheet()
+    all_v = sheet.get_all_values()
+    result = {}
+    for row in all_v[1:]:
+        if len(row) >= 2 and row[1].strip():
+            key = f"{row[0].strip()}|{row[1].strip()}"
+            result[key] = row[2].strip() if len(row) > 2 else ""
+    return jsonify(result)
+
+@ropa_bp.route('/api/dorsal', methods=['POST'])
+def save_dorsal():
+    datos = request.json or {}
+    equipo = datos.get('equipo', '').strip()
+    jugador = datos.get('jugador', '').strip()
+    dorsal = str(datos.get('dorsal', '')).strip()
+
+    if not jugador:
+        return jsonify({"status": "error", "message": "Jugador requerido"}), 400
+    if dorsal and (not dorsal.isdigit() or not (1 <= int(dorsal) <= 99)):
+        return jsonify({"status": "error", "message": "Dorsal debe ser 1-99"}), 400
+
+    sheet = get_dorsales_sheet()
+    all_v = sheet.get_all_values()
+    fila_idx = -1
+    for i, row in enumerate(all_v):
+        if i == 0: continue
+        if len(row) >= 2 and row[0].strip() == equipo and row[1].strip() == jugador:
+            fila_idx = i + 1
+            break
+
+    if fila_idx == -1:
+        sheet.append_row([equipo, jugador, dorsal])
+    else:
+        sheet.update_cell(fila_idx, 3, dorsal)
+
+    return jsonify({"status": "success"})

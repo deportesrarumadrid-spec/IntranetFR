@@ -557,6 +557,9 @@
                         </th>
                         {% endfor %}
                         <th class="col-pago-ropa pago-cell" style="min-width: 4px; max-width: 4px; padding: 0; background: #eceef2; border-bottom: 2px solid #dee2e6;"></th>
+                        <th class="col-ropa" style="padding:10px 6px; text-align:center; border-bottom:2px solid #dee2e6; min-width:52px;">
+                            <div style="font-size:9px; color:#1e293b; font-weight:900; white-space:nowrap;">DORSAL</div>
+                        </th>
                         <!-- ANCLAJE CABECERAS ROPA -->
                         <th class="col-anchor-ropa" id="thBtnRopa"></th>
                         <!-- Contenedor de cabeceras de ropa (se llenará por JS) -->
@@ -591,6 +594,7 @@
                         <td class="pago-cell col-financiera{% if mes in ('07','08') %} col-mes-oculto{% endif %}" onclick="seleccionarPago(event, this, '{{ mes }}')" {% if mes in ('07','08') %}style="display:none;"{% endif %}>-</td>
                         {% endfor %}
                         <td class="pago-cell col-pago-ropa pago-extra-bg" onclick="seleccionarPago(event, this, 'PACK_ROPA')" style="min-width: 4px; max-width: 4px; padding: 0;">-</td>
+                        <td class="col-ropa celda-dorsal" data-nombre="{{ j.NOMBRE }}" data-equipo="{{ j.EQUIPO }}" onclick="event.stopPropagation(); editarDorsal(this)" style="text-align:center; font-size:13px; font-weight:800; color:#1e293b; cursor:pointer; min-width:52px; padding:8px 4px;">-</td>
                         <!-- Celdas de Ropa (se añadirán dinámicamente) -->
                         <td class="col-anchor-ropa col-ropa-btn"></td>
                         <td id="filaRopa_{{ loop.index0 }}" class="contenedor-celdas-ropa" style="display:none; padding:0; border:0;"></td>
@@ -1388,6 +1392,7 @@ let isSaving = false;
 let ropaColumns = ["PRENDA 1"];
 let celdaRopaActiva = null;
 let ropaDataCache = {}; // Estructura: { "NombreJugador": { "CAMISETA": { talla: 'M', estado: 'PEDIDA', fecha: '...' } } }
+let dorsalesCache = {}; // { "EQUIPO|JUGADOR": "N" }
 
 function setVista(modo) {
     const tablas = [document.getElementById('tablaJugadores')].filter(Boolean);
@@ -2000,7 +2005,66 @@ async function cargarDatosRopa() {
     inicializarCeldasPagoPrendas();
     if (Array.isArray(presupuestoData) && presupuestoData.length) cargarPagosEnTabla();
     await cargarEstadoPagosJugadores();
+    await cargarDorsales();
     } catch(e) { console.error('cargarDatosRopa:', e); } finally { hideLoader(); }
+}
+
+// ─── DORSALES ─────────────────────────────────────────────────────────────────
+
+async function cargarDorsales() {
+    try {
+        const res = await fetch('/api/dorsal');
+        dorsalesCache = await res.json();
+        renderizarDorsales();
+    } catch(e) { console.error('Error cargando dorsales', e); }
+}
+
+function renderizarDorsales() {
+    document.querySelectorAll('.celda-dorsal').forEach(td => {
+        const key = `${td.dataset.equipo}|${td.dataset.nombre}`;
+        const val = dorsalesCache[key];
+        if (!td.querySelector('input')) td.textContent = val || '-';
+    });
+}
+
+function editarDorsal(td) {
+    if (td.querySelector('input')) return;
+    const actual = td.textContent === '-' ? '' : td.textContent;
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = 1; input.max = 99;
+    input.value = actual;
+    input.style.cssText = 'width:46px;text-align:center;border:2px solid #E31E24;border-radius:6px;font-size:13px;font-weight:800;padding:2px 4px;outline:none;';
+    td.textContent = '';
+    td.appendChild(input);
+    input.focus(); input.select();
+
+    async function guardar() {
+        const val = input.value.trim();
+        if (val !== '' && (isNaN(val) || parseInt(val) < 1 || parseInt(val) > 99)) {
+            input.style.border = '2px solid red';
+            setTimeout(() => input.focus(), 0);
+            return;
+        }
+        const nombre = td.dataset.nombre;
+        const equipo = td.dataset.equipo;
+        try {
+            await fetch('/api/dorsal', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ equipo, jugador: nombre, dorsal: val })
+            });
+            const key = `${equipo}|${nombre}`;
+            dorsalesCache[key] = val;
+        } catch(e) { console.error('Error guardando dorsal', e); }
+        td.textContent = val || '-';
+    }
+
+    input.addEventListener('blur', guardar);
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        if (e.key === 'Escape') { td.textContent = actual || '-'; }
+    });
 }
 
 // =====================================================================
