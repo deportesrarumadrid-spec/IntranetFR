@@ -174,9 +174,16 @@ def update_perfil(username):
 
         rango_a_actualizar = f"B{row_index}:J{row_index}"
         print(f"DEBUG: Guardando cambios para {username} en fila {row_index}: {nuevos_valores_fila}")
-        
-        # Usamos keyword arguments para evitar problemas de orden entre versiones de gspread
+
         sheet.update(values=[nuevos_valores_fila], range_name=rango_a_actualizar, value_input_option='USER_ENTERED')
+
+        # Guardar D.DEP si la columna existe en el sheet (no incluida en el rango B:J base)
+        headers_sheet = [str(h).strip().upper() for h in all_values[0]]
+        ddep_val = str(data_norm.get('D.DEP', '')).strip().upper()
+        if ddep_val in ('SI', 'NO') and 'D.DEP' in headers_sheet:
+            ddep_col = headers_sheet.index('D.DEP') + 1
+            sheet.update_cell(row_index, ddep_col, ddep_val)
+
         _invalidar_cache_perfiles()
         return jsonify({"status": "success", "message": "Perfil actualizado correctamente."})
     except Exception as e:
