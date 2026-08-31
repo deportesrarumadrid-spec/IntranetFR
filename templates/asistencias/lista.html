@@ -1369,8 +1369,9 @@ let modalContext = 'MOTIVO';
 function registrarCambioLocal(el) {
     const td = el.closest('td');
     const fila = el.closest('tr');
-    const spanNombre = fila.querySelector('.sticky-col span');
-    const nombre = spanNombre.dataset.nombreOriginal || spanNombre.innerText.trim();
+    const spanNombre = fila.querySelector('span[data-nombre-original]');
+    if (!spanNombre) return;
+    const nombre = spanNombre.dataset.nombreOriginal;
     const thCelda = document.getElementById('cabeceraDias').cells[td.cellIndex];
     const diaNumHeader = thCelda.querySelector('.day-num-header');
     if (!diaNumHeader) return;
