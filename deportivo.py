@@ -616,7 +616,14 @@ def direccion_deportiva():
         _meses_dir = [f'{t_ini_dir}-{m:02d}' for m in [9,10,11,12]] + [f'{t_fin_dir}-{m:02d}' for m in [1,2,3,4,5,6]]
         _mes_def_dir = f'{_hdir.year}-{_hdir.month:02d}'
         if _mes_def_dir not in _meses_dir: _mes_def_dir = _meses_dir[0]
-        return render_template('direccion.html', usuario=usuario, equipos=equipos, jugadores_raw=jugadores, equipo_defecto=equipo_activo, tiene_ddep=tiene_ddep, t_ini=t_ini_dir, t_fin=t_fin_dir, mes_defecto=_mes_def_dir, meses_temporada=_meses_dir)
+        equipos_cfg = {"equipos": []}
+        try:
+            cfg_path = _get_equipos_config_path()
+            with open(cfg_path, encoding='utf-8') as _f:
+                equipos_cfg = json.load(_f)
+        except Exception:
+            pass
+        return render_template('direccion.html', usuario=usuario, equipos=equipos, jugadores_raw=jugadores, equipo_defecto=equipo_activo, tiene_ddep=tiene_ddep, t_ini=t_ini_dir, t_fin=t_fin_dir, mes_defecto=_mes_def_dir, meses_temporada=_meses_dir, equipos_cfg=equipos_cfg)
     except Exception as e:
         print(f"Error en direccion_deportiva: {e}")
         return str(e), 500

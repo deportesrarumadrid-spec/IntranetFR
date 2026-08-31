@@ -8170,39 +8170,67 @@
     // --- SEGUIMIENTO ENTRENAMIENTOS COORD (dinámico desde Horarios Temporada) ---
     var _segConfig = {};
     var _segHorTempDatos = {};
+    var _EQUIPOS_CFG = {{ equipos_cfg | tojson if equipos_cfg is defined else '{"equipos":[]}' }};
 
     var _SEG_COLORES = ['','#fee2e2','#fef3c7','#d1fae5','#dbeafe','#ede9fe','#fce7f3','#e0f2fe','#f1f5f9','#1e293b','#E31E24'];
+
+    function _normDia(d) {
+        return d.toLowerCase()
+            .replace(/á/g,'a').replace(/é/g,'e').replace(/í/g,'i').replace(/ó/g,'o').replace(/ú/g,'u')
+            .replace(/è/g,'e').replace(/ü/g,'u').trim();
+    }
 
     function seguimientoEntrenamientosRender(datos) {
         _segHorTempDatos = datos;
         var grid = document.getElementById('seguimientoEntrenamientosGrid');
         if (!grid) return;
 
-        var HORARIOS_SEG = horTempGenerarHorarios();
-        var COLS_SEG = ['F7-1', 'F7-2', 'F11-CAMPO 1 1', 'F-11-CAMPO 1 2', 'F11-CAMPO 2 1', 'F11-CAMPO 2 2'];
+        var cfgEquipos = (_EQUIPOS_CFG && _EQUIPOS_CFG.equipos) || [];
+        var diasMap = { lunes: [], martes: [], miercoles: [], jueves: [] };
 
-        function equiposPorGrupo(grupoId) {
-            var grupoData = datos[grupoId] || {};
-            var visto = {};
-            var lista = [];
-            HORARIOS_SEG.forEach(function(h) {
-                var fila = grupoData[h];
-                if (!fila) return;
-                COLS_SEG.forEach(function(c) {
-                    var txt = ((fila[c] && fila[c].texto) || '').trim();
-                    if (!txt || txt.startsWith('_')) return;
-                    var partes = txt.includes(' - ') ? txt.split(' - ').map(function(p) { return p.trim(); }) : [txt];
-                    partes.forEach(function(t) {
-                        if (t && !visto[t]) { visto[t] = true; lista.push(t); }
-                    });
+        if (cfgEquipos.length > 0) {
+            // Orden y días desde Configuración General
+            cfgEquipos.forEach(function(eq) {
+                var nombre = (eq.nombre || '').trim();
+                if (!nombre) return;
+                (eq.dias || []).forEach(function(d) {
+                    var key = _normDia(d);
+                    if (diasMap.hasOwnProperty(key)) {
+                        diasMap[key].push(nombre);
+                    }
                 });
             });
-            return lista;
+        } else {
+            // Fallback: extraer desde HORARIOS_TEMPORADA
+            var HORARIOS_SEG = horTempGenerarHorarios();
+            var COLS_SEG = ['F7-1', 'F7-2', 'F11-CAMPO 1 1', 'F-11-CAMPO 1 2', 'F11-CAMPO 2 1', 'F11-CAMPO 2 2'];
+            function _equiposPorGrupo(grupoId) {
+                var grupoData = datos[grupoId] || {};
+                var visto = {};
+                var lista = [];
+                HORARIOS_SEG.forEach(function(h) {
+                    var fila = grupoData[h];
+                    if (!fila) return;
+                    COLS_SEG.forEach(function(c) {
+                        var txt = ((fila[c] && fila[c].texto) || '').trim();
+                        if (!txt || txt.startsWith('_')) return;
+                        var partes = txt.includes(' - ') ? txt.split(' - ').map(function(p) { return p.trim(); }) : [txt];
+                        partes.forEach(function(t) {
+                            if (t && !visto[t]) { visto[t] = true; lista.push(t); }
+                        });
+                    });
+                });
+                return lista;
+            }
+            var lmTeams = _equiposPorGrupo('lunes_miercoles');
+            var mjTeams = _equiposPorGrupo('martes_jueves');
+            diasMap.lunes = lmTeams;
+            diasMap.martes = mjTeams;
+            diasMap.miercoles = lmTeams;
+            diasMap.jueves = mjTeams;
         }
 
-        var lmTeams = equiposPorGrupo('lunes_miercoles');
-        var mjTeams = equiposPorGrupo('martes_jueves');
-        var hayDatos = lmTeams.length > 0 || mjTeams.length > 0;
+        var hayDatos = Object.keys(diasMap).some(function(k) { return diasMap[k].length > 0; });
 
         if (!hayDatos) {
             grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:28px 20px;color:#94a3b8;font-size:12px;font-weight:700;background:white;border-radius:10px;border:1.5px dashed #e2e8f0;">' +
@@ -8212,10 +8240,10 @@
         }
 
         var DIAS = [
-            { label: 'LUNES',     key: 'lunes',     teams: lmTeams },
-            { label: 'MARTES',    key: 'martes',    teams: mjTeams },
-            { label: 'MIÉRCOLES', key: 'miercoles', teams: lmTeams },
-            { label: 'JUEVES',    key: 'jueves',    teams: mjTeams },
+            { label: 'LUNES',     key: 'lunes',     teams: diasMap.lunes },
+            { label: 'MARTES',    key: 'martes',    teams: diasMap.martes },
+            { label: 'MIÉRCOLES', key: 'miercoles', teams: diasMap.miercoles },
+            { label: 'JUEVES',    key: 'jueves',    teams: diasMap.jueves },
         ];
 
         grid.innerHTML = DIAS.map(function(d) {
