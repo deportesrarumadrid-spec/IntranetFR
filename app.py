@@ -1393,16 +1393,25 @@ def guardar_asistencia_masiva():
         cambios = data.get('cambios', [])
         # El mes llega como número de mes desde el selector del frontend
         mes_val = int(data.get('mes', 5))
-        
+        # El año se determina por la temporada activa: meses >=8 corresponden al año de inicio
+        try:
+            _t = get_temporada_activa().split('/')
+            _t_ini = int(_t[0]); _t_fin = int(_t[1]) if len(_t) > 1 else _t_ini + 1
+        except Exception:
+            _now = __import__('datetime').datetime.now()
+            _t_ini = _now.year - 1 if _now.month < 9 else _now.year
+            _t_fin = _t_ini + 1
+        anio_val = _t_ini if mes_val >= 8 else _t_fin
+
         # IMPORTANTE: Usamos 'client' directamente, que ya lo tienes definido arriba
         sheet = client.open(NOMBRE_EXCEL).worksheet("ASISTENCIAS")
-        
+
         for c in cambios:
             # Refrescamos los valores en cada iteración para evitar duplicados si se pulsa muy rápido
             actuales = sheet.get_all_values()
-            
+
             dia_val = int(c['dia'])
-            fecha_full = f"{dia_val:02d}/{mes_val:02d}/2026"
+            fecha_full = f"{dia_val:02d}/{mes_val:02d}/{anio_val}"
             nombre = c['nombre']
             nombre_lower = nombre.strip().lower()
             equipo_lower = c['equipo'].strip().lower()
