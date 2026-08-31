@@ -2282,8 +2282,8 @@ def _get_or_crear_sheet_horarios_temporada():
     try:
         return client.open(NOMBRE_EXCEL).worksheet("HORARIOS_TEMPORADA")
     except Exception:
-        sheet = client.open(NOMBRE_EXCEL).add_worksheet(title="HORARIOS_TEMPORADA", rows="1000", cols="5")
-        sheet.append_row(["GRUPO", "HORARIO", "COLUMNA", "TEXTO", "COLOR"])
+        sheet = client.open(NOMBRE_EXCEL).add_worksheet(title="HORARIOS_TEMPORADA", rows="1000", cols="6")
+        sheet.append_row(["GRUPO", "HORARIO", "COLUMNA", "TEXTO", "COLOR", "NOTAS"])
         return sheet
 
 
@@ -2298,7 +2298,8 @@ def api_horarios_temporada_get():
         grupo, horario, columna = row[0].strip(), row[1].strip(), row[2].strip()
         texto = row[3].strip() if len(row) > 3 else ''
         color = row[4].strip() if len(row) > 4 else ''
-        datos.setdefault(grupo, {}).setdefault(horario, {})[columna] = {"texto": texto, "color": color}
+        notas = row[5].strip() if len(row) > 5 else ''
+        datos.setdefault(grupo, {}).setdefault(horario, {})[columna] = {"texto": texto, "color": color, "notas": notas}
     return jsonify({"status": "success", "datos": datos})
 
 
@@ -2313,6 +2314,7 @@ def api_horarios_temporada_guardar():
     columna = (data.get('columna') or '').strip()
     texto = data.get('texto')
     color = data.get('color')
+    notas = data.get('notas')
     if not grupo or not horario or not columna:
         return jsonify({"status": "error", "message": "Faltan datos (grupo, horario o columna)."}), 400
 
@@ -2328,9 +2330,10 @@ def api_horarios_temporada_guardar():
         fila_actual = all_v[fila_idx - 1]
         texto_final = texto if texto is not None else (fila_actual[3].strip() if len(fila_actual) > 3 else '')
         color_final = color if color is not None else (fila_actual[4].strip() if len(fila_actual) > 4 else '')
-        sheet.update(f'A{fila_idx}:E{fila_idx}', [[grupo, horario, columna, texto_final, color_final]], value_input_option='USER_ENTERED')
+        notas_final = notas if notas is not None else (fila_actual[5].strip() if len(fila_actual) > 5 else '')
+        sheet.update(f'A{fila_idx}:F{fila_idx}', [[grupo, horario, columna, texto_final, color_final, notas_final]], value_input_option='USER_ENTERED')
     else:
-        sheet.append_row([grupo, horario, columna, texto or '', color or ''])
+        sheet.append_row([grupo, horario, columna, texto or '', color or '', notas or ''])
 
     return jsonify({"status": "success"})
 

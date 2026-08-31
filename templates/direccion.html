@@ -2697,9 +2697,11 @@
     </div>
 
     <!-- BOCADILLO EDITAR CELDA HORARIOS TEMPORADA -->
-    <div id="horTempPopover" style="display:none; position:fixed; background:white; border:1px solid #e2e8f0; border-radius:14px; box-shadow:0 18px 40px rgba(0,0,0,0.18); z-index:30000; width:260px; padding:16px;">
+    <div id="horTempPopover" style="display:none; position:fixed; background:white; border:1px solid #e2e8f0; border-radius:14px; box-shadow:0 18px 40px rgba(0,0,0,0.18); z-index:30000; width:280px; padding:16px;">
         <div id="horTempPopoverTitulo" style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase; margin-bottom:8px;"></div>
         <textarea id="horTempPopoverTexto" rows="2" style="width:100%; box-sizing:border-box; padding:9px; border-radius:8px; border:2px solid #f1f5f9; font-size:12px; font-family:inherit; resize:vertical; margin-bottom:10px;"></textarea>
+        <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:5px;"><i class="fas fa-comment-dots" style="margin-right:5px; color:#94a3b8;"></i>Notas / Comentarios</label>
+        <textarea id="horTempPopoverNotas" rows="2" placeholder="Añade una nota o comentario..." style="width:100%; box-sizing:border-box; padding:9px; border-radius:8px; border:2px solid #f1f5f9; font-size:11px; font-family:inherit; resize:vertical; margin-bottom:10px; color:#475569;"></textarea>
         <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:6px;">Color de fondo</label>
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
             <input type="color" id="horTempPopoverColor" value="#ffffff" style="width:36px; height:30px; border:1px solid #ddd; border-radius:6px; cursor:pointer; padding:2px;">
@@ -7971,6 +7973,7 @@
         document.getElementById('horTempPopoverTitulo').innerText = `${horTempSeleccion.size} celdas seleccionadas`;
         document.getElementById('horTempPopoverTexto').value = '';
         document.getElementById('horTempPopoverTexto').placeholder = 'Déjalo en blanco para no cambiar el texto de las celdas';
+        document.getElementById('horTempPopoverNotas').value = '';
         document.getElementById('horTempPopoverColor').value = '#ffffff';
         horTempRenderPaleta();
 
@@ -7997,7 +8000,7 @@
 
     function horTempCelda(grupo, horario, columna) {
         const datos = (horTempDatos[grupo] && horTempDatos[grupo][horario] && horTempDatos[grupo][horario][columna]) || {};
-        return { texto: datos.texto || '', color: datos.color || '' };
+        return { texto: datos.texto || '', color: datos.color || '', notas: datos.notas || '' };
     }
 
     async function horTempCargar() {
@@ -8091,6 +8094,7 @@
         const inputTexto = document.getElementById('horTempPopoverTexto');
         inputTexto.value = actual.texto;
         inputTexto.placeholder = '';
+        document.getElementById('horTempPopoverNotas').value = actual.notas || '';
         document.getElementById('horTempPopoverColor').value = actual.color || '#ffffff';
         horTempRenderPaleta();
 
@@ -8112,6 +8116,7 @@
         const color1 = document.getElementById('horTempPopoverColor').value;
         const color = color1.toLowerCase() === '#ffffff' ? '' : color1;
         const texto = document.getElementById('horTempPopoverTexto').value;
+        const notas = document.getElementById('horTempPopoverNotas').value;
 
         if (horTempContexto.multiple) {
             try {
@@ -8121,11 +8126,11 @@
                     const textoFinal = texto !== '' ? texto : actual.texto;
                     await fetch('/api/horarios_temporada', {
                         method: 'POST', headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ grupo, horario, columna, texto: textoFinal, color })
+                        body: JSON.stringify({ grupo, horario, columna, texto: textoFinal, color, notas })
                     });
                     horTempDatos[grupo] = horTempDatos[grupo] || {};
                     horTempDatos[grupo][horario] = horTempDatos[grupo][horario] || {};
-                    horTempDatos[grupo][horario][columna] = { texto: textoFinal, color };
+                    horTempDatos[grupo][horario][columna] = { texto: textoFinal, color, notas };
                 }
                 horTempSeleccion.clear();
                 horTempActualizarBarraSeleccion();
@@ -8142,11 +8147,11 @@
         try {
             await fetch('/api/horarios_temporada', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ grupo, horario, columna, texto, color })
+                body: JSON.stringify({ grupo, horario, columna, texto, color, notas })
             });
             horTempDatos[grupo] = horTempDatos[grupo] || {};
             horTempDatos[grupo][horario] = horTempDatos[grupo][horario] || {};
-            horTempDatos[grupo][horario][columna] = { texto, color };
+            horTempDatos[grupo][horario][columna] = { texto, color, notas };
             document.getElementById('horTempPopover').style.display = 'none';
             horTempRenderTodo();
             seguimientoEntrenamientosRender(horTempDatos);
