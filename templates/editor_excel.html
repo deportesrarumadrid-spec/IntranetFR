@@ -283,6 +283,8 @@ async function guardarEnTarea() {
         if (!d.ok) { alert('Error del servidor: ' + d.error); return; }
 
         toast('✓ Guardado en la tarea');
+        // Señal al iframe del cronograma para que recargue los adjuntos
+        try { localStorage.setItem('crono_adj_updated', Date.now()); } catch(e) {}
     } catch(e) {
         alert('Error inesperado: ' + e);
     } finally {

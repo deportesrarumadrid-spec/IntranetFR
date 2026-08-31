@@ -146,6 +146,34 @@
         <div id="adjRapidoCont" style="padding:10px;display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;"></div>
     </div>
 
+    <!-- Popup detalle tarea (clic izquierdo) -->
+    <div id="tareaDetalleOverlay" style="display:none;position:fixed;inset:0;z-index:20000;" onclick="cerrarDetalleTarea()"></div>
+    <div id="tareaDetallePopup" style="display:none;position:fixed;z-index:20001;background:white;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.28);width:340px;max-width:96vw;overflow:hidden;">
+        <!-- Cabecera -->
+        <div id="tareaDetalleCab" style="background:#1e293b;padding:14px 16px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+            <div style="flex:1;min-width:0;">
+                <div id="tareaDetalleCat" style="font-size:9px;font-weight:900;color:#94a3b8;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;"></div>
+                <div id="tareaDetalleTitulo" style="font-size:13px;font-weight:900;color:white;line-height:1.3;word-break:break-word;"></div>
+                <div id="tareaDetalleFecha" style="font-size:10px;color:#64748b;margin-top:5px;"></div>
+            </div>
+            <button onclick="cerrarDetalleTarea()" style="background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;line-height:1;flex-shrink:0;padding:0;">&times;</button>
+        </div>
+        <!-- Adjuntos -->
+        <div style="padding:12px 14px;">
+            <div style="font-size:9px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;"><i class="fas fa-paperclip" style="margin-right:5px;"></i>Adjuntos</div>
+            <div id="tareaDetallAdjList" style="display:flex;flex-direction:column;gap:5px;max-height:180px;overflow-y:auto;margin-bottom:10px;">
+                <div style="color:#94a3b8;font-size:11px;font-style:italic;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>
+            </div>
+            <!-- Botones acción -->
+            <div style="display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid #f1f5f9;padding-top:10px;">
+                <button id="btnDetAdjuntar" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;background:#f8fafc;border:1.5px dashed #cbd5e1;color:#475569;font-size:10px;font-weight:800;padding:7px 10px;cursor:pointer;border-radius:7px;font-family:inherit;" onclick="detalleTareaAdjuntar()"><i class="fas fa-paperclip"></i> Adjuntar</button>
+                <button id="btnDetExcel" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;background:#f0fdf4;border:1.5px solid #86efac;color:#16a34a;font-size:10px;font-weight:800;padding:7px 10px;cursor:pointer;border-radius:7px;font-family:inherit;" onclick="detalleTareaExcel()"><i class="fas fa-file-excel"></i> Nuevo Excel</button>
+                <button id="btnDetEditar" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;background:#f8fafc;border:1.5px solid #e2e8f0;color:#1e293b;font-size:10px;font-weight:800;padding:7px 10px;cursor:pointer;border-radius:7px;font-family:inherit;" onclick="detalleTareaEditar()"><i class="fas fa-pencil"></i> Editar</button>
+            </div>
+            <input type="file" id="detalleFileInput" style="display:none;" multiple onchange="detalleSubirAdjuntos(this.files)">
+        </div>
+    </div>
+
     <!-- Menú contextual clic derecho -->
     <div id="ctxMenu">
         <button id="ctxCheck"><i class="fa-solid fa-check" style="color:#28a745;"></i><span id="ctxCheckLabel">Completar</span></button>
@@ -792,9 +820,10 @@
                 div.dataset.evKey = evKey;
                 const _adjKeyA = _tareaKey(ev.FECHA_ISO || '', ev.RESPONSABLE || '', ev.TAREA || '');
                 const _hasAdjA = _adjuntosKeys.has(_adjKeyA);
+                div.dataset.adjKey = _adjKeyA;
                 div.innerHTML = `
                     <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;${isDone?'text-decoration:line-through;opacity:.45;':''}" title="${ev.TAREA||''}">${ev.TAREA||''}</span>
-                    ${_hasAdjA ? `<i class="fas fa-paperclip" style="font-size:13px;color:#475569;flex-shrink:0;cursor:pointer;" title="Ver adjuntos" onclick="event.stopPropagation();abrirAdjuntosRapido('${_adjKeyA.replace(/'/g,"\\'")}',this)" ></i>` : ''}
+                    ${_hasAdjA ? `<i class="fas fa-paperclip clip-adj-icon" style="font-size:13px;color:#475569;flex-shrink:0;cursor:pointer;" title="Ver adjuntos" onclick="event.stopPropagation();abrirAdjuntosRapido('${_adjKeyA.replace(/'/g,"\\'")}',this)"></i>` : ''}
                     ${isDone ? '<i class="fa-solid fa-check" style="font-size:13px;color:#28a745;flex-shrink:0;"></i>' : ''}`;
                 return div;
             }
@@ -994,8 +1023,170 @@
                 const r = await fetch('/api/tareas/adjuntos/todas');
                 const d = await r.json();
                 _adjuntosKeys = new Set(d.keys || []);
+                _actualizarTodosIconosAdj();
             } catch(e) {}
         }
+
+        function _actualizarTodosIconosAdj() {
+            document.querySelectorAll('.evento[data-adj-key]').forEach(div => {
+                const key = div.dataset.adjKey;
+                const tiene = _adjuntosKeys.has(key);
+                let clip = div.querySelector('.clip-adj-icon');
+                if (tiene && !clip) {
+                    clip = document.createElement('i');
+                    clip.className = 'fas fa-paperclip clip-adj-icon';
+                    clip.style.cssText = 'font-size:13px;color:#475569;flex-shrink:0;cursor:pointer;';
+                    clip.title = 'Ver adjuntos';
+                    clip.onclick = e => { e.stopPropagation(); abrirAdjuntosRapido(key, clip); };
+                    const checkIcon = div.querySelector('.fa-check');
+                    if (checkIcon) div.insertBefore(clip, checkIcon);
+                    else div.appendChild(clip);
+                } else if (!tiene && clip) {
+                    clip.remove();
+                }
+            });
+        }
+
+        // Señal desde el editor de Excel (nueva pestaña) para recargar adjuntos
+        window.addEventListener('storage', e => {
+            if (e.key === 'crono_adj_updated') _cargarAdjuntosKeys();
+        });
+
+        // ─── POPUP DETALLE TAREA (clic izquierdo) ────────────────────────────────
+
+        let _detalleKey = '';
+        let _detalleEvData = null;
+
+        document.addEventListener('click', function(e) {
+            const ev = e.target.closest('.evento[data-ev-key]');
+            if (!ev) return;
+            // No abrir si viene de un botón de acción o del icono paperclip
+            if (e.target.closest('button, a, .clip-adj-icon, .fa-check')) return;
+            e.stopPropagation();
+            const d = _evData[ev.dataset.evKey];
+            if (!d) return;
+            abrirDetalleTarea(d, ev);
+        });
+
+        async function abrirDetalleTarea(d, evEl) {
+            _detalleEvData = d;
+            _detalleKey = _tareaKey(d.fecha || '', d.user || '', d.tarea || '');
+
+            // Cabecera
+            const catColors = { deportiva:'#E31E24', deportivo:'#3b82f6', mk:'#a855f7', oficina:'#f59e0b', otros:'#64748b' };
+            const catColor = catColors[(d.cat||'otros').toLowerCase()] || '#64748b';
+            document.getElementById('tareaDetalleCat').innerHTML = `<span style="background:${catColor};color:white;padding:2px 8px;border-radius:4px;">${d.cat||'OTROS'}</span>`;
+            document.getElementById('tareaDetalleTitulo').textContent = d.tarea || '';
+            const fechaDisp = d.fecha ? d.fecha.split('T')[0].split('-').reverse().join('/') : (d.freq || '');
+            document.getElementById('tareaDetalleFecha').textContent = fechaDisp ? '📅 ' + fechaDisp : '';
+
+            // Posicionar popup
+            const popup = document.getElementById('tareaDetallePopup');
+            popup.style.display = 'block';
+            document.getElementById('tareaDetalleOverlay').style.display = 'block';
+
+            // Centrar o posicionar cerca del elemento
+            const r = evEl.getBoundingClientRect();
+            const pw = 340;
+            let left = r.left + window.scrollX;
+            let top  = r.bottom + window.scrollY + 6;
+            if (left + pw > window.innerWidth - 10) left = window.innerWidth - pw - 10;
+            if (left < 6) left = 6;
+            if (top + 360 > window.innerHeight) top = Math.max(6, r.top + window.scrollY - 360 - 6);
+            popup.style.left = left + 'px';
+            popup.style.top  = top  + 'px';
+
+            // Cargar adjuntos en vivo
+            await _cargarAdjDetalle();
+        }
+
+        async function _cargarAdjDetalle() {
+            const list = document.getElementById('tareaDetallAdjList');
+            list.innerHTML = '<div style="color:#94a3b8;font-size:11px;font-style:italic;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+            try {
+                const r = await fetch('/api/tareas/adjuntos?key=' + encodeURIComponent(_detalleKey));
+                const d = await r.json();
+                const archivos = d.archivos || [];
+                if (!archivos.length) {
+                    list.innerHTML = '<div style="color:#94a3b8;font-size:11px;font-style:italic;">Sin adjuntos</div>';
+                    return;
+                }
+                list.innerHTML = archivos.map(a => {
+                    const esJson = a.nombre.endsWith('.json');
+                    const href = esJson
+                        ? `/editor-excel?open=${encodeURIComponent(a.url)}&nombre=${encodeURIComponent(a.nombre.replace('.json',''))}`
+                        : a.url;
+                    const icono = _adjIcono(a.nombre);
+                    const color = esJson ? '#16a34a' : '#64748b';
+                    return `<div style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px;padding:6px 10px;">
+                        <i class="${icono}" style="color:${color};font-size:12px;width:14px;text-align:center;"></i>
+                        <a href="${href}" target="_blank" style="flex:1;font-size:10px;font-weight:700;color:#1e293b;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${a.nombre}">${a.nombre}</a>
+                        <button onclick="detalleEliminarAdj('${a.nombre.replace(/'/g,"\\'")}',this)" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:12px;padding:0;"><i class="fas fa-times"></i></button>
+                    </div>`;
+                }).join('');
+                // Actualizar icono paperclip en todas las tareas
+                _adjuntosKeys.add(_detalleKey);
+                _actualizarTodosIconosAdj();
+            } catch(e) {
+                list.innerHTML = '<div style="color:#E31E24;font-size:11px;">Error al cargar adjuntos</div>';
+            }
+        }
+
+        function cerrarDetalleTarea() {
+            document.getElementById('tareaDetallePopup').style.display = 'none';
+            document.getElementById('tareaDetalleOverlay').style.display = 'none';
+            _detalleEvData = null; _detalleKey = '';
+        }
+
+        function detalleTareaAdjuntar() {
+            document.getElementById('detalleFileInput').value = '';
+            document.getElementById('detalleFileInput').click();
+        }
+
+        async function detalleSubirAdjuntos(files) {
+            if (!files?.length) return;
+            const btn = document.getElementById('btnDetAdjuntar');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+            for (const f of files) {
+                const fd = new FormData();
+                fd.append('key', _detalleKey);
+                fd.append('archivo', f);
+                await fetch('/api/tareas/adjuntos/subir', { method:'POST', body:fd });
+            }
+            document.getElementById('detalleFileInput').value = '';
+            btn.innerHTML = '<i class="fas fa-paperclip"></i> Adjuntar';
+            btn.disabled = false;
+            await _cargarAdjDetalle();
+        }
+
+        async function detalleEliminarAdj(nombre, btnEl) {
+            btnEl.disabled = true;
+            await fetch('/api/tareas/adjuntos/eliminar', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ key: _detalleKey, nombre })
+            });
+            await _cargarAdjDetalle();
+        }
+
+        function detalleTareaExcel() {
+            if (!_detalleEvData) return;
+            const d = _detalleEvData;
+            const p = new URLSearchParams({ tarea: d.tarea, fecha: d.fecha, user: d.user, cat: d.cat });
+            window.open('/editor-excel?' + p.toString(), '_blank');
+        }
+
+        function detalleTareaEditar() {
+            if (!_detalleEvData) return;
+            const d = _detalleEvData;
+            cerrarDetalleTarea();
+            abrirEdicionTarea(d.user, d.fecha, d.tarea, d.cat, d.user, d.freq);
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') cerrarDetalleTarea();
+        });
+        // ─────────────────────────────────────────────────────────────────────────
 
         function abrirExcelDesdeTarea() {
             const tarea = (document.getElementById('taskName').value || '').trim();
@@ -1124,12 +1315,8 @@
 
         async function _actualizarBadgeAdjuntos() {
             try {
-                const r = await fetch('/api/tareas/adjuntos?key=' + encodeURIComponent(_tareaAdjKey));
-                const d = await r.json();
-                // Actualizar todos los eventos que tengan este key
-                document.querySelectorAll('[data-adj-key="' + CSS.escape(_tareaAdjKey) + '"]').forEach(el => {
-                    el.style.display = d.archivos?.length ? 'inline' : 'none';
-                });
+                _adjuntosKeys.add(_tareaAdjKey);
+                _actualizarTodosIconosAdj();
             } catch(e) {}
         }
         // ──────────────────────────────────────────────────────────────
