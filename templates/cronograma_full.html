@@ -148,7 +148,7 @@
 
     <!-- Popup detalle tarea (clic izquierdo) -->
     <div id="tareaDetalleOverlay" style="display:none;position:fixed;inset:0;z-index:20000;" onclick="cerrarDetalleTarea()"></div>
-    <div id="tareaDetallePopup" style="display:none;position:fixed;z-index:20001;background:white;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.28);width:340px;max-width:96vw;overflow:hidden;">
+    <div id="tareaDetallePopup" style="display:none;position:fixed;z-index:20001;background:white;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.28);width:480px;max-width:96vw;overflow:hidden;">
         <!-- Cabecera -->
         <div id="tareaDetalleCab" style="background:#1e293b;padding:14px 16px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
             <div style="flex:1;min-width:0;">
@@ -1049,7 +1049,12 @@
 
         // Señal desde el editor de Excel (nueva pestaña) para recargar adjuntos
         window.addEventListener('storage', e => {
-            if (e.key === 'crono_adj_updated') _cargarAdjuntosKeys();
+            if (e.key === 'crono_adj_updated') {
+                _cargarAdjuntosKeys();
+                if (document.getElementById('tareaDetallePopup').style.display !== 'none') {
+                    _cargarAdjDetalle();
+                }
+            }
         });
 
         // ─── POPUP DETALLE TAREA (clic izquierdo) ────────────────────────────────
@@ -1087,7 +1092,7 @@
 
             // Centrar o posicionar cerca del elemento
             const r = evEl.getBoundingClientRect();
-            const pw = 340;
+            const pw = 480;
             let left = r.left + window.scrollX;
             let top  = r.bottom + window.scrollY + 6;
             if (left + pw > window.innerWidth - 10) left = window.innerWidth - pw - 10;
@@ -1148,15 +1153,21 @@
             const btn = document.getElementById('btnDetAdjuntar');
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             btn.disabled = true;
+            let errMsg = '';
             for (const f of files) {
                 const fd = new FormData();
                 fd.append('key', _detalleKey);
                 fd.append('archivo', f);
-                await fetch('/api/tareas/adjuntos/subir', { method:'POST', body:fd });
+                try {
+                    const res = await fetch('/api/tareas/adjuntos/subir', { method:'POST', body:fd });
+                    const rd = await res.json();
+                    if (!rd.ok) errMsg += (rd.error || 'Error desconocido') + '\n';
+                } catch(e) { errMsg += 'Error de red: ' + e + '\n'; }
             }
             document.getElementById('detalleFileInput').value = '';
             btn.innerHTML = '<i class="fas fa-paperclip"></i> Adjuntar';
             btn.disabled = false;
+            if (errMsg) alert('Error al subir adjunto:\n' + errMsg.trim());
             await _cargarAdjDetalle();
         }
 

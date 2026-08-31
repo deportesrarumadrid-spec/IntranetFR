@@ -3624,10 +3624,17 @@ def archivos_ver(rel_path):
     except Exception as e:
         return str(e), 404
 
+def _tiene_acceso_editor():
+    u = (session.get('usuario') or '').lower()
+    p = session.get('permisos', {})
+    return (u == 'admin' or p.get('ARCHIVOS') == 'SI' or
+            p.get('CRONOGRAMA') == 'SI' or p.get('D.DEP') == 'SI' or
+            p.get('D.DEPORTIVA') == 'SI')
+
 @app.route('/editor-excel')
 def editor_excel():
     if not session.get('usuario'): return redirect(url_for('index'))
-    if not _tiene_acceso_archivos(): return "Acceso denegado", 403
+    if not _tiene_acceso_editor(): return "Acceso denegado", 403
     return render_template('editor_excel.html', usuario=session.get('usuario'))
 
 @app.route('/api/editor_excel/guardar', methods=['POST'])
