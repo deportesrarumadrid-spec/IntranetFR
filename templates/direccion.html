@@ -10035,6 +10035,10 @@
         });
         const ti = document.getElementById('tituloEquipoIndiv');
         if (ti) ti.textContent = equipo || '';
+        // Sincronizar selector oculto para que actualizarVistaCoordinacion sepa el equipo
+        const sel = document.getElementById('selectEquipoCoord');
+        if (sel) sel.value = equipo;
+        actualizarVistaCoordinacion();
         asistMatrizCargar(equipo);
     }
 
