@@ -15,7 +15,7 @@ perfiles_bp = Blueprint('perfiles_bp', __name__)
 EQUIPOS_CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'equipos_config.json')
 
 # Definición de las cabeceras esperadas en la hoja "PERFILES"
-PERFILES_HEADERS = ["USUARIO", "CONTRASEÑA", "ENTRENAMIENTOS", "ASISTENCIAS", "FINANCIERO", "D.DEPORTIVA", "SEL. EQ.", "CRONOGRAMA", "EQUIPO", "TELEFONO", "TIPO"]
+PERFILES_HEADERS = ["USUARIO", "CONTRASEÑA", "ENTRENAMIENTOS", "ASISTENCIAS", "FINANCIERO", "D.DEPORTIVA", "SEL. EQ.", "CRONOGRAMA", "EQUIPO", "TELEFONO", "TIPO", "D.DEP"]
 
 def get_perfiles_sheet():
     """
