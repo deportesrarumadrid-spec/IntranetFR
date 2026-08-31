@@ -1,19 +1,30 @@
-/* Modo oscuro — se aplica cuando <html> tiene la clase dark-mode */
+/* ================================================================
+   MODO OSCURO — Intranet Club Fuentelarreyna
+   Estrategia: invert(1) global → dobla-inversión en sidebar e imágenes
+   ================================================================ */
 
 html.dark-mode {
-    filter: invert(1) hue-rotate(180deg);
-    background: #111 !important;
+    filter: invert(1);
+    background: #000 !important;
 }
 
-/* Imágenes y vídeos: doble inversión para que se vean normales */
+/* ── Imágenes, vídeo y canvas: doble inversión → colores originales */
 html.dark-mode img,
 html.dark-mode video,
-html.dark-mode canvas,
-html.dark-mode .luckysheet-cells-area {
-    filter: invert(1) hue-rotate(180deg);
+html.dark-mode canvas {
+    filter: invert(1);
 }
 
-/* Iframes same-origin: también aplican dark-mode por localStorage */
-html.dark-mode iframe {
-    filter: none;
+/* ── Sidebar: doble inversión → vuelve a sus colores originales (rojo + blanco) */
+html.dark-mode .sidebar {
+    filter: invert(1);
 }
+
+/* ── Iframes same-origin: aplican dark-mode por sí solos vía localStorage */
+html.dark-mode iframe {
+    filter: none !important;
+}
+
+/* ── Scrollbars oscuros */
+html.dark-mode ::-webkit-scrollbar-track { background: #1a1a1a; }
+html.dark-mode ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
