@@ -4,6 +4,7 @@ import calendar
 import requests
 import re
 import io
+import time
 import threading
 import pdfplumber
 from bs4 import BeautifulSoup
@@ -121,6 +122,24 @@ def intentar_autosync_background():
 
     threading.Thread(target=_job, daemon=True).start()
     return True
+
+def start_midnight_sync():
+    """Lanza un hilo que sincroniza con RFFM automáticamente cada día a las 00:00."""
+    def _loop():
+        while True:
+            now = datetime.now()
+            siguiente = now.replace(hour=0, minute=0, second=30, microsecond=0)
+            if siguiente <= now:
+                siguiente = siguiente + timedelta(days=1)
+            time.sleep((siguiente - now).total_seconds())
+            try:
+                print("[RFFM] Sync automática medianoche iniciada", flush=True)
+                intentar_autosync_background()
+            except Exception as e:
+                print(f"[RFFM] Error sync medianoche: {e}", flush=True)
+    threading.Thread(target=_loop, daemon=True, name='rffm_midnight_sync').start()
+    print("[RFFM] Scheduler medianoche registrado", flush=True)
+
 
 def get_session():
     session = requests.Session()

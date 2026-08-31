@@ -4,3 +4,4 @@ __pycache__/
 .env
 secretos.json
 dropbox_config.json
+static/data/rffm_cache.json

@@ -4101,6 +4101,10 @@ def api_push_schedule_delete(sid):
 import push_scheduler as _push_scheduler_mod
 _push_scheduler_mod.start(app)
 
+# Sync RFFM automática a las 00:00 cada día
+from competicion_scraper import start_midnight_sync as _start_midnight_sync
+_start_midnight_sync()
+
 if __name__ == '__main__':
     _debug = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
     app.run(debug=_debug, host='0.0.0.0', port=5001, use_reloader=_debug)
