@@ -71,7 +71,13 @@ def auto_sync_status():
 
 
 def _datos_desactualizados():
+    # Si no existe el archivo de cache real, siempre está desactualizado
+    if not os.path.exists(CACHE_FILE):
+        return True
     cache = load_cached_data()
+    # Si el status es demo (datos ficticios), siempre desactualizado
+    if cache.get('status') == 'demo':
+        return True
     last_updated = (cache.get('last_updated') or '')[:19]  # quita sufijos tipo "(Mapeo Completo...)"
     if not last_updated:
         return True
