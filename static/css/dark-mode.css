@@ -1,0 +1,19 @@
+/* Modo oscuro — se aplica cuando <html> tiene la clase dark-mode */
+
+html.dark-mode {
+    filter: invert(1) hue-rotate(180deg);
+    background: #111 !important;
+}
+
+/* Imágenes y vídeos: doble inversión para que se vean normales */
+html.dark-mode img,
+html.dark-mode video,
+html.dark-mode canvas,
+html.dark-mode .luckysheet-cells-area {
+    filter: invert(1) hue-rotate(180deg);
+}
+
+/* Iframes same-origin: también aplican dark-mode por localStorage */
+html.dark-mode iframe {
+    filter: none;
+}

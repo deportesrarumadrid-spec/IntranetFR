@@ -483,6 +483,28 @@ def _security_headers(response):
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     return response
 
+_DARK_MODE_SCRIPT = (
+    '<script>'
+    'try{'
+    'if(localStorage.getItem("admin_dark_mode")==="1"){'
+    'document.documentElement.classList.add("dark-mode");'
+    'var _dml=document.createElement("link");'
+    '_dml.rel="stylesheet";_dml.href="/static/css/dark-mode.css";'
+    'document.head.appendChild(_dml);'
+    '}'
+    '}catch(e){}'
+    '</script>'
+)
+
+@app.after_request
+def _inject_dark_mode(response):
+    ct = response.content_type or ''
+    if 'text/html' in ct:
+        html = response.get_data(as_text=True)
+        if '<head>' in html:
+            response.set_data(html.replace('<head>', '<head>' + _DARK_MODE_SCRIPT, 1))
+    return response
+
 @app.route('/')
 def index():
     return render_template('login.html')

@@ -702,6 +702,7 @@
             <button class="confgen-tab-btn active" onclick="confGenTab('usuarios',this)" style="padding:12px 20px; border:none; background:none; font-weight:900; font-size:11px; text-transform:uppercase; cursor:pointer; color:#E31E24; border-bottom:2px solid #E31E24; margin-bottom:-2px; white-space:nowrap; font-family:inherit; letter-spacing:0.3px;"><i class="fas fa-user-lock" style="margin-right:6px;"></i>Usuarios y Contraseñas</button>
             <button class="confgen-tab-btn" onclick="confGenTab('accesos',this)" style="padding:12px 20px; border:none; background:none; font-weight:900; font-size:11px; text-transform:uppercase; cursor:pointer; color:#64748b; border-bottom:2px solid transparent; margin-bottom:-2px; white-space:nowrap; font-family:inherit; letter-spacing:0.3px;"><i class="fas fa-bolt" style="margin-right:6px;"></i>Accesos Directos</button>
             <button class="confgen-tab-btn" onclick="confGenTab('equipos',this)" style="padding:12px 20px; border:none; background:none; font-weight:900; font-size:11px; text-transform:uppercase; cursor:pointer; color:#64748b; border-bottom:2px solid transparent; margin-bottom:-2px; white-space:nowrap; font-family:inherit; letter-spacing:0.3px;"><i class="fas fa-shield-halved" style="margin-right:6px;"></i>Configuración de Equipos</button>
+            <button class="confgen-tab-btn" onclick="confGenTab('apariencia',this)" style="padding:12px 20px; border:none; background:none; font-weight:900; font-size:11px; text-transform:uppercase; cursor:pointer; color:#64748b; border-bottom:2px solid transparent; margin-bottom:-2px; white-space:nowrap; font-family:inherit; letter-spacing:0.3px;"><i class="fas fa-moon" style="margin-right:6px;"></i>Apariencia</button>
             <div id="tempBotonesBar" style="display:none;margin-left:auto;display:none;align-items:center;gap:6px;flex-wrap:wrap;">
                 <span style="font-size:10px;font-weight:700;color:#94a3b8;white-space:nowrap;">TEMPORADA:</span>
                 <div id="tempBotonesList" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
@@ -836,6 +837,29 @@
                 </div>
                 <div id="ecEquiposList" style="display:flex; flex-direction:column; gap:14px;"></div>
                 <div id="ecStatus" style="margin-top:14px; font-size:11px; font-weight:800;"></div>
+            </div>
+
+            <!-- TAB: APARIENCIA -->
+            <div id="confgen-tab-apariencia" class="confgen-tabcontent" style="display:none;">
+                <h3 style="margin:0 0 6px 0; font-size:14px; font-weight:900; color:#1e293b;"><i class="fas fa-moon" style="color:#E31E24; margin-right:8px;"></i>Apariencia</h3>
+                <p style="margin:0 0 28px 0; font-size:12px; color:#64748b;">Personaliza el aspecto visual de la intranet para tu sesión de admin.</p>
+
+                <!-- Modo oscuro -->
+                <div style="background:#f8fafc; border-radius:14px; padding:24px; border:1.5px solid #e2e8f0; max-width:480px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:16px;">
+                        <div>
+                            <div style="font-size:13px; font-weight:900; color:#1e293b; margin-bottom:4px;"><i class="fas fa-moon" style="margin-right:7px; color:#6366f1;"></i>Modo oscuro</div>
+                            <div style="font-size:11px; color:#64748b; line-height:1.5;">Invierte los colores de toda la intranet para reducir el brillo en entornos oscuros. Se aplica solo en este navegador.</div>
+                        </div>
+                        <!-- Toggle switch -->
+                        <label id="darkModeToggleLabel" style="position:relative; display:inline-block; width:52px; height:28px; flex-shrink:0; cursor:pointer;">
+                            <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode(this.checked)" style="opacity:0; width:0; height:0; position:absolute;">
+                            <span id="darkModeSlider" style="position:absolute; inset:0; background:#cbd5e1; border-radius:28px; transition:.3s; display:flex; align-items:center;">
+                                <span style="position:absolute; left:3px; width:22px; height:22px; background:white; border-radius:50%; transition:.3s; box-shadow:0 1px 4px rgba(0,0,0,.2); display:flex; align-items:center; justify-content:center; font-size:11px;" id="darkModeKnob">☀️</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -1797,6 +1821,43 @@
             if (tab === 'usuarios') cargarPerfilesCG();
             if (tab === 'accesos') cgCargarListaAccesos();
             if (tab === 'equipos') { ecCargar(); tempCargarBotones(); }
+            if (tab === 'apariencia') _initDarkModeToggle();
+        }
+
+        function _initDarkModeToggle() {
+            const cb = document.getElementById('darkModeToggle');
+            if (!cb) return;
+            const on = localStorage.getItem('admin_dark_mode') === '1';
+            cb.checked = on;
+            _applyDarkToggleStyle(on);
+        }
+
+        function _applyDarkToggleStyle(on) {
+            const slider = document.getElementById('darkModeSlider');
+            const knob   = document.getElementById('darkModeKnob');
+            if (!slider || !knob) return;
+            slider.style.background = on ? '#6366f1' : '#cbd5e1';
+            knob.style.left = on ? '27px' : '3px';
+            knob.textContent = on ? '🌙' : '☀️';
+        }
+
+        function toggleDarkMode(on) {
+            if (on) {
+                localStorage.setItem('admin_dark_mode', '1');
+                document.documentElement.classList.add('dark-mode');
+                if (!document.getElementById('_darkModeLink')) {
+                    const l = document.createElement('link');
+                    l.id = '_darkModeLink'; l.rel = 'stylesheet';
+                    l.href = '/static/css/dark-mode.css';
+                    document.head.appendChild(l);
+                }
+            } else {
+                localStorage.setItem('admin_dark_mode', '0');
+                document.documentElement.classList.remove('dark-mode');
+                const l = document.getElementById('_darkModeLink');
+                if (l) l.remove();
+            }
+            _applyDarkToggleStyle(on);
         }
 
         // -- Tab Usuarios --
