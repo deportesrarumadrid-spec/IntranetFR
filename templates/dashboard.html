@@ -554,7 +554,7 @@
         {% if session.get('permisos', {}).get('FINANCIERO') == 'SI' %}
         <a href="/financiero" class="menu-item {{ 'active' if request.path == '/financiero' }}" onclick="showLoader()">FINANCIERO</a>
         {% endif %}
-        {% if session.get('permisos', {}).get('D.DEPORTIVA') == 'SI' or usuario|lower == 'admin' %}
+        {% if session.get('permisos', {}).get('D.DEPORTIVA') == 'SI' or session.get('permisos', {}).get('D.DEP') == 'SI' or usuario|lower == 'admin' %}
         <a href="/direccion_deportiva" class="menu-item {{ 'active' if request.path == '/direccion_deportiva' }}" onclick="showLoader()">D. DEPORTIVA</a>
         {% endif %}
         {% if session.get('permisos', {}).get('ENTRENAMIENTOS') == 'SI' or session.get('permisos', {}).get('D.DEPORTIVA') == 'SI' or session.get('permisos', {}).get('D.DEP') == 'SI' or usuario|lower == 'admin' %}

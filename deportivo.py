@@ -570,9 +570,9 @@ def direccion_deportiva():
         return redirect('/')
 
     perms = session.get('permisos', {})
-    if perms.get('D.DEPORTIVA') != 'SI' and perms.get('ENTRENAMIENTOS') != 'SI' and usuario.lower() != 'admin':
+    if perms.get('D.DEPORTIVA') != 'SI' and perms.get('D.DEP') != 'SI' and perms.get('ENTRENAMIENTOS') != 'SI' and usuario.lower() != 'admin':
         return "Acceso denegado", 403
-    tiene_ddep = perms.get('D.DEPORTIVA') == 'SI' or usuario.lower() == 'admin'
+    tiene_ddep = perms.get('D.DEPORTIVA') == 'SI' or perms.get('D.DEP') == 'SI' or usuario.lower() == 'admin'
 
     try:
         # 1. Obtener lista de TODOS los equipos desde la pestaña EQUIPO (fuente de verdad)
