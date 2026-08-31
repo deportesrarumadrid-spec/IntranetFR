@@ -9705,8 +9705,16 @@
         return m;
     }
 
-    function fpFiltroRecuento(equipo) {
+    async function fpFiltroRecuento(equipo) {
         _fpRecuentoEquipo = equipo;
+        // Asegurar caché del equipo seleccionado
+        if (equipo && !_fpPosicionesCache[equipo]) {
+            try {
+                const r = await fetch(`/api/formaciones_indiv/jugadores_posicion?equipo=${encodeURIComponent(equipo)}`);
+                const d = await r.json();
+                _fpPosicionesCache[equipo] = d.posiciones || {};
+            } catch(e) { _fpPosicionesCache[equipo] = {}; }
+        }
         fpActualizarRecuento();
     }
 
@@ -9735,7 +9743,26 @@
 
         // Which equipo is active
         const activeEq = (_fpRecuentoEquipo && equipos.includes(_fpRecuentoEquipo)) ? _fpRecuentoEquipo : null;
-        const active = activeEq ? (stats[activeEq] || {jugadores:{}, posiciones:{}, meses:{}}) : _fpMergeStats(Object.values(stats));
+        let active = activeEq ? (stats[activeEq] || {jugadores:{}, posiciones:{}, meses:{}}) : _fpMergeStats(Object.values(stats));
+
+        // Si hay equipo seleccionado, enriquecer con plantilla (jugadores con 0 sesiones incluidos)
+        if (activeEq && _fpPosicionesCache[activeEq]) {
+            const cache = _fpPosicionesCache[activeEq];
+            const mergedJugadores = {...active.jugadores};
+            const mergedPosiciones = {...active.posiciones};
+            for (const [pos, jugs] of Object.entries(cache)) {
+                if (!pos || pos === 'Sin posición') continue;
+                if (!FP_POSICIONES_SIN_FORMACION.some(x => pos.toUpperCase().startsWith(x.toUpperCase()))) {
+                    if (!(pos in mergedPosiciones)) mergedPosiciones[pos] = 0;
+                }
+                for (const jug of (jugs || [])) {
+                    if (jug.nombre && !(jug.nombre in mergedJugadores)) {
+                        mergedJugadores[jug.nombre] = 0;
+                    }
+                }
+            }
+            active = {...active, jugadores: mergedJugadores, posiciones: mergedPosiciones};
+        }
 
         // Team filter buttons — ALL configured teams, even those with 0 sessions
         const btnBase = 'font-size:10px; font-weight:900; padding:4px 12px; border-radius:6px; cursor:pointer; font-family:inherit; border:1.5px solid';
@@ -9749,8 +9776,8 @@
             .sort((a,b) => b[1]-a[1])
             .map(([jug, cnt]) => `
                 <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid #f1f5f9;">
-                    <span style="color:#475569; font-weight:700; font-size:13px;">${jug}</span>
-                    <span style="font-weight:900; color:#E31E24; font-size:18px; min-width:28px; text-align:right;">${cnt}</span>
+                    <span style="color:${cnt?'#475569':'#94a3b8'}; font-weight:700; font-size:13px;">${jug}</span>
+                    <span style="font-weight:900; color:${cnt?'#E31E24':'#cbd5e1'}; font-size:${cnt?'18':'13'}px; min-width:28px; text-align:right;">${cnt||'-'}</span>
                 </div>`).join('');
 
         // Column 2: por posición
@@ -9758,8 +9785,8 @@
             .sort((a,b) => b[1]-a[1])
             .map(([pos, cnt]) => `
                 <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid #f1f5f9;">
-                    <span style="color:#475569; font-weight:700; font-size:13px; text-transform:uppercase;">${pos}</span>
-                    <span style="font-weight:900; color:#E31E24; font-size:18px; min-width:28px; text-align:right;">${cnt}</span>
+                    <span style="color:${cnt?'#475569':'#94a3b8'}; font-weight:700; font-size:13px; text-transform:uppercase;">${pos}</span>
+                    <span style="font-weight:900; color:${cnt?'#E31E24':'#cbd5e1'}; font-size:${cnt?'18':'13'}px; min-width:28px; text-align:right;">${cnt||'-'}</span>
                 </div>`).join('');
 
         // Column 3: por mes en horizontal
