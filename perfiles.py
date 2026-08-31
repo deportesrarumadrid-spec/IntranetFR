@@ -160,36 +160,29 @@ def update_perfil(username):
         else:
             pwd_a_guardar = existing_pwd
 
+        # D.DEP (col L, índice 11) — se incluye en el rango B:L para garantizar la escritura
+        ddep_raw = str(data_norm.get('D.DEP', found_row_data[11] if len(found_row_data) > 11 else '')).strip().upper()
+        ddep_to_save = ddep_raw if ddep_raw in ('SI', 'NO') else (found_row_data[11] if len(found_row_data) > 11 else '')
+        tipo_val = found_row_data[10] if len(found_row_data) > 10 else ''  # TIPO (col K) — preservar
+
         nuevos_valores_fila = [
             pwd_a_guardar,
             str(data_norm.get('ENTRENAMIENTOS', found_row_data[2] if len(found_row_data) > 2 else "NO")).upper(),
             str(data_norm.get('ASISTENCIAS', found_row_data[3] if len(found_row_data) > 3 else "NO")).upper(),
             str(data_norm.get('FINANCIERO', found_row_data[4] if len(found_row_data) > 4 else "NO")).upper(),
-            str(data_norm.get('D.DEPORTIVA', found_row_data[5] if len(found_row_data) > 5 else "NO")).upper(), # Index 5
-            str(data_norm.get('SEL. EQ.', found_row_data[6] if len(found_row_data) > 6 else "NO")).upper(), # Index 6
+            str(data_norm.get('D.DEPORTIVA', found_row_data[5] if len(found_row_data) > 5 else "NO")).upper(),
+            str(data_norm.get('SEL. EQ.', found_row_data[6] if len(found_row_data) > 6 else "NO")).upper(),
             str(data_norm.get('CRONOGRAMA', found_row_data[7] if len(found_row_data) > 7 else "NO")).upper(),
             str(data_norm.get('EQUIPO', found_row_data[8] if len(found_row_data) > 8 else "")).strip(),
-            str(data_norm.get('TELEFONO', found_row_data[9] if len(found_row_data) > 9 else "")).strip()
+            str(data_norm.get('TELEFONO', found_row_data[9] if len(found_row_data) > 9 else "")).strip(),
+            tipo_val,
+            ddep_to_save,
         ]
 
-        rango_a_actualizar = f"B{row_index}:J{row_index}"
-        print(f"DEBUG: Guardando cambios para {username} en fila {row_index}: {nuevos_valores_fila}")
+        rango_a_actualizar = f"B{row_index}:L{row_index}"
+        print(f"DEBUG: Guardando {username} fila {row_index} B:L → {nuevos_valores_fila}")
 
         sheet.update(values=[nuevos_valores_fila], range_name=rango_a_actualizar, value_input_option='USER_ENTERED')
-
-        # Guardar D.DEP si la columna existe en el sheet (no incluida en el rango B:J base)
-        # Matching flexible: busca el header que al quitar no-letras sea "DDEP" (D.DEP, D.DEP., DDEP, etc.)
-        headers_sheet = [str(h).strip().upper() for h in all_values[0]]
-        ddep_val = str(data_norm.get('D.DEP', '')).strip().upper()
-        if ddep_val in ('SI', 'NO'):
-            ddep_col = None
-            for ci, h in enumerate(headers_sheet):
-                h_clean = ''.join(c for c in h if c.isalpha())
-                if h_clean == 'DDEP':
-                    ddep_col = ci + 1
-                    break
-            if ddep_col:
-                sheet.update_cell(row_index, ddep_col, ddep_val)
 
         _invalidar_cache_perfiles()
         return jsonify({"status": "success", "message": "Perfil actualizado correctamente."})
