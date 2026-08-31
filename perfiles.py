@@ -178,11 +178,18 @@ def update_perfil(username):
         sheet.update(values=[nuevos_valores_fila], range_name=rango_a_actualizar, value_input_option='USER_ENTERED')
 
         # Guardar D.DEP si la columna existe en el sheet (no incluida en el rango B:J base)
+        # Matching flexible: busca el header que al quitar no-letras sea "DDEP" (D.DEP, D.DEP., DDEP, etc.)
         headers_sheet = [str(h).strip().upper() for h in all_values[0]]
         ddep_val = str(data_norm.get('D.DEP', '')).strip().upper()
-        if ddep_val in ('SI', 'NO') and 'D.DEP' in headers_sheet:
-            ddep_col = headers_sheet.index('D.DEP') + 1
-            sheet.update_cell(row_index, ddep_col, ddep_val)
+        if ddep_val in ('SI', 'NO'):
+            ddep_col = None
+            for ci, h in enumerate(headers_sheet):
+                h_clean = ''.join(c for c in h if c.isalpha())
+                if h_clean == 'DDEP':
+                    ddep_col = ci + 1
+                    break
+            if ddep_col:
+                sheet.update_cell(row_index, ddep_col, ddep_val)
 
         _invalidar_cache_perfiles()
         return jsonify({"status": "success", "message": "Perfil actualizado correctamente."})
