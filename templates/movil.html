@@ -678,8 +678,10 @@ async function renderSemana() {
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     const fin = new Date(lun); fin.setDate(lun.getDate()+6);
 
+    // Usar el jueves de la semana (ISO: representa el mes real de la semana)
+    const thu = new Date(lun); thu.setDate(lun.getDate() + 3);
     document.getElementById('monthLabel').textContent =
-        `${MESES_L[lun.getMonth()]} ${lun.getFullYear()}`;
+        `${MESES_L[thu.getMonth()]} ${thu.getFullYear()}`;
 
     const btnMes = document.getElementById('btnMesCompleto');
     if (btnMes) btnMes.textContent = mesCompleto ? 'Ver semana' : 'Ver mes completo';
@@ -906,7 +908,8 @@ function toggleMesDropdown() {
     // Generar meses: 12 meses atrás + 6 meses adelante desde hoy
     const hoy = new Date();
     const lun = getLunes(weekOffset);
-    const mesActual = { y: lun.getFullYear(), m: lun.getMonth() };
+    const thu = new Date(lun); thu.setDate(lun.getDate() + 3);
+    const mesActual = { y: thu.getFullYear(), m: thu.getMonth() };
     // Calcular el año de inicio de la temporada para el mes visualizado
     // Temporada: Sep(año X) → Jun(año X+1). Jul/Ago = inicio de temporada siguiente.
     const refM = lun.getMonth(); // mes visualizado
@@ -944,7 +947,8 @@ document.addEventListener('click', e => {
 let _lastObjMes = '';
 async function cargarObjetivos() {
     const lun = getLunes(weekOffset);
-    const mesKey = `${lun.getFullYear()}-${p2(lun.getMonth()+1)}`;
+    const thu = new Date(lun); thu.setDate(lun.getDate() + 3);
+    const mesKey = `${thu.getFullYear()}-${p2(thu.getMonth()+1)}`;
     if (mesKey === _lastObjMes) return;
     _lastObjMes = mesKey;
     const card = document.getElementById('objCard');
