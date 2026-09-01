@@ -3063,12 +3063,29 @@ def api_formaciones_jugadores_posicion():
 
         # Fallback: si JUGADORES no dio resultados, usar directamente MI EQUIPO
         if not result:
-            # Filtrar por equipo si tenemos esa info; si no, mostrar todos
             candidates = me_equipo_names if me_equipo_names else set(pos_lookup.keys())
             for nk in candidates:
                 nombre_orig = pos_lookup_orig.get(nk, nk)
                 pos = pos_lookup.get(nk, '') or 'Sin posición'
                 result.setdefault(pos, []).append({"nombre": nombre_orig, "count": contadores.get(nombre_orig, 0)})
+
+        # Fallback: si aún vacío, extraer jugadores únicos de ASISTENCIAS
+        if not result:
+            try:
+                sheet_asis = client.open(NOMBRE_EXCEL).worksheet("ASISTENCIAS")
+                asis_vals = sheet_asis.get_all_values()
+                nombres_asis = set()
+                for row in (asis_vals[1:] if asis_vals else []):
+                    eq_a = row[1].strip() if len(row) > 1 else ''
+                    nom_a = row[2].strip() if len(row) > 2 else ''
+                    if nom_a and normalizar_cabecera_universal(eq_a) == normalizar_cabecera_universal(equipo):
+                        nombres_asis.add(nom_a)
+                print(f"[formaciones] Fallback ASISTENCIAS: {len(nombres_asis)} jugadores para '{equipo}'")
+                for nombre in sorted(nombres_asis):
+                    pos = pos_lookup.get(_norm(nombre), '') or 'Sin posición'
+                    result.setdefault(pos, []).append({"nombre": nombre, "count": contadores.get(nombre, 0)})
+            except Exception as e:
+                print(f"[formaciones] Error leyendo ASISTENCIAS fallback: {e}")
 
         for pos in result:
             result[pos].sort(key=lambda x: x['count'])
