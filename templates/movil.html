@@ -157,8 +157,7 @@
         .asis-btn:active{transform:scale(.92);}
         .asis-btn.sel-SI{background:#dcfce7;border-color:#86efac;color:#15803d;}
         .asis-btn.sel-NO{background:#fee2e2;border-color:#fca5a5;color:#dc2626;}
-        .asis-btn.sel-EXC{background:#fef3c7;border-color:#fcd34d;color:#b45309;}
-        .asis-btn.sel-AV{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8;}
+        .asis-btn.sel-AV{background:#fff9c4;border-color:#fcd34d;color:#856404;}
         .save-bar{position:fixed;bottom:62px;left:0;right:0;padding:8px 14px;background:rgba(242,243,247,.95);backdrop-filter:blur(8px);border-top:1px solid var(--border);}
         .save-btn{width:100%;background:var(--red);color:white;border:none;border-radius:10px;padding:13px;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:inherit;}
         .save-btn:active{opacity:.85;}
@@ -188,8 +187,7 @@
         .npr-btn:active{opacity:.8;transform:scale(.94);}
         .nb-si{background:#16a34a;color:white;}
         .nb-no{background:#dc2626;color:white;}
-        .nb-exc{background:#ca8a04;color:white;}
-        .nb-av{background:#1d4ed8;color:white;}
+        .nb-av{background:#ffc107;color:#000;}
         .nb-none{background:#f1f5f9;color:#94a3b8;}
         .npr-trend{width:clamp(26px,7.7vw,34px);height:clamp(40px,11.3vw,50px);display:flex;align-items:center;justify-content:center;font-size:clamp(17px,5.1vw,23px);flex-shrink:0;cursor:pointer;border-radius:8px;transition:background .1s;}
         .npr-trend:active{background:#f1f5f9;}
@@ -1214,7 +1212,7 @@ function _patchAsis(dia, mes, nombre, estado, valoracion, motivo, charla) {
         _asisAllData.push({nombre, dia: diaN, mes: mesN, estado, valoracion, motivo, charla});
     }
 }
-const _CICLO_ESTADOS = ['SI','NO','EXC','AV',''];
+const _CICLO_ESTADOS = ['SI','NO','AV',''];
 const _DIAS_SEMANA = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 const _MESES_LABEL_A = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
 let balonesData = {};
@@ -1268,10 +1266,10 @@ async function cargarEstado() {
         const k = r.nombre.trim().toLowerCase();
         if (!stats[k]) stats[k] = {totalTemp:0,siExcTemp:0,totalMes:0,siExcMes:0,faltasMes:0,charlas:0,faltas:0};
         const s = stats[k];
-        s.totalTemp++; if (r.estado==='SI'||r.estado==='EXC') s.siExcTemp++;
-        if (r.estado==='NO') s.faltas++;
+        s.totalTemp++; if (r.estado==='SI') s.siExcTemp++;
+        if (r.estado==='NO'||r.estado==='AV') s.faltas++;
         if ((r.charla||'').toUpperCase()==='SI') s.charlas++;
-        if (String(r.mes)===String(mesNum)) { s.totalMes++; if(r.estado==='SI'||r.estado==='EXC') s.siExcMes++; if(r.estado==='NO') s.faltasMes++; }
+        if (String(r.mes)===String(mesNum)) { s.totalMes++; if(r.estado==='SI') s.siExcMes++; if(r.estado==='NO'||r.estado==='AV') s.faltasMes++; }
     });
 
 
@@ -1301,9 +1299,10 @@ async function cargarEstado() {
         const nombre = row.dataset.nombre || '';
         const k = nombre.trim().toLowerCase();
         const estado = estadoHoy[k] || '';
-        row.dataset.estado = estado;
+        const estadoDisplay = (estado === 'EXC') ? '' : estado;
+        row.dataset.estado = estadoDisplay;
         const btn = row.querySelector('.npr-btn');
-        if (btn) { btn.textContent = estado||'–'; btn.className = `npr-btn nb-${estado.toLowerCase()||'none'}`; }
+        if (btn) { btn.textContent = estadoDisplay||'–'; btn.className = `npr-btn nb-${estadoDisplay.toLowerCase()||'none'}`; }
 
         const tieneCharla = k in charlaHoy;
         row.dataset.charla = tieneCharla ? 'SI' : 'NO';

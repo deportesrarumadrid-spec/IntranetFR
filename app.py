@@ -1451,6 +1451,25 @@ def guardar_asistencia_masiva():
         print(f"Error crítico al guardar: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/api/migrar_exc', methods=['POST'])
+def migrar_exc():
+    if session.get('usuario', '').lower() != 'admin':
+        return jsonify({"status": "error", "message": "No autorizado"}), 403
+    try:
+        sheet = client.open(NOMBRE_EXCEL).worksheet("ASISTENCIAS")
+        actuales = sheet.get_all_values()
+        updates = []
+        for i, fila in enumerate(actuales):
+            if i == 0: continue
+            if len(fila) > 4 and fila[4].strip() == 'EXC':
+                updates.append({"range": f"E{i+1}", "values": [[""]]})
+        if updates:
+            sheet.batch_update(updates)
+        _asis_cache.clear()
+        return jsonify({"status": "success", "actualizadas": len(updates)}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route('/cambiar_equipo_jugador', methods=['POST'])
 def cambiar_equipo_jugador():
     if session.get('usuario', '').lower() != 'admin':
