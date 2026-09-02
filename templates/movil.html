@@ -600,11 +600,12 @@ function _esDiaEntreno(isoDate) {
 let FOTOS = new Set({{ fotos_subidas | tojson | safe }}.map(String));
 let _fotosKey = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
 async function _actualizarFotos(lun) {
-    const key = `${lun.getFullYear()}-${p2(lun.getMonth()+1)}`;
+    const thu = new Date(lun); thu.setDate(lun.getDate() + 3);
+    const key = `${thu.getFullYear()}-${p2(thu.getMonth()+1)}`;
     if (key === _fotosKey) return;
     _fotosKey = key;
     try {
-        const r = await fetch(`/api/fotos_mes?mes=${lun.getMonth()+1}&anio=${lun.getFullYear()}`);
+        const r = await fetch(`/api/fotos_mes?mes=${thu.getMonth()+1}&anio=${thu.getFullYear()}`);
         FOTOS = new Set((await r.json()).map(String));
     } catch(e) { FOTOS = new Set(); }
 }
@@ -612,11 +613,12 @@ async function _actualizarFotos(lun) {
 let PARTIDOS = new Set();
 let _partidosKey = '';
 async function _actualizarPartidos(lun) {
-    const key = `${lun.getFullYear()}-${p2(lun.getMonth()+1)}`;
+    const thu = new Date(lun); thu.setDate(lun.getDate() + 3);
+    const key = `${thu.getFullYear()}-${p2(thu.getMonth()+1)}`;
     if (key === _partidosKey) return;
     _partidosKey = key;
     try {
-        const r = await fetch(`/api/partidos_mes?mes=${lun.getMonth()+1}&anio=${lun.getFullYear()}`);
+        const r = await fetch(`/api/partidos_mes?mes=${thu.getMonth()+1}&anio=${thu.getFullYear()}`);
         PARTIDOS = new Set((await r.json()).map(String));
     } catch(e) { PARTIDOS = new Set(); }
 }
