@@ -241,6 +241,9 @@
             <i class="fas fa-user-tie"></i> STAFF
         </button>
         {% endif %}
+        <button onclick="exportarExcel()" style="padding: 9px 16px; border-radius: 8px; border: 2px solid #16a34a; background: #16a34a; color: white; font-weight: 900; font-size: 11px; cursor: pointer; margin-left: auto;">
+            <i class="fas fa-file-excel"></i> EXPORTAR EXCEL
+        </button>
     </div>
 
     <div id="contenedorConvocatorias" style="display: none; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); padding: 18px;"></div>
@@ -2414,6 +2417,72 @@ async function abrirModalSuplenciaStaff() {
     renderModalStaffAsis();
 }
 
+function exportarExcel() {
+    if (typeof XLSX === 'undefined') { alert('Librería Excel no cargada. Espera un momento y vuelve a intentarlo.'); return; }
+    const equipo = document.getElementById('selectEquipo').value;
+    if (!equipo) { alert('Selecciona un equipo primero.'); return; }
+    const selectMes = document.getElementById('selectMes');
+    const mesLabel = selectMes.options[selectMes.selectedIndex]?.text || '';
+
+    // Días: leer cabeceras del DOM
+    const thDias = [...document.querySelectorAll('#cabeceraDias .th-dia')];
+    const dias = thDias.map(th => {
+        const numEl = th.querySelector('.day-num-header');
+        const labelEl = th.querySelector('div:first-child');
+        const num = numEl ? numEl.textContent.trim() : '';
+        const lbl = labelEl ? labelEl.textContent.replace(/★/g,'').trim().split(' ')[0] : '';
+        return { num, lbl };
+    });
+
+    // Cabecera Excel
+    const headers = ['JUGADOR', '% MES', '% TEMP', 'CHARLAS', 'FALTAS'];
+    dias.forEach(d => {
+        headers.push(`${d.num} ${d.lbl} - ASIS`);
+        headers.push(`${d.num} ${d.lbl} - VAL`);
+        headers.push(`${d.num} ${d.lbl} - CHARLA`);
+    });
+
+    const dataRows = [];
+    document.querySelectorAll('#cuerpoTabla tr').forEach(tr => {
+        const spanNombre = tr.querySelector('.sticky-col span[data-nombre-original]');
+        if (!spanNombre) return;
+        const nombre = spanNombre.dataset.nombreOriginal || spanNombre.textContent.trim();
+        const percMes = tr.querySelector('.perc-mes')?.textContent?.trim() || '-';
+        const percTot = tr.querySelector('.perc-tot')?.textContent?.trim() || '-';
+        const charlas = tr.querySelector('.charlas-tot')?.textContent?.trim() || '0';
+        const faltas = tr.querySelector('.faltas-mes')?.textContent?.trim() || '0';
+        const row = [nombre, percMes, percTot, charlas, faltas];
+
+        const tdCells = tr.querySelectorAll('.td-asistencia');
+        tdCells.forEach(td => {
+            const celdaEl = td.querySelector('.celda-asistencia');
+            if (!celdaEl) {
+                // Baja: celda X o —
+                row.push('BAJA', '-', '-');
+            } else {
+                const estado = celdaEl.innerText.trim() === '-' ? '' : celdaEl.innerText.trim();
+                const val = td.querySelector('.btn-val')?.dataset?.valor || '-';
+                const charla = td.querySelector('.btn-charla')?.dataset?.valor || 'NO';
+                row.push(estado || '-', val === '-' ? '' : val, charla === 'NO' ? '' : 'SI');
+            }
+        });
+        dataRows.push(row);
+    });
+
+    if (!dataRows.length) { alert('No hay datos para exportar.'); return; }
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
+    ws['!cols'] = [
+        { wch: 32 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 7 },
+        ...dias.flatMap(() => [{ wch: 10 }, { wch: 10 }, { wch: 8 }])
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, 'Asistencias');
+    const filename = `Asistencias_${equipo.replace(/\s+/g,'_')}_${mesLabel.replace(/\s+/g,'_')}.xlsx`;
+    XLSX.writeFile(wb, filename);
+}
+
 </script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
 {% endblock %}
