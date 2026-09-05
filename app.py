@@ -2755,6 +2755,31 @@ def api_historico_jugadores():
         return jsonify({"temporadas": {}, "error": str(e)})
 
 
+@app.route('/api/historico_jugadores/eliminar', methods=['POST'])
+def api_historico_eliminar_jugador():
+    if session.get('usuario', '').lower() != 'admin':
+        return jsonify({"status": "error", "message": "No autorizado"}), 403
+    data = request.get_json() or {}
+    nombre = (data.get('nombre') or '').strip().upper()
+    temporada = (data.get('temporada') or '').strip()
+    if not nombre or not temporada:
+        return jsonify({"status": "error", "message": "nombre y temporada requeridos"}), 400
+    try:
+        with open(HISTORICO_FILE, 'r', encoding='utf-8') as f:
+            historico = json.load(f)
+        temp = historico.get('temporadas', {}).get(temporada)
+        if not temp:
+            return jsonify({"status": "error", "message": "Temporada no encontrada"}), 404
+        antes = len(temp.get('jugadores', []))
+        temp['jugadores'] = [j for j in temp.get('jugadores', []) if j.get('NOMBRE', '').strip().upper() != nombre]
+        despues = len(temp['jugadores'])
+        with open(HISTORICO_FILE, 'w', encoding='utf-8') as f:
+            json.dump(historico, f, ensure_ascii=False, indent=2)
+        return jsonify({"status": "success", "eliminados": antes - despues})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route('/api/temporadas', methods=['GET'])
 def api_temporadas_get():
     """Devuelve la lista de temporadas y la activa."""
