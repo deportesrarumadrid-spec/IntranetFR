@@ -7531,12 +7531,17 @@ function cargarPagosEnTabla() {
         }
 
         // ── Celdas 1-12: Meses de pago ──
-        const grupos = configMatch?.grupos || []; // [{grupo: [9,10,11]}, ...]
+        // Si el TIPO_PAGO del jugador es una forma de pago antigua (ej. "Efectivo"),
+        // usar la tarifa MENSUAL como defecto
+        const _configEfectiva = configMatch
+            || gridConfigData.find(c => c.tipo.toUpperCase() === 'MENSUAL')
+            || gridConfigData[0];
+        const grupos = _configEfectiva?.grupos || [];
         const tieneGrupos = grupos.some(g => Array.isArray(g) && g.length > 0);
 
         if (!tieneGrupos) {
             // MENSUAL (sin grupos) → mostrar importe en todos los meses excepto JUL y AGO
-            const importe = configMatch ? configMatch.importe : 49;
+            const importe = _configEfectiva ? _configEfectiva.importe : 49;
             for (let mIdx = 1; mIdx <= 12; mIdx++) {
                 const cell = celdas[MES_CEL[mIdx]];
                 if (!cell) continue;
@@ -7572,7 +7577,7 @@ function cargarPagosEnTabla() {
                 const anclaCell = celdas[MES_CEL[primerMes]];
                 if (!anclaCell) return;
 
-                const importe = configMatch.importe;
+                const importe = _configEfectiva ? _configEfectiva.importe : 49;
                 const concepto = primerMes < 10 ? '0' + primerMes : '' + primerMes;
                 const _ML = {1:'ENE',2:'FEB',3:'MAR',4:'ABR',5:'MAY',6:'JUN',9:'SEP',10:'OCT',11:'NOV',12:'DIC'};
 
