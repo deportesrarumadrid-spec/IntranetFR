@@ -29,8 +29,10 @@
         (function(){
             const equipos = [{% for equipo in equipos %}'{{ equipo }}'{% if not loop.last %},{% endif %}{% endfor %}];
             const _equipoDefecto = '{{ equipo_defecto or "" }}';
-            // El equipo de sesión (badge navbar) tiene prioridad siempre
-            let equipoActual = (_equipoDefecto && equipos.includes(_equipoDefecto)) ? _equipoDefecto
+            // localStorage tiene prioridad sobre sesión (permite persistir selección al recargar)
+            const _savedEquipo = localStorage.getItem('asis_equipo');
+            let equipoActual = (_savedEquipo && equipos.includes(_savedEquipo)) ? _savedEquipo
+                             : (_equipoDefecto && equipos.includes(_equipoDefecto)) ? _equipoDefecto
                              : (equipos.length ? equipos[0] : '');
             const cont = document.getElementById('customEquipoOptions');
             function renderEquipoOpciones(){
@@ -129,11 +131,14 @@
                 {v:'8',t:'AGOSTO',año:T_INI}
             ];
             window._MESES_ASIS = meses;
-            // Mes por defecto: mes actual si está en la temporada, si no Sep del inicio
+            // localStorage tiene prioridad; fallback al mes actual
+            const _savedMes = localStorage.getItem('asis_mes');
             const _hM = new Date().getMonth() + 1;
-            const _defM = meses.find(m => parseInt(m.v) === _hM) || meses[0];
+            const _defM = (_savedMes && meses.find(m => m.v === _savedMes))
+                        || meses.find(m => parseInt(m.v) === _hM)
+                        || meses[0];
             let mesActual = _defM.v;
-            // Actualizar select y label al valor por defecto
+            // Actualizar select y label
             const _sel0 = document.getElementById('selectMes');
             if (_sel0) { _sel0.value = mesActual; }
             const _lbl0 = document.getElementById('customMesLabel');
@@ -2140,11 +2145,9 @@ function calcularStats() {
 }
 
 window.onload = async function() {
-    const hoyReal = new Date();
-    const selectorMes = document.getElementById('selectMes');
     const select = document.getElementById('selectEquipo');
 
-    // 1. URL param tiene máxima prioridad
+    // URL param sobreescribe todo (incluso localStorage)
     const urlParams = new URLSearchParams(window.location.search);
     const equipoUrl = urlParams.get('equipo');
     if (equipoUrl && select) {
@@ -2152,10 +2155,6 @@ window.onload = async function() {
         for (let i = 0; i < select.options.length; i++) {
             if (select.options[i].value.trim().toUpperCase() === eUrl.toUpperCase()) {
                 select.selectedIndex = i;
-                if (selectorMes) {
-                    selectorMes.value = hoyReal.getMonth() + 1;
-                    if (!selectorMes.value) selectorMes.value = selectorMes.options[0].value;
-                }
                 await actualizarDiasDesdeConfig(eUrl);
                 hideLoader();
                 return;
@@ -2163,53 +2162,14 @@ window.onload = async function() {
         }
     }
 
-    // 2. localStorage: equipo y mes guardados por el usuario en esta sesión
-    const equipoGuardado = localStorage.getItem('asis_equipo');
-    const mesGuardado = localStorage.getItem('asis_mes');
-
-    if (equipoGuardado && select) {
-        let encontrado = false;
-        for (let i = 0; i < select.options.length; i++) {
-            if (select.options[i].value.trim().toUpperCase() === equipoGuardado.trim().toUpperCase()) {
-                select.selectedIndex = i;
-                encontrado = true;
-                break;
-            }
-        }
-        if (encontrado) {
-            if (selectorMes && mesGuardado) {
-                selectorMes.value = mesGuardado;
-                if (!selectorMes.value) selectorMes.value = hoyReal.getMonth() + 1;
-            } else if (selectorMes) {
-                selectorMes.value = hoyReal.getMonth() + 1;
-                if (!selectorMes.value) selectorMes.value = selectorMes.options[0].value;
-            }
-            try { await generarCalendario(); } catch(e) { console.error(e); hideLoader(); }
-            return;
-        }
-    }
-
-    // 3. Fallback: equipo de sesión (para usuarios no admin con equipo fijo)
-    if (selectorMes) {
-        selectorMes.value = hoyReal.getMonth() + 1;
-        if (!selectorMes.value) selectorMes.value = selectorMes.options[0].value;
-    }
-    const equipoDefecto = "{{ session.get('equipo_defecto', '') }}".trim();
-    if (equipoDefecto && select) {
-        for (let i = 0; i < select.options.length; i++) {
-            if (select.options[i].value.trim().toUpperCase() === equipoDefecto.toUpperCase()) {
-                select.selectedIndex = i;
-                await actualizarDiasDesdeConfig(equipoDefecto);
-                hideLoader();
-                return;
-            }
-        }
-    }
-
-    // 4. Primer equipo disponible
-    if (select && select.options.length > 1) {
+    // Los scripts inline ya inicializaron equipo y mes desde localStorage (o sesión/defecto).
+    // Solo hay que arrancar la carga del calendario con el estado ya fijado.
+    const equipo = select ? select.value : '';
+    if (equipo) {
+        try { await actualizarDiasDesdeConfig(equipo); } catch(e) { console.error(e); hideLoader(); }
+    } else if (select && select.options.length > 1) {
         select.selectedIndex = 1;
-        await generarCalendario();
+        try { await generarCalendario(); } catch(e) { console.error(e); hideLoader(); }
     } else {
         hideLoader();
     }
