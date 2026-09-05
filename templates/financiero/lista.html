@@ -1379,8 +1379,21 @@ let configuracionesPago = [];
 let configInscripciones = {};
 let configCuotasMes = {};
 
+const _CATEGORIAS_ORDEN = ['DEBUTANTES','PREBENJAMIN','BENJAMIN','ALEVIN F7','ALEVIN F11','INFANTIL','CADETE','JUVENIL','AFICIONADO'];
+
 function _getCategoriaEquipo(equipo) {
-    const partes = (equipo || '').trim().split(/\s+/);
+    const eq = (equipo || '').trim().toUpperCase();
+    if (eq.includes('F11'))                                   return 'ALEVIN F11';
+    if (eq.includes('F7') || eq.includes('FEMENINO'))        return 'ALEVIN F7';
+    if (eq.startsWith('ALEVIN'))                             return 'ALEVIN F7';
+    if (eq.startsWith('DEBUTANTE'))                          return 'DEBUTANTES';
+    if (eq.startsWith('PREBENJAMIN') || eq.startsWith('PRE BENJAMIN')) return 'PREBENJAMIN';
+    if (eq.startsWith('BENJAMIN'))                           return 'BENJAMIN';
+    if (eq.startsWith('INFANTIL'))                           return 'INFANTIL';
+    if (eq.startsWith('CADETE'))                             return 'CADETE';
+    if (eq.startsWith('JUVENIL'))                            return 'JUVENIL';
+    if (eq.startsWith('AFICIONADO'))                         return 'AFICIONADO';
+    const partes = eq.split(/\s+/);
     return partes.length > 1 ? partes.slice(0, -1).join(' ') : equipo;
 }
 function _getImporteInscripcion(equipo) {
@@ -11626,13 +11639,7 @@ const defaultColor = { bg: '#f1f5f9', text: '#64748b', border: '#e2e8f0' };
 function renderInscripcionesConfig() {
     const container = document.getElementById('gridInscripcionConfig');
     if (!container) return;
-    const equipos = [...new Set(Array.from(document.querySelectorAll('.fila-jugador')).map(f => f.dataset.equipo).filter(Boolean))];
-    const categorias = [...new Set(equipos.map(eq => _getCategoriaEquipo(eq)))].sort();
-    if (categorias.length === 0) {
-        container.innerHTML = '<span style="color:#94a3b8;font-size:11px;">No hay equipos registrados.</span>';
-        return;
-    }
-    container.innerHTML = categorias.map(cat => {
+    container.innerHTML = _CATEGORIAS_ORDEN.map(cat => {
         const val = parseFloat(configInscripciones[cat]) || 50;
         return `<div style="display:flex;flex-direction:column;align-items:center;gap:6px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;min-width:110px;">
             <span style="font-size:10px;font-weight:900;color:#475569;text-transform:uppercase;letter-spacing:.5px;">${cat}</span>
