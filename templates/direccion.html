@@ -4393,6 +4393,7 @@
 
     // Tab switching logic
     function switchTab(e, tabId) {
+        localStorage.setItem('dir_tab', tabId);
         try {
             document.querySelectorAll('.tab-content').forEach(c => {
                 c.style.display = 'none'; // Ensure it's hidden
@@ -4438,6 +4439,7 @@
     }
 
     function coordActivarSubTab(sub, btn) {
+        localStorage.setItem('dir_coord_sub', sub);
         document.querySelectorAll('.coord-subtab-btn').forEach(function(b) {
             b.style.background = '#f1f5f9'; b.style.color = '#475569';
         });
@@ -5722,6 +5724,7 @@
     // LÓGICA KPIS
     // ==========================================
     window.switchSubTab = function(evt, tabId) {
+        localStorage.setItem('dir_sub_tab', tabId);
         // Ocultar contenidos de subtabs
         document.querySelectorAll('.subtab-content').forEach(el => el.style.display = 'none');
         document.getElementById(tabId).style.display = tabId === 'subtab-gestion-estrategica' ? 'grid' : 'block';
@@ -8448,6 +8451,7 @@
     var obsSubActiva = 'finde';
 
     function obsActivarSubTab(sub, btn) {
+        localStorage.setItem('dir_obs_sub', sub);
         obsSubActiva = sub;
         document.querySelectorAll('.obs-subtab-btn').forEach(function(b) {
             b.style.background = ''; b.style.color = '';
@@ -8481,7 +8485,8 @@
             obsRenderCalendario();
             obsRenderStatsGlobal();
             obsRenderTemporada('obsEquiposGridFinde');
-            obsActivarSubTab('finde', document.querySelector('.obs-subtab-btn'));
+            const _obsSub = localStorage.getItem('dir_obs_sub') || 'finde';
+            obsActivarSubTab(_obsSub, document.querySelector(`.obs-subtab-btn[onclick*="${_obsSub}"]`) || document.querySelector('.obs-subtab-btn'));
         } catch (err) {
             document.getElementById('obsLoading').style.display = 'none';
             var errEl = document.getElementById('obsError');
@@ -11016,6 +11021,40 @@ async function asistMatrizCargar(equipo) {
         if (b && !p.contains(e.target) && !b.contains(e.target)) p.style.display = 'none';
     });
 })();
+
+// ── Restaurar pestaña activa tras refresco ─────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    const savedTab = localStorage.getItem('dir_tab');
+    if (!savedTab) return;
+
+    // 1. Restaurar pestaña principal
+    const mainEl = document.querySelector(`.tab-item[onclick*="'${savedTab}'"]`);
+    if (mainEl) switchTab({ currentTarget: mainEl }, savedTab);
+
+    // 2. Restaurar sub-pestaña de COORDINACIÓN
+    if (savedTab === 'tab-coordinacion') {
+        const sub = localStorage.getItem('dir_coord_sub');
+        if (sub) {
+            const btn = document.querySelector(`.coord-subtab-btn[onclick*="'${sub}'"]`);
+            coordActivarSubTab(sub, btn);
+        }
+    }
+
+    // 3. Restaurar sub-pestaña de D. DEPORTIVA
+    if (savedTab === 'tab-d-deportiva') {
+        const sub = localStorage.getItem('dir_sub_tab');
+        if (sub) {
+            const el = document.querySelector(`#tab-d-deportiva .tab-item[onclick*="'${sub}'"]`);
+            if (el) {
+                switchSubTab({ currentTarget: el }, sub);
+                if (sub === 'subtab-base-datos' && typeof bdCargar === 'function') bdCargar();
+                if (sub === 'subtab-loteria' && typeof lotInit === 'function') lotInit();
+                if (sub === 'subtab-material' && typeof matCargar === 'function') matCargar();
+            }
+        }
+    }
+    // Para tab-obj-semanales el sub-tab lo restaura objSemanalesCargar() via localStorage
+});
 </script>
 
 {% endblock %}
