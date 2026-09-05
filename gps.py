@@ -125,7 +125,8 @@ def obtener_equipos_gps():
     except Exception as e:
         print(f"Error leyendo carpetas GPS: {e}")
 
-    return sorted(equipos)
+    from app import ordenar_equipos
+    return ordenar_equipos(equipos)
 
 
 def get_gps_sheet():

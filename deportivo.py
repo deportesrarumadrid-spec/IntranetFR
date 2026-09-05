@@ -134,7 +134,8 @@ def deportivo():
                 start_row = 1 # Si hay cabecera, los datos empiezan en la segunda fila
 
             # Filtramos valores vacíos y la propia cabecera si está en la lista
-            equipos = sorted(list(set(str(row[idx_eq]).strip() for row in all_v[start_row:] if len(row) > idx_eq and str(row[idx_eq]).strip() and str(row[idx_eq]).strip().upper() != (headers[idx_eq] if start_row == 1 else ''))))
+            from app import ordenar_equipos
+            equipos = ordenar_equipos(list(set(str(row[idx_eq]).strip() for row in all_v[start_row:] if len(row) > idx_eq and str(row[idx_eq]).strip() and str(row[idx_eq]).strip().upper() != (headers[idx_eq] if start_row == 1 else ''))))
     except Exception as e:
         print(f"Error al cargar equipos en deportivo: {e}")
 
@@ -583,7 +584,8 @@ def direccion_deportiva():
             if rows_eq:
                 h_eq = normalizar_cabeceras_dep(rows_eq[0])
                 idx_e = h_eq.index("EQUIPO") if "EQUIPO" in h_eq else 0
-                equipos = sorted(list(set(str(r[idx_e]).strip() for r in rows_eq[1:] if len(r) > idx_e and r[idx_e].strip())))
+                from app import ordenar_equipos
+                equipos = ordenar_equipos(list(set(str(r[idx_e]).strip() for r in rows_eq[1:] if len(r) > idx_e and r[idx_e].strip())))
         except: pass
 
         # 2. Cargar jugadores para la gestión de datos
@@ -1391,9 +1393,10 @@ def api_kpis_deportivos():
                 "label": f"{MONTH_NAMES[int(parts[1])]} {parts[0]}"
             })
 
+        from app import ordenar_equipos
         return jsonify({
             "kpis": res_list,
-            "equipos": sorted(list(all_teams)),
+            "equipos": ordenar_equipos(list(all_teams)),
             "meses": dropdown_months
         })
 
@@ -1757,10 +1760,11 @@ def api_kpis_pagos():
         # Ordenar por equipo -> nombre
         result_jugadores.sort(key=lambda x: (x['equipo'].upper(), x['nombre'].upper()))
 
+        from app import ordenar_equipos
         season_months_out = [{'year': y, 'month': m, 'label': month_labels.get(m, str(m))} for (y, m) in season_months]
         return jsonify({
             'jugadores': result_jugadores,
-            'equipos': sorted(list(all_equipos)),
+            'equipos': ordenar_equipos(list(all_equipos)),
             'season_months': season_months_out
         })
 
@@ -1885,7 +1889,8 @@ def api_kpis_estadisticas():
                 "domicilio": (ficha_match["domicilio"] if ficha_match and ficha_match["domicilio"] else None)
             })
 
-        equipos = sorted(set(p["equipo"] for p in resultado))
+        from app import ordenar_equipos
+        equipos = ordenar_equipos(set(p["equipo"] for p in resultado))
         return jsonify({"jugadores": resultado, "equipos": equipos})
     except Exception as e:
         print(f"Error en api_kpis_estadisticas: {e}")
@@ -1996,7 +2001,8 @@ def clasificaciones():
         if all_v:
             headers = normalizar_cabeceras_dep(all_v[0])
             idx_eq = headers.index("EQUIPO") if "EQUIPO" in headers else 0
-            equipos = sorted(list(set(str(row[idx_eq]).strip() for row in all_v[1:] if len(row) > idx_eq and str(row[idx_eq]).strip())))
+            from app import ordenar_equipos
+            equipos = ordenar_equipos(list(set(str(row[idx_eq]).strip() for row in all_v[1:] if len(row) > idx_eq and str(row[idx_eq]).strip())))
     except Exception as e:
         print(f"Error cargando equipos en clasificaciones: {e}")
 
@@ -2897,7 +2903,8 @@ def api_material():
                     rows_eq = sheet_eq.get_all_values()
                     hdrs = normalizar_cabeceras_dep(rows_eq[0]) if rows_eq else []
                     idx_e = hdrs.index("EQUIPO") if "EQUIPO" in hdrs else 0
-                    equipos = sorted(list(set(str(r[idx_e]).strip() for r in rows_eq[1:] if len(r) > idx_e and r[idx_e].strip())))
+                    from app import ordenar_equipos
+                    equipos = ordenar_equipos(list(set(str(r[idx_e]).strip() for r in rows_eq[1:] if len(r) > idx_e and r[idx_e].strip())))
                 except Exception:
                     equipos = []
                 ws = client.open(nombre_excel).add_worksheet(title='MATERIAL', rows=100, cols=20)

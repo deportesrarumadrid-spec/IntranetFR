@@ -41,7 +41,8 @@ def formulario_partido():
                 headers = [str(h).strip().upper() for h in rows_eq[0]]
                 if "EQUIPO" in headers:
                     idx_e = headers.index("EQUIPO")
-                    equipos = sorted(list(set(str(r[idx_e]).strip() for r in rows_eq[1:] if len(r) > idx_e and r[idx_e].strip())))
+                    from app import ordenar_equipos
+                    equipos = ordenar_equipos(list(set(str(r[idx_e]).strip() for r in rows_eq[1:] if len(r) > idx_e and r[idx_e].strip())))
         except Exception as e:
             print(f"Error al cargar equipos para el formulario: {e}")
             equipos = ["PRIMER EQUIPO", "BENJAMIN A", "ALEVIN A", "INFANTIL A"] # Fallback

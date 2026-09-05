@@ -81,6 +81,25 @@ DIAS_MESES_IDENT = [
 ]
 
 # --- UTILIDADES DE NOTIFICACIÓN ---
+_CATS_ORDEN = ['AFICIONADO','JUVENIL','CADETE','INFANTIL','ALEVIN F11','ALEVIN F7','BENJAMIN','PREBENJAMIN','DEBUTANTE']
+
+def _cat_equipo(nombre):
+    n = (nombre or '').strip().upper()
+    if 'F11' in n:                                        return 'ALEVIN F11'
+    if 'F7' in n or 'FEMENINO' in n:                     return 'ALEVIN F7'
+    for cat in _CATS_ORDEN:
+        if n.startswith(cat):                             return cat
+    return 'ZZZ'
+
+def _key_equipo(nombre):
+    n = (nombre or '').strip().upper()
+    cat = _cat_equipo(n)
+    idx = _CATS_ORDEN.index(cat) if cat in _CATS_ORDEN else 99
+    return (idx, n)
+
+def ordenar_equipos(lista):
+    return sorted(lista, key=_key_equipo)
+
 def normalizar_id(texto):
     """Normaliza IDs de usuario quitando tildes, pasando a minúsculas y colapsando espacios."""
     if not texto: return ""
@@ -534,14 +553,13 @@ def seleccionar_equipo():
         actual_idx = idx_eq if found_header else 0
         start_row = 1 if found_header else 0
         
-        todos = sorted(list(set(str(row[actual_idx]).strip() for row in all_v[start_row:] if len(row) > actual_idx and str(row[actual_idx]).strip())))
+        todos = ordenar_equipos(list(set(str(row[actual_idx]).strip() for row in all_v[start_row:] if len(row) > actual_idx and str(row[actual_idx]).strip())))
         # Si el usuario tiene equipos asignados, mostrar solo esos (en el orden del perfil)
         permitidos = session.get('equipos_permitidos', [])
         if permitidos:
             permitidos_upper = [e.upper() for e in permitidos]
             equipos = [e for e in permitidos if e.upper() in [t.upper() for t in todos]]
-            # Añadir cualquier equipo de la lista que exista en el sistema aunque el orden difiera
-            equipos = sorted(equipos, key=lambda e: permitidos_upper.index(e.upper()) if e.upper() in permitidos_upper else 999)
+            equipos = ordenar_equipos(equipos)
         else:
             equipos = todos
     except Exception as e:
@@ -997,10 +1015,10 @@ def asistencias():
                     break
             s_row = 1 if i_eq != -1 else 0
             if i_eq == -1: i_eq = 0
-            equipos = sorted(list(set(str(r[i_eq]).strip() for r in rows_eq[s_row:] if len(r) > i_eq and str(r[i_eq]).strip())))
+            equipos = ordenar_equipos(list(set(str(r[i_eq]).strip() for r in rows_eq[s_row:] if len(r) > i_eq and str(r[i_eq]).strip())))
         else: equipos = []
     except:
-        equipos = sorted(list(set(row['EQUIPO'] for row in datos if row.get('EQUIPO'))))
+        equipos = ordenar_equipos(list(set(row['EQUIPO'] for row in datos if row.get('EQUIPO'))))
     
     # 3. Determinar equipo activo
     equipo_param = request.args.get('equipo')
@@ -2678,7 +2696,7 @@ def api_equipos_lista():
                         equipos.add(val)
             except Exception:
                 pass
-        return jsonify({"equipos": sorted(equipos)})
+        return jsonify({"equipos": ordenar_equipos(equipos)})
     except Exception as e:
         return jsonify({"equipos": [], "error": str(e)})
 

@@ -166,11 +166,13 @@ def financiero():
         if rows_eq:
             h_eq = normalizar_cabeceras(rows_eq[0])
             idx_e = h_eq.index("EQUIPO") if "EQUIPO" in h_eq else 0
-            equipos = sorted(list(set(str(r[idx_e]).strip() for r in rows_eq[1:] if len(r) > idx_e and r[idx_e].strip())))
+            from app import ordenar_equipos
+            equipos = ordenar_equipos(list(set(str(r[idx_e]).strip() for r in rows_eq[1:] if len(r) > idx_e and r[idx_e].strip())))
     except:
         # Fallback si falla la pestaña EQUIPO
+        from app import ordenar_equipos
         jugadores_temp = leer_hoja_limpia(client, NOMBRE_EXCEL, "JUGADORES")
-        equipos = sorted(list(set(j['EQUIPO'] for j in jugadores_temp if 'EQUIPO' in j)))
+        equipos = ordenar_equipos(list(set(j['EQUIPO'] for j in jugadores_temp if 'EQUIPO' in j)))
 
     jugadores = leer_hoja_limpia(client, NOMBRE_EXCEL, "JUGADORES")
     staff = leer_hoja_limpia(client, NOMBRE_EXCEL, "STAFF")
