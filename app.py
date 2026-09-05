@@ -1470,6 +1470,36 @@ def migrar_exc():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/api/eliminar_dia_asistencia', methods=['POST'])
+def eliminar_dia_asistencia():
+    if session.get('usuario', '').lower() != 'admin':
+        return jsonify({"status": "error", "message": "No autorizado"}), 403
+    data = request.get_json() or {}
+    equipo = (data.get('equipo') or '').strip().lower()
+    dia = int(data.get('dia', 0))
+    mes = int(data.get('mes', 0))
+    if not equipo or not dia or not mes:
+        return jsonify({"status": "error", "message": "Datos incompletos"}), 400
+    try:
+        sheet = client.open(NOMBRE_EXCEL).worksheet("ASISTENCIAS")
+        rows = sheet.get_all_values()
+        filas_borrar = []
+        for i, row in enumerate(rows):
+            if i == 0: continue
+            if len(row) < 2: continue
+            partes = row[0].split('/')
+            if len(partes) < 2: continue
+            try:
+                if int(partes[0]) == dia and int(partes[1]) == mes and row[1].strip().lower() == equipo:
+                    filas_borrar.append(i + 1)
+            except: continue
+        for fila in sorted(filas_borrar, reverse=True):
+            sheet.delete_rows(fila)
+        _asis_cache.pop(equipo, None)
+        return jsonify({"status": "success", "eliminadas": len(filas_borrar)}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route('/cambiar_equipo_jugador', methods=['POST'])
 def cambiar_equipo_jugador():
     if session.get('usuario', '').lower() != 'admin':
