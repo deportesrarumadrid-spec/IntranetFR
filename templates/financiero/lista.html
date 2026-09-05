@@ -1378,6 +1378,17 @@ let presupuestoData = [];
 let configuracionesPago = [];
 let configInscripciones = {};
 let configCuotasMes = {};
+
+function _getCategoriaEquipo(equipo) {
+    const partes = (equipo || '').trim().split(/\s+/);
+    return partes.length > 1 ? partes.slice(0, -1).join(' ') : equipo;
+}
+function _getImporteInscripcion(equipo) {
+    const cat = _getCategoriaEquipo(equipo);
+    return parseFloat(configInscripciones[cat])
+        || parseFloat(configInscripciones[equipo])
+        || 50;
+}
 let extraNames = { "STAFF_OTROS": "OTROS" };
 let staffSueldos = {};
 let staffExtrasCount = 1;
@@ -5805,7 +5816,7 @@ function actualizarBarraPagos() {
         if (esperadoIndividual === 0) {
             const keyOverride = `${equipo}-${item}`;
             if (!isStaff && item === 'Inscripción') {
-                esperadoIndividual = parseFloat(configInscripciones[equipo]) || 50;
+                esperadoIndividual = _getImporteInscripcion(equipo);
             } else if (configCuotasMes[keyOverride] !== undefined) {
                 esperadoIndividual = parseFloat(configCuotasMes[keyOverride]);
             } else if (!isStaff) {
@@ -7514,7 +7525,7 @@ function cargarPagosEnTabla() {
 
         // ── Celda 0: Inscripción ──
         const cellIns = celdas[0];
-        const valIns = parseFloat(configInscripciones[equipo]) || 50;
+        const valIns = _getImporteInscripcion(equipo);
         cellIns.innerText = `${Math.round(valIns)}€`;
         cellIns.style.color = '#ccc';
         cellIns.dataset.esperado = valIns;
@@ -8693,7 +8704,7 @@ function generarReporteImpagos() {
         if (incluyeInscr) {
             const cellInscrip = celdasPago[0];
             if (cellInscrip) {
-                const inscEsp = parseFloat(cellInscrip.dataset.esperado) || parseFloat(configInscripciones[equipoJugador]) || 50;
+                const inscEsp = parseFloat(cellInscrip.dataset.esperado) || _getImporteInscripcion(equipoJugador);
                 const inscPag = parseFloat(cellInscrip.dataset.importe) || 0;
                 const inscDeuda = Math.max(0, inscEsp - inscPag);
                 if (inscDeuda > 0.1) {
@@ -9571,7 +9582,7 @@ function renderPlayerPaymentGrid(playerData) {
     items.forEach(it => {
         let esp = 0;
         if (!isStaff) {
-            if (it.id === 'Inscripción') esp = configInscripciones[playerData.equipo] || 50;
+            if (it.id === 'Inscripción') esp = _getImporteInscripcion(playerData.equipo);
             else if (meses.includes(it.id)) esp = configCuotasMes[`${playerData.equipo}-${it.id}`] || 49;
             else esp = configCuotasMes[`${playerData.equipo}-${it.id}`] || 0;
         } else {
@@ -11475,6 +11486,18 @@ async function guardarPagoIndividual(btn) {
             </div>
         </div>
 
+        <!-- SECCIÓN: INSCRIPCIÓN POR CATEGORÍA -->
+        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; margin-bottom: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);">
+            <div style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; background: #fdfdfd;">
+                <h4 style="font-size: 12px; font-weight: 900; color: #475569; margin: 0; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-ticket-alt" style="color: #E31E24;"></i> Inscripción por Categoría
+                </h4>
+            </div>
+            <div id="gridInscripcionConfig" style="padding: 15px 20px; display: flex; flex-wrap: wrap; gap: 12px;">
+                <!-- Se rellena dinámicamente -->
+            </div>
+        </div>
+
         <div style="display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid #f1f5f9; padding-top: 20px; margin-top: 20px;">
             <button class="btn-fin" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 10px;" onclick="cerrarModalConfigurarTipoForma()">CANCELAR</button>
             <button class="btn-fin" style="background: #E31E24; color: white; padding: 12px 35px; border-radius: 10px; box-shadow: 0 4px 12px rgba(227,30,36,0.3);" onclick="guardarConfiguracionesGrid(this)">GUARDAR CAMBIOS</button>
@@ -11600,9 +11623,31 @@ const groupColors = [
 ];
 const defaultColor = { bg: '#f1f5f9', text: '#64748b', border: '#e2e8f0' };
 
+function renderInscripcionesConfig() {
+    const container = document.getElementById('gridInscripcionConfig');
+    if (!container) return;
+    const equipos = [...new Set(Array.from(document.querySelectorAll('.fila-jugador')).map(f => f.dataset.equipo).filter(Boolean))];
+    const categorias = [...new Set(equipos.map(eq => _getCategoriaEquipo(eq)))].sort();
+    if (categorias.length === 0) {
+        container.innerHTML = '<span style="color:#94a3b8;font-size:11px;">No hay equipos registrados.</span>';
+        return;
+    }
+    container.innerHTML = categorias.map(cat => {
+        const val = parseFloat(configInscripciones[cat]) || 50;
+        return `<div style="display:flex;flex-direction:column;align-items:center;gap:6px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;min-width:110px;">
+            <span style="font-size:10px;font-weight:900;color:#475569;text-transform:uppercase;letter-spacing:.5px;">${cat}</span>
+            <div style="display:inline-flex;align-items:center;background:white;border:1px solid #cbd5e1;border-radius:8px;padding:5px 10px;">
+                <input type="number" step="any" value="${val}" data-categoria="${cat}" oninput="configInscripciones['${cat}']=parseFloat(this.value)||0" style="width:55px;border:none;outline:none;font-weight:900;text-align:right;font-size:13px;color:#1e293b;background:transparent;">
+                <span style="font-weight:900;color:#64748b;font-size:13px;margin-left:4px;">€</span>
+            </div>
+        </div>`;
+    }).join('');
+}
+
 function abrirModalConfigurarTipoForma() {
     document.getElementById('modalConfigurarTipoForma').style.display = 'flex';
     renderGridConfig();
+    renderInscripcionesConfig();
 }
 
 function cerrarModalConfigurarTipoForma() {
@@ -11890,10 +11935,14 @@ async function guardarConfiguracionesGrid(btn) {
     btn.disabled = true;
 
     try {
-        // Leer importes directamente del DOM por si oninput no capturó el último valor
+        // Leer importes de tarifas del DOM
         document.querySelectorAll('#tablaGridConfig input[type="number"][data-tipo]').forEach(input => {
             const match = gridConfigData.find(c => c.tipo === input.dataset.tipo);
             if (match) match.importe = parseFloat(input.value) || 0;
+        });
+        // Leer importes de inscripción por categoría del DOM
+        document.querySelectorAll('#gridInscripcionConfig input[data-categoria]').forEach(input => {
+            configInscripciones[input.dataset.categoria] = parseFloat(input.value) || 0;
         });
         configuracionesPago = {
             formas: gridFormas,
@@ -12030,7 +12079,7 @@ function obtenerEsperadoConcepto(fila, concepto) {
     const equipo = fila.dataset.equipo;
     const keyOverride = `${equipo}-${concepto}`;
     if (concepto === 'Inscripción') {
-        return parseFloat(configInscripciones[equipo]) || 50;
+        return _getImporteInscripcion(equipo);
     } else if (configCuotasMes[keyOverride] !== undefined) {
         return parseFloat(configCuotasMes[keyOverride]);
     } else {
