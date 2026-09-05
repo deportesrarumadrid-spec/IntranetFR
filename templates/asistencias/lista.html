@@ -777,6 +777,8 @@ function parsearFechaLocal(str) {
 let vistaActualAsistConv = 'asistencias';
 
 function onCambioMesAsist() {
+    const mes = document.getElementById('selectMes').value;
+    if (mes) localStorage.setItem('asis_mes', mes);
     if (vistaActualAsistConv === 'staff') {
         abrirAsistenciasStaff();
     } else {
@@ -786,6 +788,7 @@ function onCambioMesAsist() {
 
 function onCambioEquipoAsistConv() {
     const equipo = document.getElementById('selectEquipo').value;
+    if (equipo) localStorage.setItem('asis_equipo', equipo);
     if (vistaActualAsistConv === 'convocatorias') {
         if (equipo) cargarYRenderConvocatorias(equipo, 'contenedorConvocatorias');
     } else if (vistaActualAsistConv === 'staff') {
@@ -2139,23 +2142,63 @@ function calcularStats() {
 window.onload = async function() {
     const hoyReal = new Date();
     const selectorMes = document.getElementById('selectMes');
-    if (selectorMes) {
-        const mesNum = hoyReal.getMonth() + 1;
-        selectorMes.value = mesNum;
-        if (!selectorMes.value) selectorMes.value = selectorMes.options[0].value;
+    const select = document.getElementById('selectEquipo');
+
+    // 1. URL param tiene máxima prioridad
+    const urlParams = new URLSearchParams(window.location.search);
+    const equipoUrl = urlParams.get('equipo');
+    if (equipoUrl && select) {
+        const eUrl = equipoUrl.trim();
+        for (let i = 0; i < select.options.length; i++) {
+            if (select.options[i].value.trim().toUpperCase() === eUrl.toUpperCase()) {
+                select.selectedIndex = i;
+                if (selectorMes) {
+                    selectorMes.value = hoyReal.getMonth() + 1;
+                    if (!selectorMes.value) selectorMes.value = selectorMes.options[0].value;
+                }
+                await actualizarDiasDesdeConfig(eUrl);
+                hideLoader();
+                return;
+            }
+        }
     }
 
-    // 1. Prioridad: Equipo en URL, luego Sesión
-    const urlParams = new URLSearchParams(window.location.search);
-    const equipoDefecto = (urlParams.get('equipo') || "{{ session.get('equipo_defecto', '') }}").trim();
+    // 2. localStorage: equipo y mes guardados por el usuario en esta sesión
+    const equipoGuardado = localStorage.getItem('asis_equipo');
+    const mesGuardado = localStorage.getItem('asis_mes');
 
-    const select = document.getElementById('selectEquipo');
+    if (equipoGuardado && select) {
+        let encontrado = false;
+        for (let i = 0; i < select.options.length; i++) {
+            if (select.options[i].value.trim().toUpperCase() === equipoGuardado.trim().toUpperCase()) {
+                select.selectedIndex = i;
+                encontrado = true;
+                break;
+            }
+        }
+        if (encontrado) {
+            if (selectorMes && mesGuardado) {
+                selectorMes.value = mesGuardado;
+                if (!selectorMes.value) selectorMes.value = hoyReal.getMonth() + 1;
+            } else if (selectorMes) {
+                selectorMes.value = hoyReal.getMonth() + 1;
+                if (!selectorMes.value) selectorMes.value = selectorMes.options[0].value;
+            }
+            try { await generarCalendario(); } catch(e) { console.error(e); hideLoader(); }
+            return;
+        }
+    }
+
+    // 3. Fallback: equipo de sesión (para usuarios no admin con equipo fijo)
+    if (selectorMes) {
+        selectorMes.value = hoyReal.getMonth() + 1;
+        if (!selectorMes.value) selectorMes.value = selectorMes.options[0].value;
+    }
+    const equipoDefecto = "{{ session.get('equipo_defecto', '') }}".trim();
     if (equipoDefecto && select) {
-        // Buscamos coincidencia exacta ignorando espacios laterales
         for (let i = 0; i < select.options.length; i++) {
             if (select.options[i].value.trim().toUpperCase() === equipoDefecto.toUpperCase()) {
                 select.selectedIndex = i;
-                // Primero actualizar los días de entrenamiento del equipo, luego generar
                 await actualizarDiasDesdeConfig(equipoDefecto);
                 hideLoader();
                 return;
@@ -2163,22 +2206,11 @@ window.onload = async function() {
         }
     }
 
-    // Recuperamos el último equipo si existe tras recargar
-    const ultimoEquipo = localStorage.getItem('ultimoEquipoAsistencias');
-    if (ultimoEquipo) {
-        const select = document.getElementById('selectEquipo');
-        select.value = ultimoEquipo;
-        try {
-            await generarCalendario();
-        } catch (e) {
-            console.error("Error al generar calendario en onload:", e);
-            hideLoader(); // Asegurarse de ocultar el loader incluso si hay un error
-        }
-        localStorage.removeItem('ultimoEquipoAsistencias'); // Limpiamos para no forzar siempre
-    } else if (document.getElementById('selectEquipo').options.length > 1) { // If there are teams, select the first one and generate
-        document.getElementById('selectEquipo').selectedIndex = 1; // Select the first actual team
+    // 4. Primer equipo disponible
+    if (select && select.options.length > 1) {
+        select.selectedIndex = 1;
         await generarCalendario();
-    } else { // If no team is selected and no teams are available, hide the loader
+    } else {
         hideLoader();
     }
 };
