@@ -8293,21 +8293,27 @@
     }
 
     async function horTempCargar() {
+        let recienCreado = false;
         try {
             const res = await fetch(_horTempApiUrl());
             const data = await res.json();
-            horTempDatos = (data.status === 'success' ? data.datos : {}) || {};
+            if (data.status === 'success') {
+                horTempDatos = data.datos || {};
+                recienCreado = data.nuevo === true;
+            }
+            // Si hay error de API, mantenemos horTempDatos como estaba (no borramos nada)
         } catch (e) {
-            horTempDatos = {};
+            console.warn('[horTempCargar] Error al cargar:', e);
         }
-        // Si el borrador está vacío, copiar automáticamente desde el oficial
-        if (horTempModo === 'borrador' && Object.keys(horTempDatos).length === 0) {
+        // Auto-copiar desde oficial SOLO si la hoja acaba de ser creada (nueva)
+        // NUNCA si simplemente hubo un error de carga — eso borraría cambios del usuario
+        if (horTempModo === 'borrador' && recienCreado) {
             try {
                 await fetch('/api/horarios_temporada_borrador/copiar_oficial', { method: 'POST' });
                 const res2 = await fetch('/api/horarios_temporada_borrador');
                 const data2 = await res2.json();
-                horTempDatos = (data2.status === 'success' ? data2.datos : {}) || {};
-            } catch (e2) {}
+                horTempDatos = (data2.status === 'success' ? data2.datos : horTempDatos) || horTempDatos;
+            } catch (e2) { console.warn('[horTempCargar] Error auto-copia:', e2); }
         }
         horTempRenderTodo();
         if (horTempModo === 'oficial') seguimientoEntrenamientosRender(horTempDatos);

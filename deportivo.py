@@ -2437,28 +2437,40 @@ def api_horarios_temporada_guardar():
 
 
 def _get_or_crear_sheet_horarios_borrador():
-    client = current_app.gs_client
+    client = current_app.gs_client._client  # raw, sin caché, datos frescos
     NOMBRE_EXCEL = current_app.gs_name
     try:
         return client.open(NOMBRE_EXCEL).worksheet("HORARIOS_TEMPORADA_BORRADOR")
     except Exception:
-        sheet = client.open(NOMBRE_EXCEL).add_worksheet(title="HORARIOS_TEMPORADA_BORRADOR", rows="1000", cols="6")
+        sheet = client.open(NOMBRE_EXCEL).add_worksheet(title="HORARIOS_TEMPORADA_BORRADOR", rows=1000, cols=6)
         sheet.append_row(["GRUPO", "HORARIO", "COLUMNA", "TEXTO", "COLOR", "NOTAS"])
         return sheet
 
 @deportivo_bp.route('/api/horarios_temporada_borrador', methods=['GET'])
 def api_horarios_borrador_get():
-    sheet = _get_or_crear_sheet_horarios_borrador()
-    all_v = sheet.get_all_values()
-    datos = {}
-    for row in all_v[1:]:
-        if len(row) < 3 or not row[0].strip(): continue
-        grupo, horario, columna = row[0].strip(), row[1].strip(), row[2].strip()
-        texto = row[3].strip() if len(row) > 3 else ''
-        color = row[4].strip() if len(row) > 4 else ''
-        notas = row[5].strip() if len(row) > 5 else ''
-        datos.setdefault(grupo, {}).setdefault(horario, {})[columna] = {"texto": texto, "color": color, "notas": notas}
-    return jsonify({"status": "success", "datos": datos})
+    nuevo = False
+    try:
+        client = current_app.gs_client._client
+        NOMBRE_EXCEL = current_app.gs_name
+        try:
+            sheet = client.open(NOMBRE_EXCEL).worksheet("HORARIOS_TEMPORADA_BORRADOR")
+        except Exception:
+            sheet = client.open(NOMBRE_EXCEL).add_worksheet(title="HORARIOS_TEMPORADA_BORRADOR", rows=1000, cols=6)
+            sheet.append_row(["GRUPO", "HORARIO", "COLUMNA", "TEXTO", "COLOR", "NOTAS"])
+            nuevo = True
+        all_v = sheet.get_all_values()
+        datos = {}
+        for row in all_v[1:]:
+            if len(row) < 3 or not row[0].strip(): continue
+            grupo, horario, columna = row[0].strip(), row[1].strip(), row[2].strip()
+            texto = row[3].strip() if len(row) > 3 else ''
+            color = row[4].strip() if len(row) > 4 else ''
+            notas = row[5].strip() if len(row) > 5 else ''
+            datos.setdefault(grupo, {}).setdefault(horario, {})[columna] = {"texto": texto, "color": color, "notas": notas}
+        return jsonify({"status": "success", "datos": datos, "nuevo": nuevo})
+    except Exception as e:
+        print(f"[BORRADOR GET] Error: {e}", flush=True)
+        return jsonify({"status": "error", "datos": {}, "nuevo": False, "message": str(e)})
 
 @deportivo_bp.route('/api/horarios_temporada_borrador', methods=['POST'])
 def api_horarios_borrador_guardar():
