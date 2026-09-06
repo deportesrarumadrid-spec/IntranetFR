@@ -797,7 +797,7 @@ def api_revision_objetivos():
         "fotos_subidas": fotos_subidas
     })
 
-@deportivo_bp.route('/api/ejercicios_semanales', methods=['GET', 'POST'])
+@deportivo_bp.route('/api/ejercicios_semanales', methods=['GET', 'POST', 'DELETE'])
 def api_ejercicios_semanales():
     client = current_app.gs_client
     NOMBRE_EXCEL = current_app.gs_name
@@ -873,6 +873,85 @@ def api_ejercicios_semanales():
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+_EJE_PUSH_LOG = os.path.join('static', 'data', 'ejercicios_push_log.json')
+
+def _load_eje_push_log():
+    if not os.path.exists(_EJE_PUSH_LOG):
+        return {}
+    try:
+        with open(_EJE_PUSH_LOG, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def _save_eje_push_log(data):
+    os.makedirs(os.path.dirname(_EJE_PUSH_LOG), exist_ok=True)
+    with open(_EJE_PUSH_LOG, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+@deportivo_bp.route('/api/ejercicios_push_grupo', methods=['POST'])
+def api_ejercicios_push_grupo():
+    usuario = session.get('usuario')
+    if not usuario:
+        return jsonify({"status": "error"}), 401
+    data = request.json or {}
+    grupo = data.get('grupo', '')          # 'f7' o 'f11'
+    semana = data.get('semana', '')        # DD/MM/YYYY
+    equipos = data.get('equipos', [])      # lista de equipos seleccionados
+    texto_tpl = data.get('texto', 'Ya tienes disponible la planificación semanal de ejercicios del equipo {equipo}. ¡Accede para verla!')
+    link = data.get('link', 'https://intranet.clubfuentelarreyna.com/movil')
+    if not grupo or not equipos:
+        return jsonify({"status": "error", "message": "Faltan datos"}), 400
+    try:
+        from app import enviar_push
+        client = current_app.gs_client
+        NOMBRE_EXCEL = current_app.gs_name
+        perfiles_sheet = client.open(NOMBRE_EXCEL).worksheet("PERFILES")
+        perfiles_data = perfiles_sheet.get_all_records()
+        enviados = []
+        for equipo in equipos:
+            equipo_up = equipo.strip().upper()
+            coaches = [
+                p for p in perfiles_data
+                if equipo_up in [e.strip().upper() for e in str(p.get('EQUIPO', '')).split(',')]
+                and str(p.get('TIPO', '')).strip().upper() == 'ENTRENADOR'
+            ]
+            for coach in coaches:
+                nombre = str(coach.get('USUARIO', '')).strip()
+                if not nombre:
+                    continue
+                msg = texto_tpl.replace('{nombre}', nombre).replace('{equipo}', equipo)
+                if link:
+                    msg += f"\n\n{link}"
+                enviar_push(nombre.lower(), msg)
+                enviados.append(nombre)
+        # Guardar registro
+        log = _load_eje_push_log()
+        if grupo not in log:
+            log[grupo] = {}
+        if semana not in log[grupo]:
+            log[grupo][semana] = []
+        log[grupo][semana].append({
+            "fecha": datetime.now().isoformat(),
+            "equipos": equipos,
+            "enviados": enviados
+        })
+        _save_eje_push_log(log)
+        return jsonify({"status": "ok", "enviados": len(enviados)})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@deportivo_bp.route('/api/ejercicios_push_registro')
+def api_ejercicios_push_registro():
+    usuario = session.get('usuario')
+    if not usuario:
+        return jsonify({"status": "error"}), 401
+    grupo = request.args.get('grupo', '')
+    semana = request.args.get('semana', '')
+    log = _load_eje_push_log()
+    registros = log.get(grupo, {}).get(semana, [])
+    return jsonify({"status": "ok", "registros": registros})
 
 @deportivo_bp.route('/api/upload_ejercicio', methods=['POST'])
 def api_upload_ejercicio():

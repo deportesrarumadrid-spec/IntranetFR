@@ -3162,7 +3162,7 @@
                 </div>
 
                 <!-- Categorías de Ejercicios (Contenedor de las 4 cajas) -->
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;" id="exerciseCategoriesContainer">
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;" id="exerciseCategoriesContainer" data-grupo="general">
                     <div class="cat-box disabled" onclick="mostrarSelectorCarga(0)">
                         <i class="fas fa-project-diagram" style="font-size: 24px; color: #E31E24; margin-bottom: 5px;"></i>
                         <div style="display: flex; align-items: center; gap: 8px;">
@@ -3200,10 +3200,55 @@
                         <div id="view_btn_container_3" style="margin-top: 10px;"></div>
                     </div>
                 </div>
+
+
+                <!-- ══ GRUPO FÚTBOL 7 ══ -->
+                <div style="border-top:2px solid #f1f5f9;padding-top:20px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+                        <div>
+                            <span style="font-size:13px;font-weight:900;color:#1e293b;">⚽ FÚTBOL 7</span>
+                            <span style="font-size:10px;color:#94a3b8;margin-left:8px;font-weight:600;">Prebenjamines · Benjamines · Alevines F7</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div id="grupoF7PushLog" style="font-size:10px;color:#94a3b8;"></div>
+                            <button onclick="enviarPushGrupo('f7')" style="padding:7px 14px;background:#1e293b;color:white;border:none;border-radius:8px;font-size:10px;font-weight:900;cursor:pointer;letter-spacing:.5px;">📲 ENVIAR PUSH</button>
+                        </div>
+                    </div>
+                    <div id="grupoF7Equipos" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px;" id="grupoF7Slots">
+                        <div class="cat-box" onclick="mostrarSelectorCargaGrupo('f7',0)" id="gf7_box_0"><i class="fas fa-project-diagram" style="font-size:22px;color:#E31E24;margin-bottom:5px;"></i><span id="gf7_txt_0" style="font-weight:900;font-size:11px;">JUGADA COMBINATIVA</span><div id="gf7_status_0" style="font-size:9px;color:#999;">VACÍO</div><div id="gf7_view_0" style="margin-top:8px;"></div></div>
+                        <div class="cat-box" onclick="mostrarSelectorCargaGrupo('f7',1)" id="gf7_box_1"><i class="fas fa-running" style="font-size:22px;color:#E31E24;margin-bottom:5px;"></i><span id="gf7_txt_1" style="font-weight:900;font-size:11px;">FISICO COORDINACIÓN</span><div id="gf7_status_1" style="font-size:9px;color:#999;">VACÍO</div><div id="gf7_view_1" style="margin-top:8px;"></div></div>
+                        <div class="cat-box" onclick="mostrarSelectorCargaGrupo('f7',2)" id="gf7_box_2"><i class="fas fa-shoe-prints" style="font-size:22px;color:#E31E24;margin-bottom:5px;"></i><span id="gf7_txt_2" style="font-weight:900;font-size:11px;">PIERNA NO HÁBIL</span><div id="gf7_status_2" style="font-size:9px;color:#999;">VACÍO</div><div id="gf7_view_2" style="margin-top:8px;"></div></div>
+                        <div class="cat-box" onclick="mostrarSelectorCargaGrupo('f7',3)" id="gf7_box_3"><i class="fas fa-plus-circle" style="font-size:22px;color:#E31E24;margin-bottom:5px;"></i><span id="gf7_txt_3" style="font-weight:900;font-size:11px;">EDITAR...</span><div id="gf7_status_3" style="font-size:9px;color:#999;">VACÍO</div><div id="gf7_view_3" style="margin-top:8px;"></div></div>
+                    </div>
+                </div>
+
+                <!-- ══ GRUPO FÚTBOL 11 ══ -->
+                <div style="border-top:2px solid #f1f5f9;padding-top:20px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+                        <div>
+                            <span style="font-size:13px;font-weight:900;color:#1e293b;">🏟️ FÚTBOL 11</span>
+                            <span style="font-size:10px;color:#94a3b8;margin-left:8px;font-weight:600;">Alevines F11 · Infantiles</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div id="grupoF11PushLog" style="font-size:10px;color:#94a3b8;"></div>
+                            <button onclick="enviarPushGrupo('f11')" style="padding:7px 14px;background:#1e293b;color:white;border:none;border-radius:8px;font-size:10px;font-weight:900;cursor:pointer;letter-spacing:.5px;">📲 ENVIAR PUSH</button>
+                        </div>
+                    </div>
+                    <div id="grupoF11Equipos" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px;" id="grupoF11Slots">
+                        <div class="cat-box" onclick="mostrarSelectorCargaGrupo('f11',0)" id="gf11_box_0"><i class="fas fa-project-diagram" style="font-size:22px;color:#E31E24;margin-bottom:5px;"></i><span id="gf11_txt_0" style="font-weight:900;font-size:11px;">JUGADA COMBINATIVA</span><div id="gf11_status_0" style="font-size:9px;color:#999;">VACÍO</div><div id="gf11_view_0" style="margin-top:8px;"></div></div>
+                        <div class="cat-box" onclick="mostrarSelectorCargaGrupo('f11',1)" id="gf11_box_1"><i class="fas fa-running" style="font-size:22px;color:#E31E24;margin-bottom:5px;"></i><span id="gf11_txt_1" style="font-weight:900;font-size:11px;">FISICO COORDINACIÓN</span><div id="gf11_status_1" style="font-size:9px;color:#999;">VACÍO</div><div id="gf11_view_1" style="margin-top:8px;"></div></div>
+                        <div class="cat-box" onclick="mostrarSelectorCargaGrupo('f11',2)" id="gf11_box_2"><i class="fas fa-shoe-prints" style="font-size:22px;color:#E31E24;margin-bottom:5px;"></i><span id="gf11_txt_2" style="font-weight:900;font-size:11px;">PIERNA NO HÁBIL</span><div id="gf11_status_2" style="font-size:9px;color:#999;">VACÍO</div><div id="gf11_view_2" style="margin-top:8px;"></div></div>
+                        <div class="cat-box" onclick="mostrarSelectorCargaGrupo('f11',3)" id="gf11_box_3"><i class="fas fa-plus-circle" style="font-size:22px;color:#E31E24;margin-bottom:5px;"></i><span id="gf11_txt_3" style="font-weight:900;font-size:11px;">EDITAR...</span><div id="gf11_status_3" style="font-size:9px;color:#999;">VACÍO</div><div id="gf11_view_3" style="margin-top:8px;"></div></div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
     <input type="file" id="inputImgEje" style="display:none" accept="image/*, .pdf" onchange="subirArchivoEjercicio(this)">
+    <input type="file" id="inputImgEjeGrupo" style="display:none" accept="image/*, .pdf" onchange="subirArchivoEjercicioGrupo(this)">
 </div>
 
 
@@ -3892,6 +3937,8 @@
     function abrirModalEjercicios() {
         document.getElementById('modalEjerciciosSemanales').style.display = 'flex';
         renderCalendarWeekly();
+        renderGrupoEquiposCheckboxes('f7');
+        renderGrupoEquiposCheckboxes('f11');
         // Auto-seleccionar la semana actual para disparar la carga de datos con el cargador global
         seleccionarSemana(new Date());
     }
@@ -3976,6 +4023,8 @@
         });
         checkAndEnableExerciseCategories();
         cargarEjerciciosSemana();
+        cargarEjerciciosGrupo('f7');
+        cargarEjerciciosGrupo('f11');
     }
 
     async function cargarEjerciciosSemana() {
@@ -4008,11 +4057,210 @@
                     renderVerButton(idx, item.url, item.titulo, item.descripcion);
                 }
             });
-        } catch (e) { 
-            console.error(e); 
+        } catch (e) {
+            console.error(e);
         } finally {
             hideLoader();
         }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // EJERCICIOS POR GRUPO (F7 / F11)
+    // ═══════════════════════════════════════════════════════
+    let _grupoUpload = null;
+    let _slotUpload  = -1;
+
+    function _equiposDeGrupo(grupo) {
+        return equiposList.filter(eq => {
+            const eu = eq.trim().toUpperCase();
+            if (grupo === 'f7') {
+                if (eu.includes('F11')) return false;
+                if (eu.includes('F7') || eu.includes('FEMENINO')) return true;
+                if (eu.startsWith('BENJAMIN') || eu.startsWith('PREBENJAMIN')) return true;
+                return false;
+            } else {
+                if (eu.includes('F11')) return true;
+                if (eu.startsWith('INFANTIL')) return true;
+                return false;
+            }
+        });
+    }
+
+    function renderGrupoEquiposCheckboxes(grupo) {
+        const gId = grupo === 'f7' ? 'F7' : 'F11';
+        const container = document.getElementById(`grupo${gId}Equipos`);
+        if (!container) return;
+        const eqs = _equiposDeGrupo(grupo);
+        container.innerHTML = eqs.map(eq => `
+            <label style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:#1e293b;
+                          background:#f1f5f9;border-radius:8px;padding:6px 10px;cursor:pointer;border:1px solid #e2e8f0;">
+                <input type="checkbox" class="check-eq-grp-${grupo}" value="${eq}" checked style="accent-color:#E31E24;">
+                ${eq}
+            </label>`).join('');
+    }
+
+    async function cargarEjerciciosGrupo(grupo) {
+        if (!semanaActiva) return;
+        const semanaStr = getSemanaStr();
+        const pfx = 'g' + grupo;
+        for (let i = 0; i < 4; i++) {
+            const st = document.getElementById(`${pfx}_status_${i}`);
+            const vw = document.getElementById(`${pfx}_view_${i}`);
+            if (st) { st.innerText = 'VACÍO'; st.style.color = '#999'; }
+            if (vw) vw.innerHTML = '';
+        }
+        try {
+            const res = await fetch(`{{ url_for('deportivo_bp.api_ejercicios_semanales') }}?semana=${encodeURIComponent(semanaStr)}`);
+            const data = await res.json();
+            data.forEach(item => {
+                const cat = String(item.categoria);
+                if (!cat.startsWith(grupo + '_')) return;
+                const idx = parseInt(cat.split('_')[1]);
+                if (isNaN(idx) || idx < 0 || idx > 3) return;
+                const st = document.getElementById(`${pfx}_status_${idx}`);
+                if (st) {
+                    st.innerText = '✓ GUARDADO';
+                    st.style.color = '#28a745';
+                    renderVerButtonGrupo(grupo, idx, item.url, item.titulo, item.descripcion);
+                }
+            });
+        } catch (e) { console.error(e); }
+        cargarRegistroPushGrupo(grupo);
+    }
+
+    function mostrarSelectorCargaGrupo(grupo, slotIdx) {
+        if (!semanaActiva) return alert('Selecciona primero una FECHA.');
+        _grupoUpload = grupo;
+        _slotUpload  = slotIdx;
+        document.getElementById('inputImgEjeGrupo').click();
+    }
+
+    async function subirArchivoEjercicioGrupo(input) {
+        if (!input.files || !input.files[0]) return;
+        const file = input.files[0];
+        const grupo = _grupoUpload;
+        const slotIdx = _slotUpload;
+        if (!grupo || slotIdx < 0) return;
+        const formData = new FormData();
+        formData.append('file', file);
+        showLoader();
+        try {
+            const res = await fetch("{{ url_for('deportivo_bp.api_upload_ejercicio') }}", { method: 'POST', body: formData });
+            if (!res.ok) throw new Error('Error subida');
+            const result = await res.json();
+            if (result.status === 'success') {
+                const equipos = _equiposDeGrupo(grupo).filter(eq => {
+                    const cb = document.querySelector(`.check-eq-grp-${grupo}[value="${eq}"]`);
+                    return !cb || cb.checked;
+                });
+                const semanaStr = getSemanaStr();
+                const pfx = 'g' + grupo;
+                const txtEl = document.getElementById(`${pfx}_txt_${slotIdx}`);
+                const titulo = txtEl ? txtEl.innerText : `SLOT ${slotIdx + 1}`;
+                await _guardarEjercicioGrupoInt(grupo, slotIdx, titulo, 'Archivo: ' + file.name, result.url, equipos, semanaStr);
+            }
+        } catch (e) { alert('Error al subir el archivo'); }
+        finally { hideLoader(); input.value = ''; }
+    }
+
+    async function _guardarEjercicioGrupoInt(grupo, slotIdx, titulo, descripcion, url, equipos, semanaStr) {
+        const payload = {
+            semana: semanaStr || getSemanaStr(),
+            equipos: equipos,
+            categoria: `${grupo}_${slotIdx}`,
+            titulo: titulo,
+            descripcion: descripcion,
+            url: url
+        };
+        const res = await fetch("{{ url_for('deportivo_bp.api_ejercicios_semanales') }}", {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+            mostrarToastAutoguardado('EJERCICIO GUARDADO');
+            await cargarEjerciciosGrupo(grupo);
+        }
+    }
+
+    function renderVerButtonGrupo(grupo, slotIdx, url, titulo, descripcion) {
+        const pfx = 'g' + grupo;
+        const container = document.getElementById(`${pfx}_view_${slotIdx}`);
+        if (!container) return;
+        const t = (titulo || '').replace(/'/g, "\\'");
+        const d = (descripcion || '').replace(/'/g, "\\'").replace(/\n/g, '<br>');
+        container.innerHTML = `
+            <div style="display:flex;gap:6px;margin-top:6px;">
+                <button class="btn-fin" style="background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);color:white;padding:8px 6px;font-size:9px;border-radius:10px;flex:1.5;justify-content:center;"
+                        onclick="event.stopPropagation();abrirModalVerEjercicio('${url}','${t}','${d}')">
+                    <i class="fas fa-eye"></i> VER
+                </button>
+                <button class="btn-fin" style="background:#fff1f2;color:#e11d48;border:1px solid #fecdd3;padding:8px 5px;font-size:9px;border-radius:10px;width:34px;justify-content:center;"
+                        title="Eliminar" onclick="event.stopPropagation();eliminarEjercicioGrupo('${grupo}',${slotIdx})">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>`;
+    }
+
+    async function eliminarEjercicioGrupo(grupo, slotIdx) {
+        if (!confirm('¿Seguro que deseas eliminar este ejercicio?')) return;
+        const semanaStr = getSemanaStr();
+        showLoader();
+        try {
+            await fetch("{{ url_for('deportivo_bp.api_ejercicios_semanales') }}", {
+                method: 'DELETE',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ semana: semanaStr, categoria: `${grupo}_${slotIdx}` })
+            });
+            await cargarEjerciciosGrupo(grupo);
+        } catch (e) { console.error(e); }
+        finally { hideLoader(); }
+    }
+
+    async function enviarPushGrupo(grupo) {
+        if (!semanaActiva) return alert('Selecciona primero una semana.');
+        const equipos = _equiposDeGrupo(grupo).filter(eq => {
+            const cb = document.querySelector(`.check-eq-grp-${grupo}[value="${eq}"]`);
+            return !cb || cb.checked;
+        });
+        if (!equipos.length) return alert('No hay equipos para este grupo.');
+        showLoader();
+        try {
+            const res = await fetch("{{ url_for('deportivo_bp.api_ejercicios_push_grupo') }}", {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ grupo, semana: getSemanaStr(), equipos })
+            });
+            const d = await res.json();
+            if (d.status === 'ok') {
+                mostrarToastAutoguardado('PUSH ENVIADO A ENTRENADORES');
+                cargarRegistroPushGrupo(grupo);
+            } else {
+                alert('Error al enviar push: ' + (d.error || d.message || ''));
+            }
+        } catch (e) { alert('Error al enviar push'); }
+        finally { hideLoader(); }
+    }
+
+    async function cargarRegistroPushGrupo(grupo) {
+        if (!semanaActiva) return;
+        const semanaStr = getSemanaStr();
+        const gId = grupo === 'f7' ? 'F7' : 'F11';
+        const logEl = document.getElementById(`grupo${gId}PushLog`);
+        if (!logEl) return;
+        try {
+            const res = await fetch(`{{ url_for('deportivo_bp.api_ejercicios_push_registro') }}?grupo=${grupo}&semana=${encodeURIComponent(semanaStr)}`);
+            const d = await res.json();
+            const regs = d.registros || [];
+            if (regs.length === 0) {
+                logEl.innerText = '';
+            } else {
+                const ult = regs[regs.length - 1];
+                const fechaStr = (ult.fecha || '').substring(0, 16).replace('T', ' ');
+                const nEnviados = (ult.enviados || []).length;
+                logEl.innerText = `📲 Último push: ${fechaStr} (${nEnviados} enviados)`;
+            }
+        } catch (e) { /* ignore */ }
     }
 
     function editarNombreCategoria(idx) {

@@ -6,3 +6,4 @@ secretos.json
 dropbox_config.json
 static/data/rffm_cache.json
 static/data/push_schedule.json
+static/data/ejercicios_push_log.json
