@@ -559,11 +559,46 @@
     <button class="save-btn" id="btnGuardar" onclick="guardar()">Guardar asistencia</button>
 </div>
 
+<!-- ═══ PANEL CLASIFICACIÓN ═══ -->
+<div id="panelClasif" class="panel">
+    <div class="spacer" style="height:8px;"></div>
+
+    <!-- Próximo partido -->
+    <div class="card" id="clasiProxCard" style="padding:14px 16px;">
+        <div style="font-size:9px;font-weight:900;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Próximo Partido</div>
+        <div id="clasiProxContenido" style="text-align:center;color:#94a3b8;font-size:12px;font-weight:600;">Cargando…</div>
+    </div>
+
+    <!-- Clasificación -->
+    <div class="card" style="padding:14px 16px;overflow-x:auto;">
+        <div style="font-size:9px;font-weight:900;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Clasificación</div>
+        <div id="clasiTablaContenido" style="text-align:center;color:#94a3b8;font-size:12px;font-weight:600;">Cargando…</div>
+    </div>
+
+    <!-- IDA y VUELTA -->
+    <div class="card" style="padding:14px 16px;">
+        <div style="font-size:9px;font-weight:900;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Ida y Vuelta</div>
+        <div id="clasiIdaVueltaContenido" style="color:#94a3b8;font-size:12px;font-weight:600;">Cargando…</div>
+    </div>
+
+    <!-- Seguimiento Temporada -->
+    <div class="card" style="padding:14px 16px;">
+        <div style="font-size:9px;font-weight:900;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Seguimiento Temporada</div>
+        <div id="clasiSeguimientoContenido" style="color:#94a3b8;font-size:12px;font-weight:600;">Cargando…</div>
+    </div>
+
+    <div class="spacer"></div>
+</div>
+
 <!-- TAB BAR -->
 <nav class="tab-bar">
     <button class="tab-btn active" id="tabEnt" onclick="cambiarTab('ent')">
         <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <span class="tab-label">Entrenamientos</span>
+    </button>
+    <button class="tab-btn" id="tabClasif" onclick="cambiarTab('clasif')">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+        <span class="tab-label">Clasificación</span>
     </button>
     <button class="tab-btn" id="tabAsis" onclick="cambiarTab('asis')">
         <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
@@ -636,10 +671,158 @@ const MESES_L = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agost
 function cambiarTab(t) {
     document.getElementById('panelEnt').classList.toggle('active', t==='ent');
     document.getElementById('panelAsis').classList.toggle('active', t==='asis');
+    document.getElementById('panelClasif').classList.toggle('active', t==='clasif');
     document.getElementById('tabEnt').classList.toggle('active', t==='ent');
     document.getElementById('tabAsis').classList.toggle('active', t==='asis');
+    document.getElementById('tabClasif').classList.toggle('active', t==='clasif');
     const sb = document.getElementById('saveBar');
     if (sb) sb.style.display = 'none';
+    if (t === 'clasif') clasiCargar();
+}
+
+// ─── CLASIFICACIÓN ───
+let _clasiDatos = null;
+
+async function clasiCargar() {
+    if (_clasiDatos) { clasiRender(); return; }
+    try {
+        const r = await fetch('/api/movil/clasif_partido');
+        const d = await r.json();
+        if (d.status !== 'ok') throw new Error();
+        _clasiDatos = d;
+    } catch(e) {
+        _clasiDatos = null;
+        document.getElementById('clasiProxContenido').innerHTML = '<span style="color:#ef4444;">Error cargando datos</span>';
+        return;
+    }
+    clasiRender();
+}
+
+function clasiRender() {
+    if (!_clasiDatos) return;
+    clasiRenderProximo(_clasiDatos.proximo_partido);
+    clasiRenderTabla(_clasiDatos.clasificacion);
+    clasiRenderIdaVuelta(_clasiDatos.partidos);
+    clasiRenderSeguimiento(_clasiDatos.partidos);
+}
+
+function clasiRenderProximo(p) {
+    const el = document.getElementById('clasiProxContenido');
+    if (!p) { el.innerHTML = '<span>Sin próximo partido disponible</span>'; return; }
+    const esLocal = (p.es_local !== false);
+    const rival = p.rival || '–';
+    const fecha = p.fecha || '–';
+    const hora = p.hora || '';
+    const campo = p.campo || '';
+    const loc = esLocal ? 'LOCAL' : 'VISITANTE';
+    const locColor = esLocal ? '#16a34a' : '#E31E24';
+    el.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+            <span style="font-size:9px;font-weight:900;color:${locColor};letter-spacing:.8px;">${loc}</span>
+            <div style="font-size:16px;font-weight:900;color:var(--text);">vs ${rival}</div>
+            <div style="font-size:12px;font-weight:700;color:#64748b;">${fecha}${hora ? ' · ' + hora : ''}</div>
+            ${campo ? `<div style="font-size:10px;color:#94a3b8;font-weight:600;">📍 ${campo}</div>` : ''}
+        </div>`;
+}
+
+function clasiRenderTabla(clasif) {
+    const el = document.getElementById('clasiTablaContenido');
+    if (!clasif || !clasif.length) { el.innerHTML = '<span>Sin datos de clasificación</span>'; return; }
+    const equipo = '{{ equipo }}'.toUpperCase();
+    let html = `<table style="width:100%;border-collapse:collapse;font-size:9.5px;">
+        <thead><tr style="background:#1e293b;color:white;">
+            <th style="padding:5px 4px;text-align:left;">Pos</th>
+            <th style="padding:5px 4px;text-align:left;min-width:100px;">Equipo</th>
+            <th style="padding:5px 4px;">PJ</th><th style="padding:5px 4px;">G</th>
+            <th style="padding:5px 4px;">E</th><th style="padding:5px 4px;">P</th>
+            <th style="padding:5px 4px;">GF</th><th style="padding:5px 4px;">GC</th>
+            <th style="padding:5px 4px;font-weight:900;">Pts</th>
+        </tr></thead><tbody>`;
+    clasif.forEach((e, i) => {
+        const nombre = e.equipo || '–';
+        const esMio = nombre.toUpperCase().includes('FUENTELARREYNA');
+        const bg = esMio ? 'background:#fff7ed;font-weight:900;' : (i%2===0?'background:#f8fafc;':'');
+        const borde = esMio ? 'border-left:3px solid #E31E24;' : '';
+        html += `<tr style="${bg}${borde}">
+            <td style="padding:4px;text-align:center;">${e.posicion || i+1}</td>
+            <td style="padding:4px;font-weight:${esMio?'900':'600'};color:${esMio?'#E31E24':'var(--text)'};">${nombre}</td>
+            <td style="padding:4px;text-align:center;">${e.pj??'–'}</td>
+            <td style="padding:4px;text-align:center;">${e.pg??'–'}</td>
+            <td style="padding:4px;text-align:center;">${e.pe??'–'}</td>
+            <td style="padding:4px;text-align:center;">${e.pp??'–'}</td>
+            <td style="padding:4px;text-align:center;">${e.gf??'–'}</td>
+            <td style="padding:4px;text-align:center;">${e.gc??'–'}</td>
+            <td style="padding:4px;text-align:center;font-weight:900;">${e.puntos??'–'}</td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+}
+
+function clasiRenderIdaVuelta(partidos) {
+    const el = document.getElementById('clasiIdaVueltaContenido');
+    if (!partidos || !partidos.length) { el.innerHTML = '<span>Sin datos</span>'; return; }
+    // Solo partidos con ida_resultado (vuelta)
+    const vuelta = partidos.filter(p => p.ida_resultado);
+    if (!vuelta.length) { el.innerHTML = '<span style="color:#94a3b8;">Aún no hay datos de ida y vuelta</span>'; return; }
+    let html = '';
+    vuelta.forEach(p => {
+        const resultado = p.resultado || '–';
+        const idaRes = p.ida_resultado || '–';
+        const rival = p.rival || '–';
+        const cumplido = p.cumplido;
+        const color = cumplido === true ? '#16a34a' : cumplido === false ? '#E31E24' : '#94a3b8';
+        const icono = cumplido === true ? '✓' : cumplido === false ? '✗' : '–';
+        html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f1f5f9;">
+            <span style="font-size:16px;color:${color};font-weight:900;min-width:18px;text-align:center;">${icono}</span>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:11px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${rival}</div>
+                <div style="font-size:9.5px;color:#64748b;font-weight:600;">IDA: ${idaRes} · VUELTA: ${resultado}</div>
+            </div>
+        </div>`;
+    });
+    el.innerHTML = html;
+}
+
+function clasiRenderSeguimiento(partidos) {
+    const el = document.getElementById('clasiSeguimientoContenido');
+    if (!partidos || !partidos.length) { el.innerHTML = '<span>Sin datos</span>'; return; }
+    const jugados = partidos.filter(p => p.resultado);
+    if (!jugados.length) { el.innerHTML = '<span style="color:#94a3b8;">Aún no hay partidos jugados</span>'; return; }
+    const ganados = jugados.filter(p => p.cumplido === true).length;
+    const perdidos = jugados.filter(p => p.cumplido === false).length;
+    const pct = jugados.length ? Math.round(ganados/jugados.length*100) : 0;
+    let html = `<div style="display:flex;gap:10px;margin-bottom:12px;">
+        <div style="flex:1;text-align:center;background:#f0fdf4;border-radius:10px;padding:10px 6px;">
+            <div style="font-size:22px;font-weight:900;color:#16a34a;">${ganados}</div>
+            <div style="font-size:8px;color:#94a3b8;font-weight:900;letter-spacing:.5px;">OBJETIVOS</div>
+        </div>
+        <div style="flex:1;text-align:center;background:#fef2f2;border-radius:10px;padding:10px 6px;">
+            <div style="font-size:22px;font-weight:900;color:#E31E24;">${perdidos}</div>
+            <div style="font-size:8px;color:#94a3b8;font-weight:900;letter-spacing:.5px;">NO CUMPLIDOS</div>
+        </div>
+        <div style="flex:1;text-align:center;background:#f8fafc;border-radius:10px;padding:10px 6px;">
+            <div style="font-size:22px;font-weight:900;color:#1e293b;">${pct}%</div>
+            <div style="font-size:8px;color:#94a3b8;font-weight:900;letter-spacing:.5px;">CUMPLIMIENTO</div>
+        </div>
+    </div>`;
+    // Lista de partidos jugados
+    jugados.forEach(p => {
+        const resultado = p.resultado || '–';
+        const rival = p.rival || '–';
+        const obj = p.objetivo_texto || p.objetivo || '–';
+        const cumplido = p.cumplido;
+        const color = cumplido === true ? '#16a34a' : cumplido === false ? '#E31E24' : '#94a3b8';
+        const icono = cumplido === true ? '✓' : cumplido === false ? '✗' : '–';
+        html += `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f1f5f9;">
+            <span style="font-size:14px;color:${color};font-weight:900;min-width:16px;text-align:center;">${icono}</span>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:10.5px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${rival}</div>
+                <div style="font-size:9px;color:#94a3b8;font-weight:600;">Obj: ${obj} · Res: ${resultado}</div>
+            </div>
+        </div>`;
+    });
+    el.innerHTML = html;
 }
 
 function toast(msg, err) {

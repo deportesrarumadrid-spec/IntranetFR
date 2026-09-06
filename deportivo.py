@@ -2460,6 +2460,77 @@ def api_seguimiento_config_post():
     return jsonify({"status": "success"})
 
 
+# --- MÓVIL: CLASIFICACIÓN + PARTIDO ---
+
+@deportivo_bp.route('/api/movil/clasif_partido')
+def api_movil_clasif_partido():
+    usuario = session.get('usuario')
+    if not usuario:
+        return jsonify({"status": "error"}), 401
+    equipo_session = (session.get('equipo_defecto') or '').strip().upper()
+
+    from competicion_scraper import load_cached_data, construir_obj_semanales
+    from datetime import datetime
+
+    cache = load_cached_data()
+
+    # Buscar el equipo_data de la RFFM que corresponde al equipo de sesión
+    equipo_data_found = None
+    for ed in cache.get('equipos', []):
+        cat = (ed.get('categoria') or '').strip().upper()
+        let = (ed.get('letra') or '').strip().upper()
+        nombre_rffm = f"{cat} {let}".strip()
+        if nombre_rffm == equipo_session or equipo_session.startswith(cat):
+            # Preferir coincidencia exacta
+            if nombre_rffm == equipo_session:
+                equipo_data_found = ed
+                break
+            if equipo_data_found is None:
+                equipo_data_found = ed
+
+    clasificacion = []
+    proximo_partido = None
+    if equipo_data_found:
+        clasificacion = equipo_data_found.get('clasificacion', [])
+        hoy = datetime.now()
+        for p in equipo_data_found.get('calendario', []):
+            if p.get('resultado'):
+                continue
+            fecha_str = p.get('fecha', '')
+            try:
+                fecha_p = datetime.strptime(fecha_str, '%d/%m/%Y')
+                if fecha_p >= hoy:
+                    proximo_partido = p
+                    break
+            except Exception:
+                continue
+        if proximo_partido is None:
+            # fallback: primer partido sin resultado
+            for p in equipo_data_found.get('calendario', []):
+                if not p.get('resultado'):
+                    proximo_partido = p
+                    break
+
+    # Obj semanales filtrados por equipo
+    try:
+        todos_partidos = construir_obj_semanales()
+    except Exception:
+        todos_partidos = []
+
+    partidos_equipo = [
+        p for p in todos_partidos
+        if (f"{(p.get('categoria') or '').strip().upper()} {(p.get('letra') or '').strip().upper()}".strip() == equipo_session
+            or equipo_session.startswith((p.get('categoria') or '').strip().upper()))
+    ]
+
+    return jsonify({
+        "status": "ok",
+        "clasificacion": clasificacion,
+        "proximo_partido": proximo_partido,
+        "partidos": partidos_equipo
+    })
+
+
 # --- OBJ SEMANALES ---
 
 @deportivo_bp.route('/api/obj_semanales/resumen')
