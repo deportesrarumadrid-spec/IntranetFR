@@ -304,9 +304,15 @@ def deportivo():
         lista_ejes = ejercicios_semanales.get(semana_key, [])
         for e in lista_ejes:
             idx_cat = str(e['categoria']).strip()
-            # Si la categoría es numérica (0-3), la ponemos en su sitio
+            slot_idx = None
             if idx_cat.isdigit() and 0 <= int(idx_cat) < 4:
-                ejes_fijos[int(idx_cat)] = e
+                slot_idx = int(idx_cat)
+            elif '_' in idx_cat:
+                suffix = idx_cat.rsplit('_', 1)[-1]
+                if suffix.isdigit() and 0 <= int(suffix) < 4:
+                    slot_idx = int(suffix)
+            if slot_idx is not None and ejes_fijos[slot_idx] is None:
+                ejes_fijos[slot_idx] = e
 
         # Pre-filtrar solo los días de entrenamiento configurados (Mon=0..Fri=4)
         dias_entreno_week = []

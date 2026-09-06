@@ -1050,7 +1050,12 @@ function renderEjercicios(lun) {
     const cont = document.getElementById('ejerciciosSem');
     const SLOT_NAMES = ['JUGADA COMBINATIVA','FISICO COORDINACIÓN','PIERNA NO HÁBIL','EDITAR...'];
     const slots = [null, null, null, null];
-    ejes.forEach(e => { const c=parseInt(e.categoria); if(c>=0&&c<=3) slots[c]=e; });
+    ejes.forEach(e => {
+        const cat = String(e.categoria);
+        let c = parseInt(cat);
+        if (isNaN(c) && cat.includes('_')) c = parseInt(cat.split('_').pop());
+        if (!isNaN(c) && c >= 0 && c <= 3 && !slots[c]) slots[c] = e;
+    });
     if (!ejes.length) { cont.className='eje-empty'; cont.innerHTML='Sin ejercicios planificados esta semana.'; return; }
     cont.className='';
     cont.innerHTML=`<div class="eje-slots">${

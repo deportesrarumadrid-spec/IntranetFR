@@ -3233,6 +3233,24 @@
     </div>
 </div>
 
+<!-- MODAL PREVIEW PUSH GRUPO -->
+<div id="modalPushGrupoPreview" class="modal" style="z-index:10001;">
+    <div class="modal-content" style="width:520px;padding:36px;border-radius:28px;text-align:left;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;">
+            <h3 style="margin:0;font-weight:900;font-size:1.1rem;color:#1e293b;text-transform:uppercase;letter-spacing:.5px;">📲 Previsualización del Push</h3>
+            <span style="cursor:pointer;font-size:28px;color:#94a3b8;line-height:1;" onclick="document.getElementById('modalPushGrupoPreview').style.display='none'">&times;</span>
+        </div>
+        <div style="font-size:11px;font-weight:900;color:#94a3b8;letter-spacing:.5px;margin-bottom:8px;">EQUIPOS DESTINATARIOS</div>
+        <div id="previewPushEquipos" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px;"></div>
+        <div style="font-size:11px;font-weight:900;color:#94a3b8;letter-spacing:.5px;margin-bottom:8px;">MENSAJE QUE SE ENVIARÁ</div>
+        <div id="previewPushMensaje" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;font-size:13px;color:#334155;line-height:1.6;white-space:pre-wrap;margin-bottom:24px;"></div>
+        <div style="display:flex;gap:12px;">
+            <button class="btn-fin" style="background:#f1f5f9;color:#64748b;flex:1;justify-content:center;" onclick="document.getElementById('modalPushGrupoPreview').style.display='none'">CANCELAR</button>
+            <button class="btn-fin" id="btnConfirmarPushGrupo" style="background:#1e293b;color:white;flex:2;justify-content:center;" onclick="confirmarPushGrupo()">📲 CONFIRMAR ENVÍO</button>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL EDITOR EJERCICIO (PIZARRA / SUBIDA) -->
 <div id="modalEditorEjercicio" class="modal">
     <div class="modal-content" style="width: 95vw; height: 92vh; border-radius: 30px; background: #f4f7f6; display: flex; flex-direction: column;">
@@ -4160,13 +4178,37 @@
         finally { hideLoader(); }
     }
 
-    async function enviarPushGrupo(grupo) {
+    let _pushGrupoActual = null;
+
+    function enviarPushGrupo(grupo) {
         if (!semanaActiva) return alert('Selecciona primero una semana.');
         const equipos = _equiposDeGrupo(grupo).filter(eq => {
             const cb = document.querySelector(`.check-eq-grp-${grupo}[value="${eq}"]`);
             return !cb || cb.checked;
         });
         if (!equipos.length) return alert('No hay equipos para este grupo.');
+
+        _pushGrupoActual = { grupo, equipos };
+
+        // Render equipos en el preview
+        const eqDiv = document.getElementById('previewPushEquipos');
+        eqDiv.innerHTML = equipos.map(eq =>
+            `<span style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;color:#1e293b;">${eq}</span>`
+        ).join('');
+
+        // Render mensaje de ejemplo (usando primer equipo como ejemplo)
+        const ejemploEq = equipos[0] || 'EQUIPO';
+        const semanaStr = getSemanaStr();
+        const msg = `Ya tienes disponible la planificación semanal de ejercicios del equipo ${ejemploEq}. ¡Accede para verla!\n\nhttps://intranet.clubfuentelarreyna.com/movil`;
+        document.getElementById('previewPushMensaje').innerText = msg;
+
+        document.getElementById('modalPushGrupoPreview').style.display = 'flex';
+    }
+
+    async function confirmarPushGrupo() {
+        if (!_pushGrupoActual) return;
+        const { grupo, equipos } = _pushGrupoActual;
+        document.getElementById('modalPushGrupoPreview').style.display = 'none';
         showLoader();
         try {
             const res = await fetch("{{ url_for('deportivo_bp.api_ejercicios_push_grupo') }}", {
@@ -4182,7 +4224,7 @@
                 alert('Error al enviar push: ' + (d.error || d.message || ''));
             }
         } catch (e) { alert('Error al enviar push'); }
-        finally { hideLoader(); }
+        finally { hideLoader(); _pushGrupoActual = null; }
     }
 
     async function cargarRegistroPushGrupo(grupo) {
