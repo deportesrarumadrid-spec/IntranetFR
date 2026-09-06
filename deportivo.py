@@ -2351,6 +2351,61 @@ def api_horarios_temporada_guardar():
     return jsonify({"status": "success"})
 
 
+def _get_or_crear_sheet_horarios_borrador():
+    client = current_app.gs_client._client
+    NOMBRE_EXCEL = current_app.gs_name
+    try:
+        return client.open(NOMBRE_EXCEL).worksheet("HORARIOS_TEMPORADA_BORRADOR")
+    except Exception:
+        sheet = client.open(NOMBRE_EXCEL).add_worksheet(title="HORARIOS_TEMPORADA_BORRADOR", rows="1000", cols="6")
+        sheet.append_row(["GRUPO", "HORARIO", "COLUMNA", "TEXTO", "COLOR", "NOTAS"])
+        return sheet
+
+@deportivo_bp.route('/api/horarios_temporada_borrador', methods=['GET'])
+def api_horarios_borrador_get():
+    sheet = _get_or_crear_sheet_horarios_borrador()
+    all_v = sheet.get_all_values()
+    datos = {}
+    for row in all_v[1:]:
+        if len(row) < 3 or not row[0].strip(): continue
+        grupo, horario, columna = row[0].strip(), row[1].strip(), row[2].strip()
+        texto = row[3].strip() if len(row) > 3 else ''
+        color = row[4].strip() if len(row) > 4 else ''
+        notas = row[5].strip() if len(row) > 5 else ''
+        datos.setdefault(grupo, {}).setdefault(horario, {})[columna] = {"texto": texto, "color": color, "notas": notas}
+    return jsonify({"status": "success", "datos": datos})
+
+@deportivo_bp.route('/api/horarios_temporada_borrador', methods=['POST'])
+def api_horarios_borrador_guardar():
+    if not session.get('usuario'):
+        return jsonify({"status": "error", "message": "No autenticado"}), 401
+    data = request.json or {}
+    grupo = (data.get('grupo') or '').strip()
+    horario = (data.get('horario') or '').strip()
+    columna = (data.get('columna') or '').strip()
+    texto = data.get('texto')
+    color = data.get('color')
+    notas = data.get('notas')
+    if not grupo or not horario or not columna:
+        return jsonify({"status": "error", "message": "Faltan datos"}), 400
+    sheet = _get_or_crear_sheet_horarios_borrador()
+    all_v = sheet.get_all_values()
+    fila_idx = -1
+    for i, row in enumerate(all_v[1:], start=2):
+        if len(row) > 2 and row[0].strip() == grupo and row[1].strip() == horario and row[2].strip() == columna:
+            fila_idx = i
+            break
+    if fila_idx != -1:
+        fila_actual = all_v[fila_idx - 1]
+        texto_final = texto if texto is not None else (fila_actual[3].strip() if len(fila_actual) > 3 else '')
+        color_final = color if color is not None else (fila_actual[4].strip() if len(fila_actual) > 4 else '')
+        notas_final = notas if notas is not None else (fila_actual[5].strip() if len(fila_actual) > 5 else '')
+        sheet.update(f'A{fila_idx}:F{fila_idx}', [[grupo, horario, columna, texto_final, color_final, notas_final]], value_input_option='USER_ENTERED')
+    else:
+        sheet.append_row([grupo, horario, columna, texto or '', color or '', notas or ''])
+    return jsonify({"status": "success"})
+
+
 # --- SEGUIMIENTO CONFIG ---
 
 @deportivo_bp.route('/api/seguimiento_config', methods=['GET'])

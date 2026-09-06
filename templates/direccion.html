@@ -2523,13 +2523,21 @@
 
     <div id="tab-horarios-temp" class="tab-content">
         <div class="card-coord" style="padding: 22px;">
-            <h3 style="margin:0 0 6px 0; font-size:14px; font-weight:900; color:#1e293b;"><i class="fas fa-calendar-week" style="color:#E31E24; margin-right:6px;"></i> Horarios de Temporada</h3>
+            <!-- Sub-tabs OFICIAL / BORRADOR -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+                <h3 style="margin:0; font-size:14px; font-weight:900; color:#1e293b;"><i class="fas fa-calendar-week" style="color:#E31E24; margin-right:6px;"></i> Horarios de Temporada</h3>
+                <div style="display:flex;gap:6px;">
+                    <button id="btnHorModoOficial" onclick="horTempSwitchModo('oficial')" style="padding:6px 16px;border-radius:8px;font-size:11px;font-weight:900;border:2px solid #1e293b;background:#1e293b;color:white;cursor:pointer;">OFICIAL</button>
+                    <button id="btnHorModoBorrador" onclick="horTempSwitchModo('borrador')" style="padding:6px 16px;border-radius:8px;font-size:11px;font-weight:900;border:2px solid #94a3b8;background:white;color:#64748b;cursor:pointer;">BORRADOR</button>
+                </div>
+            </div>
             <p style="font-size:11px; color:#999; margin:0 0 16px;">Haz clic <b>derecho</b> en cualquier celda (incluidos los títulos y las cabeceras) para editar su texto y su color de fondo. Mantén pulsado <b>Ctrl</b> y haz clic izquierdo para seleccionar varias celdas a la vez.</p>
             <div id="horTempBarraSeleccion" class="hortemp-barra-seleccion" style="display:none;">
                 <span id="horTempBarraTexto"></span>
                 <button class="btn-fin" style="background:#E31E24; color:white; padding:6px 12px; font-size:10px;" onclick="horTempAbrirEditorMultiple()">PINTAR/EDITAR SELECCIÓN</button>
                 <button class="btn-fin" style="background:rgba(255,255,255,0.15); color:white; padding:6px 12px; font-size:10px;" onclick="horTempLimpiarSeleccion()">CANCELAR</button>
             </div>
+            <div id="horTempModoLabel" style="display:none;margin-bottom:10px;padding:6px 12px;background:#fef9c3;border:1px solid #fde047;border-radius:8px;font-size:11px;font-weight:800;color:#92400e;">✏️ MODO BORRADOR — los cambios no afectan al horario oficial</div>
             <div id="horTempGrupos"></div>
         </div>
     </div>
@@ -7933,9 +7941,28 @@
         { id: 'martes_jueves', tituloDefecto: 'MARTES Y JUEVES (Temporada {{ temporada_activa }})', subtituloDefecto: '' },
         { id: 'viernes', tituloDefecto: 'VIERNES (Temporada {{ temporada_activa }})', subtituloDefecto: '' },
     ];
+    let horTempModo = 'oficial';
     let horTempDatos = {};
+    let horTempDatosBorrador = {};
     let horTempContexto = null;
     let horTempSeleccion = new Set();
+
+    function _horTempApiUrl() {
+        return horTempModo === 'borrador' ? '/api/horarios_temporada_borrador' : '/api/horarios_temporada';
+    }
+
+    function horTempSwitchModo(modo) {
+        horTempModo = modo;
+        document.getElementById('btnHorModoOficial').style.background = modo === 'oficial' ? '#1e293b' : 'white';
+        document.getElementById('btnHorModoOficial').style.color = modo === 'oficial' ? 'white' : '#64748b';
+        document.getElementById('btnHorModoOficial').style.borderColor = modo === 'oficial' ? '#1e293b' : '#94a3b8';
+        document.getElementById('btnHorModoBorrador').style.background = modo === 'borrador' ? '#E31E24' : 'white';
+        document.getElementById('btnHorModoBorrador').style.color = modo === 'borrador' ? 'white' : '#64748b';
+        document.getElementById('btnHorModoBorrador').style.borderColor = modo === 'borrador' ? '#E31E24' : '#94a3b8';
+        const label = document.getElementById('horTempModoLabel');
+        label.style.display = modo === 'borrador' ? 'block' : 'none';
+        horTempCargar();
+    }
 
     function horTempClave(grupo, horario, columna) {
         return `${grupo}|||${horario}|||${columna}`;
@@ -8008,14 +8035,14 @@
 
     async function horTempCargar() {
         try {
-            const res = await fetch('/api/horarios_temporada');
+            const res = await fetch(_horTempApiUrl());
             const data = await res.json();
             horTempDatos = (data.status === 'success' ? data.datos : {}) || {};
         } catch (e) {
             horTempDatos = {};
         }
         horTempRenderTodo();
-        seguimientoEntrenamientosRender(horTempDatos);
+        if (horTempModo === 'oficial') seguimientoEntrenamientosRender(horTempDatos);
     }
 
     function horTempRenderTodo() {
@@ -8066,7 +8093,7 @@
 
     async function horTempGuardarTextoSimple(grupo, horario, texto) {
         try {
-            await fetch('/api/horarios_temporada', {
+            await fetch(_horTempApiUrl(), {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ grupo, horario, columna: '_titulo_', texto })
             });
@@ -8127,7 +8154,7 @@
                     const [grupo, horario, columna] = clave.split('|||');
                     const actual = horTempCelda(grupo, horario, columna);
                     const textoFinal = texto !== '' ? texto : actual.texto;
-                    await fetch('/api/horarios_temporada', {
+                    await fetch(_horTempApiUrl(), {
                         method: 'POST', headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ grupo, horario, columna, texto: textoFinal, color, notas })
                     });
@@ -8148,7 +8175,7 @@
 
         const { grupo, horario, columna } = horTempContexto;
         try {
-            await fetch('/api/horarios_temporada', {
+            await fetch(_horTempApiUrl(), {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ grupo, horario, columna, texto, color, notas })
             });
