@@ -109,7 +109,7 @@ def _check_asistencias(client, nombre_excel, equipo, dias_numeros):
         rows = sheet.get_all_values()[1:]
         hechos = set(f"{r[0]}-{r[1].strip().upper()}" for r in rows if len(r) >= 2)
         faltas = 0
-        for d in range(1, hoy.day):
+        for d in range(1, hoy.day + 1):
             fecha = datetime(hoy.year, hoy.month, d)
             if fecha.weekday() in dias_numeros:
                 key = f"{fecha.strftime('%d/%m/%Y')}-{equipo.strip().upper()}"
