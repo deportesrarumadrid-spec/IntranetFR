@@ -2437,7 +2437,7 @@ def api_horarios_temporada_guardar():
 
 
 def _get_or_crear_sheet_horarios_borrador():
-    client = current_app.gs_client._client
+    client = current_app.gs_client
     NOMBRE_EXCEL = current_app.gs_name
     try:
         return client.open(NOMBRE_EXCEL).worksheet("HORARIOS_TEMPORADA_BORRADOR")
@@ -2495,7 +2495,7 @@ def api_horarios_borrador_copiar_oficial():
     if not session.get('usuario'):
         return jsonify({"status": "error", "message": "No autenticado"}), 401
     try:
-        client = current_app.gs_client._client
+        client = current_app.gs_client
         NOMBRE_EXCEL = current_app.gs_name
         ws_oficial = client.open(NOMBRE_EXCEL).worksheet("HORARIOS_TEMPORADA")
         datos_oficial = ws_oficial.get_all_values()
