@@ -3147,23 +3147,9 @@
 
             <!-- Derecha: Contenido -->
             <div style="flex: 1; padding: 25px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto;">
-                <!-- Equipos (Ticks) -->
-                <div>
-                    <label style="font-size: 10px; font-weight: 900; color: #999; display: block; margin-bottom: 10px;">EQUIPOS DESTINATARIOS</label>
-                    <div style="display: flex; flex-wrap: wrap; gap: 10px;" id="containerTicksEquipos">
-                        {% for eq in equipos %}
-                        <label class="pill-checkbox">
-                            <input type="checkbox" class="check-eq-ejercicio" value="{{ eq }}" onchange="this.parentElement.classList.toggle('checked', this.checked); checkAndEnableExerciseCategories();">
-                            <span class="pill-check-box"></span>
-                            <i class="fas fa-shield-halved" style="font-size: 10px;"></i> {{ eq }}
-                        </label>
-                        {% endfor %}
-                    </div>
-                </div>
-
                 <!-- Categorías de Ejercicios (Contenedor de las 4 cajas) -->
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;" id="exerciseCategoriesContainer" data-grupo="general">
-                    <div class="cat-box disabled" onclick="mostrarSelectorCarga(0)">
+                    <div class="cat-box" onclick="mostrarSelectorCarga(0)">
                         <i class="fas fa-project-diagram" style="font-size: 24px; color: #E31E24; margin-bottom: 5px;"></i>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span id="txtCat_0" style="font-weight: 900; font-size: 12px;">JUGADA COMBINATIVA</span>
@@ -3172,7 +3158,7 @@
                         <div id="status_0" style="font-size: 9px; color: #999;">VACÍO</div>
                         <div id="view_btn_container_0" style="margin-top: 10px;"></div>
                     </div>
-                    <div class="cat-box disabled" onclick="mostrarSelectorCarga(1)">
+                    <div class="cat-box" onclick="mostrarSelectorCarga(1)">
                         <i class="fas fa-running" style="font-size: 24px; color: #E31E24; margin-bottom: 5px;"></i>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span id="txtCat_1" style="font-weight: 900; font-size: 12px;">FISICO COORDINACIÓN</span>
@@ -3181,7 +3167,7 @@
                         <div id="status_1" style="font-size: 9px; color: #999;">VACÍO</div>
                         <div id="view_btn_container_1" style="margin-top: 10px;"></div>
                     </div>
-                    <div class="cat-box disabled" onclick="mostrarSelectorCarga(2)">
+                    <div class="cat-box" onclick="mostrarSelectorCarga(2)">
                         <i class="fas fa-shoe-prints" style="font-size: 24px; color: #E31E24; margin-bottom: 5px;"></i>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span id="txtCat_2" style="font-weight: 900; font-size: 12px;">PIERNA NO HÁBIL</span>
@@ -3190,7 +3176,7 @@
                         <div id="status_2" style="font-size: 9px; color: #999;">VACÍO</div>
                         <div id="view_btn_container_2" style="margin-top: 10px;"></div>
                     </div>
-                    <div class="cat-box disabled" onclick="mostrarSelectorCarga(3)">
+                    <div class="cat-box" onclick="mostrarSelectorCarga(3)">
                         <i class="fas fa-plus-circle" style="font-size: 24px; color: #E31E24; margin-bottom: 5px;"></i>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span id="txtCat_3" style="font-weight: 900; font-size: 12px;">EDITAR...</span>
@@ -3805,9 +3791,8 @@
     }
 
     function mostrarSelectorCarga(idx) {
-        const selectedTeams = Array.from(document.querySelectorAll('.check-eq-ejercicio:checked')).map(cb => cb.value);
-        if (!semanaActiva || selectedTeams.length === 0) {
-            return alert("Es obligatorio seleccionar una FECHA y al menos un EQUIPO antes de continuar.");
+        if (!semanaActiva) {
+            return alert("Es obligatorio seleccionar una FECHA antes de continuar.");
         }
         catActiva = idx;
         document.getElementById('tituloCarga').innerText = document.getElementById(`txtCat_${idx}`).innerText;
@@ -3837,7 +3822,7 @@
             const result = await res.json();
             
             if (result.status === 'success') {
-                const selectedTeams = Array.from(document.querySelectorAll('.check-eq-ejercicio:checked')).map(cb => cb.value);
+                const selectedTeams = equiposList;
                 const semanaStr = getSemanaStr();
                 
                 const payload = {
@@ -4021,7 +4006,6 @@
             row.classList.toggle('selected-week', isSelected);
             daysInRow.forEach(d => d.classList.toggle('week-selected', isSelected));
         });
-        checkAndEnableExerciseCategories();
         cargarEjerciciosSemana();
         cargarEjerciciosGrupo('f7');
         cargarEjerciciosGrupo('f11');
