@@ -5,3 +5,4 @@ __pycache__/
 secretos.json
 dropbox_config.json
 static/data/rffm_cache.json
+static/data/push_schedule.json
