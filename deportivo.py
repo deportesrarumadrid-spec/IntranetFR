@@ -2405,6 +2405,27 @@ def api_horarios_borrador_guardar():
         sheet.append_row([grupo, horario, columna, texto or '', color or '', notas or ''])
     return jsonify({"status": "success"})
 
+@deportivo_bp.route('/api/horarios_temporada_borrador/copiar_oficial', methods=['POST'])
+def api_horarios_borrador_copiar_oficial():
+    if not session.get('usuario'):
+        return jsonify({"status": "error", "message": "No autenticado"}), 401
+    try:
+        client = current_app.gs_client._client
+        NOMBRE_EXCEL = current_app.gs_name
+        ws_oficial = client.open(NOMBRE_EXCEL).worksheet("HORARIOS_TEMPORADA")
+        datos_oficial = ws_oficial.get_all_values()
+        ws_borrador = _get_or_crear_sheet_horarios_borrador()
+        # Limpiar borrador (mantener cabecera)
+        ws_borrador.clear()
+        ws_borrador.append_row(["GRUPO", "HORARIO", "COLUMNA", "TEXTO", "COLOR", "NOTAS"])
+        # Copiar filas de datos (sin cabecera)
+        filas_datos = [r for r in datos_oficial[1:] if any(c.strip() for c in r)]
+        if filas_datos:
+            ws_borrador.append_rows(filas_datos, value_input_option='USER_ENTERED')
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 # --- SEGUIMIENTO CONFIG ---
 
