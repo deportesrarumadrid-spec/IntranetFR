@@ -4176,6 +4176,7 @@ def api_push_schedule_create():
         'tipo': data.get('tipo', 'asistencias'),
         'modo': data.get('modo', 'diario'),
         'dia_semana': data.get('dia_semana'),
+        'dias_determinados': data.get('dias_determinados'),
         'dia_mes': data.get('dia_mes'),
         'hora': data.get('hora', '17:00'),
         'equipos': data.get('equipos', []),
@@ -4199,7 +4200,7 @@ def api_push_schedule_update(sid):
     schedules = _ps.load_schedules()
     for s in schedules:
         if s['id'] == sid:
-            for k in ['nombre','tipo','modo','dia_semana','dia_mes','hora','equipos','texto','link','activo']:
+            for k in ['nombre','tipo','modo','dia_semana','dias_determinados','dia_mes','hora','equipos','texto','link','activo']:
                 if k in data:
                     s[k] = data[k]
             break

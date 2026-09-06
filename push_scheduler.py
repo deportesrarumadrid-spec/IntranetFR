@@ -84,6 +84,14 @@ def _should_run(schedule, now):
             return False
         return True
 
+    elif modo == 'dias_determinados':
+        dias = [int(d) for d in (schedule.get('dias_determinados') or [])]
+        if not dias or now.weekday() not in dias:
+            return False
+        if ultima and ultima.date() == now.date():
+            return False
+        return True
+
     elif modo == 'dia_mes':
         dia_obj = int(schedule.get('dia_mes', 1))
         if now.day != dia_obj:

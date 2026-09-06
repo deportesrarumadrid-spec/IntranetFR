@@ -2276,6 +2276,7 @@
                             <option value="diario">Todos los días</option>
                             <option value="cada_2_dias">Cada 2 días</option>
                             <option value="dia_semana">Un día de la semana</option>
+                            <option value="dias_determinados">Días determinados</option>
                             <option value="dia_mes">Un día del mes</option>
                         </select>
                     </div>
@@ -2292,6 +2293,20 @@
                             <option value="5">Sábado</option>
                             <option value="6">Domingo</option>
                         </select>
+                    </div>
+
+                    <!-- Días determinados (condicional) -->
+                    <div id="psDiasDeterminadosDiv" style="display:none;">
+                        <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:7px;">Días de la semana</label>
+                        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                            <label style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#334155;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:6px;padding:5px 9px;cursor:pointer;"><input type="checkbox" class="ps-dia-det-check" value="0" style="accent-color:#E31E24;"> Lunes</label>
+                            <label style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#334155;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:6px;padding:5px 9px;cursor:pointer;"><input type="checkbox" class="ps-dia-det-check" value="1" style="accent-color:#E31E24;"> Martes</label>
+                            <label style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#334155;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:6px;padding:5px 9px;cursor:pointer;"><input type="checkbox" class="ps-dia-det-check" value="2" style="accent-color:#E31E24;"> Miércoles</label>
+                            <label style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#334155;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:6px;padding:5px 9px;cursor:pointer;"><input type="checkbox" class="ps-dia-det-check" value="3" style="accent-color:#E31E24;"> Jueves</label>
+                            <label style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#334155;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:6px;padding:5px 9px;cursor:pointer;"><input type="checkbox" class="ps-dia-det-check" value="4" style="accent-color:#E31E24;"> Viernes</label>
+                            <label style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#334155;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:6px;padding:5px 9px;cursor:pointer;"><input type="checkbox" class="ps-dia-det-check" value="5" style="accent-color:#E31E24;"> Sábado</label>
+                            <label style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#334155;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:6px;padding:5px 9px;cursor:pointer;"><input type="checkbox" class="ps-dia-det-check" value="6" style="accent-color:#E31E24;"> Domingo</label>
+                        </div>
                     </div>
 
                     <!-- Día del mes (condicional) -->
@@ -2399,6 +2414,10 @@
         if (s.modo === 'diario') return `Todos los días a las ${s.hora}`;
         if (s.modo === 'cada_2_dias') return `Cada 2 días a las ${s.hora}`;
         if (s.modo === 'dia_semana') return `Todos los ${PS_DIAS_SEMANA[s.dia_semana] || ''} a las ${s.hora}`;
+        if (s.modo === 'dias_determinados') {
+            const dias = (s.dias_determinados || []).map(d => PS_DIAS_SEMANA[d] || '').filter(Boolean);
+            return `${dias.join(', ') || '–'} a las ${s.hora}`;
+        }
         if (s.modo === 'dia_mes') return `Día ${s.dia_mes} de cada mes a las ${s.hora}`;
         return s.hora;
     }
@@ -2448,6 +2467,8 @@
         document.getElementById('psHora').value = s.hora;
         document.getElementById('psDiaSemana').value = s.dia_semana ?? '4';
         document.getElementById('psDiaMes').value = s.dia_mes ?? '1';
+        const detDias = s.dias_determinados || [];
+        document.querySelectorAll('.ps-dia-det-check').forEach(c => c.checked = detDias.includes(parseInt(c.value)));
         document.querySelectorAll('.ps-equipo-check').forEach(c => c.checked = (s.equipos || []).includes(c.value));
         document.getElementById('psTexto').value = s.texto;
         document.getElementById('psLink').value = s.link || '';
@@ -2463,6 +2484,7 @@
     function psModoChange() {
         const modo = document.getElementById('psModo').value;
         document.getElementById('psDiaSemanaDiv').style.display = modo === 'dia_semana' ? 'block' : 'none';
+        document.getElementById('psDiasDeterminadosDiv').style.display = modo === 'dias_determinados' ? 'block' : 'none';
         document.getElementById('psDiaMesDiv').style.display = modo === 'dia_mes' ? 'block' : 'none';
     }
 
@@ -2497,6 +2519,7 @@
             tipo: document.getElementById('psTipo').value,
             modo,
             dia_semana: modo === 'dia_semana' ? parseInt(document.getElementById('psDiaSemana').value) : null,
+            dias_determinados: modo === 'dias_determinados' ? [...document.querySelectorAll('.ps-dia-det-check:checked')].map(c => parseInt(c.value)) : null,
             dia_mes: modo === 'dia_mes' ? parseInt(document.getElementById('psDiaMes').value) : null,
             hora: document.getElementById('psHora').value,
             equipos: equiposSel,
