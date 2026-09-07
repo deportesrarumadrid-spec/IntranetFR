@@ -19,6 +19,8 @@ DEFAULT_TTL = 90  # segundos — ajustar según necesidad
 # ─────────────────────────────────────────────
 
 def _get_or_fetch(key: str, fetch_fn, ttl: int):
+    if ttl <= 0:
+        return fetch_fn()
     with _lock:
         entry = _cache.get(key)
         if entry and (time.time() - entry["ts"]) < ttl:

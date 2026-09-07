@@ -259,7 +259,7 @@ scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/au
 creds = ServiceAccountCredentials.from_service_account_file(os.path.join(BASE_DIR, "secretos.json"), scopes=scope)
 from sheets_cache import CachedClient
 _raw_client = gspread.authorize(creds)
-client = CachedClient(_raw_client, ttl=30)  # caché 30s — datos frescos sin riesgo quota 429
+client = CachedClient(_raw_client, ttl=0)  # sin caché — datos siempre frescos, multi-usuario
 NOMBRE_EXCEL = "Control Asistencia Club"
 app.gs_client = client
 app.gs_name = NOMBRE_EXCEL
