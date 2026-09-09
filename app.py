@@ -264,7 +264,7 @@ NOMBRE_EXCEL = "Control Asistencia Club"
 app.gs_client = client
 app.gs_name = NOMBRE_EXCEL
 _asis_cache = {}  # {equipo_lower: {'data': list, 'ts': float}}
-_ASIS_CACHE_TTL = 60  # segundos
+_ASIS_CACHE_TTL = 5  # segundos — debe coincidir con CachedClient TTL para evitar stale data cross-worker
 # ----------------------------------
 
 # ===================== SISTEMA MULTI-TEMPORADA =====================
