@@ -9088,7 +9088,7 @@
             claveCnt[k] = (claveCnt[k]||0) + 1;
         });
 
-        var widthRival = modoResultados ? '20%' : '14%';
+        var widthRival = modoResultados ? 'auto' : '14%';
         var widthIda = modoResultados ? '5%' : '7%';
         var html = '<table style="width:100%;border-collapse:collapse;font-family:inherit;table-layout:fixed;"><thead><tr>';
         html += '<th style="'+thS+'width:13%;">Equipo</th><th style="'+thS+'width:9%;">Jorn.</th><th style="'+thS+'width:6%;">Campo</th><th style="'+thS+'width:'+widthRival+';">Rival</th>';
@@ -9096,7 +9096,7 @@
         if (!modoResultados) {
             html += '<th style="'+thS+'width:9%;">Objetivo</th><th style="'+thS+'width:auto;">Datos rival</th>';
         } else {
-            html += '<th style="'+thS+'width:auto;">Resultado</th><th style="'+thS+'text-align:center;width:5%;">✓/✗</th><th style="'+thS+'width:9%;">Obj.</th>';
+            html += '<th style="'+thS+'text-align:center;width:12%;">Resultado</th><th style="'+thS+'text-align:center;width:5%;">✓/✗</th><th style="'+thS+'text-align:center;width:14%;">Obj.</th>';
         }
         html += '</tr></thead><tbody>';
 
