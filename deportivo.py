@@ -3087,6 +3087,8 @@ def api_informes_semanales_get():
     result = []
     for eq in equipos:
         eq_up = eq.upper()
+        if _nt_dep(eq).startswith(('aficionado', 'debutante')):
+            continue  # Aficionados y debutantes no entran en el informe finde WhatsApp
         if teams_with_game:
             tiene_partido = any(eq_up == tg or tg.startswith(eq_up) or eq_up.startswith(tg) for tg in teams_with_game)
         else:
