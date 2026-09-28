@@ -2803,10 +2803,9 @@ def api_informe_mensual():
     nm = _cal_mod.monthrange(anio, mes_int)[1]
     saturdays = sum(1 for d in range(1, nm + 1) if _cal_mod.weekday(anio, mes_int, d) == 5)
 
-    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'equipos_config.json')
     equipos_data = []
     try:
-        with open(config_path, 'r', encoding='utf-8') as f:
+        with open(_get_equipos_config_path(), 'r', encoding='utf-8') as f:
             equipos_data = json.load(f).get('equipos', [])
     except Exception:
         pass
@@ -2847,7 +2846,7 @@ def api_informe_mensual():
                 pf = row[idx_fe].strip().split()[0].split('/') if row[idx_fe].strip() else []
                 try:
                     if len(pf) >= 3 and int(pf[1]) == mes_int and int(pf[2]) == anio:
-                        k = row[idx_eq].strip().upper()
+                        k = _nt_dep(row[idx_eq])
                         forms_eq[k] = forms_eq.get(k, 0) + 1
                 except Exception: pass
     except Exception: pass
@@ -2861,7 +2860,7 @@ def api_informe_mensual():
             p = row[0].strip().split('/')
             try:
                 if int(p[1]) == mes_int and int(p[2]) == anio and row[2].strip().upper() == 'SI':
-                    k = row[1].strip().upper()
+                    k = _nt_dep(row[1])
                     audios_eq[k] = audios_eq.get(k, 0) + 1
             except Exception: pass
     except Exception: pass
@@ -2878,7 +2877,7 @@ def api_informe_mensual():
             except Exception: continue
             cat   = (p.get('categoria') or '').strip().upper()
             letra = (p.get('letra') or '').strip().upper()
-            key   = f"{cat} {letra}".strip() if letra else cat
+            key   = _nt_dep(f"{cat} {letra}" if letra else cat)
             s = obj_eq.setdefault(key, {'cumplidos': 0, 'total': 0})
             s['total'] += 1
             if p.get('cumplido') is True:
@@ -2961,14 +2960,14 @@ def api_informe_mensual():
                     except Exception: pass
             except Exception: pass
 
-        obj_stats = obj_eq.get(eq_up, {'cumplidos': 0, 'total': 0})
+        obj_stats = obj_eq.get(eq_n, {'cumplidos': 0, 'total': 0})
 
         result.append({
             'nombre':        nombre,
             'asistencias':   {'hechas': asist_hechas,    'total': len(fechas_entreno)},
             'entrenamientos':{'subidos': sesiones_subidas,'total': total_entrenos},
-            'formularios':   {'hechos': forms_eq.get(eq_up, 0), 'total': saturdays},
-            'audios':        {'enviados': audios_eq.get(eq_up, 0), 'total': saturdays},
+            'formularios':   {'hechos': forms_eq.get(eq_n, 0), 'total': saturdays},
+            'audios':        {'enviados': audios_eq.get(eq_n, 0), 'total': saturdays},
             'balones':       balones,
             'obj':           obj_stats,
         })
@@ -3014,9 +3013,8 @@ def api_informes_semanales_get():
     sat_str = sat.strftime('%d/%m/%Y')
 
     equipos = []
-    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'equipos_config.json')
     try:
-        with open(config_path, 'r', encoding='utf-8') as f:
+        with open(_get_equipos_config_path(), 'r', encoding='utf-8') as f:
             equipos = [e['nombre'] for e in json.load(f).get('equipos', [])]
     except Exception:
         pass
@@ -3034,6 +3032,20 @@ def api_informes_semanales_get():
                     cat = (entry.get('categoria') or '').strip().upper()
                     letra = (entry.get('letra') or '').strip().upper()
                     teams_with_game.add(f"{cat} {letra}".strip() if letra else cat)
+    except Exception:
+        pass
+    # Calendario RFFM (misma fuente que Resultados — Cumplimiento): cubre partidos sin convocatoria generada
+    try:
+        from competicion_scraper import construir_obj_semanales
+        for p in construir_obj_semanales():
+            try:
+                pd_, pm_, py_ = [int(x) for x in (p.get('fecha') or '').split('-')]
+                if _date(py_, pm_, pd_) not in (sat, sun): continue
+            except Exception:
+                continue
+            cat = (p.get('categoria') or '').strip().upper()
+            letra = (p.get('letra') or '').strip().upper()
+            teams_with_game.add(f"{cat} {letra}".strip() if letra else cat)
     except Exception:
         pass
 
@@ -3056,7 +3068,7 @@ def api_informes_semanales_get():
                     fd, fm, fy = int(pf[0]), int(pf[1]), int(pf[2])
                     if fy < 100: fy += 2000
                     if _date(fy, fm, fd) in (sat, sun):
-                        teams_formulario.add(row[idx_eq].strip().upper())
+                        teams_formulario.add(_nt_dep(row[idx_eq]))
                 except Exception:
                     pass
     except Exception:
@@ -3082,7 +3094,7 @@ def api_informes_semanales_get():
         result.append({
             'nombre': eq,
             'tiene_partido': tiene_partido,
-            'formulario': eq_up in teams_formulario,
+            'formulario': _nt_dep(eq) in teams_formulario,
             'audio': audio_data.get(eq_up)
         })
 
