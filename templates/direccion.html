@@ -8603,7 +8603,6 @@
 
     function seguimientoEntrenamientosRender(datos) {
         _segHorTempDatos = datos;
-        coordEntrenosCargar();
         var grid = document.getElementById('seguimientoEntrenamientosGrid');
         if (!grid) return;
 
@@ -8768,7 +8767,7 @@
     seguimientoEntrenamientosCargar();
 
     // ── COORDINACIÓN · ENTRENAMIENTOS (SEMANA / DÍA / MES) ───────────────────
-    // Equipos por día desde HORARIOS TEMP. (L-X / M-J) · F7/F11 desde la configuración del equipo
+    // Equipos por día y tipo F7/F11 desde CONFIGURACIÓN GENERAL (equipos_config de la temporada)
     // · "ver" si hay entreno subido ese día (entreno_{EQUIPO}_{DD-MM-YYYY}.jpg), "X" si no.
     var _ceSubidos = {};
     var _ceMESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
@@ -8789,38 +8788,17 @@
         return l;
     }
 
-    function _ceTipo(nombre, columna) {
-        var n = _ceNorm(nombre);
-        if (/\bF7\b/.test(n)) return 'F7';
-        if (/\bF11\b/.test(n)) return 'F11';
-        var cfg = ((_EQUIPOS_CFG && _EQUIPOS_CFG.equipos) || []).find(function(e) { return _ceNorm(e.nombre) === n; });
-        if (cfg && cfg.tipo) return cfg.tipo === 'F7' ? 'F7' : 'F11';
-        return /^F7/i.test(columna || '') ? 'F7' : 'F11';
-    }
-
-    // dow: 1=lunes … 4=jueves → [{nombre, tipo}]
+    // dow: 1=lunes … 4=jueves → [{nombre, tipo}] en el orden de Configuración General
     function _ceEquiposDia(dow) {
-        var grupo = (dow === 1 || dow === 3) ? 'lunes_miercoles' : (dow === 2 || dow === 4) ? 'martes_jueves' : null;
-        if (!grupo) return [];
-        var grupoData = (_segHorTempDatos || {})[grupo] || {};
-        var COLS = ['F7-1', 'F7-2', 'F11-CAMPO 1 1', 'F-11-CAMPO 1 2', 'F11-CAMPO 2 1', 'F11-CAMPO 2 2'];
-        var horarios = (typeof horTempGenerarHorarios === 'function') ? horTempGenerarHorarios() : Object.keys(grupoData);
-        var visto = {}, lista = [];
-        horarios.forEach(function(h) {
-            var fila = grupoData[h];
-            if (!fila) return;
-            COLS.forEach(function(c) {
-                var txt = ((fila[c] && fila[c].texto) || '').trim();
-                if (!txt || txt.startsWith('_')) return;
-                (txt.includes(' - ') ? txt.split(' - ') : [txt]).forEach(function(t) {
-                    t = t.trim();
-                    var k = _ceNorm(t);
-                    if (t && !visto[k]) { visto[k] = true; lista.push({ nombre: t, tipo: _ceTipo(t, c) }); }
-                });
-            });
-        });
+        var key = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'][dow];
         var filtro = _ceNorm(window._equipoIndivActual || '');
-        return filtro ? lista.filter(function(e) { return _ceNorm(e.nombre) === filtro; }) : lista;
+        return ((_EQUIPOS_CFG && _EQUIPOS_CFG.equipos) || [])
+            .filter(function(e) {
+                return (e.nombre || '').trim() &&
+                    (e.dias || []).some(function(d) { return _normDia(d) === key; }) &&
+                    (!filtro || _ceNorm(e.nombre) === filtro);
+            })
+            .map(function(e) { return { nombre: e.nombre.trim(), tipo: e.tipo === 'F7' ? 'F7' : 'F11' }; });
     }
 
     function _ceFilasTipo(equipos, iso) {
@@ -8884,8 +8862,8 @@
         };
         var sinHorarios = ![1, 2, 3, 4].some(function(d) { return _ceEquiposDia(d).length; });
         var msgSinHor = window._equipoIndivActual
-            ? 'Este equipo no aparece en HORARIOS TEMP.'
-            : 'Sin horarios cargados — ve a <b style="color:#1e293b;">HORARIOS TEMP.</b> e introduce los equipos por franjas';
+            ? 'Este equipo no tiene días de entreno en CONFIGURACIÓN GENERAL'
+            : 'No hay equipos con días de entreno en <b style="color:#1e293b;">CONFIGURACIÓN GENERAL</b>';
 
         // SEMANA actual
         var cSem = document.getElementById('coordEntrenos-semana');
@@ -8958,6 +8936,8 @@
         renderObjetivosVisorFoto();
         document.getElementById('modalVerFotoObjetivos').style.display = 'flex';
     }
+
+    coordEntrenosCargar();
 
     var _segCoordEquipo = '';
     var _segCoordCat    = 'ENTRENAMIENTOS';
