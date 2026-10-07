@@ -626,10 +626,14 @@
                     <i class="fas fa-calendar-alt"></i> PROGRAMAR OBJETIVOS
                 </button>
             </div>
-            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;">
+            <div style="display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:10px; margin-bottom:14px;">
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
                 <button class="coord-ent-btn" style="padding:5px 14px;font-size:10px;font-weight:900;border-radius:20px;border:1.5px solid #e2e8f0;background:white;color:#475569;cursor:pointer;font-family:inherit;letter-spacing:.3px;" data-ent="semana" onclick="coordEntSubTab('semana')">SEMANA</button>
                 <button class="coord-ent-btn" style="padding:5px 14px;font-size:10px;font-weight:900;border-radius:20px;border:1.5px solid #e2e8f0;background:white;color:#475569;cursor:pointer;font-family:inherit;letter-spacing:.3px;" data-ent="dia" onclick="coordEntSubTab('dia')">DÍA</button>
                 <button class="coord-ent-btn" style="padding:5px 14px;font-size:10px;font-weight:900;border-radius:20px;border:1.5px solid #e2e8f0;background:white;color:#475569;cursor:pointer;font-family:inherit;letter-spacing:.3px;" data-ent="mes" onclick="coordEntSubTab('mes')">MES</button>
+            </div>
+            <button onclick="coordAbrirPushEntrenos()" style="padding:0 18px;height:34px;border-radius:9px;border:none;background:#E31E24;color:white;font-weight:900;font-size:11px;cursor:pointer;font-family:inherit;letter-spacing:.3px;display:inline-flex;align-items:center;gap:7px;"><i class="fas fa-bell"></i> ENVIAR PUSH</button>
+            <div></div>
             </div>
             <div id="coordEnt-semana" class="coord-ent-pane">
                 <div id="coordEntrenos-semana" class="coord-entrenos-cont"></div>
@@ -3039,6 +3043,34 @@
     </div>
     <div id="modalTareasBody" style="padding:0;overflow-x:auto;"></div>
   </div>
+</div>
+
+<!-- MODAL PUSH ENTRENOS SIN SUBIR (COORDINACIÓN → ENTRENAMIENTOS) -->
+<div id="modalPushEntrenos" class="modal" style="z-index:10010;">
+    <div class="modal-content" style="width:900px; max-width:96%; max-height:90vh; border-radius:20px; display:flex; flex-direction:column; border:none; overflow:hidden; padding:0;">
+        <div style="background:#1e293b; padding:16px 25px; display:flex; justify-content:space-between; align-items:center; color:white;">
+            <h3 style="margin:0; font-size:15px; font-weight:900; text-transform:uppercase; letter-spacing:1px;"><i class="fas fa-bell" style="color:#E31E24; margin-right:8px;"></i> Enviar push · entrenos sin subir</h3>
+            <span style="font-size:26px; cursor:pointer;" onclick="document.getElementById('modalPushEntrenos').style.display='none'">&times;</span>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px; padding:20px; overflow-y:auto;">
+            <div style="border:1.5px solid #e2e8f0; border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:10px;">
+                <div style="font-size:12px; font-weight:900; color:#1e293b;"><i class="fas fa-calendar-day" style="color:#E31E24;"></i> PUSH DEL DÍA DE HOY</div>
+                <div style="font-size:10.5px; color:#64748b;">A los entrenadores que no han subido el entrenamiento de hoy.</div>
+                <div id="pushEntHoyLista" style="font-size:11px; max-height:180px; overflow-y:auto;"></div>
+                <textarea id="pushEntHoyTexto" rows="3" style="width:100%; box-sizing:border-box; border:1.5px solid #e2e8f0; border-radius:8px; padding:8px; font-size:11.5px; font-family:inherit; resize:vertical;">Hola {nombre}, aún no has subido el entrenamiento de hoy de {equipo}. ¡Súbelo cuando puedas!</textarea>
+                <button id="pushEntHoyBtn" onclick="coordEnviarPushEntrenos('hoy')" style="height:38px; border:none; border-radius:9px; background:#E31E24; color:white; font-weight:900; font-size:11px; cursor:pointer; font-family:inherit;"><i class="fas fa-paper-plane"></i> ENVIAR PUSH DE HOY</button>
+            </div>
+            <div style="border:1.5px solid #e2e8f0; border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:10px;">
+                <div style="font-size:12px; font-weight:900; color:#1e293b;"><i class="fas fa-calendar-alt" style="color:#E31E24;"></i> PUSH RECORDATORIO DEL MES</div>
+                <div style="font-size:10.5px; color:#64748b;">A todos los entrenadores que tienen algún entrenamiento sin subir este mes (hasta hoy).</div>
+                <div id="pushEntMesLista" style="font-size:11px; max-height:180px; overflow-y:auto;"></div>
+                <textarea id="pushEntMesTexto" rows="3" style="width:100%; box-sizing:border-box; border:1.5px solid #e2e8f0; border-radius:8px; padding:8px; font-size:11.5px; font-family:inherit; resize:vertical;">Hola {nombre}, tienes {n} entrenamiento(s) de {equipo} sin subir este mes: {dias}. ¡Súbelos cuando puedas!</textarea>
+                <button id="pushEntMesBtn" onclick="coordEnviarPushEntrenos('mes')" style="height:38px; border:none; border-radius:9px; background:#1e293b; color:white; font-weight:900; font-size:11px; cursor:pointer; font-family:inherit;"><i class="fas fa-paper-plane"></i> ENVIAR RECORDATORIO</button>
+            </div>
+        </div>
+        <div style="padding:0 20px 16px; font-size:10px; color:#94a3b8;">Puedes usar {nombre}, {equipo}, {dias} y {n} en el texto.</div>
+        <div id="pushEntResultado" style="padding:0 20px 18px; font-size:11.5px;"></div>
+    </div>
 </div>
 
 <!-- MODAL VISOR FOTO + OBJETIVOS (al pulsar VER en Revisión de Objetivos) -->
@@ -8851,7 +8883,7 @@
     }
 
     // RESUMEN: equipos que NO han subido y qué días (solo días hasta hoy, incluido)
-    function _ceResumen(titulo, fechas) {
+    function _cePendientes(fechas) {
         var hoyIso = _ceIso(new Date());
         var faltan = {}, orden = [];
         fechas.forEach(function(d) {
@@ -8864,6 +8896,11 @@
             });
         });
         orden.sort(function(a, b) { return faltan[b].dias.length - faltan[a].dias.length; });
+        return { faltan: faltan, orden: orden };
+    }
+
+    function _ceResumen(titulo, fechas) {
+        var pend = _cePendientes(fechas), faltan = pend.faltan, orden = pend.orden;
         var cab = '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #f1f5f9;">' +
             '<span style="font-size:12px;font-weight:900;color:#1e293b;letter-spacing:.5px;"><i class="fas fa-clipboard-list" style="color:#E31E24;margin-right:6px;"></i>RESUMEN · ' + titulo + '</span>' +
             (orden.length ? '<span style="background:#ffc7ce;color:#9c0006;font-size:10px;font-weight:900;border-radius:20px;padding:2px 10px;">' + orden.length + ' SIN SUBIR</span>' : '') +
@@ -8969,6 +9006,74 @@
         document.getElementById('tituloVisorFotoObjetivos').innerText = 'DÍA ' + parseInt(p[2], 10) + ' ' + _ceMESES[parseInt(p[1], 10) - 1] + ' · ' + equipo;
         renderObjetivosVisorFoto();
         document.getElementById('modalVerFotoObjetivos').style.display = 'flex';
+    }
+
+    // ── PUSH entrenos sin subir: hoy / recordatorio del mes ──
+    var _cePush = { hoy: null, mes: null };
+    function _ceDiasMesHastaHoy() {
+        var hoy = new Date(), out = [];
+        for (var d = 1; d <= hoy.getDate(); d++) {
+            var f = new Date(hoy.getFullYear(), hoy.getMonth(), d);
+            if (f.getDay() >= 1 && f.getDay() <= 4) out.push(f);
+        }
+        return out;
+    }
+    function _cePushLista(pend, conDias) {
+        if (!pend.orden.length) return '<div style="color:#16a34a;font-weight:800;padding:6px 0;"><i class="fas fa-circle-check"></i> Nadie pendiente</div>';
+        return pend.orden.map(function(n) {
+            var dias = pend.faltan[n].dias;
+            return '<div style="padding:3px 0;border-top:1px solid #f8fafc;"><b style="color:#1e293b;">' + n + '</b>' +
+                (conDias ? dias.map(function(d) {
+                    return '<span style="color:#9c0006;font-weight:800;margin-left:8px;white-space:nowrap;">' + _ceDIAS[d.getDay()].slice(0, 3) + ' ' + d.getDate() + '</span>';
+                }).join('') + '<span style="margin-left:8px;font-weight:900;color:#9c0006;">&rarr; ' + dias.length + '</span>' : '') +
+                '</div>';
+        }).join('');
+    }
+    function coordAbrirPushEntrenos() {
+        var hoy = new Date();
+        var hayHoy = hoy.getDay() >= 1 && hoy.getDay() <= 4;
+        _cePush.hoy = hayHoy ? _cePendientes([hoy]) : { faltan: {}, orden: [] };
+        _cePush.mes = _cePendientes(_ceDiasMesHastaHoy());
+        document.getElementById('pushEntHoyLista').innerHTML = hayHoy
+            ? _cePushLista(_cePush.hoy, false)
+            : '<div style="color:#94a3b8;font-weight:800;padding:6px 0;">Hoy no hay entrenos</div>';
+        document.getElementById('pushEntMesLista').innerHTML = _cePushLista(_cePush.mes, true);
+        [['pushEntHoyBtn', _cePush.hoy], ['pushEntMesBtn', _cePush.mes]].forEach(function(x) {
+            var b = document.getElementById(x[0]);
+            b.disabled = !x[1].orden.length;
+            b.style.opacity = x[1].orden.length ? '1' : '.4';
+        });
+        document.getElementById('pushEntResultado').innerHTML = '';
+        document.getElementById('modalPushEntrenos').style.display = 'flex';
+    }
+    async function coordEnviarPushEntrenos(modo) {
+        var pend = _cePush[modo];
+        if (!pend || !pend.orden.length) return;
+        var texto = document.getElementById(modo === 'hoy' ? 'pushEntHoyTexto' : 'pushEntMesTexto').value.trim();
+        if (!texto) { alert('Escribe el texto del push.'); return; }
+        if (!confirm('¿Enviar push a los entrenadores de ' + pend.orden.length + ' equipo(s)?')) return;
+        var btn = document.getElementById(modo === 'hoy' ? 'pushEntHoyBtn' : 'pushEntMesBtn');
+        var txtBtn = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ENVIANDO...';
+        var res = document.getElementById('pushEntResultado');
+        try {
+            var r = await fetch('/api/coord_push_entrenos', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    texto: texto,
+                    pendientes: pend.orden.map(function(n) { return { equipo: n, dias: pend.faltan[n].dias.map(_ceIso) }; })
+                })
+            });
+            var d = await r.json();
+            if (d.status !== 'ok') throw new Error(d.message || 'Error enviando');
+            res.innerHTML = '<div style="color:#16a34a;font-weight:800;"><i class="fas fa-circle-check"></i> Push enviado a ' + d.enviados.length + ' entrenador(es)' +
+                (d.enviados.length ? ': ' + d.enviados.map(function(e) { return e.entrenador + ' (' + e.equipo + ')'; }).join(', ') : '') + '</div>' +
+                (d.sin_entrenador.length ? '<div style="color:#b45309;font-weight:800;margin-top:4px;"><i class="fas fa-triangle-exclamation"></i> Sin entrenador en PERFILES: ' + d.sin_entrenador.join(', ') + '</div>' : '');
+        } catch (e) {
+            res.innerHTML = '<div style="color:#dc2626;font-weight:800;">' + e.message + '</div>';
+        } finally {
+            btn.disabled = false; btn.innerHTML = txtBtn;
+        }
     }
 
     coordEntrenosCargar();

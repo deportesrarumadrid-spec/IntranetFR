@@ -2432,6 +2432,54 @@ def api_coord_entrenos_subidos():
     return jsonify({"status": "ok", "subidos": subidos})
 
 
+@deportivo_bp.route('/api/coord_push_entrenos', methods=['POST'])
+def api_coord_push_entrenos():
+    """Push a los entrenadores (PERFILES, TIPO=ENTRENADOR) de los equipos con entrenos sin subir.
+    Body: {pendientes: [{equipo, dias: ["YYYY-MM-DD", ...]}], texto: plantilla con {nombre} {equipo} {dias} {n}}"""
+    if not session.get('usuario'):
+        return jsonify({"status": "error"}), 401
+    data = request.json or {}
+    pendientes = data.get('pendientes') or []
+    texto_tpl = (data.get('texto') or '').strip()
+    link = 'https://intranet.clubfuentelarreyna.com/movil'
+    if not pendientes or not texto_tpl:
+        return jsonify({"status": "error", "message": "Faltan datos"}), 400
+    try:
+        from app import enviar_push
+        perfiles = current_app.gs_client.open(current_app.gs_name).worksheet("PERFILES").get_all_records()
+        enviados, sin_entrenador = [], []
+        for p in pendientes:
+            equipo = (p.get('equipo') or '').strip()
+            equipo_n = _nt_dep(equipo)
+            fechas = []
+            for iso in p.get('dias') or []:
+                try:
+                    fechas.append(datetime.strptime(iso, '%Y-%m-%d'))
+                except ValueError:
+                    pass
+            if not equipo or not fechas:
+                continue
+            dias_txt = ', '.join(f"{['lunes','martes','miércoles','jueves','viernes','sábado','domingo'][f.weekday()]} {f.day}" for f in fechas)
+            coaches = [
+                c for c in perfiles
+                if equipo_n in [_nt_dep(e) for e in str(c.get('EQUIPO', '')).split(',')]
+                and str(c.get('TIPO', '')).strip().upper() == 'ENTRENADOR'
+                and str(c.get('USUARIO', '')).strip()
+            ]
+            if not coaches:
+                sin_entrenador.append(equipo)
+                continue
+            for c in coaches:
+                nombre = str(c.get('USUARIO', '')).strip()
+                msg = (texto_tpl.replace('{nombre}', nombre).replace('{equipo}', equipo)
+                       .replace('{dias}', dias_txt).replace('{n}', str(len(fechas))))
+                enviar_push(nombre.lower(), f"{msg}\n\n{link}")
+                enviados.append({"entrenador": nombre, "equipo": equipo})
+        return jsonify({"status": "ok", "enviados": enviados, "sin_entrenador": sin_entrenador})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @deportivo_bp.route('/api/horarios_temporada', methods=['POST'])
 def api_horarios_temporada_guardar():
     if not session.get('usuario'):
