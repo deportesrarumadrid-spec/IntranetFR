@@ -598,7 +598,9 @@
         <div id="coord-sub-individual" class="coord-subvista">
         <!-- Selector de equipo propio del subtab DESARROLLO INDV -->
         <div style="margin-bottom:18px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <div id="btnsEquipoIndiv" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+            <select id="selectEquipoIndiv" onchange="seleccionarEquipoIndiv(this.value)" style="padding:0 14px; height:38px; min-width:240px; border-radius:9px; border:1.5px solid #e2e8f0; background:white; color:#1e293b; font-weight:900; font-size:12px; font-family:inherit; cursor:pointer; letter-spacing:.3px;">
+                <option value="">TODOS LOS EQUIPOS</option>
+            </select>
             <h2 id="tituloEquipoIndiv" style="margin:0; font-size:16px; font-weight:900; color:#E31E24; text-transform:uppercase;"></h2>
         </div>
 
@@ -4737,6 +4739,9 @@
             p.style.display = (p.id === 'coordPane-' + pane) ? '' : 'none';
         });
         _coordMarcarBtn('.coord-tab-btn', 'data-pane', pane, '#E31E24', 'white', '#f1f5f9', '#475569');
+        if (pane === 'asistencias' && window._asistMatrizPendiente && typeof asistMatrizCargar === 'function') {
+            asistMatrizCargar(window._equipoIndivActual || '');
+        }
     }
     function coordEntSubTab(sub) {
         if (!document.getElementById('coordEnt-' + sub)) sub = 'semana';
@@ -5403,8 +5408,7 @@
                 estado.style.color = '#16a34a';
                 estado.textContent = data.message || 'Convocatorias actualizadas correctamente.';
                 convocatoriasCacheGlobal = null;
-                const equipo = document.getElementById('selectEquipoCoord').value;
-                if (equipo) cargarYRenderConvocatorias(equipo, 'containerConvocatoriasCoord');
+                actualizarVistaCoordinacion();
             } else {
                 banner.style.display = 'block';
                 banner.textContent = data.message || 'Error al actualizar.';
@@ -5493,55 +5497,97 @@
         renderFullCalendar();
     }
 
+    function _fechaCoordStr(date) {
+        return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+    }
+
+    function _filasCoord(equipo) {
+        return Array.from(document.querySelectorAll('#cuerpoCoordinacion tr[data-jugador]')).filter(tr => tr.dataset.equipo === equipo);
+    }
+
     async function cargarDatosDia(date) {
         if (!date) date = selectedCoordinationDate;
-        const equipo = document.getElementById('selectEquipoCoord').value;
-        if (!equipo || !date) return;
+        if (!date) return;
+        const fechaStr = _fechaCoordStr(date);
+        const equipos = _equiposVistaCoord();
+        if (!equipos.length) return;
 
-        // Forzamos formato DD/MM/YYYY para evitar fallos de guardado
-        const fechaStr = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
-        
+        // Resetear todos los campos primero
+        document.querySelectorAll('#cuerpoCoordinacion tr[data-jugador]').forEach(tr => {
+            tr.querySelector('.check-coord').checked = false;
+            tr.querySelector('.select-tipo-coord').value = '';
+            tr.querySelector('.obs-coord').value = '';
+            tr.querySelector('.historial-mini').innerText = '';
+            delete tr.dataset.guardado;
+        });
+
         showLoader();
         try {
-            const res = await fetch("{{ url_for('deportivo_bp.api_seguimiento_coordinacion') }}?equipo=" + equipo + "&fecha=" + fechaStr);
-            if (!res.ok) throw new Error("Error en la comunicación con el servidor");
-            const data = await res.json();
+            await Promise.all(equipos.map(async equipo => {
+                const res = await fetch("{{ url_for('deportivo_bp.api_seguimiento_coordinacion') }}?equipo=" + encodeURIComponent(equipo) + "&fecha=" + encodeURIComponent(fechaStr));
+                if (!res.ok) throw new Error("Error en la comunicación con el servidor");
+                const data = await res.json();
+                const filas = _filasCoord(equipo);
+                const fila = nombre => filas.find(tr => tr.dataset.jugador === nombre);
 
-            // Resetear todos los campos primero
-            document.querySelectorAll('.check-coord').forEach(cb => cb.checked = false);
-            document.querySelectorAll('.select-tipo-coord').forEach(sel => sel.value = "");
-            document.querySelectorAll('.input-coord').forEach(inp => inp.value = "");
-            document.querySelectorAll('.historial-mini').forEach(div => div.innerText = "");
-
-            // Aplicar datos actuales
-            if (data.actual) {
-                data.actual.forEach(s => {
-                    const fila = Array.from(document.querySelectorAll('#cuerpoCoordinacion tr')).find(tr => tr.dataset.jugador === s.jugador);
-                    if (fila) {
-                        fila.querySelector('.check-coord').checked = s.reunion;
-                        fila.querySelector('.select-tipo-coord').value = s.tipo || "";
-                        fila.querySelector('.input-coord').value = s.obs;
-                    }
+                (data.actual || []).forEach(sg => {
+                    const tr = fila(sg.jugador);
+                    if (!tr) return;
+                    tr.querySelector('.check-coord').checked = sg.reunion;
+                    tr.querySelector('.select-tipo-coord').value = sg.tipo || '';
+                    tr.querySelector('.obs-coord').value = sg.obs || '';
+                    tr.dataset.guardado = '1';
                 });
-            }
-
-            // Aplicar historial (último comentario)
-            if (data.historial) {
-                Object.keys(data.historial).forEach(jugador => {
-                    const fila = Array.from(document.querySelectorAll('#cuerpoCoordinacion tr')).find(tr => tr.dataset.jugador === jugador);
-                    if (fila) {
-                        const histDiv = fila.querySelector('.historial-mini');
-                        if (histDiv) {
-                            const h = data.historial[jugador];
-                            histDiv.innerText = `${h.tipo} : ${h.obs}`;
-                        }
-                    }
+                Object.keys(data.historial || {}).forEach(jugador => {
+                    const tr = fila(jugador);
+                    if (!tr) return;
+                    const h = data.historial[jugador];
+                    tr.querySelector('.historial-mini').innerText = `${h.tipo} : ${h.obs}`;
                 });
-            }
+            }));
         } catch (e) {
             console.error("Error en cargarDatosDia:", e);
         } finally {
             hideLoader();
+        }
+    }
+
+    async function guardarSeguimiento(btn) {
+        if (!selectedCoordinationDate) { alert('Selecciona primero un día en el calendario.'); return; }
+        const fechaStr = _fechaCoordStr(selectedCoordinationDate);
+        // Agrupar por equipo; solo filas con datos o ya guardadas (para poder vaciarlas)
+        const porEquipo = {};
+        document.querySelectorAll('#cuerpoCoordinacion tr[data-jugador]').forEach(tr => {
+            const reg = {
+                jugador: tr.dataset.jugador,
+                reunion: tr.querySelector('.check-coord').checked,
+                tipo: tr.querySelector('.select-tipo-coord').value,
+                obs: tr.querySelector('.obs-coord').value.trim()
+            };
+            if (!reg.reunion && !reg.tipo && !reg.obs && !tr.dataset.guardado) return;
+            (porEquipo[tr.dataset.equipo] = porEquipo[tr.dataset.equipo] || []).push(reg);
+        });
+        const equipos = Object.keys(porEquipo);
+        if (!equipos.length) { alert('No hay nada que guardar.'); return; }
+
+        const txt = btn ? btn.textContent : '';
+        if (btn) { btn.disabled = true; btn.textContent = 'GUARDANDO...'; }
+        try {
+            for (const equipo of equipos) {
+                const res = await fetch("{{ url_for('deportivo_bp.api_seguimiento_coordinacion') }}", {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ fecha: fechaStr, equipo, registros: porEquipo[equipo] })
+                });
+                if (!res.ok) throw new Error('Error guardando ' + equipo);
+            }
+            if (btn) btn.textContent = '✓ GUARDADO';
+            await cargarDatosDia();
+        } catch (e) {
+            alert(e.message);
+            if (btn) btn.textContent = txt;
+        } finally {
+            if (btn) { btn.disabled = false; setTimeout(() => { btn.textContent = txt; }, 1500); }
         }
     }
 
@@ -5554,28 +5600,9 @@
         });
     }
 
-    function actualizarVistaCoordinacion() {
-        const equipo = document.getElementById('selectEquipoCoord').value;
-        const titulo = document.getElementById('tituloEquipoCoord');
-        const tituloIndiv = document.getElementById('tituloEquipoIndiv');
-        const cuerpo = document.getElementById('cuerpoCoordinacion');
-        if (tituloIndiv) tituloIndiv.textContent = equipo || '';
-
-        if (!equipo) {
-            titulo.style.display = 'none';
-            cuerpo.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 40px; color: #999; font-weight: 700;">Selecciona un equipo para comenzar</td></tr>';
-            document.getElementById('containerConvocatoriasCoord').innerHTML = '<div style="text-align:center; padding:20px; color:#999; font-size:12px;">Selecciona un equipo arriba para ver sus convocatorias.</div>';
-            return;
-        }
-
-        titulo.innerText = equipo;
-        titulo.style.display = 'block';
-
-        cargarYRenderConvocatorias(equipo, 'containerConvocatoriasCoord');
-
-        const filtrados = jugadoresRaw.filter(j => j.EQUIPO === equipo);
-        cuerpo.innerHTML = filtrados.map(j => `
-            <tr data-jugador="${j.NOMBRE}">
+    function _filaJugadorCoord(j, equipo) {
+        return `
+            <tr data-jugador="${j.NOMBRE}" data-equipo="${equipo}">
                 <td style="font-weight: 800; color: #333; line-height: 1.2;">
                     ${j.NOMBRE}
                     <div class="historial-mini" style="font-size: 11px; color: #E31E24; font-weight: 600; margin-top: 4px; font-style: italic; max-width: 250px;"></div>
@@ -5589,10 +5616,53 @@
                         <option value="OTRA">OTRA</option>
                     </select>
                 </td>
-                <td><input type="text" class="input-coord" placeholder="Añadir nota de la reunión..."></td>
-            </tr>
-        `).join('');
-        
+                <td><input type="text" class="input-coord obs-coord" placeholder="Añadir nota de la reunión..."></td>
+            </tr>`;
+    }
+
+    function _equiposVistaCoord() {
+        const equipo = window._equipoIndivActual || '';
+        if (equipo) return [equipo];
+        const lista = (window._coordEquipos && window._coordEquipos.length)
+            ? window._coordEquipos
+            : [...new Set(jugadoresRaw.map(j => j.EQUIPO).filter(Boolean))];
+        return lista.filter(eq => jugadoresRaw.some(j => j.EQUIPO === eq));
+    }
+
+    function actualizarVistaCoordinacion() {
+        const equipo = window._equipoIndivActual || '';
+        const titulo = document.getElementById('tituloEquipoCoord');
+        const cuerpo = document.getElementById('cuerpoCoordinacion');
+        const contConv = document.getElementById('containerConvocatoriasCoord');
+        if (titulo) titulo.style.display = 'none';
+
+        const equipos = _equiposVistaCoord();
+        if (!equipos.length) {
+            cuerpo.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: #999; font-weight: 700;">No hay jugadores cargados</td></tr>';
+            if (contConv) contConv.innerHTML = '';
+            return;
+        }
+
+        // Convocatorias: un bloque por equipo
+        if (contConv) {
+            if (equipo) {
+                cargarYRenderConvocatorias(equipo, 'containerConvocatoriasCoord');
+            } else {
+                contConv.innerHTML = equipos.map((eq, i) => `
+                    <div style="margin-bottom:22px;">
+                        <div style="font-size:12px;font-weight:900;color:#E31E24;text-transform:uppercase;margin-bottom:8px;">${eq}</div>
+                        <div id="convCoordEq_${i}"></div>
+                    </div>`).join('');
+                equipos.forEach((eq, i) => cargarYRenderConvocatorias(eq, 'convCoordEq_' + i));
+            }
+        }
+
+        // Jugadores: agrupados por equipo cuando se ven todos
+        cuerpo.innerHTML = equipos.map(eq => {
+            const cab = equipo ? '' : `<tr class="fila-equipo-coord"><td colspan="4" style="background:#1e293b;color:white;font-size:11px;font-weight:900;letter-spacing:.5px;padding:8px 12px;text-transform:uppercase;">${eq}</td></tr>`;
+            return cab + jugadoresRaw.filter(j => j.EQUIPO === eq).map(j => _filaJugadorCoord(j, eq)).join('');
+        }).join('');
+
         cargarDatosDia();
     }
 
@@ -9584,17 +9654,15 @@
                 _fpEquiposF11 = (ecData.equipos || []).filter(e => (e.tipo||'F11') === 'F11').map(e => e.nombre).filter(Boolean);
                 _fpEquiposF7  = (ecData.equipos || []).filter(e =>  e.tipo === 'F7').map(e => e.nombre).filter(Boolean);
             }
-            // Populate btnsEquipoIndiv
-            const btnsCont = document.getElementById('btnsEquipoIndiv');
-            if (btnsCont && todosEquipos.length) {
-                btnsCont.innerHTML = todosEquipos.map(e => {
-                    const letra = e.split(' ').pop();
-                    const cat   = e.split(' ').slice(0, -1).join(' ');
-                    return `<button id="btnIndiv_${e.replace(/\s+/g,'_')}" onclick="seleccionarEquipoIndiv('${e.replace(/'/g,"\\'")}')"
-                        style="padding:5px 12px; border-radius:20px; border:1.5px solid #e2e8f0; background:white; color:#475569; font-weight:800; font-size:10px; cursor:pointer; font-family:inherit; letter-spacing:.3px; white-space:nowrap; transition:.15s;">
-                        <span style="color:#94a3b8; font-weight:600;">${cat}</span> <span style="color:#1e293b;">${letra}</span>
-                    </button>`;
-                }).join('');
+            // Desplegable de equipos de COORDINACIÓN (por defecto: TODOS)
+            const selEq = document.getElementById('selectEquipoIndiv');
+            if (selEq && todosEquipos.length) {
+                window._coordEquipos = todosEquipos;
+                const actual = window._equipoIndivActual || '';
+                selEq.innerHTML = '<option value="">TODOS LOS EQUIPOS</option>' +
+                    todosEquipos.map(e => `<option value="${e.replace(/"/g,'&quot;')}">${e}</option>`).join('');
+                selEq.value = actual;
+                seleccionarEquipoIndiv(actual);
             }
             // Pre-fetch positions for all configured + saved teams
             const equiposEnSlots = new Set([..._fpGetEquiposActivos()]);
@@ -10413,31 +10481,49 @@
 
     window._equipoIndivActual = '';
     function seleccionarEquipoIndiv(equipo) {
+        equipo = equipo || '';
         window._equipoIndivActual = equipo;
-        document.querySelectorAll('[id^="btnIndiv_"]').forEach(b => {
-            const activo = b.id === 'btnIndiv_' + equipo.replace(/\s+/g,'_');
-            b.style.background   = activo ? '#1e293b' : 'white';
-            b.style.borderColor  = activo ? '#1e293b' : '#e2e8f0';
-            b.style.color        = activo ? 'white'   : '#475569';
-        });
+        const selEq = document.getElementById('selectEquipoIndiv');
+        if (selEq && selEq.value !== equipo) selEq.value = equipo;
         const ti = document.getElementById('tituloEquipoIndiv');
-        if (ti) ti.textContent = equipo || '';
-        // Sincronizar selector oculto para que actualizarVistaCoordinacion sepa el equipo
+        if (ti) ti.textContent = '';
+        // Sincronizar selector oculto (legacy)
         const sel = document.getElementById('selectEquipoCoord');
         if (sel) sel.value = equipo;
         actualizarVistaCoordinacion();
-        asistMatrizCargar(equipo);
+        // La matriz de asistencias se carga al abrir su subpestaña (con TODOS son muchas peticiones)
+        window._asistMatrizPendiente = true;
+        const paneAsis = document.getElementById('coordPane-asistencias');
+        if (paneAsis && paneAsis.style.display !== 'none') asistMatrizCargar(equipo);
     }
 
 // ── Matriz de asistencias ─────────────────────────────────────────────────────
 async function asistMatrizCargar(equipo) {
     const cont  = document.getElementById('asistMatrizCont');
-    const badge = document.getElementById('asistMatrizBadge');
-    if (!equipo) {
-        cont.innerHTML = '<div style="color:#94a3b8;font-size:12px;text-align:center;padding:30px;">Selecciona un equipo.</div>';
-        badge.style.display = 'none';
+    window._asistMatrizPendiente = false;
+    if (equipo) return _asistMatrizUno(equipo, cont);
+    // TODOS: un bloque por equipo, uno debajo de otro
+    const equipos = window._coordEquipos || [];
+    if (!equipos.length) {
+        cont.innerHTML = '<div style="color:#94a3b8;font-size:12px;text-align:center;padding:30px;">Cargando equipos...</div>';
+        window._asistMatrizPendiente = true;
         return;
     }
+    cont.innerHTML = equipos.map((eq, i) => `
+        <div style="margin-bottom:22px;">
+            <div style="font-size:12px;font-weight:900;color:#E31E24;text-transform:uppercase;margin-bottom:8px;">${eq}</div>
+            <div id="asistMatrizEq_${i}" style="overflow-x:auto;"></div>
+        </div>`).join('');
+    // Cargar de 4 en 4 para no saturar el servidor
+    for (let i = 0; i < equipos.length; i += 4) {
+        await Promise.all(equipos.slice(i, i + 4).map((eq, k) =>
+            _asistMatrizUno(eq, document.getElementById('asistMatrizEq_' + (i + k)))));
+    }
+}
+
+async function _asistMatrizUno(equipo, cont) {
+    const badge = document.getElementById('asistMatrizBadge');
+    if (!cont) return;
     cont.innerHTML = '<div style="color:#94a3b8;font-size:12px;text-align:center;padding:30px;">Cargando...</div>';
     try {
         const res  = await fetch(`/api/asistencias_matrix?equipo=${encodeURIComponent(equipo)}`);
