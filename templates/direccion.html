@@ -8850,6 +8850,48 @@
             '</tbody></table></div>';
     }
 
+    // RESUMEN: equipos que NO han subido y qué días (solo días hasta hoy, incluido)
+    function _ceResumen(titulo, fechas) {
+        var hoyIso = _ceIso(new Date());
+        var faltan = {}, orden = [];
+        fechas.forEach(function(d) {
+            var iso = _ceIso(d);
+            if (iso > hoyIso) return;
+            _ceEquiposDia(d.getDay()).forEach(function(e) {
+                if ((_ceSubidos[_ceClave(e.nombre)] || {})[iso]) return;
+                if (!faltan[e.nombre]) { faltan[e.nombre] = { tipo: e.tipo, dias: [] }; orden.push(e.nombre); }
+                faltan[e.nombre].dias.push(d);
+            });
+        });
+        orden.sort(function(a, b) { return faltan[b].dias.length - faltan[a].dias.length; });
+        var cab = '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #f1f5f9;">' +
+            '<span style="font-size:12px;font-weight:900;color:#1e293b;letter-spacing:.5px;"><i class="fas fa-clipboard-list" style="color:#E31E24;margin-right:6px;"></i>RESUMEN · ' + titulo + '</span>' +
+            (orden.length ? '<span style="background:#ffc7ce;color:#9c0006;font-size:10px;font-weight:900;border-radius:20px;padding:2px 10px;">' + orden.length + ' SIN SUBIR</span>' : '') +
+            '</div>';
+        var cuerpo = !orden.length
+            ? '<div style="padding:14px;text-align:center;font-size:12px;font-weight:800;color:#16a34a;"><i class="fas fa-circle-check"></i> Todos los equipos han subido sus entrenos</div>'
+            : '<table style="width:100%;border-collapse:collapse;font-size:11px;">' +
+                '<thead><tr>' +
+                    '<th style="text-align:left;padding:6px 14px;font-size:9.5px;font-weight:900;color:#94a3b8;">EQUIPO</th>' +
+                    '<th style="text-align:left;padding:6px 8px;font-size:9.5px;font-weight:900;color:#94a3b8;">DÍAS SIN SUBIR</th>' +
+                    '<th style="text-align:center;padding:6px 14px;font-size:9.5px;font-weight:900;color:#94a3b8;width:60px;">TOTAL</th>' +
+                '</tr></thead><tbody>' +
+                orden.map(function(n) {
+                    var f = faltan[n];
+                    var dias = f.dias.map(function(d) {
+                        return '<span style="display:inline-block;background:#fff1f2;color:#9c0006;border:1px solid #fecdd3;border-radius:5px;padding:1px 6px;margin:1px 3px 1px 0;font-weight:800;white-space:nowrap;">' +
+                            _ceDIAS[d.getDay()].slice(0, 3) + ' ' + d.getDate() + '</span>';
+                    }).join('');
+                    return '<tr style="border-top:1px solid #f1f5f9;">' +
+                        '<td style="padding:6px 14px;font-weight:800;color:#1e293b;white-space:nowrap;">' + n + ' <span style="color:#94a3b8;font-size:9.5px;">' + f.tipo + '</span></td>' +
+                        '<td style="padding:6px 8px;">' + dias + '</td>' +
+                        '<td style="padding:6px 14px;text-align:center;font-weight:900;color:#9c0006;">' + f.dias.length + '</td>' +
+                    '</tr>';
+                }).join('') +
+                '</tbody></table>';
+        return '<div style="background:white;border-radius:12px;border:1px solid #e2e8f0;margin-bottom:14px;overflow-x:auto;">' + cab + cuerpo + '</div>';
+    }
+
     function _ceSemanaDe(lunes) {
         return [0, 1, 2, 3].map(function(i) { var d = new Date(lunes); d.setDate(d.getDate() + i); return d; });
     }
@@ -8871,7 +8913,7 @@
             var lunes = _ceLunes(hoy);
             var sem = _ceSemanaDe(lunes);
             var titSem = 'SEMANA DEL ' + lunes.getDate() + ' ' + _ceMESES[lunes.getMonth()] + ' AL ' + sem[3].getDate() + ' ' + _ceMESES[sem[3].getMonth()];
-            cSem.innerHTML = sinHorarios ? aviso(msgSinHor) : _ceTabla(titSem, [sem], null);
+            cSem.innerHTML = sinHorarios ? aviso(msgSinHor) : _ceResumen(titSem, sem) + _ceTabla(titSem, [sem], null);
         }
 
         // DÍA actual
@@ -8884,7 +8926,7 @@
                 cDia.innerHTML = aviso(msgSinHor);
             } else {
                 var tit = _ceDIAS[dow] + ' ' + hoy.getDate() + ' ' + _ceMESES[m];
-                cDia.innerHTML = _ceTabla(tit, [[hoy]], null).replace('min-width:240px', 'min-width:320px;max-width:560px;margin:0 auto');
+                cDia.innerHTML = _ceResumen(tit, [hoy]) + _ceTabla(tit, [[hoy]], null).replace('min-width:240px', 'min-width:320px;max-width:560px;margin:0 auto');
             }
         }
 
@@ -8897,7 +8939,8 @@
                 var s = _ceSemanaDe(l);
                 if (s.some(function(d) { return d.getMonth() === m; })) semanas.push(s);
             }
-            cMes.innerHTML = sinHorarios ? aviso(msgSinHor) : _ceTabla(_ceMESES[m] + ' ' + y, semanas, m);
+            var diasMes = [].concat.apply([], semanas).filter(function(d) { return d.getMonth() === m; });
+            cMes.innerHTML = sinHorarios ? aviso(msgSinHor) : _ceResumen(_ceMESES[m] + ' ' + y, diasMes) + _ceTabla(_ceMESES[m] + ' ' + y, semanas, m);
         }
     }
 
