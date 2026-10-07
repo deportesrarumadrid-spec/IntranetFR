@@ -2401,6 +2401,37 @@ def api_horarios_temporada_get():
     return jsonify({"status": "success", "datos": datos})
 
 
+@deportivo_bp.route('/api/coord_entrenos_subidos', methods=['GET'])
+def api_coord_entrenos_subidos():
+    """Entrenos subidos (entreno_{EQUIPO}_{DD-MM-YYYY}.jpg) entre dos fechas, para COORDINACIÓN → ENTRENAMIENTOS.
+    Devuelve {clave_equipo: {"YYYY-MM-DD": url}} con la clave normalizada como sanitizar_equipo_archivo."""
+    if not session.get('usuario'):
+        return jsonify({"status": "error"}), 401
+    import re as _re
+    try:
+        desde = datetime.strptime(request.args.get('desde', ''), '%Y-%m-%d').date()
+        hasta = datetime.strptime(request.args.get('hasta', ''), '%Y-%m-%d').date()
+    except Exception:
+        return jsonify({"status": "error", "message": "Fechas inválidas"}), 400
+
+    upload_folder = current_app.config.get('UPLOAD_FOLDER') or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
+    subidos = {}
+    if os.path.exists(upload_folder):
+        for f in os.listdir(upload_folder):
+            m = _re.match(r'^entreno_(.+)_(\d{2})-(\d{2})-(\d{4})\.jpg$', f)
+            if not m:
+                continue
+            try:
+                fecha = datetime(int(m.group(4)), int(m.group(3)), int(m.group(2))).date()
+            except ValueError:
+                continue
+            if not (desde <= fecha <= hasta):
+                continue
+            clave = _re.sub(r'[^A-Z0-9]+', '_', m.group(1).upper()).strip('_')
+            subidos.setdefault(clave, {})[fecha.isoformat()] = f"/static/uploads/{f}"
+    return jsonify({"status": "ok", "subidos": subidos})
+
+
 @deportivo_bp.route('/api/horarios_temporada', methods=['POST'])
 def api_horarios_temporada_guardar():
     if not session.get('usuario'):

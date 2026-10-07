@@ -632,16 +632,13 @@
                 <button class="coord-ent-btn" style="padding:5px 14px;font-size:10px;font-weight:900;border-radius:20px;border:1.5px solid #e2e8f0;background:white;color:#475569;cursor:pointer;font-family:inherit;letter-spacing:.3px;" data-ent="mes" onclick="coordEntSubTab('mes')">MES</button>
             </div>
             <div id="coordEnt-semana" class="coord-ent-pane">
-            <div style="background:white;border-radius:12px;border:1px dashed #cbd5e1;padding:40px;text-align:center;color:#94a3b8;font-size:12px;font-weight:800;">
-                <i class="fas fa-person-digging" style="font-size:20px;margin-bottom:8px;display:block;"></i> SEMANA — PRÓXIMAMENTE
-            </div>
+                <div id="coordEntrenos-semana" class="coord-entrenos-cont"></div>
             </div>
             <div id="coordEnt-dia" class="coord-ent-pane" style="display:none;">
-            <div style="background:white;border-radius:12px;border:1px dashed #cbd5e1;padding:40px;text-align:center;color:#94a3b8;font-size:12px;font-weight:800;">
-                <i class="fas fa-person-digging" style="font-size:20px;margin-bottom:8px;display:block;"></i> DÍA — PRÓXIMAMENTE
-            </div>
+                <div id="coordEntrenos-dia" class="coord-entrenos-cont"></div>
             </div>
             <div id="coordEnt-mes" class="coord-ent-pane" style="display:none;">
+                <div id="coordEntrenos-mes" class="coord-entrenos-cont" style="margin-bottom:24px;"></div>
         <!-- Metodología por Equipo -->
         <div class="tecnificaciones-container">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
@@ -8606,6 +8603,7 @@
 
     function seguimientoEntrenamientosRender(datos) {
         _segHorTempDatos = datos;
+        coordEntrenosCargar();
         var grid = document.getElementById('seguimientoEntrenamientosGrid');
         if (!grid) return;
 
@@ -8768,6 +8766,198 @@
     }
 
     seguimientoEntrenamientosCargar();
+
+    // ── COORDINACIÓN · ENTRENAMIENTOS (SEMANA / DÍA / MES) ───────────────────
+    // Equipos por día desde HORARIOS TEMP. (L-X / M-J) · F7/F11 desde la configuración del equipo
+    // · "ver" si hay entreno subido ese día (entreno_{EQUIPO}_{DD-MM-YYYY}.jpg), "X" si no.
+    var _ceSubidos = {};
+    var _ceMESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+    var _ceDIAS = ['DOMINGO','LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES','SÁBADO'];
+
+    function _ceIso(d) {
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function _ceClave(eq) {
+        return (eq || '').trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    }
+    function _ceNorm(eq) {
+        return (eq || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toUpperCase().replace(/\s+/g, ' ');
+    }
+    function _ceLunes(d) {
+        var l = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        l.setDate(l.getDate() - ((l.getDay() + 6) % 7));
+        return l;
+    }
+
+    function _ceTipo(nombre, columna) {
+        var n = _ceNorm(nombre);
+        if (/\bF7\b/.test(n)) return 'F7';
+        if (/\bF11\b/.test(n)) return 'F11';
+        var cfg = ((_EQUIPOS_CFG && _EQUIPOS_CFG.equipos) || []).find(function(e) { return _ceNorm(e.nombre) === n; });
+        if (cfg && cfg.tipo) return cfg.tipo === 'F7' ? 'F7' : 'F11';
+        return /^F7/i.test(columna || '') ? 'F7' : 'F11';
+    }
+
+    // dow: 1=lunes … 4=jueves → [{nombre, tipo}]
+    function _ceEquiposDia(dow) {
+        var grupo = (dow === 1 || dow === 3) ? 'lunes_miercoles' : (dow === 2 || dow === 4) ? 'martes_jueves' : null;
+        if (!grupo) return [];
+        var grupoData = (_segHorTempDatos || {})[grupo] || {};
+        var COLS = ['F7-1', 'F7-2', 'F11-CAMPO 1 1', 'F-11-CAMPO 1 2', 'F11-CAMPO 2 1', 'F11-CAMPO 2 2'];
+        var horarios = (typeof horTempGenerarHorarios === 'function') ? horTempGenerarHorarios() : Object.keys(grupoData);
+        var visto = {}, lista = [];
+        horarios.forEach(function(h) {
+            var fila = grupoData[h];
+            if (!fila) return;
+            COLS.forEach(function(c) {
+                var txt = ((fila[c] && fila[c].texto) || '').trim();
+                if (!txt || txt.startsWith('_')) return;
+                (txt.includes(' - ') ? txt.split(' - ') : [txt]).forEach(function(t) {
+                    t = t.trim();
+                    var k = _ceNorm(t);
+                    if (t && !visto[k]) { visto[k] = true; lista.push({ nombre: t, tipo: _ceTipo(t, c) }); }
+                });
+            });
+        });
+        var filtro = _ceNorm(window._equipoIndivActual || '');
+        return filtro ? lista.filter(function(e) { return _ceNorm(e.nombre) === filtro; }) : lista;
+    }
+
+    function _ceFilasTipo(equipos, iso) {
+        if (!equipos.length) return '<div style="font-size:10px;color:#cbd5e1;padding:4px 6px;">—</div>';
+        return equipos.map(function(e) {
+            var url = (_ceSubidos[_ceClave(e.nombre)] || {})[iso];
+            var esc = e.nombre.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            var estado = url
+                ? '<span onclick="coordVerEntreno(\'' + esc + '\',\'' + iso + '\')" style="background:#c6efce;color:#166534;cursor:pointer;">ver</span>'
+                : '<span style="background:#ffc7ce;color:#9c0006;">X</span>';
+            return '<div style="display:flex;border-top:1px solid #eef2f6;">' +
+                '<span style="flex:1;font-size:10.5px;font-weight:800;color:#1e293b;padding:5px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + e.nombre + '">' + e.nombre + '</span>' +
+                estado.replace('style="', 'style="width:46px;flex-shrink:0;text-align:center;font-size:10.5px;font-weight:800;padding:5px 0;') +
+                '</div>';
+        }).join('');
+    }
+
+    function _ceCelda(fecha, enMes) {
+        if (!enMes) return '<td style="border:1.5px solid #1e293b;background:#f8fafc;"></td>';
+        var iso = _ceIso(fecha);
+        var hoy = _ceIso(new Date()) === iso;
+        var eqs = _ceEquiposDia(fecha.getDay());
+        var col = function(tipo) {
+            return '<div style="flex:1;min-width:0;">' +
+                '<div style="text-align:center;font-size:10px;font-weight:900;color:#64748b;padding:3px 0;">' + tipo + '</div>' +
+                _ceFilasTipo(eqs.filter(function(e) { return e.tipo === tipo; }), iso) +
+                '</div>';
+        };
+        return '<td style="border:1.5px solid #1e293b;vertical-align:top;padding:0;background:' + (hoy ? '#fff5f5' : 'white') + ';">' +
+            '<div style="text-align:center;font-size:17px;font-weight:900;color:' + (hoy ? '#E31E24' : '#1e293b') + ';padding:6px 0 2px;">' + fecha.getDate() + '</div>' +
+            '<div style="display:flex;gap:6px;padding:0 4px 6px;">' + col('F7') + '<div style="width:1px;background:#e2e8f0;"></div>' + col('F11') + '</div>' +
+            '</td>';
+    }
+
+    // semanas: [[Date lunes..jueves], ...]; mesRef: solo se pintan los días de ese mes (null = todos)
+    function _ceTabla(titulo, semanas, mesRef) {
+        var cab = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES'].slice(0, semanas[0].length);
+        return '<div style="background:white;border-radius:12px;border:1px solid #e2e8f0;overflow-x:auto;">' +
+            '<div style="text-align:center;font-size:13px;font-weight:900;color:#1e293b;padding:10px;letter-spacing:.5px;">' + titulo + '</div>' +
+            '<table style="width:100%;min-width:' + (cab.length * 240) + 'px;border-collapse:collapse;table-layout:fixed;">' +
+            '<thead><tr>' + cab.map(function(c) {
+                return '<th style="background:#1e293b;color:white;font-size:10px;font-weight:900;padding:7px;letter-spacing:.5px;">' + c + '</th>';
+            }).join('') + '</tr></thead><tbody>' +
+            semanas.map(function(sem) {
+                return '<tr>' + sem.map(function(d) {
+                    return _ceCelda(d, mesRef === null || d.getMonth() === mesRef);
+                }).join('') + '</tr>';
+            }).join('') +
+            '</tbody></table></div>';
+    }
+
+    function _ceSemanaDe(lunes) {
+        return [0, 1, 2, 3].map(function(i) { var d = new Date(lunes); d.setDate(d.getDate() + i); return d; });
+    }
+
+    function coordEntrenosRender() {
+        var hoy = new Date();
+        var y = hoy.getFullYear(), m = hoy.getMonth();
+        var aviso = function(t) {
+            return '<div style="background:white;border-radius:12px;border:1px dashed #cbd5e1;padding:36px;text-align:center;color:#94a3b8;font-size:12px;font-weight:800;">' + t + '</div>';
+        };
+        var sinHorarios = ![1, 2, 3, 4].some(function(d) { return _ceEquiposDia(d).length; });
+        var msgSinHor = window._equipoIndivActual
+            ? 'Este equipo no aparece en HORARIOS TEMP.'
+            : 'Sin horarios cargados — ve a <b style="color:#1e293b;">HORARIOS TEMP.</b> e introduce los equipos por franjas';
+
+        // SEMANA actual
+        var cSem = document.getElementById('coordEntrenos-semana');
+        if (cSem) {
+            var lunes = _ceLunes(hoy);
+            var sem = _ceSemanaDe(lunes);
+            var titSem = 'SEMANA DEL ' + lunes.getDate() + ' ' + _ceMESES[lunes.getMonth()] + ' AL ' + sem[3].getDate() + ' ' + _ceMESES[sem[3].getMonth()];
+            cSem.innerHTML = sinHorarios ? aviso(msgSinHor) : _ceTabla(titSem, [sem], null);
+        }
+
+        // DÍA actual
+        var cDia = document.getElementById('coordEntrenos-dia');
+        if (cDia) {
+            var dow = hoy.getDay();
+            if (dow < 1 || dow > 4) {
+                cDia.innerHTML = aviso('<i class="fas fa-mug-hot" style="font-size:20px;display:block;margin-bottom:8px;"></i> HOY NO HAY ENTRENOS');
+            } else if (sinHorarios) {
+                cDia.innerHTML = aviso(msgSinHor);
+            } else {
+                var tit = _ceDIAS[dow] + ' ' + hoy.getDate() + ' ' + _ceMESES[m];
+                cDia.innerHTML = _ceTabla(tit, [[hoy]], null).replace('min-width:240px', 'min-width:320px;max-width:560px;margin:0 auto');
+            }
+        }
+
+        // MES actual (semanas de lunes a jueves)
+        var cMes = document.getElementById('coordEntrenos-mes');
+        if (cMes) {
+            var semanas = [];
+            var ultimo = new Date(y, m + 1, 0);
+            for (var l = _ceLunes(new Date(y, m, 1)); l <= ultimo; l.setDate(l.getDate() + 7)) {
+                var s = _ceSemanaDe(l);
+                if (s.some(function(d) { return d.getMonth() === m; })) semanas.push(s);
+            }
+            cMes.innerHTML = sinHorarios ? aviso(msgSinHor) : _ceTabla(_ceMESES[m] + ' ' + y, semanas, m);
+        }
+    }
+
+    async function coordEntrenosCargar() {
+        var hoy = new Date();
+        var ini = _ceLunes(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+        var fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+        var finSemana = _ceLunes(hoy); finSemana.setDate(finSemana.getDate() + 3);
+        if (finSemana > fin) fin = finSemana;
+        coordEntrenosRender();
+        try {
+            var r = await fetch('/api/coord_entrenos_subidos?desde=' + _ceIso(ini) + '&hasta=' + _ceIso(fin));
+            var d = await r.json();
+            if (d.status === 'ok') _ceSubidos = d.subidos || {};
+        } catch (e) { console.error('[COORD ENTRENOS]', e); }
+        coordEntrenosRender();
+    }
+
+    // VER: mismo visor que Revisión Objetivos (foto en grande + OBJ del mes para marcar)
+    async function coordVerEntreno(equipo, iso) {
+        var url = (_ceSubidos[_ceClave(equipo)] || {})[iso];
+        if (!url) return;
+        var p = iso.split('-');
+        var selEq = document.getElementById('selectEquipoRevision');
+        var selMes = document.getElementById('selectMesRevision');
+        if (!selEq || !selMes) return;
+        if (!Array.from(selEq.options).some(function(o) { return o.value === equipo; })) selEq.add(new Option(equipo, equipo));
+        selEq.value = equipo;
+        var mesVal = p[0] + '-' + p[1];
+        if (!Array.from(selMes.options).some(function(o) { return o.value === mesVal; })) selMes.add(new Option(mesVal, mesVal));
+        selMes.value = mesVal;
+        await cargarRevisionObjetivos();
+        verFotoDiaActual = parseInt(p[2], 10);
+        document.getElementById('imgVisorFotoObjetivos').src = url + '?t=' + Date.now();
+        document.getElementById('tituloVisorFotoObjetivos').innerText = 'DÍA ' + parseInt(p[2], 10) + ' ' + _ceMESES[parseInt(p[1], 10) - 1] + ' · ' + equipo;
+        renderObjetivosVisorFoto();
+        document.getElementById('modalVerFotoObjetivos').style.display = 'flex';
+    }
 
     var _segCoordEquipo = '';
     var _segCoordCat    = 'ENTRENAMIENTOS';
@@ -10491,6 +10681,7 @@
         const sel = document.getElementById('selectEquipoCoord');
         if (sel) sel.value = equipo;
         actualizarVistaCoordinacion();
+        if (typeof coordEntrenosRender === 'function') coordEntrenosRender();
         // La matriz de asistencias se carga al abrir su subpestaña (con TODOS son muchas peticiones)
         window._asistMatrizPendiente = true;
         const paneAsis = document.getElementById('coordPane-asistencias');
