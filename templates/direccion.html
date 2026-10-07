@@ -580,15 +580,9 @@
             {% endfor %}
         </select>
         <div style="margin-bottom: 8px;">
-            <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px;">
-                <button class="btn-fin coord-subtab-btn" style="background:#E31E24;color:white;padding:0 14px;font-size:10px;height:36px;border-radius:8px;letter-spacing:.3px;" onclick="coordActivarSubTab('metodologia',this)">COOR. METODOLOGÍA</button>
-                <button class="btn-fin coord-subtab-btn" style="padding:0 14px;font-size:10px;height:36px;border-radius:8px;background:#f1f5f9;color:#475569;letter-spacing:.3px;" onclick="coordActivarSubTab('individual',this)">COOR. DESARROLLO INDV</button>
-            </div>
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                <button id="btnTareasMetodologia" onclick="abrirTareasSemanal('metodologia')" style="padding:0 16px;font-size:12px;height:36px;border-radius:9px;border:2px solid #0f766e;background:#f0fdf4;color:#0f766e;font-weight:900;cursor:pointer;letter-spacing:.3px;display:inline-flex;align-items:center;gap:6px;"><i class="fas fa-list-check"></i> TAREAS SEMANAL — METODOLOGÍA</button>
-                <button id="btnEjerciciosMetodologia" onclick="abrirModalEjercicios()" style="padding:0 16px;font-size:12px;height:36px;border-radius:9px;border:2px solid #1e293b;background:#1e293b;color:white;font-weight:900;cursor:pointer;letter-spacing:.3px;display:inline-flex;align-items:center;gap:6px;"><i class="fas fa-dumbbell"></i> PROGRAMAR EJERCICIOS SEMANALES</button>
-                <button id="btnTareasIndividual" onclick="abrirTareasSemanal('individual')" style="display:none;padding:0 16px;font-size:12px;height:36px;border-radius:9px;border:2px solid #0f766e;background:#f0fdf4;color:#0f766e;font-weight:900;cursor:pointer;letter-spacing:.3px;align-items:center;gap:6px;"><i class="fas fa-list-check"></i> TAREAS SEMANAL — DESARROLLO INDV</button>
-                <button id="btnEjerciciosIndividual" onclick="abrirModalEjercicios()" style="display:none;padding:0 16px;font-size:12px;height:36px;border-radius:9px;border:2px solid #1e293b;background:#1e293b;color:white;font-weight:900;cursor:pointer;letter-spacing:.3px;align-items:center;gap:6px;"><i class="fas fa-dumbbell"></i> PROGRAMAR EJERCICIOS SEMANALES</button>
+                <button id="btnTareasCoordinacion" onclick="abrirTareasSemanal('coordinacion')" style="padding:0 16px;font-size:12px;height:36px;border-radius:9px;border:2px solid #0f766e;background:#f0fdf4;color:#0f766e;font-weight:900;cursor:pointer;letter-spacing:.3px;display:inline-flex;align-items:center;gap:6px;"><i class="fas fa-list-check"></i> TAREAS SEMANAL — COORDINACIÓN</button>
+                <button id="btnEjerciciosCoordinacion" onclick="abrirModalEjercicios()" style="padding:0 16px;font-size:12px;height:36px;border-radius:9px;border:2px solid #1e293b;background:#1e293b;color:white;font-weight:900;cursor:pointer;letter-spacing:.3px;display:inline-flex;align-items:center;gap:6px;"><i class="fas fa-dumbbell"></i> PROGRAMAR EJERCICIOS SEMANALES</button>
             </div>
             <div style="display:flex; gap:14px; align-items:center; margin-top:14px; flex-wrap:wrap;">
             <div style="flex: 1; max-width: 250px; display: none;" id="containerBusquedaJug">
@@ -601,7 +595,7 @@
             </div>
         </div>
 
-        <div id="coord-sub-individual" class="coord-subvista" style="display:none;">
+        <div id="coord-sub-individual" class="coord-subvista">
         <!-- Selector de equipo propio del subtab DESARROLLO INDV -->
         <div style="margin-bottom:18px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
             <div id="btnsEquipoIndiv" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
@@ -618,9 +612,6 @@
                 </button>
                 <button class="btn-premium" onclick="abrirModalObjetivos()" style="margin-bottom: 25px; width: 100%;">
                     <i class="fas fa-calendar-alt"></i> PROGRAMAR OBJETIVOS
-                </button>
-                <button class="btn-modern-dark" onclick="abrirModalEjercicios()" style="margin-bottom: 25px; width: 100%;">
-                    <i class="fas fa-dumbbell"></i> PROGRAMAR EJERCICIOS SEMANALES
                 </button>
                 <label style="font-size: 10px; font-weight: 900; color: #999; display: block; margin-bottom: 10px;">FECHA DE SEGUIMIENTO</label>
                 <div id="fullCalendarContainer">
@@ -4705,26 +4696,6 @@
         } catch (err) { console.error("Error switchTab:", err); }
     }
 
-    function coordActivarSubTab(sub, btn) {
-        localStorage.setItem('dir_coord_sub', sub);
-        document.querySelectorAll('.coord-subtab-btn').forEach(function(b) {
-            b.style.background = '#f1f5f9'; b.style.color = '#475569';
-        });
-        if (btn) { btn.style.background = '#E31E24'; btn.style.color = 'white'; }
-        document.querySelectorAll('.coord-subvista').forEach(function(v) { v.style.display = 'none'; });
-        var el = document.getElementById('coord-sub-' + sub);
-        if (el) el.style.display = '';
-        // Mostrar solo el botón de tareas semanal del tab activo
-        var bMet = document.getElementById('btnTareasMetodologia');
-        var bInd = document.getElementById('btnTareasIndividual');
-        var bEjMet = document.getElementById('btnEjerciciosMetodologia');
-        var bEjInd = document.getElementById('btnEjerciciosIndividual');
-        if (bMet) bMet.style.display = sub === 'metodologia' ? 'inline-flex' : 'none';
-        if (bInd) bInd.style.display = sub === 'individual'  ? 'inline-flex' : 'none';
-        if (bEjMet) bEjMet.style.display = sub === 'metodologia' ? 'inline-flex' : 'none';
-        if (bEjInd) bEjInd.style.display = sub === 'individual'  ? 'inline-flex' : 'none';
-    }
-
     // ── TAREAS SEMANALES COORDINACIÓN ─────────────────────────────────────────
     const _TAREAS_COORD = {
         metodologia: {
@@ -4797,6 +4768,28 @@
             ]
         }
     };
+
+    // COORDINACIÓN unificada: Metodología + Desarrollo Indv, sin repetir tareas ya listadas en el mismo día
+    _TAREAS_COORD.coordinacion = (function() {
+        const DIAS = ['lunes','martes','miercoles','jueves','sd'];
+        const vistos = {};
+        DIAS.forEach(d => vistos[d] = new Set());
+        const grupos = [];
+        [..._TAREAS_COORD.metodologia.grupos, ..._TAREAS_COORD.individual.grupos].forEach(g => {
+            const filas = [];
+            g.filas.forEach(fila => {
+                const limpia = {};
+                DIAS.forEach(d => {
+                    const v = fila[d] || '';
+                    limpia[d] = (v && !vistos[d].has(v)) ? v : '';
+                    if (v) vistos[d].add(v);
+                });
+                if (DIAS.some(d => limpia[d])) filas.push(limpia);
+            });
+            if (filas.length) grupos.push({ color: g.color, filas });
+        });
+        return { titulo: 'COORDINACIÓN — Tareas semanales', grupos };
+    })();
 
     function abrirTareasSemanal(tipo) {
         const cfg  = _TAREAS_COORD[tipo];
@@ -11331,15 +11324,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // 1. Restaurar pestaña principal
     const mainEl = document.querySelector(`.tab-item[onclick*="'${savedTab}'"]`);
     if (mainEl) switchTab({ currentTarget: mainEl }, savedTab);
-
-    // 2. Restaurar sub-pestaña de COORDINACIÓN
-    if (savedTab === 'tab-coordinacion') {
-        const sub = localStorage.getItem('dir_coord_sub');
-        if (sub) {
-            const btn = document.querySelector(`.coord-subtab-btn[onclick*="'${sub}'"]`);
-            coordActivarSubTab(sub, btn);
-        }
-    }
 
     // 3. Restaurar sub-pestaña de D. DEPORTIVA
     if (savedTab === 'tab-d-deportiva') {
