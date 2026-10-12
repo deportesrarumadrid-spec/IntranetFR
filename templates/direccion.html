@@ -9834,12 +9834,6 @@
             if (p.jornada_num < 999) { eqMap[clave].jornadas[p.jornada_num] = p; if (p.jornada_num > maxJ) maxJ = p.jornada_num; }
         });
         var equiposGraf = Object.values(eqMap).sort(ordenar);
-        var ABR = { 'AFICIONADO':'AFI', 'JUVENIL':'JUV', 'CADETE':'CDT', 'INFANTIL':'INF', 'ALEVIN':'ALE', 'ALEVIN F7':'ALE', 'BENJAMIN':'BEN', 'PREBENJAMIN':'PRE' };
-        var etiqueta = function(eq) {
-            var letra = (eq.clave.slice((eq.categoria + ' ').length) || eq.letra || '')
-                .replace(/\bF-?11\b/i, '11').replace(/\bF-?7\b/i, '7').replace(/FEMENINO/i, 'FEM');
-            return ((ABR[eq.categoria] || eq.categoria.slice(0, 3)) + ' ' + letra).trim();
-        };
 
         // ── Lienzo vertical ──
         var cv = document.createElement('canvas');
@@ -9894,30 +9888,81 @@
             y += lh * (maxF + 1) + GAP;
         });
 
-        // ── Gráfico SEGUIMIENTO TEMPORADA ──
+        // ── Tabla SEGUIMIENTO TEMPORADA (igual que la vista: ✓ / ✗ por jornada, % Cump. y Detalle) ──
         if (maxJ > 0 && equiposGraf.length) {
-            var gy0 = ALTO_TABLAS + 14, labW = 64, cabH = 16;
-            var gx0 = M + labW, gW = W - M - gx0;
+            var gy0 = ALTO_TABLAS + 12, cabH = 18;
+            var nomW = 118, pctW = 54, detW = 64;
+            var gx0 = M + nomW, gW = W - M - detW - pctW - gx0;
             var colJ = gW / maxJ;
-            var rowH = (H - M - gy0 - cabH) / equiposGraf.length;
-            ctx.font = 'bold ' + Math.min(11, Math.floor(colJ * 0.45)) + 'px ' + FUENTE;
-            ctx.fillStyle = '#000000'; ctx.textAlign = 'center';
+            var rowH = Math.min(24, (H - M - gy0 - cabH) / equiposGraf.length);
+            var rad = Math.max(3, Math.min(rowH, colJ) * 0.36);
+            // Cabecera
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(M, gy0, W - 2 * M, cabH);
+            ctx.textAlign = 'left'; ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 11px ' + FUENTE;
+            ctx.fillText('Equipo', M + 6, gy0 + cabH / 2);
+            ctx.textAlign = 'center';
+            ctx.font = 'bold ' + Math.max(7, Math.min(9, Math.floor(colJ * 0.36))) + 'px ' + FUENTE;
+            ctx.fillStyle = '#94a3b8';
             for (var j = 1; j <= maxJ; j++) ctx.fillText('J.' + j, gx0 + colJ * (j - 0.5), gy0 + cabH / 2);
+            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 11px ' + FUENTE;
+            ctx.fillText('% Cump.', gx0 + gW + pctW / 2, gy0 + cabH / 2);
+            ctx.fillText('Detalle', gx0 + gW + pctW + detW / 2, gy0 + cabH / 2);
+
+            var icono = function(cx, cy, tipo) {
+                ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+                ctx.fillStyle = tipo === 'ok' ? '#16a34a' : (tipo === 'ko' ? '#dc2626' : '#94a3b8');
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(1.2, rad * 0.32); ctx.lineCap = 'round';
+                ctx.beginPath();
+                if (tipo === 'ok') {
+                    ctx.moveTo(cx - rad * 0.45, cy + rad * 0.02); ctx.lineTo(cx - rad * 0.1, cy + rad * 0.38); ctx.lineTo(cx + rad * 0.48, cy - rad * 0.32);
+                } else if (tipo === 'ko') {
+                    ctx.moveTo(cx - rad * 0.38, cy - rad * 0.38); ctx.lineTo(cx + rad * 0.38, cy + rad * 0.38);
+                    ctx.moveTo(cx + rad * 0.38, cy - rad * 0.38); ctx.lineTo(cx - rad * 0.38, cy + rad * 0.38);
+                } else {
+                    ctx.moveTo(cx - rad * 0.45, cy); ctx.lineTo(cx + rad * 0.45, cy);
+                }
+                ctx.stroke();
+            };
+
             equiposGraf.forEach(function(eq, k) {
                 var ry = gy0 + cabH + k * rowH, mid = ry + rowH / 2;
-                ctx.font = 'bold ' + Math.min(13, Math.floor(rowH * 0.6)) + 'px ' + FUENTE;
-                ctx.fillStyle = '#000000'; ctx.textAlign = 'left';
-                ctx.fillText(recortar(etiqueta(eq), labW - 6), M, mid);
-                ctx.strokeStyle = '#000000'; ctx.lineWidth = 0.6;
-                ctx.beginPath(); ctx.moveTo(gx0, ry + rowH); ctx.lineTo(W - M, ry + rowH); ctx.stroke();
+                var verde = 0, rojo = 0;
+                // Fondo de nombre, % y detalle (como en la vista)
+                ctx.fillStyle = '#f8fafc';
+                ctx.fillRect(M, ry + 0.5, nomW, rowH - 1);
+                ctx.fillRect(gx0 + gW, ry + 0.5, pctW + detW, rowH - 1);
+                ctx.fillStyle = '#e2e8f0'; ctx.fillRect(M + nomW - 1.5, ry, 1.5, rowH);
+                ctx.font = 'bold ' + Math.min(11, Math.floor(rowH * 0.5)) + 'px ' + FUENTE;
+                ctx.fillStyle = '#1e293b'; ctx.textAlign = 'left';
+                ctx.fillText(recortar(eq.clave, nomW - 10), M + 6, mid);
+                ctx.textAlign = 'center';
                 for (var j = 1; j <= maxJ; j++) {
+                    var cx = gx0 + colJ * (j - 0.5);
                     var p = eq.jornadas[j];
-                    if (!p || !p.estado || (p.cumplido !== true && p.cumplido !== false)) continue;
-                    var bx = gx0 + colJ * (j - 1) + colJ * 0.18, bw = colJ * 0.64, bh = rowH * 0.42;
-                    ctx.fillStyle = p.cumplido ? '#00b050' : '#ff0000';
-                    if (p.cumplido) ctx.fillRect(bx, mid - bh, bw, bh);
-                    else ctx.fillRect(bx, mid, bw, bh);
+                    if (p && p.estado) {
+                        if (p.cumplido === true) { verde++; icono(cx, mid, 'ok'); }
+                        else if (p.cumplido === false) { rojo++; icono(cx, mid, 'ko'); }
+                        else icono(cx, mid, 'sin');
+                    } else {
+                        ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 11px ' + FUENTE;
+                        ctx.fillText('·', cx, mid);
+                    }
                 }
+                var total = verde + rojo;
+                var pct = total ? Math.round(verde / total * 100) : 0;
+                ctx.font = 'bold ' + Math.min(13, Math.floor(rowH * 0.6)) + 'px ' + FUENTE;
+                ctx.fillStyle = !total ? '#cbd5e1' : (pct >= 70 ? '#16a34a' : (pct >= 40 ? '#d97706' : '#dc2626'));
+                ctx.fillText(total ? pct + '%' : '–', gx0 + gW + pctW / 2, mid);
+                ctx.font = 'bold ' + Math.min(12, Math.floor(rowH * 0.55)) + 'px ' + FUENTE;
+                var tOk = '✓' + verde, tKo = '✗' + rojo, sep = 6;
+                var wOk = ctx.measureText(tOk).width, wKo = ctx.measureText(tKo).width;
+                var dx = gx0 + gW + pctW + (detW - wOk - wKo - sep) / 2;
+                ctx.textAlign = 'left';
+                ctx.fillStyle = '#16a34a'; ctx.fillText(tOk, dx, mid);
+                ctx.fillStyle = '#dc2626'; ctx.fillText(tKo, dx + wOk + sep, mid);
             });
         }
 
