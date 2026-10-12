@@ -9765,47 +9765,173 @@
         el.innerHTML = html || '<div style="text-align:center;padding:30px;color:#94a3b8;">Sin datos.</div>';
     }
 
-    // Imagen IDA Y VUELTA: versión compacta (4 columnas encajadas, letra más grande, sin huecos)
-    window.obsDescargarIdaVueltaImagen = async function() {
-        var origen = document.getElementById('obsIdaVueltaGrid');
-        if (!origen || !origen.children.length) return;
-        var NCOL = 4;
-        var wrap = document.createElement('div');
-        wrap.style.cssText = 'position:fixed;left:-20000px;top:0;width:1800px;box-sizing:border-box;background:#ffffff;padding:14px;display:flex;gap:12px;align-items:flex-start;font-family:inherit;';
-        var cols = [];
-        for (var i = 0; i < NCOL; i++) {
-            var c = document.createElement('div');
-            c.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;gap:12px;';
-            wrap.appendChild(c); cols.push(c);
-        }
-        document.body.appendChild(wrap);
-        var cards = Array.from(origen.cloneNode(true).children);
-        cards.forEach(function(card) {
-            card.style.cssText += ';min-width:0;max-width:none;width:100%;box-sizing:border-box;margin:0;padding:10px 12px;box-shadow:none;border:1px solid #e2e8f0;';
-            card.querySelectorAll('*').forEach(function(n) {
-                var fs = parseFloat(n.style.fontSize);
-                if (fs) n.style.fontSize = (fs * 1.4) + 'px';
-                if (n.tagName === 'TH') { n.style.minWidth = '0'; n.style.padding = '6px 8px'; }
-                if (n.tagName === 'TD') n.style.padding = '5px 8px';
-            });
-            // Siempre a la columna más baja → sin huecos
-            var destino = cols.reduce(function(a, b) { return b.offsetHeight < a.offsetHeight ? b : a; });
-            destino.appendChild(card);
+    // Imagen IDA Y VUELTA (1920×1080, contenido girado 90° como la plantilla Excel):
+    // arriba tablas Rival | IDA | VUELTA en 4 columnas, abajo gráfico de SEGUIMIENTO TEMPORADA.
+    // Se dibuja en vertical (1080×1920) y se gira al exportar.
+    window.obsDescargarIdaVueltaImagen = function() {
+        if (!obsData || !obsData.length) { alert('Sin datos.'); return; }
+        var W = 1080, H = 1920, M = 8, GAP = 8, NCOL = 4;
+        var ALTO_TABLAS = 1390;
+        var FUENTE = '"Arial Narrow", "Roboto Condensed", Arial, sans-serif';
+        var ORD = { 'G': 3, 'E': 2, 'P': 1 };
+        var ordenCat = {'AFICIONADO':0,'JUVENIL':1,'CADETE':2,'INFANTIL':3,'ALEVIN':4,'ALEVIN F7':5,'BENJAMIN':6,'PREBENJAMIN':7};
+        var ordenar = function(a, b) {
+            var ca = ordenCat[a.categoria] !== undefined ? ordenCat[a.categoria] : 99;
+            var cb = ordenCat[b.categoria] !== undefined ? ordenCat[b.categoria] : 99;
+            return ca !== cb ? ca - cb : a.letra.localeCompare(b.letra);
+        };
+        // Goles nuestros / suyos (resultado viene "local - visitante")
+        var goles = function(p) {
+            var m = (p.resultado || '').match(/(\d+)\s*-\s*(\d+)/);
+            if (!m) return null;
+            var a = +m[1], b = +m[2];
+            return p.es_local === false ? [b, a] : [a, b];
+        };
+        var txtRes = function(p) {
+            var g = goles(p);
+            return g ? g[0] + '-' + g[1] + ' ' + (p.estado || '') : '';
+        };
+        // VUELTA respecto a la IDA: mejora verde · iguala amarillo · empeora rojo (P→P: amarillo si mejora la diferencia de goles)
+        var colorVuelta = function(ida, vuelta) {
+            if (!ida || !ida.estado || !vuelta || !vuelta.estado) return null;
+            var vi = ORD[ida.estado] || 0, vv = ORD[vuelta.estado] || 0;
+            if (vv > vi) return '#00b050';
+            if (vv < vi) return '#ff0000';
+            if (vuelta.estado !== 'P') return '#ffff00';
+            var gi = goles(ida), gv = goles(vuelta);
+            return (gi && gv && (gv[0] - gv[1]) > (gi[0] - gi[1])) ? '#ffff00' : '#ff0000';
+        };
+
+        // ── Datos de las tablas (igual que la vista IDA Y VUELTA) ──
+        var grupoMap = {};
+        obsData.forEach(function(p) {
+            var key = p.categoria + '|' + p.letra;
+            if (!grupoMap[key]) grupoMap[key] = { categoria: p.categoria, letra: p.letra, partidos: [] };
+            grupoMap[key].partidos.push(p);
         });
-        showLoader();
-        try {
-            var canvas = await html2canvas(wrap, { backgroundColor: '#ffffff', scale: 2 });
-            var link = document.createElement('a');
-            link.download = 'ida_y_vuelta_' + formatoFechaISO(new Date()) + '.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        } catch (e) {
-            alert('Error al generar la imagen.');
-            console.error(e);
-        } finally {
-            wrap.remove();
-            hideLoader();
+        var bloques = Object.values(grupoMap).sort(ordenar).map(function(gr) {
+            var rivales = {}, orden = [];
+            gr.partidos.slice().sort(function(a, b) { return a.jornada_num - b.jornada_num; }).forEach(function(p) {
+                var r = p.rival || '';
+                if (!rivales[r]) { rivales[r] = []; orden.push(r); }
+                rivales[r].push(p);
+            });
+            return { titulo: (gr.categoria + ' ' + gr.letra).trim(), filas: orden.map(function(r) { return { rival: r, ida: rivales[r][0] || null, vuelta: rivales[r][1] || null }; }) };
+        });
+
+        // ── Datos del gráfico (igual que SEGUIMIENTO TEMPORADA) ──
+        var cntGrupos = {};
+        obsData.forEach(function(p) {
+            var k = p.categoria + ' ' + p.letra;
+            if (!cntGrupos[k]) cntGrupos[k] = new Set();
+            if (p.grupo_short) cntGrupos[k].add(p.grupo_short);
+        });
+        var eqMap = {}, maxJ = 0;
+        obsData.forEach(function(p) {
+            var base = p.categoria + ' ' + p.letra;
+            var clave = (cntGrupos[base] && cntGrupos[base].size > 1 && p.grupo_short) ? base + ' [' + p.grupo_short + ']' : base;
+            if (!eqMap[clave]) eqMap[clave] = { categoria: p.categoria, letra: p.letra, clave: clave, jornadas: {} };
+            if (p.jornada_num < 999) { eqMap[clave].jornadas[p.jornada_num] = p; if (p.jornada_num > maxJ) maxJ = p.jornada_num; }
+        });
+        var equiposGraf = Object.values(eqMap).sort(ordenar);
+        var ABR = { 'AFICIONADO':'AFI', 'JUVENIL':'JUV', 'CADETE':'CDT', 'INFANTIL':'INF', 'ALEVIN':'ALE', 'ALEVIN F7':'ALE', 'BENJAMIN':'BEN', 'PREBENJAMIN':'PRE' };
+        var etiqueta = function(eq) {
+            var letra = (eq.clave.slice((eq.categoria + ' ').length) || eq.letra || '')
+                .replace(/\bF-?11\b/i, '11').replace(/\bF-?7\b/i, '7').replace(/FEMENINO/i, 'FEM');
+            return ((ABR[eq.categoria] || eq.categoria.slice(0, 3)) + ' ' + letra).trim();
+        };
+
+        // ── Lienzo vertical ──
+        var cv = document.createElement('canvas');
+        cv.width = W; cv.height = H;
+        var ctx = cv.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+        ctx.textBaseline = 'middle';
+        var recortar = function(t, maxW) {
+            if (ctx.measureText(t).width <= maxW) return t;
+            while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+            return t + '…';
+        };
+
+        // Filas de bloques (4 por fila) y alto de línea para que todo quepa
+        var filasBloques = [];
+        for (var i = 0; i < bloques.length; i += NCOL) filasBloques.push(bloques.slice(i, i + NCOL));
+        var lineas = filasBloques.reduce(function(s, fb) {
+            return s + 1 + Math.max.apply(null, fb.map(function(b) { return b.filas.length; }));
+        }, 0);
+        var lh = Math.min(16, (ALTO_TABLAS - M - GAP * (filasBloques.length - 1)) / Math.max(lineas, 1));
+        var fs = Math.max(6, Math.floor(lh * 0.78));
+        var colW = (W - 2 * M - GAP * (NCOL - 1)) / NCOL;
+        var resW = Math.round(colW * 0.2);
+
+        var y = M;
+        filasBloques.forEach(function(fb) {
+            var maxF = Math.max.apply(null, fb.map(function(b) { return b.filas.length; }));
+            fb.forEach(function(b, ci) {
+                var x = M + ci * (colW + GAP);
+                // Título del equipo
+                ctx.font = 'bold ' + (fs + 1) + 'px ' + FUENTE;
+                ctx.fillStyle = '#c00000'; ctx.textAlign = 'left';
+                ctx.fillText(b.titulo, x + 2, y + lh / 2);
+                ctx.fillStyle = '#c00000'; ctx.fillRect(x, y + lh - 1.5, colW, 1.5);
+                // Filas
+                b.filas.forEach(function(f, ri) {
+                    var yy = y + lh * (ri + 1);
+                    var xIda = x + colW - 2 * resW, xVue = x + colW - resW;
+                    var cVue = colorVuelta(f.ida, f.vuelta);
+                    if (cVue) { ctx.fillStyle = cVue; ctx.fillRect(xVue, yy, resW, lh); }
+                    ctx.strokeStyle = '#bfbfbf'; ctx.lineWidth = 0.6;
+                    ctx.strokeRect(x, yy, colW - 2 * resW, lh);
+                    ctx.strokeRect(xIda, yy, resW, lh);
+                    ctx.strokeRect(xVue, yy, resW, lh);
+                    ctx.fillStyle = '#000000';
+                    ctx.font = fs + 'px ' + FUENTE; ctx.textAlign = 'center';
+                    ctx.fillText(recortar(f.rival, colW - 2 * resW - 6), x + (colW - 2 * resW) / 2, yy + lh / 2);
+                    if (f.ida) ctx.fillText(txtRes(f.ida), xIda + resW / 2, yy + lh / 2);
+                    if (f.vuelta) ctx.fillText(txtRes(f.vuelta), xVue + resW / 2, yy + lh / 2);
+                });
+            });
+            y += lh * (maxF + 1) + GAP;
+        });
+
+        // ── Gráfico SEGUIMIENTO TEMPORADA ──
+        if (maxJ > 0 && equiposGraf.length) {
+            var gy0 = ALTO_TABLAS + 14, labW = 64, cabH = 16;
+            var gx0 = M + labW, gW = W - M - gx0;
+            var colJ = gW / maxJ;
+            var rowH = (H - M - gy0 - cabH) / equiposGraf.length;
+            ctx.font = 'bold ' + Math.min(11, Math.floor(colJ * 0.45)) + 'px ' + FUENTE;
+            ctx.fillStyle = '#000000'; ctx.textAlign = 'center';
+            for (var j = 1; j <= maxJ; j++) ctx.fillText('J.' + j, gx0 + colJ * (j - 0.5), gy0 + cabH / 2);
+            equiposGraf.forEach(function(eq, k) {
+                var ry = gy0 + cabH + k * rowH, mid = ry + rowH / 2;
+                ctx.font = 'bold ' + Math.min(13, Math.floor(rowH * 0.6)) + 'px ' + FUENTE;
+                ctx.fillStyle = '#000000'; ctx.textAlign = 'left';
+                ctx.fillText(recortar(etiqueta(eq), labW - 6), M, mid);
+                ctx.strokeStyle = '#000000'; ctx.lineWidth = 0.6;
+                ctx.beginPath(); ctx.moveTo(gx0, ry + rowH); ctx.lineTo(W - M, ry + rowH); ctx.stroke();
+                for (var j = 1; j <= maxJ; j++) {
+                    var p = eq.jornadas[j];
+                    if (!p || !p.estado || (p.cumplido !== true && p.cumplido !== false)) continue;
+                    var bx = gx0 + colJ * (j - 1) + colJ * 0.18, bw = colJ * 0.64, bh = rowH * 0.42;
+                    ctx.fillStyle = p.cumplido ? '#00b050' : '#ff0000';
+                    if (p.cumplido) ctx.fillRect(bx, mid - bh, bw, bh);
+                    else ctx.fillRect(bx, mid, bw, bh);
+                }
+            });
         }
+
+        // ── Girar 90° (texto de abajo a arriba) → 1920×1080 ──
+        var out = document.createElement('canvas');
+        out.width = H; out.height = W;
+        var octx = out.getContext('2d');
+        octx.translate(0, W);
+        octx.rotate(-Math.PI / 2);
+        octx.drawImage(cv, 0, 0);
+        var link = document.createElement('a');
+        link.download = 'ida_y_vuelta_' + formatoFechaISO(new Date()) + '.png';
+        link.href = out.toDataURL('image/png');
+        link.click();
     };
 
     // ── Comentario IA para seguimiento temporada ──
