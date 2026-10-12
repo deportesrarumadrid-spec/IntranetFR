@@ -9584,7 +9584,7 @@
         html += '<th style="'+thS+'width:13%;">Equipo</th><th style="'+thS+'width:9%;">Jorn.</th><th style="'+thS+'width:6%;">Campo</th><th style="'+thS+'width:'+widthRival+';">Rival</th>';
         if (hayIda) html += '<th style="'+thS+'text-align:center;width:'+widthIda+';">IDA</th>';
         if (!modoResultados) {
-            html += '<th style="'+thS+'width:9%;">Objetivo</th><th style="'+thS+'width:auto;">Datos rival</th>';
+            html += '<th style="'+thS+'width:13%;">Objetivo</th><th style="'+thS+'width:auto;">Datos rival</th>';
         } else {
             html += '<th style="'+thS+'text-align:center;width:12%;">Resultado</th><th style="'+thS+'text-align:center;width:5%;">✓/✗</th><th style="'+thS+'text-align:center;width:14%;">Obj.</th>';
         }
@@ -9606,9 +9606,9 @@
             var objCelda = objChip;
             if (!modoResultados) {
                 var idxP = obsData.indexOf(p);
-                objCelda = '<div style="display:flex;align-items:center;gap:4px;">' + objChip
-                    + (p.objetivo_manual ? '<span title="Fijado a mano" style="font-size:8px;font-weight:900;color:#2563eb;">M</span>' : '')
-                    + '<button class="no-img" title="Editar objetivo" onclick="obsEditarObjetivo('+idxP+', this)" style="background:none;border:none;cursor:pointer;color:#94a3b8;padding:0 2px;font-size:10px;"><i class="fas fa-pen"></i></button>'
+                objCelda = '<div style="display:flex;align-items:center;gap:4px;position:relative;z-index:1;">' + objChip
+                    + (p.objetivo_manual ? '<span title="Fijado a mano" style="font-size:8px;font-weight:900;color:#2563eb;flex-shrink:0;">M</span>' : '')
+                    + '<button class="no-img" title="Editar objetivo" onclick="obsEditarObjetivo('+idxP+', this)" style="background:none;border:none;cursor:pointer;color:#94a3b8;padding:2px 4px;font-size:10px;flex-shrink:0;"><i class="fas fa-pen"></i></button>'
                     + '</div>';
             }
             var estado = p.estado || '';
