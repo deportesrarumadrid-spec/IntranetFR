@@ -2722,6 +2722,27 @@ def api_obj_semanales_resumen():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@deportivo_bp.route('/api/obj_semanales/objetivo', methods=['POST'])
+def api_obj_semanales_objetivo():
+    """Fija a mano el objetivo de un partido (o lo devuelve al automático si objetivo viene vacío)."""
+    usuario = session.get('usuario')
+    if not usuario:
+        return jsonify({"status": "error"}), 401
+    if usuario != 'admin':
+        return jsonify({"status": "error", "message": "Solo el admin puede modificar objetivos"}), 403
+    from competicion_scraper import guardar_objetivo_manual
+    data = request.json or {}
+    grupo = (data.get('grupo') or '').strip()
+    jornada_num = data.get('jornada_num')
+    if not grupo or jornada_num is None:
+        return jsonify({"status": "error", "message": "Faltan datos (grupo o jornada)"}), 400
+    try:
+        guardar_objetivo_manual(grupo, int(jornada_num), (data.get('objetivo') or '').strip() or None)
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
 @deportivo_bp.route('/api/criterios_objetivo', methods=['GET', 'POST'])
 def api_criterios_objetivo():
     usuario = session.get('usuario')

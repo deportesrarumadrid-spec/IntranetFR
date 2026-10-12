@@ -2009,6 +2009,41 @@ def guardar_criterios_objetivo(nuevos):
     return criterios
 
 
+OBJETIVOS_MANUALES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'objetivos_manuales.json')
+OBJETIVOS_VALIDOS = ("GANAR", "GANAR/EMPATAR", "EMPATAR", "COMPETIR")
+
+
+def _clave_objetivo_manual(grupo, jornada_num):
+    return f"{grupo}|{jornada_num}"
+
+
+def load_objetivos_manuales():
+    """Objetivos fijados a mano por partido (clave 'grupo|jornada_num'), que sustituyen al automático."""
+    if os.path.exists(OBJETIVOS_MANUALES_FILE):
+        try:
+            with open(OBJETIVOS_MANUALES_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
+def guardar_objetivo_manual(grupo, jornada_num, objetivo):
+    """Fija el objetivo de un partido. objetivo vacío/None elimina el ajuste manual (vuelve al automático)."""
+    if objetivo and objetivo not in OBJETIVOS_VALIDOS:
+        raise ValueError("Objetivo no válido")
+    manuales = load_objetivos_manuales()
+    clave = _clave_objetivo_manual(grupo, jornada_num)
+    if objetivo:
+        manuales[clave] = objetivo
+    else:
+        manuales.pop(clave, None)
+    os.makedirs(os.path.dirname(OBJETIVOS_MANUALES_FILE), exist_ok=True)
+    with open(OBJETIVOS_MANUALES_FILE, 'w', encoding='utf-8') as f:
+        json.dump(manuales, f, ensure_ascii=False, indent=2)
+    return manuales
+
+
 def calcular_objetivo(pos_nuestra, pts_nuestro, pos_rival, pts_rival):
     """GANAR / GANAR/EMPATAR / EMPATAR / COMPETIR según diferencia de posición y puntos.
     pos_dif > 0 = estamos mejor posicionados (numéricamente más arriba en la tabla).
@@ -2098,6 +2133,7 @@ def construir_obj_semanales():
     resultado si ya se jugó, cumplimiento del objetivo, y los últimos resultados del rival.
     Deduplica grupos con nombre idéntico (bug del scraper) y añade ida_resultado si existe."""
     cache = load_cached_data()
+    objetivos_manuales = load_objetivos_manuales()
     resultado_final = []
 
     # Deduplicar: saltar entries con nombre_grupo ya procesado
@@ -2171,6 +2207,10 @@ def construir_obj_semanales():
                     datos_nuestro.get('posicion'), datos_nuestro.get('puntos'),
                     datos_rival.get('posicion'), datos_rival.get('puntos')
                 )
+            objetivo_auto = objetivo
+            objetivo_manual = objetivos_manuales.get(_clave_objetivo_manual(nombre_grupo, jornada_num))
+            if objetivo_manual:
+                objetivo = objetivo_manual
 
             cumplido = _cumple_objetivo(objetivo, partido.get('estado'))
             ultimos_rival = ultimos_resultados_equipo(calendario_grupo, rival, jornada_num, n=2) if calendario_grupo else []
@@ -2190,6 +2230,8 @@ def construir_obj_semanales():
                 "resultado": partido.get('resultado', ''),
                 "estado": partido.get('estado', ''),
                 "objetivo": objetivo,
+                "objetivo_auto": objetivo_auto,
+                "objetivo_manual": bool(objetivo_manual),
                 "cumplido": cumplido,
                 "datos_nuestro": datos_nuestro,
                 "datos_rival": datos_rival,
