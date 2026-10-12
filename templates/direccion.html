@@ -9977,12 +9977,12 @@
             });
         }
 
-        // ── Girar 90° (texto de abajo a arriba) → 1920×1080 ──
+        // ── Girar 90° (texto de arriba a abajo) → 1920×1080 ──
         var out = document.createElement('canvas');
         out.width = H; out.height = W;
         var octx = out.getContext('2d');
-        octx.translate(0, W);
-        octx.rotate(-Math.PI / 2);
+        octx.translate(H, 0);
+        octx.rotate(Math.PI / 2);
         octx.drawImage(cv, 0, 0);
         var link = document.createElement('a');
         link.download = 'ida_y_vuelta_' + formatoFechaISO(new Date()) + '.png';
