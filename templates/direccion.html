@@ -2745,7 +2745,7 @@
             <!-- IDA Y VUELTA -->
             <div id="obs-sub-idavuelta" class="obs-subvista" style="display:none;">
                 <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-                    <button class="btn-fin" style="background:#f1f5f9;color:#475569;padding:5px 12px;font-size:9px;" onclick="descargarObjImagen('obsIdaVueltaGrid','ida_y_vuelta')"><i class="fas fa-download"></i> IMAGEN</button>
+                    <button class="btn-fin" style="background:#f1f5f9;color:#475569;padding:5px 12px;font-size:9px;" onclick="obsDescargarIdaVueltaImagen()"><i class="fas fa-download"></i> IMAGEN</button>
                 </div>
                 <div id="obsIdaVueltaGrid" style="display:flex;flex-wrap:wrap;gap:14px;"></div>
             </div>
@@ -9764,6 +9764,49 @@
         });
         el.innerHTML = html || '<div style="text-align:center;padding:30px;color:#94a3b8;">Sin datos.</div>';
     }
+
+    // Imagen IDA Y VUELTA: versión compacta (4 columnas encajadas, letra más grande, sin huecos)
+    window.obsDescargarIdaVueltaImagen = async function() {
+        var origen = document.getElementById('obsIdaVueltaGrid');
+        if (!origen || !origen.children.length) return;
+        var NCOL = 4;
+        var wrap = document.createElement('div');
+        wrap.style.cssText = 'position:fixed;left:-20000px;top:0;width:1800px;box-sizing:border-box;background:#ffffff;padding:14px;display:flex;gap:12px;align-items:flex-start;font-family:inherit;';
+        var cols = [];
+        for (var i = 0; i < NCOL; i++) {
+            var c = document.createElement('div');
+            c.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;gap:12px;';
+            wrap.appendChild(c); cols.push(c);
+        }
+        document.body.appendChild(wrap);
+        var cards = Array.from(origen.cloneNode(true).children);
+        cards.forEach(function(card) {
+            card.style.cssText += ';min-width:0;max-width:none;width:100%;box-sizing:border-box;margin:0;padding:10px 12px;box-shadow:none;border:1px solid #e2e8f0;';
+            card.querySelectorAll('*').forEach(function(n) {
+                var fs = parseFloat(n.style.fontSize);
+                if (fs) n.style.fontSize = (fs * 1.4) + 'px';
+                if (n.tagName === 'TH') { n.style.minWidth = '0'; n.style.padding = '6px 8px'; }
+                if (n.tagName === 'TD') n.style.padding = '5px 8px';
+            });
+            // Siempre a la columna más baja → sin huecos
+            var destino = cols.reduce(function(a, b) { return b.offsetHeight < a.offsetHeight ? b : a; });
+            destino.appendChild(card);
+        });
+        showLoader();
+        try {
+            var canvas = await html2canvas(wrap, { backgroundColor: '#ffffff', scale: 2 });
+            var link = document.createElement('a');
+            link.download = 'ida_y_vuelta_' + formatoFechaISO(new Date()) + '.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } catch (e) {
+            alert('Error al generar la imagen.');
+            console.error(e);
+        } finally {
+            wrap.remove();
+            hideLoader();
+        }
+    };
 
     // ── Comentario IA para seguimiento temporada ──
     var _obsIAPopover = null;
