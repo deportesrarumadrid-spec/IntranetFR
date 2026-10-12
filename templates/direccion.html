@@ -9774,6 +9774,7 @@
         var ALTO_TABLAS = 1390;
         var FUENTE = '"Arial Narrow", "Roboto Condensed", Arial, sans-serif';
         var ORD = { 'G': 3, 'E': 2, 'P': 1 };
+        var COLOR_RES = { 'G': '#00a043', 'E': '#f08c00', 'P': '#e00000' };
         var ordenCat = {'AFICIONADO':0,'JUVENIL':1,'CADETE':2,'INFANTIL':3,'ALEVIN':4,'ALEVIN F7':5,'BENJAMIN':6,'PREBENJAMIN':7};
         var ordenar = function(a, b) {
             var ca = ordenCat[a.categoria] !== undefined ? ordenCat[a.categoria] : 99;
@@ -9881,8 +9882,18 @@
                     ctx.fillStyle = '#000000';
                     ctx.font = fs + 'px ' + FUENTE; ctx.textAlign = 'center';
                     ctx.fillText(recortar(f.rival, colW - 2 * resW - 6), x + (colW - 2 * resW) / 2, yy + lh / 2);
-                    if (f.ida) ctx.fillText(txtRes(f.ida), xIda + resW / 2, yy + lh / 2);
-                    if (f.vuelta) ctx.fillText(txtRes(f.vuelta), xVue + resW / 2, yy + lh / 2);
+                    // IDA: texto en color del resultado (G verde · E naranja · P rojo)
+                    if (f.ida) {
+                        ctx.font = 'bold ' + fs + 'px ' + FUENTE;
+                        ctx.fillStyle = COLOR_RES[f.ida.estado] || '#000000';
+                        ctx.fillText(txtRes(f.ida), xIda + resW / 2, yy + lh / 2);
+                    }
+                    // VUELTA: la celda ya va pintada (mejora/iguala/empeora) → texto negro para que se lea
+                    if (f.vuelta) {
+                        ctx.font = 'bold ' + fs + 'px ' + FUENTE;
+                        ctx.fillStyle = cVue ? '#000000' : (COLOR_RES[f.vuelta.estado] || '#000000');
+                        ctx.fillText(txtRes(f.vuelta), xVue + resW / 2, yy + lh / 2);
+                    }
                 });
             });
             y += lh * (maxF + 1) + GAP;
