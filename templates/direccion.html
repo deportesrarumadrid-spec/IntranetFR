@@ -9075,7 +9075,7 @@
         if (info === 'error') return msg('Error al cargar los jugadores.');
         if (!info.jugadores.length) return msg('Este equipo no tiene asistencias registradas.');
         var dd = function(d) { return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear(); };
-        return info.jugadores.map(function(jug) {
+        return info.jugadores.map(function(jug, n) {
             var si = 0, marcados = 0;
             var celdas = fechas.map(function(d) {
                 var base = 'text-align:center;border:1px solid #eef2f6;padding:3px;font-size:10px;font-weight:900;';
@@ -9087,7 +9087,8 @@
                 if (estado === 'AV') { marcados++; return '<td title="Avisó" style="' + base + 'background:#fef9c3;color:#a16207;font-size:9px;">AV</td>'; }
                 return '<td style="' + base + 'background:#fbfcfe;"></td>';
             }).join('');
-            return '<tr><td style="background:#fbfcfe;font-size:10px;font-weight:700;color:#475569;padding:4px 12px 4px 31px;border:1px solid #eef2f6;white-space:nowrap;">' + jug + '</td>' +
+            return '<tr><td style="background:#fbfcfe;font-size:10px;font-weight:700;color:#475569;padding:4px 12px 4px 8px;border:1px solid #eef2f6;white-space:nowrap;">' +
+                '<span style="display:inline-block;width:18px;margin-right:7px;text-align:right;color:#94a3b8;font-weight:700;">' + (n + 1) + '</span>' + jug + '</td>' +
                 celdas +
                 '<td style="text-align:center;border:1px solid #eef2f6;background:#fbfcfe;font-size:10px;font-weight:800;color:#64748b;">' + (marcados ? si + '/' + marcados : '–') + '</td></tr>';
         }).join('');
@@ -9099,10 +9100,8 @@
         if (!_caAbiertos[equipo] || (_caJugadores[equipo] && _caJugadores[equipo] !== 'error')) return;
         _caJugadores[equipo] = 'cargando';
         try {
-            var hoy = new Date();
-            var desde = _ceIso(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
-            var hasta = _ceIso(new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0));
-            var r = await fetch('/api/asistencias_matrix?plantilla=1&desde=' + desde + '&hasta=' + hasta + '&equipo=' + encodeURIComponent(equipo));
+            var rango = _caRango();
+            var r = await fetch('/api/asistencias_matrix?plantilla=1&desde=' + rango.desde + '&hasta=' + rango.hasta + '&equipo=' + encodeURIComponent(equipo));
             var d = await r.json();
             _caJugadores[equipo] = { jugadores: d.jugadores || [], datos: d.datos || {} };
         } catch (err) {
@@ -9139,17 +9138,23 @@
         cMes.innerHTML = _caTabla(tit(_ceMESES[m] + ' ' + y), diasMes);
     }
 
-    async function coordAsisCargar() {
-        coordAsisRender();
-        if (_caCargando) return;
-        _caCargando = true;
+    // Fechas que cubren las tres vistas: semana actual + mes actual (mismo rango para totales y plantilla)
+    function _caRango() {
         var hoy = new Date();
         var ini = _ceLunes(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
         var fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
         var finSemana = _ceLunes(hoy); finSemana.setDate(finSemana.getDate() + 3);
         if (finSemana > fin) fin = finSemana;
+        return { desde: _ceIso(ini), hasta: _ceIso(fin) };
+    }
+
+    async function coordAsisCargar() {
+        coordAsisRender();
+        if (_caCargando) return;
+        _caCargando = true;
+        var rango = _caRango();
         try {
-            var r = await fetch('/api/asistencias_pasadas?desde=' + _ceIso(ini) + '&hasta=' + _ceIso(fin));
+            var r = await fetch('/api/asistencias_pasadas?desde=' + rango.desde + '&hasta=' + rango.hasta);
             var d = await r.json();
             var map = {};
             Object.keys(d.pasadas || {}).forEach(function(eq) { map[_ceNorm(eq)] = d.pasadas[eq]; });

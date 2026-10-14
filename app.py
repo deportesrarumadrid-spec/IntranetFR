@@ -1278,6 +1278,52 @@ def obtener_asistencias():
         return jsonify([])
 
 
+def _fecha_flexible(s):
+    """'dd/mm/yyyy', 'dd/mm/yy' o 'yyyy-mm-dd' -> date (None si no se puede leer)."""
+    from datetime import date as _date
+    s = (s or '').strip()
+    try:
+        if '/' in s:
+            d, m, y = [int(x) for x in s.split('/')[:3]]
+            return _date(y + 2000 if y < 100 else y, m, d)
+        if '-' in s:
+            y, m, d = [int(x) for x in s.split('-')[:3]]
+            return _date(y, m, d)
+    except (ValueError, IndexError):
+        pass
+    return None
+
+
+def _plantillas_actuales(desde=None, hasta=None):
+    """Plantilla de cada equipo según la hoja JUGADORES, igual que en pasar lista: se excluyen los que
+    están de baja en algún momento entre desde y hasta. Devuelve {equipo_en_minusculas: [nombres en orden]}."""
+    from datetime import date as _date
+    hoy = _date.today()
+    desde = _fecha_flexible(desde) or hoy
+    hasta = _fecha_flexible(hasta) or hoy
+    filas = client.open(NOMBRE_EXCEL).worksheet("JUGADORES").get_all_values()
+    plantillas = {}
+    if not filas:
+        return plantillas
+    hj = [normalizar_cabecera_universal(h) for h in filas[0]]
+    i_nom = hj.index('NOMBRE') if 'NOMBRE' in hj else 0
+    i_eq = next((hj.index(k) for k in ["EQUIPO", "CATEGORIA", "GRUPO", "EQUIPOS", "EQUIPOACTIVO"] if k in hj), 1)
+    i_baja = hj.index('BAJADESDE') if 'BAJADESDE' in hj else -1
+    i_alta = hj.index('ALTADESDE') if 'ALTADESDE' in hj else -1
+    for fila in filas[1:]:
+        if len(fila) <= max(i_nom, i_eq):
+            continue
+        nombre, equipo = fila[i_nom].strip(), fila[i_eq].strip().lower()
+        if not nombre or not equipo:
+            continue
+        f_baja = _fecha_flexible(fila[i_baja]) if 0 <= i_baja < len(fila) else None
+        f_alta = _fecha_flexible(fila[i_alta]) if 0 <= i_alta < len(fila) else None
+        if f_baja and f_baja <= hasta and (not f_alta or f_alta > desde):
+            continue
+        plantillas.setdefault(equipo, []).append(nombre)
+    return plantillas
+
+
 @app.route('/api/asistencias_matrix')
 def api_asistencias_matrix():
     """Devuelve todas las asistencias de un equipo con fecha completa para la matriz."""
@@ -1331,45 +1377,11 @@ def api_asistencias_matrix():
         fechas_sorted = sorted(fechas_set, key=sort_fecha)
         jugadores_sorted = sorted(datos.keys())
 
-        # plantilla=1: solo la plantilla actual del equipo (hoja JUGADORES), sin los que están de baja
-        # en algún momento entre desde y hasta (YYYY-MM-DD), en el mismo orden que la hoja (igual que pasar lista)
+        # plantilla=1: solo la plantilla actual del equipo (hoja JUGADORES), sin bajas, en el orden de la hoja
         if request.args.get('plantilla') == '1':
-            from datetime import date as _date
-            def _fecha(s):
-                s = (s or '').strip()
-                try:
-                    if '/' in s:
-                        d, m, y = [int(x) for x in s.split('/')[:3]]
-                        return _date(y + 2000 if y < 100 else y, m, d)
-                    if '-' in s:
-                        y, m, d = [int(x) for x in s.split('-')[:3]]
-                        return _date(y, m, d)
-                except (ValueError, IndexError):
-                    pass
-                return None
-            hoy = _date.today()
-            desde = _fecha(request.args.get('desde')) or hoy
-            hasta = _fecha(request.args.get('hasta')) or hoy
-            filas_jug = client.open(NOMBRE_EXCEL).worksheet("JUGADORES").get_all_values()
-            if filas_jug:
-                hj = [normalizar_cabecera_universal(h) for h in filas_jug[0]]
-                i_nom = hj.index('NOMBRE') if 'NOMBRE' in hj else 0
-                i_eq = next((hj.index(k) for k in ["EQUIPO", "CATEGORIA", "GRUPO", "EQUIPOS", "EQUIPOACTIVO"] if k in hj), 1)
-                i_baja = hj.index('BAJADESDE') if 'BAJADESDE' in hj else -1
-                i_alta = hj.index('ALTADESDE') if 'ALTADESDE' in hj else -1
-                plantilla = []
-                for fila in filas_jug[1:]:
-                    if len(fila) <= max(i_nom, i_eq) or fila[i_eq].strip().lower() != equipo:
-                        continue
-                    nombre = fila[i_nom].strip()
-                    if not nombre:
-                        continue
-                    f_baja = _fecha(fila[i_baja]) if 0 <= i_baja < len(fila) else None
-                    f_alta = _fecha(fila[i_alta]) if 0 <= i_alta < len(fila) else None
-                    if f_baja and f_baja <= hasta and (not f_alta or f_alta > desde):
-                        continue
-                    plantilla.append(nombre)
-                jugadores_sorted = plantilla
+            plantillas = _plantillas_actuales(request.args.get('desde'), request.args.get('hasta'))
+            if equipo in plantillas:
+                jugadores_sorted = plantillas[equipo]
 
         return jsonify({
             'fechas': fechas_sorted,
@@ -1384,12 +1396,18 @@ def api_asistencias_matrix():
 @app.route('/api/asistencias_pasadas')
 def api_asistencias_pasadas():
     """Días en que cada equipo ha pasado lista (hay filas en ASISTENCIAS) entre desde y hasta (YYYY-MM-DD).
+    Solo cuenta jugadores de la plantilla actual (sin bajas); si el equipo no tiene plantilla, cuenta todos.
     Devuelve {EQUIPO: {YYYY-MM-DD: {si, total}}}."""
     desde = (request.args.get('desde') or '').strip()
     hasta = (request.args.get('hasta') or '').strip()
     try:
         todo = client.open(NOMBRE_EXCEL).worksheet("ASISTENCIAS").get_all_values()
-        resultado = {}
+        try:
+            plantillas = {eq: {n.lower() for n in noms} for eq, noms in _plantillas_actuales(desde, hasta).items()}
+        except Exception as e:
+            print(f"Error plantillas en asistencias_pasadas: {e}")
+            plantillas = {}
+        vistos = {}  # {(EQUIPO, iso): {nombre: estado}}
         for fila in todo[1:]:
             if len(fila) < 3 or not fila[1].strip() or not fila[2].strip():
                 continue
@@ -1404,11 +1422,19 @@ def api_asistencias_pasadas():
             iso = f"{anio:04d}-{mes:02d}-{dia:02d}"
             if (desde and iso < desde) or (hasta and iso > hasta):
                 continue
-            equipo = ' '.join(fila[1].strip().upper().split())
-            celda = resultado.setdefault(equipo, {}).setdefault(iso, {'si': 0, 'total': 0})
-            celda['total'] += 1
-            if len(fila) > 4 and fila[4].strip().upper() == 'SI':
-                celda['si'] += 1
+            equipo = ' '.join(fila[1].strip().split())
+            nombre = fila[2].strip().lower()
+            plantilla = plantillas.get(equipo.lower())
+            if plantilla and nombre not in plantilla:
+                continue
+            estado = fila[4].strip().upper() if len(fila) > 4 else ''
+            vistos.setdefault((equipo.upper(), iso), {})[nombre] = estado
+        resultado = {}
+        for (equipo, iso), jugadores in vistos.items():
+            resultado.setdefault(equipo, {})[iso] = {
+                'si': sum(1 for e in jugadores.values() if e == 'SI'),
+                'total': len(jugadores),
+            }
         return jsonify({'status': 'ok', 'pasadas': resultado})
     except Exception as e:
         print(f"Error asistencias_pasadas: {e}")
