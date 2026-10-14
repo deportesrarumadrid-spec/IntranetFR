@@ -662,6 +662,15 @@
 
         <!-- ASISTENCIAS -->
         <div id="coordPane-asistencias" class="coord-pane" style="display:none;">
+        <!-- ===== ASISTENCIAS PASADAS POR EQUIPO (SEMANA / DÍA / MES) ===== -->
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;">
+            <button class="coord-asis-btn" style="padding:5px 14px;font-size:10px;font-weight:900;border-radius:20px;border:1.5px solid #e2e8f0;background:white;color:#475569;cursor:pointer;font-family:inherit;letter-spacing:.3px;" data-asis="semana" onclick="coordAsisSubTab('semana')">SEMANA</button>
+            <button class="coord-asis-btn" style="padding:5px 14px;font-size:10px;font-weight:900;border-radius:20px;border:1.5px solid #e2e8f0;background:white;color:#475569;cursor:pointer;font-family:inherit;letter-spacing:.3px;" data-asis="dia" onclick="coordAsisSubTab('dia')">DÍA</button>
+            <button class="coord-asis-btn" style="padding:5px 14px;font-size:10px;font-weight:900;border-radius:20px;border:1.5px solid #e2e8f0;background:white;color:#475569;cursor:pointer;font-family:inherit;letter-spacing:.3px;" data-asis="mes" onclick="coordAsisSubTab('mes')">MES</button>
+        </div>
+        <div id="coordAsis-semana" class="coord-asis-pane"></div>
+        <div id="coordAsis-dia" class="coord-asis-pane" style="display:none;"></div>
+        <div id="coordAsis-mes" class="coord-asis-pane" style="display:none;"></div>
         <!-- ===== MATRIZ DE ASISTENCIAS POR EQUIPO ===== -->
         <div style="margin-top:25px; background:white; border-radius:16px; padding:22px; border:1px solid #f1f5f9; box-shadow:0 4px 15px rgba(0,0,0,0.04);">
             <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px; flex-wrap:wrap;">
@@ -4774,6 +4783,15 @@
         if (pane === 'asistencias' && window._asistMatrizPendiente && typeof asistMatrizCargar === 'function') {
             asistMatrizCargar(window._equipoIndivActual || '');
         }
+        if (pane === 'asistencias' && typeof coordAsisCargar === 'function') coordAsisCargar();
+    }
+    function coordAsisSubTab(sub) {
+        if (!document.getElementById('coordAsis-' + sub)) sub = 'semana';
+        try { localStorage.setItem('dir_coord_asis', sub); } catch (e) {}
+        document.querySelectorAll('.coord-asis-pane').forEach(function(p) {
+            p.style.display = (p.id === 'coordAsis-' + sub) ? '' : 'none';
+        });
+        _coordMarcarBtn('.coord-asis-btn', 'data-asis', sub, '#1e293b', 'white', 'white', '#475569');
     }
     function coordEntSubTab(sub) {
         if (!document.getElementById('coordEnt-' + sub)) sub = 'semana';
@@ -4788,6 +4806,9 @@
         try { pane = localStorage.getItem('dir_coord_pane') || pane; ent = localStorage.getItem('dir_coord_ent') || ent; } catch (e) {}
         coordSubTab(pane);
         coordEntSubTab(ent);
+        var asis = 'semana';
+        try { asis = localStorage.getItem('dir_coord_asis') || asis; } catch (e) {}
+        coordAsisSubTab(asis);
     });
 
     // ── TAREAS SEMANALES COORDINACIÓN ─────────────────────────────────────────
@@ -8990,6 +9011,116 @@
         coordEntrenosRender();
     }
 
+    // ── COORDINACIÓN · ASISTENCIAS (SEMANA / DÍA / MES) ──────────────────────
+    // Filas = equipos (CONFIGURACIÓN GENERAL), columnas = días de entreno.
+    // ✓ si el equipo tiene filas en la hoja ASISTENCIAS ese día, X si no (solo hasta hoy).
+    var _caPasadas = null;
+    var _caCargando = false;
+
+    function _caEquipos() {
+        var filtro = _ceNorm(window._equipoIndivActual || '');
+        return ((_EQUIPOS_CFG && _EQUIPOS_CFG.equipos) || [])
+            .filter(function(e) { return (e.nombre || '').trim() && (e.dias || []).length && (!filtro || _ceNorm(e.nombre) === filtro); })
+            .map(function(e) {
+                return { nombre: e.nombre.trim(), dias: (e.dias || []).map(_normDia) };
+            });
+    }
+
+    function _caTabla(titulo, fechas) {
+        var hoyIso = _ceIso(new Date());
+        var DOW = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
+        var equipos = _caEquipos().filter(function(e) {
+            return fechas.some(function(d) { return e.dias.indexOf(DOW[d.getDay()]) !== -1; });
+        });
+        var cab = '<div style="text-align:center;font-size:13px;font-weight:900;color:#1e293b;padding:10px;letter-spacing:.5px;">' + titulo + '</div>';
+        if (!equipos.length) {
+            return '<div style="background:white;border-radius:12px;border:1px solid #e2e8f0;">' + cab +
+                '<div style="padding:30px;text-align:center;color:#94a3b8;font-size:12px;font-weight:800;">No hay equipos con entreno en estos días</div></div>';
+        }
+        var thS = 'background:#1e293b;color:white;font-size:10px;font-weight:900;padding:7px 4px;letter-spacing:.3px;text-align:center;';
+        var html = '<div style="background:white;border-radius:12px;border:1px solid #e2e8f0;overflow-x:auto;">' + cab +
+            '<table style="width:100%;border-collapse:collapse;"><thead><tr>' +
+            '<th style="' + thS + 'text-align:left;padding-left:12px;min-width:150px;">EQUIPO</th>' +
+            fechas.map(function(d) {
+                var esHoy = _ceIso(d) === hoyIso;
+                return '<th style="' + thS + 'min-width:52px;' + (esHoy ? 'background:#E31E24;' : '') + '">' + _ceDIAS[d.getDay()].slice(0, 3) + ' ' + d.getDate() + '</th>';
+            }).join('') +
+            '<th style="' + thS + 'min-width:60px;">HECHAS</th></tr></thead><tbody>';
+        equipos.forEach(function(e, i) {
+            var bg = i % 2 ? '#f8fafc' : 'white';
+            var datos = (_caPasadas || {})[_ceNorm(e.nombre)] || {};
+            var hechas = 0, tocaban = 0;
+            var celdas = fechas.map(function(d) {
+                var iso = _ceIso(d);
+                var base = 'text-align:center;border:1px solid #eef2f6;padding:5px 3px;font-size:10.5px;font-weight:800;';
+                if (e.dias.indexOf(DOW[d.getDay()]) === -1) return '<td style="' + base + 'background:#f1f5f9;"></td>';
+                var c = datos[iso];
+                if (c) {
+                    hechas++; tocaban++;
+                    return '<td title="' + c.si + ' presentes de ' + c.total + '" style="' + base + 'background:#c6efce;color:#166534;">✓ <span style="font-size:9px;font-weight:700;">' + c.si + '/' + c.total + '</span></td>';
+                }
+                if (iso > hoyIso) return '<td style="' + base + 'background:' + bg + ';"></td>';
+                tocaban++;
+                return '<td style="' + base + 'background:#ffc7ce;color:#9c0006;">X</td>';
+            }).join('');
+            var colorTot = !tocaban ? '#94a3b8' : (hechas === tocaban ? '#16a34a' : '#dc2626');
+            html += '<tr><td style="background:' + bg + ';font-size:10.5px;font-weight:800;color:#1e293b;padding:6px 12px;border:1px solid #eef2f6;white-space:nowrap;">' + e.nombre + '</td>' +
+                celdas +
+                '<td style="text-align:center;border:1px solid #eef2f6;background:' + bg + ';font-size:10.5px;font-weight:900;color:' + colorTot + ';">' + (tocaban ? hechas + '/' + tocaban : '–') + '</td></tr>';
+        });
+        return html + '</tbody></table></div>';
+    }
+
+    function coordAsisRender() {
+        var cSem = document.getElementById('coordAsis-semana');
+        if (!cSem) return;
+        var cDia = document.getElementById('coordAsis-dia');
+        var cMes = document.getElementById('coordAsis-mes');
+        if (_caPasadas === null) {
+            var cargando = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;"><i class="fas fa-spinner fa-spin"></i> Cargando asistencias...</div>';
+            cSem.innerHTML = cDia.innerHTML = cMes.innerHTML = cargando;
+            return;
+        }
+        var hoy = new Date();
+        var y = hoy.getFullYear(), m = hoy.getMonth();
+        var tit = function(t) { return '<span style="color:#E31E24;">ASISTENCIAS</span> · ' + t; };
+
+        var lunes = _ceLunes(hoy);
+        var sem = _ceSemanaDe(lunes);
+        cSem.innerHTML = _caTabla(tit('SEMANA DEL ' + lunes.getDate() + ' ' + _ceMESES[lunes.getMonth()] + ' AL ' + sem[3].getDate() + ' ' + _ceMESES[sem[3].getMonth()]), sem);
+
+        cDia.innerHTML = _caTabla(tit(_ceDIAS[hoy.getDay()] + ' ' + hoy.getDate() + ' ' + _ceMESES[m]), [hoy]);
+
+        var diasMes = [];
+        for (var d = new Date(y, m, 1); d.getMonth() === m; d.setDate(d.getDate() + 1)) {
+            if (d.getDay() >= 1 && d.getDay() <= 4) diasMes.push(new Date(d));
+        }
+        cMes.innerHTML = _caTabla(tit(_ceMESES[m] + ' ' + y), diasMes);
+    }
+
+    async function coordAsisCargar() {
+        coordAsisRender();
+        if (_caCargando) return;
+        _caCargando = true;
+        var hoy = new Date();
+        var ini = _ceLunes(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+        var fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+        var finSemana = _ceLunes(hoy); finSemana.setDate(finSemana.getDate() + 3);
+        if (finSemana > fin) fin = finSemana;
+        try {
+            var r = await fetch('/api/asistencias_pasadas?desde=' + _ceIso(ini) + '&hasta=' + _ceIso(fin));
+            var d = await r.json();
+            var map = {};
+            Object.keys(d.pasadas || {}).forEach(function(eq) { map[_ceNorm(eq)] = d.pasadas[eq]; });
+            _caPasadas = map;
+        } catch (e) {
+            console.error('[COORD ASISTENCIAS]', e);
+            _caPasadas = {};
+        }
+        _caCargando = false;
+        coordAsisRender();
+    }
+
     // VER: mismo visor que Revisión Objetivos (foto en grande + OBJ del mes para marcar)
     async function coordVerEntreno(equipo, iso) {
         var url = (_ceSubidos[_ceClave(equipo)] || {})[iso];
@@ -11095,6 +11226,7 @@
         if (sel) sel.value = equipo;
         actualizarVistaCoordinacion();
         if (typeof coordEntrenosRender === 'function') coordEntrenosRender();
+        if (typeof coordAsisRender === 'function') coordAsisRender();
         // La matriz de asistencias se carga al abrir su subpestaña (con TODOS son muchas peticiones)
         window._asistMatrizPendiente = true;
         const paneAsis = document.getElementById('coordPane-asistencias');

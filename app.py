@@ -1341,6 +1341,40 @@ def api_asistencias_matrix():
         return jsonify({'fechas': [], 'jugadores': [], 'datos': {}})
 
 
+@app.route('/api/asistencias_pasadas')
+def api_asistencias_pasadas():
+    """Días en que cada equipo ha pasado lista (hay filas en ASISTENCIAS) entre desde y hasta (YYYY-MM-DD).
+    Devuelve {EQUIPO: {YYYY-MM-DD: {si, total}}}."""
+    desde = (request.args.get('desde') or '').strip()
+    hasta = (request.args.get('hasta') or '').strip()
+    try:
+        todo = client.open(NOMBRE_EXCEL).worksheet("ASISTENCIAS").get_all_values()
+        resultado = {}
+        for fila in todo[1:]:
+            if len(fila) < 3 or not fila[1].strip() or not fila[2].strip():
+                continue
+            partes = fila[0].strip().split('/')
+            try:
+                dia, mes = int(partes[0]), int(partes[1])
+                anio = int(partes[2]) if len(partes) > 2 else 2026
+                if anio < 100:
+                    anio += 2000
+            except (ValueError, IndexError):
+                continue
+            iso = f"{anio:04d}-{mes:02d}-{dia:02d}"
+            if (desde and iso < desde) or (hasta and iso > hasta):
+                continue
+            equipo = ' '.join(fila[1].strip().upper().split())
+            celda = resultado.setdefault(equipo, {}).setdefault(iso, {'si': 0, 'total': 0})
+            celda['total'] += 1
+            if len(fila) > 4 and fila[4].strip().upper() == 'SI':
+                celda['si'] += 1
+        return jsonify({'status': 'ok', 'pasadas': resultado})
+    except Exception as e:
+        print(f"Error asistencias_pasadas: {e}")
+        return jsonify({'status': 'error', 'pasadas': {}})
+
+
 @app.route('/obtener_observaciones_jugadores')
 def obtener_observaciones_jugadores():
     try:
