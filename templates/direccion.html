@@ -8944,7 +8944,7 @@
             var lunes = _ceLunes(hoy);
             var sem = _ceSemanaDe(lunes);
             var titSem = 'SEMANA DEL ' + lunes.getDate() + ' ' + _ceMESES[lunes.getMonth()] + ' AL ' + sem[3].getDate() + ' ' + _ceMESES[sem[3].getMonth()];
-            cSem.innerHTML = sinHorarios ? aviso(msgSinHor) : _ceTabla(titSem, [sem], null) + _ceResumen(titSem, sem);
+            cSem.innerHTML = sinHorarios ? aviso(msgSinHor) : _ceTabla('<span style="color:#E31E24;">ENTRENAMIENTOS</span> · ' + titSem, [sem], null) + _ceResumen(titSem, sem);
         }
 
         // DÍA actual
