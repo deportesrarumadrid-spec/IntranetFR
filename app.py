@@ -1331,6 +1331,46 @@ def api_asistencias_matrix():
         fechas_sorted = sorted(fechas_set, key=sort_fecha)
         jugadores_sorted = sorted(datos.keys())
 
+        # plantilla=1: solo la plantilla actual del equipo (hoja JUGADORES), sin los que están de baja
+        # en algún momento entre desde y hasta (YYYY-MM-DD), en el mismo orden que la hoja (igual que pasar lista)
+        if request.args.get('plantilla') == '1':
+            from datetime import date as _date
+            def _fecha(s):
+                s = (s or '').strip()
+                try:
+                    if '/' in s:
+                        d, m, y = [int(x) for x in s.split('/')[:3]]
+                        return _date(y + 2000 if y < 100 else y, m, d)
+                    if '-' in s:
+                        y, m, d = [int(x) for x in s.split('-')[:3]]
+                        return _date(y, m, d)
+                except (ValueError, IndexError):
+                    pass
+                return None
+            hoy = _date.today()
+            desde = _fecha(request.args.get('desde')) or hoy
+            hasta = _fecha(request.args.get('hasta')) or hoy
+            filas_jug = client.open(NOMBRE_EXCEL).worksheet("JUGADORES").get_all_values()
+            if filas_jug:
+                hj = [normalizar_cabecera_universal(h) for h in filas_jug[0]]
+                i_nom = hj.index('NOMBRE') if 'NOMBRE' in hj else 0
+                i_eq = next((hj.index(k) for k in ["EQUIPO", "CATEGORIA", "GRUPO", "EQUIPOS", "EQUIPOACTIVO"] if k in hj), 1)
+                i_baja = hj.index('BAJADESDE') if 'BAJADESDE' in hj else -1
+                i_alta = hj.index('ALTADESDE') if 'ALTADESDE' in hj else -1
+                plantilla = []
+                for fila in filas_jug[1:]:
+                    if len(fila) <= max(i_nom, i_eq) or fila[i_eq].strip().lower() != equipo:
+                        continue
+                    nombre = fila[i_nom].strip()
+                    if not nombre:
+                        continue
+                    f_baja = _fecha(fila[i_baja]) if 0 <= i_baja < len(fila) else None
+                    f_alta = _fecha(fila[i_alta]) if 0 <= i_alta < len(fila) else None
+                    if f_baja and f_baja <= hasta and (not f_alta or f_alta > desde):
+                        continue
+                    plantilla.append(nombre)
+                jugadores_sorted = plantilla
+
         return jsonify({
             'fechas': fechas_sorted,
             'jugadores': jugadores_sorted,

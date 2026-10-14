@@ -9084,6 +9084,7 @@
                 var estado = (c && typeof c === 'object' ? (c.estado || '') : (c || '')).trim().toUpperCase();
                 if (estado === 'SI') { si++; marcados++; return '<td style="' + base + 'background:#f0fdf4;color:#16a34a;">✓</td>'; }
                 if (estado === 'NO') { marcados++; return '<td style="' + base + 'background:#fef2f2;color:#dc2626;">✕</td>'; }
+                if (estado === 'AV') { marcados++; return '<td title="Avisó" style="' + base + 'background:#fef9c3;color:#a16207;font-size:9px;">AV</td>'; }
                 return '<td style="' + base + 'background:#fbfcfe;"></td>';
             }).join('');
             return '<tr><td style="background:#fbfcfe;font-size:10px;font-weight:700;color:#475569;padding:4px 12px 4px 31px;border:1px solid #eef2f6;white-space:nowrap;">' + jug + '</td>' +
@@ -9098,7 +9099,10 @@
         if (!_caAbiertos[equipo] || (_caJugadores[equipo] && _caJugadores[equipo] !== 'error')) return;
         _caJugadores[equipo] = 'cargando';
         try {
-            var r = await fetch('/api/asistencias_matrix?equipo=' + encodeURIComponent(equipo));
+            var hoy = new Date();
+            var desde = _ceIso(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+            var hasta = _ceIso(new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0));
+            var r = await fetch('/api/asistencias_matrix?plantilla=1&desde=' + desde + '&hasta=' + hasta + '&equipo=' + encodeURIComponent(equipo));
             var d = await r.json();
             _caJugadores[equipo] = { jugadores: d.jugadores || [], datos: d.datos || {} };
         } catch (err) {
