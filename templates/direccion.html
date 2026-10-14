@@ -9022,14 +9022,14 @@
                 '<div style="padding:30px;text-align:center;color:#94a3b8;font-size:12px;font-weight:800;">No hay equipos con entreno en estos días</div></div>';
         }
         var thS = 'background:#1e293b;color:white;font-size:10px;font-weight:900;padding:7px 4px;letter-spacing:.3px;text-align:center;';
-        var html = '<div style="background:white;border-radius:12px;border:1px solid #e2e8f0;overflow-x:auto;">' + cab +
-            '<table style="width:100%;border-collapse:collapse;"><thead><tr>' +
-            '<th style="' + thS + 'text-align:left;padding-left:12px;min-width:150px;">EQUIPO</th>' +
+        var html = '<div style="background:white;border-radius:12px;border:1px solid #e2e8f0;overflow-x:auto;width:fit-content;max-width:100%;">' + cab +
+            '<table style="border-collapse:collapse;"><thead><tr>' +
+            '<th style="' + thS + 'text-align:left;padding-left:12px;min-width:200px;">EQUIPO</th>' +
             fechas.map(function(d) {
                 var esHoy = _ceIso(d) === hoyIso;
-                return '<th style="' + thS + 'min-width:52px;' + (esHoy ? 'background:#E31E24;' : '') + '">' + _ceDIAS[d.getDay()].slice(0, 3) + ' ' + d.getDate() + '</th>';
+                return '<th style="' + thS + 'width:72px;min-width:72px;' + (esHoy ? 'background:#E31E24;' : '') + '">' + _ceDIAS[d.getDay()].slice(0, 3) + ' ' + d.getDate() + '</th>';
             }).join('') +
-            '<th style="' + thS + 'min-width:60px;">HECHAS</th></tr></thead><tbody>';
+            '<th style="' + thS + 'width:64px;min-width:64px;">HECHAS</th></tr></thead><tbody>';
         equipos.forEach(function(e, i) {
             var bg = i % 2 ? '#f8fafc' : 'white';
             var datos = (_caPasadas || {})[_ceNorm(e.nombre)] || {};
@@ -9048,11 +9048,64 @@
                 return '<td style="' + base + 'background:#ffc7ce;color:#9c0006;">X</td>';
             }).join('');
             var colorTot = !tocaban ? '#94a3b8' : (hechas === tocaban ? '#16a34a' : '#dc2626');
-            html += '<tr><td style="background:' + bg + ';font-size:10.5px;font-weight:800;color:#1e293b;padding:6px 12px;border:1px solid #eef2f6;white-space:nowrap;">' + e.nombre + '</td>' +
+            var abierto = !!_caAbiertos[e.nombre];
+            var esc = e.nombre.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            html += '<tr><td style="background:' + bg + ';font-size:10.5px;font-weight:800;color:#1e293b;padding:6px 12px 6px 6px;border:1px solid #eef2f6;white-space:nowrap;">' +
+                '<button onclick="coordAsisToggleEquipo(\'' + esc + '\')" title="Ver jugadores" style="width:18px;height:18px;border-radius:4px;border:1px solid #cbd5e1;background:' + (abierto ? '#1e293b' : 'white') + ';color:' + (abierto ? 'white' : '#475569') + ';font-size:12px;font-weight:900;line-height:1;cursor:pointer;padding:0;margin-right:7px;vertical-align:middle;">' + (abierto ? '−' : '+') + '</button>' +
+                e.nombre + '</td>' +
                 celdas +
                 '<td style="text-align:center;border:1px solid #eef2f6;background:' + bg + ';font-size:10.5px;font-weight:900;color:' + colorTot + ';">' + (tocaban ? hechas + '/' + tocaban : '–') + '</td></tr>';
+            if (abierto) html += _caFilasJugadores(e, fechas);
         });
         return html + '</tbody></table></div>';
+    }
+
+    // ── Desplegable de jugadores por equipo (datos de /api/asistencias_matrix) ──
+    var _caAbiertos = {};   // {equipo: true}
+    var _caJugadores = {};  // {equipo: 'cargando' | 'error' | {jugadores, datos}}
+
+    function _caFilasJugadores(e, fechas) {
+        var DOW = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
+        var nCols = fechas.length + 2;
+        var info = _caJugadores[e.nombre];
+        var msg = function(t) {
+            return '<tr><td colspan="' + nCols + '" style="padding:8px 30px;font-size:10.5px;color:#94a3b8;background:#fbfcfe;border:1px solid #eef2f6;">' + t + '</td></tr>';
+        };
+        if (!info || info === 'cargando') return msg('<i class="fas fa-spinner fa-spin"></i> Cargando jugadores...');
+        if (info === 'error') return msg('Error al cargar los jugadores.');
+        if (!info.jugadores.length) return msg('Este equipo no tiene asistencias registradas.');
+        var dd = function(d) { return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear(); };
+        return info.jugadores.map(function(jug) {
+            var si = 0, marcados = 0;
+            var celdas = fechas.map(function(d) {
+                var base = 'text-align:center;border:1px solid #eef2f6;padding:3px;font-size:10px;font-weight:900;';
+                if (e.dias.indexOf(DOW[d.getDay()]) === -1) return '<td style="' + base + 'background:#f1f5f9;"></td>';
+                var c = (info.datos[jug] || {})[dd(d)];
+                var estado = (c && typeof c === 'object' ? (c.estado || '') : (c || '')).trim().toUpperCase();
+                if (estado === 'SI') { si++; marcados++; return '<td style="' + base + 'background:#f0fdf4;color:#16a34a;">✓</td>'; }
+                if (estado === 'NO') { marcados++; return '<td style="' + base + 'background:#fef2f2;color:#dc2626;">✕</td>'; }
+                return '<td style="' + base + 'background:#fbfcfe;"></td>';
+            }).join('');
+            return '<tr><td style="background:#fbfcfe;font-size:10px;font-weight:700;color:#475569;padding:4px 12px 4px 31px;border:1px solid #eef2f6;white-space:nowrap;">' + jug + '</td>' +
+                celdas +
+                '<td style="text-align:center;border:1px solid #eef2f6;background:#fbfcfe;font-size:10px;font-weight:800;color:#64748b;">' + (marcados ? si + '/' + marcados : '–') + '</td></tr>';
+        }).join('');
+    }
+
+    async function coordAsisToggleEquipo(equipo) {
+        _caAbiertos[equipo] = !_caAbiertos[equipo];
+        coordAsisRender();
+        if (!_caAbiertos[equipo] || (_caJugadores[equipo] && _caJugadores[equipo] !== 'error')) return;
+        _caJugadores[equipo] = 'cargando';
+        try {
+            var r = await fetch('/api/asistencias_matrix?equipo=' + encodeURIComponent(equipo));
+            var d = await r.json();
+            _caJugadores[equipo] = { jugadores: d.jugadores || [], datos: d.datos || {} };
+        } catch (err) {
+            console.error('[COORD ASISTENCIAS jugadores]', err);
+            _caJugadores[equipo] = 'error';
+        }
+        coordAsisRender();
     }
 
     function coordAsisRender() {
