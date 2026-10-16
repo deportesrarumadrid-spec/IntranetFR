@@ -9740,7 +9740,7 @@
         if (!objetivo || !estado) return null;
         if (objetivo === 'GANAR') return estado === 'G';
         if (objetivo === 'GANAR/EMPATAR' || objetivo === 'EMPATAR') return estado === 'G' || estado === 'E';
-        if (objetivo === 'COMPETIR') return true;
+        if (objetivo === 'COMPETIR' || objetivo === 'EMPATAR/COMPETIR') return true;
         return null;
     }
 
@@ -9757,7 +9757,7 @@
                 if (pop.style.display !== 'none' && !pop.contains(e.target) && !e.target.closest('[onclick^="obsEditarObjetivo"]')) pop.style.display = 'none';
             });
         }
-        var opciones = ['GANAR', 'GANAR/EMPATAR', 'EMPATAR', 'COMPETIR'];
+        var opciones = ['GANAR', 'GANAR/EMPATAR', 'EMPATAR', 'EMPATAR/COMPETIR', 'COMPETIR'];
         var html = '<div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;padding:2px 6px 6px;">Objetivo · ' + (p.categoria + ' ' + p.letra).trim() + '</div>';
         opciones.forEach(function(o) {
             var activo = p.objetivo === o;

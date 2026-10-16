@@ -2010,7 +2010,7 @@ def guardar_criterios_objetivo(nuevos):
 
 
 OBJETIVOS_MANUALES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'objetivos_manuales.json')
-OBJETIVOS_VALIDOS = ("GANAR", "GANAR/EMPATAR", "EMPATAR", "COMPETIR")
+OBJETIVOS_VALIDOS = ("GANAR", "GANAR/EMPATAR", "EMPATAR", "EMPATAR/COMPETIR", "COMPETIR")
 
 
 def _clave_objetivo_manual(grupo, jornada_num):
@@ -2071,7 +2071,7 @@ def _cumple_objetivo(objetivo, estado_real):
         return estado_real == 'G'
     if objetivo in ("GANAR/EMPATAR", "EMPATAR"):
         return estado_real in ('G', 'E')
-    if objetivo == "COMPETIR":
+    if objetivo in ("COMPETIR", "EMPATAR/COMPETIR"):
         return True  # no hay forma de "fallar" este objetivo, cualquier resultado vale
     return None
 
