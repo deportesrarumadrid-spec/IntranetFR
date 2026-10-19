@@ -9889,8 +9889,7 @@
             if (p.cumplido === true) cumHtml = '<i class="fas fa-circle-check" style="font-size:14px;color:#16a34a;"></i>';
             else if (p.cumplido === false) cumHtml = '<i class="fas fa-circle-xmark" style="font-size:14px;color:#dc2626;"></i>';
             if (modoResultados) {
-                cumHtml = '<span onclick="obsEditarCumplido(' + obsData.indexOf(p) + ', this)" title="Cambiar ✓/✗" style="cursor:pointer;display:inline-flex;align-items:center;gap:3px;">' + cumHtml +
-                    (p.cumplido_manual ? '<span title="Fijado a mano" style="font-size:8px;font-weight:900;color:#2563eb;">M</span>' : '') + '</span>';
+                cumHtml = '<span onclick="obsEditarCumplido(' + obsData.indexOf(p) + ', this)" title="Cambiar ✓/✗" style="cursor:pointer;display:inline-flex;align-items:center;">' + cumHtml + '</span>';
             }
 
             // Columna IDA
