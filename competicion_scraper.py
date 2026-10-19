@@ -2048,6 +2048,39 @@ def guardar_objetivo_manual(grupo, jornada_num, objetivo, clave=None):
     return manuales
 
 
+CUMPLIDOS_MANUALES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'data', 'cumplidos_manuales.json')
+
+
+def load_cumplidos_manuales():
+    """✓/✗ fijados a mano por partido (misma clave que los objetivos manuales) → True/False."""
+    if os.path.exists(CUMPLIDOS_MANUALES_FILE):
+        try:
+            with open(CUMPLIDOS_MANUALES_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
+def guardar_cumplido_manual(grupo, jornada_num, cumplido, clave=None):
+    """Fija el ✓/✗ de un partido. cumplido None elimina el ajuste manual (vuelve al automático)."""
+    if cumplido not in (True, False, None):
+        raise ValueError("Valor de cumplido no válido")
+    manuales = load_cumplidos_manuales()
+    base = _clave_objetivo_manual(grupo, jornada_num)
+    if clave and not (clave == base or clave.startswith(base + '|')):
+        raise ValueError("Clave no válida")
+    clave = clave or base
+    if cumplido is None:
+        manuales.pop(clave, None)
+    else:
+        manuales[clave] = cumplido
+    os.makedirs(os.path.dirname(CUMPLIDOS_MANUALES_FILE), exist_ok=True)
+    with open(CUMPLIDOS_MANUALES_FILE, 'w', encoding='utf-8') as f:
+        json.dump(manuales, f, ensure_ascii=False, indent=2)
+    return manuales
+
+
 def calcular_objetivo(pos_nuestra, pts_nuestro, pos_rival, pts_rival):
     """GANAR / GANAR/EMPATAR / EMPATAR / COMPETIR según diferencia de posición y puntos.
     pos_dif > 0 = estamos mejor posicionados (numéricamente más arriba en la tabla).
@@ -2156,6 +2189,7 @@ def construir_obj_semanales():
     Deduplica grupos con nombre idéntico (bug del scraper) y añade ida_resultado si existe."""
     cache = load_cached_data()
     objetivos_manuales = load_objetivos_manuales()
+    cumplidos_manuales = load_cumplidos_manuales()
     resultado_final = []
 
     # Deduplicar: saltar entries con nombre_grupo ya procesado
@@ -2257,7 +2291,9 @@ def construir_obj_semanales():
             if objetivo_manual:
                 objetivo = objetivo_manual
 
-            cumplido = _cumple_objetivo(objetivo, partido.get('estado'))
+            cumplido_auto = _cumple_objetivo(objetivo, partido.get('estado'))
+            cumplido_manual = cumplidos_manuales.get(clave_objetivo)
+            cumplido = cumplido_manual if cumplido_manual is not None else cumplido_auto
             ultimos_rival = ultimos_resultados_equipo(calendario_grupo, rival, jornada_num, n=2) if calendario_grupo else []
 
             resultado_final.append({
@@ -2279,6 +2315,7 @@ def construir_obj_semanales():
                 "objetivo_auto": objetivo_auto,
                 "objetivo_manual": bool(objetivo_manual),
                 "cumplido": cumplido,
+                "cumplido_manual": cumplido_manual is not None,
                 "datos_nuestro": datos_nuestro,
                 "datos_rival": datos_rival,
                 "ultimos_rival": ultimos_rival,

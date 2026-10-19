@@ -9754,7 +9754,7 @@
             pop.style.cssText = 'display:none;position:fixed;background:white;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,0.18);z-index:30000;padding:8px;min-width:170px;';
             document.body.appendChild(pop);
             document.addEventListener('click', function(e) {
-                if (pop.style.display !== 'none' && !pop.contains(e.target) && !e.target.closest('[onclick^="obsEditarObjetivo"]')) pop.style.display = 'none';
+                if (pop.style.display !== 'none' && !pop.contains(e.target) && !e.target.closest('[onclick^="obsEditar"]')) pop.style.display = 'none';
             });
         }
         var opciones = ['GANAR', 'GANAR/EMPATAR', 'EMPATAR', 'EMPATAR/COMPETIR', 'COMPETIR'];
@@ -9787,11 +9787,49 @@
             if (data.status !== 'ok') { alert(data.message || 'Error al guardar el objetivo.'); return; }
             p.objetivo_manual = !!objetivo;
             p.objetivo = objetivo || p.objetivo_auto || null;
-            p.cumplido = obsCumpleObjetivo(p.objetivo, p.estado);
+            if (!p.cumplido_manual) p.cumplido = obsCumpleObjetivo(p.objetivo, p.estado);
             obsRenderFinde();
             obsRenderStatsGlobal();
             obsRenderTemporada('obsEquiposGridFinde');
         }).catch(function() { alert('Error de conexión al guardar el objetivo.'); });
+    }
+
+    // ✓/✗ a mano: mismo bocadillo que el del objetivo
+    function obsEditarCumplido(idx, el) {
+        var p = obsData[idx];
+        if (!p) return;
+        obsEditarObjetivo(idx, el); // crea/posiciona el bocadillo
+        var pop = document.getElementById('obsObjPopover');
+        var auto = obsCumpleObjetivo(p.objetivo, p.estado);
+        var autoTxt = auto === true ? '✓' : (auto === false ? '✗' : 'sin dato');
+        var opc = [[true, '✓ CUMPLIDO', '#16a34a'], [false, '✗ NO CUMPLIDO', '#dc2626']];
+        var html = '<div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;padding:2px 6px 6px;">Cumplimiento · ' + (p.categoria + ' ' + p.letra).trim() + '</div>';
+        opc.forEach(function(o) {
+            var activo = p.cumplido_manual && p.cumplido === o[0];
+            html += '<button onclick="obsGuardarCumplido(' + idx + ',' + o[0] + ')" style="display:block;width:100%;text-align:left;border:none;border-radius:6px;padding:6px 8px;margin-bottom:2px;cursor:pointer;font-family:inherit;font-size:10.5px;font-weight:800;background:' + (activo ? o[2] : '#f8fafc') + ';color:' + (activo ? 'white' : o[2]) + ';">' + o[1] + '</button>';
+        });
+        html += '<button onclick="obsGuardarCumplido(' + idx + ',null)" style="display:block;width:100%;text-align:left;border:none;border-top:1px solid #f1f5f9;border-radius:6px;padding:6px 8px;margin-top:4px;cursor:pointer;font-family:inherit;font-size:10px;font-weight:700;background:white;color:#64748b;">' +
+            '<i class="fas fa-rotate-left" style="margin-right:4px;"></i>AUTOMÁTICO (' + autoTxt + ')</button>';
+        pop.innerHTML = html;
+    }
+
+    function obsGuardarCumplido(idx, cumplido) {
+        var p = obsData[idx];
+        var pop = document.getElementById('obsObjPopover');
+        if (pop) pop.style.display = 'none';
+        if (!p) return;
+        fetch('/api/obj_semanales/cumplido', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ grupo: p.grupo, jornada_num: p.jornada_num, clave: p.clave_objetivo || '', cumplido: cumplido })
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.status !== 'ok') { alert(data.message || 'Error al guardar.'); return; }
+            p.cumplido_manual = cumplido !== null;
+            p.cumplido = cumplido !== null ? cumplido : obsCumpleObjetivo(p.objetivo, p.estado);
+            obsRenderFinde();
+            obsRenderStatsGlobal();
+            obsRenderTemporada('obsEquiposGridFinde');
+        }).catch(function() { alert('Error de conexión al guardar.'); });
     }
 
     function obsRenderTablaFinde(partidos, modoResultados) {
@@ -9850,6 +9888,10 @@
             var cumHtml = '<span style="color:#cbd5e1;font-size:14px;">–</span>';
             if (p.cumplido === true) cumHtml = '<i class="fas fa-circle-check" style="font-size:14px;color:#16a34a;"></i>';
             else if (p.cumplido === false) cumHtml = '<i class="fas fa-circle-xmark" style="font-size:14px;color:#dc2626;"></i>';
+            if (modoResultados) {
+                cumHtml = '<span onclick="obsEditarCumplido(' + obsData.indexOf(p) + ', this)" title="Cambiar ✓/✗" style="cursor:pointer;display:inline-flex;align-items:center;gap:3px;">' + cumHtml +
+                    (p.cumplido_manual ? '<span title="Fijado a mano" style="font-size:8px;font-weight:900;color:#2563eb;">M</span>' : '') + '</span>';
+            }
 
             // Columna IDA
             var idaHtml = '';
