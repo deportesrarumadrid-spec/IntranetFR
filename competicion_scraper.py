@@ -2028,12 +2028,16 @@ def load_objetivos_manuales():
     return {}
 
 
-def guardar_objetivo_manual(grupo, jornada_num, objetivo):
-    """Fija el objetivo de un partido. objetivo vacío/None elimina el ajuste manual (vuelve al automático)."""
+def guardar_objetivo_manual(grupo, jornada_num, objetivo, clave=None):
+    """Fija el objetivo de un partido. objetivo vacío/None elimina el ajuste manual (vuelve al automático).
+    clave: la 'clave_objetivo' que devuelve construir_obj_semanales (lleva letra si el grupo tiene varios equipos nuestros)."""
     if objetivo and objetivo not in OBJETIVOS_VALIDOS:
         raise ValueError("Objetivo no válido")
     manuales = load_objetivos_manuales()
-    clave = _clave_objetivo_manual(grupo, jornada_num)
+    base = _clave_objetivo_manual(grupo, jornada_num)
+    if clave and not (clave == base or clave.startswith(base + '|')):
+        raise ValueError("Clave de objetivo no válida")
+    clave = clave or base
     if objetivo:
         manuales[clave] = objetivo
     else:
@@ -2127,6 +2131,24 @@ def _grupo_short(nombre_grupo):
     return f'Gr.{m.group(1)}' if m else ''
 
 
+def _norm_eq_nombre(nombre):
+    """Nombre de equipo normalizado para comparar (sin comillas, espacios simples, mayúsculas)."""
+    return ' '.join((nombre or '').replace('"', '').replace("'", '').upper().split())
+
+
+def _letra_de_nombre(nombre):
+    """Letra del equipo a partir de su nombre RFFM: 'CLUB FUENTELARREYNA "D"' → 'D'."""
+    nombre = nombre or ''
+    m_q = re.search(r'"([^"]+)"', nombre)
+    if m_q:
+        return m_q.group(1).strip()
+    words = nombre.strip().upper().split()
+    last = words[-1] if words else ''
+    if last and len(last) <= 2 and all(c in 'ABCDE' for c in last):
+        return last
+    return None
+
+
 def construir_obj_semanales():
     """Recorre el caché de RFFM y devuelve, por cada partido de cada equipo del club: rival,
     clasificación de ambos (previa al partido o de fin de temporada como fallback), objetivo calculado,
@@ -2162,14 +2184,30 @@ def construir_obj_semanales():
             if "FUENTELARREYNA" in (p.get('visitante') or '').upper():
                 nombre_nuestro = p['visitante']; break
 
-        # Construir mapa rival → partido más temprano (IDA) con resultado
+        # Un mismo grupo puede tener varios equipos del club (p.ej. PREBENJAMIN B y D en el Grupo 11):
+        # el calendario recoge los partidos de todos ellos, así que para cada partido sacamos cuál de
+        # nuestros equipos juega (jornada + rival → nombre nuestro) y de ahí su letra y su clasificación.
+        nuestro_por_partido = {}
+        for p in calendario_grupo:
+            loc, vis = p.get('local') or '', p.get('visitante') or ''
+            jn = _numero_jornada(p.get('jornada'))
+            if "FUENTELARREYNA" in loc.upper():
+                nuestro_por_partido.setdefault((jn, _norm_eq_nombre(vis)), loc)
+            if "FUENTELARREYNA" in vis.upper():
+                nuestro_por_partido.setdefault((jn, _norm_eq_nombre(loc)), vis)
+        hay_varios_nuestros = len({n for n in nuestro_por_partido.values()}) > 1
+
+        def _nuestro_de(pt):
+            return nuestro_por_partido.get((_numero_jornada(pt.get('jornada')), _norm_eq_nombre(pt.get('rival', '')))) or nombre_nuestro
+
+        # Construir mapa (nuestro equipo, rival) → partido más temprano (IDA) con resultado
         # Para cada rival, el primer partido jugado contra él es la IDA
         partidos_ordenados = sorted(calendario, key=lambda p: _numero_jornada(p.get('jornada')))
         ida_por_rival = {}
         for pt in partidos_ordenados:
             if not pt.get('resultado'):
                 continue
-            r = pt.get('rival', '').replace('"', '').replace("'", '').strip().upper()
+            r = (_nuestro_de(pt), pt.get('rival', '').replace('"', '').replace("'", '').strip().upper())
             if r not in ida_por_rival:
                 ida_por_rival[r] = pt
 
@@ -2177,16 +2215,18 @@ def construir_obj_semanales():
             jornada_num = _numero_jornada(partido.get('jornada'))
             rival = partido.get('rival', '')
             rival_norm = rival.replace('"', '').replace("'", '').strip().upper()
+            nuestro = _nuestro_de(partido)
+            letra_partido = (_letra_de_nombre(nuestro) if hay_varios_nuestros else None) or letra
 
             # IDA: buscar si existe un partido anterior contra el mismo rival CON resultado
-            ida_partido = ida_por_rival.get(rival_norm)
+            ida_partido = ida_por_rival.get((nuestro, rival_norm))
             # Solo contar como IDA si es un partido DISTINTO (jornada menor)
             if ida_partido and _numero_jornada(ida_partido.get('jornada')) >= jornada_num:
                 ida_partido = None
 
             # Clasificación previa (histórica) si hay calendario_grupo, fallback si no
             clasif_previa = calcular_clasificacion_en_jornada(calendario_grupo, jornada_num - 1) if calendario_grupo else {}
-            datos_nuestro = clasif_previa.get(nombre_nuestro) if nombre_nuestro else None
+            datos_nuestro = clasif_previa.get(nuestro) if nuestro else None
             datos_rival = None
             for nombre_eq, datos_eq in clasif_previa.items():
                 if _rival_coincide(rival_norm, nombre_eq.replace('"', '').replace("'", '').strip().upper()):
@@ -2194,9 +2234,12 @@ def construir_obj_semanales():
 
             # Fallback: usar la clasificación final de temporada cuando no hay calendario_grupo
             if datos_nuestro is None or datos_rival is None:
+                nuestro_norm = _norm_eq_nombre(nuestro) if nuestro else ''
                 for fila in clasif_temporada:
                     nombre_eq_norm = fila.get('equipo', '').replace('"', '').replace("'", '').strip().upper()
-                    if 'FUENTELARREYNA' in nombre_eq_norm and datos_nuestro is None:
+                    es_nuestro = (_norm_eq_nombre(fila.get('equipo', '')) == nuestro_norm) if (nuestro_norm and hay_varios_nuestros) \
+                        else 'FUENTELARREYNA' in nombre_eq_norm
+                    if es_nuestro and datos_nuestro is None:
                         datos_nuestro = _clasif_fila_a_dict(fila)
                     if datos_rival is None and _rival_coincide(rival_norm, nombre_eq_norm):
                         datos_rival = _clasif_fila_a_dict(fila)
@@ -2208,7 +2251,9 @@ def construir_obj_semanales():
                     datos_rival.get('posicion'), datos_rival.get('puntos')
                 )
             objetivo_auto = objetivo
-            objetivo_manual = objetivos_manuales.get(_clave_objetivo_manual(nombre_grupo, jornada_num))
+            # Con varios equipos nuestros en el grupo, la clave lleva la letra para no compartir objetivo
+            clave_objetivo = _clave_objetivo_manual(nombre_grupo, jornada_num) + (f"|{letra_partido}" if hay_varios_nuestros else '')
+            objetivo_manual = objetivos_manuales.get(clave_objetivo)
             if objetivo_manual:
                 objetivo = objetivo_manual
 
@@ -2217,9 +2262,10 @@ def construir_obj_semanales():
 
             resultado_final.append({
                 "categoria": categoria,
-                "letra": letra,
+                "letra": letra_partido,
                 "formato": formato,
                 "grupo": nombre_grupo,
+                "clave_objetivo": clave_objetivo,
                 "grupo_short": grp_short,
                 "jornada": partido.get('jornada'),
                 "jornada_num": jornada_num,

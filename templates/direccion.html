@@ -9782,7 +9782,7 @@
         fetch('/api/obj_semanales/objetivo', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ grupo: p.grupo, jornada_num: p.jornada_num, objetivo: objetivo })
+            body: JSON.stringify({ grupo: p.grupo, jornada_num: p.jornada_num, clave: p.clave_objetivo || '', objetivo: objetivo })
         }).then(function(r) { return r.json(); }).then(function(data) {
             if (data.status !== 'ok') { alert(data.message || 'Error al guardar el objetivo.'); return; }
             p.objetivo_manual = !!objetivo;

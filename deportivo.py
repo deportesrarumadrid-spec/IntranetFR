@@ -2737,7 +2737,8 @@ def api_obj_semanales_objetivo():
     if not grupo or jornada_num is None:
         return jsonify({"status": "error", "message": "Faltan datos (grupo o jornada)"}), 400
     try:
-        guardar_objetivo_manual(grupo, int(jornada_num), (data.get('objetivo') or '').strip() or None)
+        guardar_objetivo_manual(grupo, int(jornada_num), (data.get('objetivo') or '').strip() or None,
+                                clave=(data.get('clave') or '').strip() or None)
         return jsonify({"status": "ok"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
