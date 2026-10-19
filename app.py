@@ -265,6 +265,28 @@ app.gs_client = client
 app.gs_name = NOMBRE_EXCEL
 _asis_cache = {}  # {equipo_lower: {'data': list, 'ts': float}}
 _ASIS_CACHE_TTL = 5  # segundos — debe coincidir con CachedClient TTL para evitar stale data cross-worker
+
+import threading
+from contextlib import contextmanager
+
+_ASIS_LOCK_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.asistencias.lock')
+_asis_thread_lock = threading.Lock()
+
+@contextmanager
+def _asis_lock():
+    """Serializa los guardados de ASISTENCIAS entre hilos y entre workers de gunicorn (flock en Linux)."""
+    with _asis_thread_lock:
+        try:
+            import fcntl
+        except ImportError:  # Windows (desarrollo): basta con el lock de hilo
+            yield
+            return
+        with open(_ASIS_LOCK_FILE, 'w') as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(f, fcntl.LOCK_UN)
 # ----------------------------------
 
 # ===================== SISTEMA MULTI-TEMPORADA =====================
@@ -1524,42 +1546,47 @@ def guardar_asistencia_masiva():
         # IMPORTANTE: Usamos 'client' directamente, que ya lo tienes definido arriba
         sheet = client.open(NOMBRE_EXCEL).worksheet("ASISTENCIAS")
 
-        for c in cambios:
-            # Refrescamos los valores en cada iteración para evitar duplicados si se pulsa muy rápido
-            actuales = sheet.get_all_values()
+        # Una sola lectura de la hoja por guardado (antes era una por jugador y Google cortaba
+        # por límite de lecturas/minuto con TODO SI). El candado evita que dos guardados
+        # simultáneos del mismo día creen filas duplicadas.
+        with _asis_lock():
+            # Lectura directa, sin la caché de 5s: otro worker puede haber añadido filas hace un momento
+            actuales = getattr(sheet, '_ws', sheet).get_all_values()
 
-            dia_val = int(c['dia'])
-            fecha_full = f"{dia_val:02d}/{mes_val:02d}/{anio_val}"
-            nombre = c['nombre']
-            nombre_lower = nombre.strip().lower()
-            equipo_lower = c['equipo'].strip().lower()
-            estado = c['estado']
-            valoracion = c.get('valoracion', '-') # Captura la flecha (NORMAL, MAL, etc.)
-            if not valoracion: valoracion = "-"
-            observacion = c.get('motivo', '') 
-            charla = c.get('charla', 'NO')
+            # Índice (día, mes, equipo, nombre) -> nº de fila. Se comparan números de día y mes, no strings exactos
+            indice = {}
+            for i, fila in enumerate(actuales[1:], start=2):
+                if len(fila) < 3:
+                    continue
+                partes = fila[0].split('/')
+                try:
+                    clave = (int(partes[0]), int(partes[1]), fila[1].strip().lower(), fila[2].strip().lower())
+                except (ValueError, IndexError):
+                    continue
+                indice.setdefault(clave, i)
 
-            # Búsqueda robusta: comparamos números de día y mes, no strings exactos
-            fila_idx = -1
-            for i, fila in enumerate(actuales):
-                if i == 0: continue
-                if len(fila) >= 3:
-                    partes = fila[0].split('/')
-                    if len(partes) >= 2:
-                        try:
-                            f_dia = int(partes[0])
-                            f_mes = int(partes[1])
-                            if f_dia == dia_val and f_mes == mes_val and fila[1].strip().lower() == equipo_lower and fila[2].strip().lower() == nombre_lower:
-                                fila_idx = i + 1
-                                break
-                        except: continue
-            
-            if fila_idx != -1:
-                # Actualización masiva de la fila (Columnas E, F, G) para mayor velocidad y fiabilidad
-                sheet.update(f'E{fila_idx}:H{fila_idx}', [[estado, valoracion, observacion, charla]], value_input_option='USER_ENTERED')
-            else:
-                # Nueva fila: FECHA, EQUIPO, NOMBRE, APELLIDO, ASISTENCIA, VALORACIÓN, OBSERVACIONES, CHARLA
-                sheet.append_row([fecha_full, c['equipo'], nombre, "", estado, valoracion, observacion, charla])
+            actualizar = {}   # nº de fila -> valores E:H
+            nuevas = {}       # clave -> fila completa (si un jugador viene repetido, gana el último)
+            for c in cambios:
+                dia_val = int(c['dia'])
+                nombre = c['nombre']
+                estado = c['estado']
+                valoracion = c.get('valoracion', '-') or '-'  # Captura la flecha (NORMAL, MAL, etc.)
+                observacion = c.get('motivo', '')
+                charla = c.get('charla', 'NO')
+                clave = (dia_val, mes_val, c['equipo'].strip().lower(), nombre.strip().lower())
+                if clave in indice:
+                    actualizar[indice[clave]] = [estado, valoracion, observacion, charla]
+                else:
+                    # Nueva fila: FECHA, EQUIPO, NOMBRE, APELLIDO, ASISTENCIA, VALORACIÓN, OBSERVACIONES, CHARLA
+                    fecha_full = f"{dia_val:02d}/{mes_val:02d}/{anio_val}"
+                    nuevas[clave] = [fecha_full, c['equipo'], nombre, "", estado, valoracion, observacion, charla]
+
+            if actualizar:
+                sheet.batch_update([{'range': f'E{f}:H{f}', 'values': [v]} for f, v in actualizar.items()],
+                                   value_input_option='USER_ENTERED')
+            if nuevas:
+                sheet.append_rows(list(nuevas.values()))
 
         equipos_mod = {c['equipo'].strip().lower() for c in cambios}
         for eq in equipos_mod:

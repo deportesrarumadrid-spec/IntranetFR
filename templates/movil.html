@@ -189,6 +189,9 @@
         .nb-no{background:#dc2626;color:white;}
         .nb-av{background:#ffc107;color:#000;}
         .nb-none{background:#f1f5f9;color:#94a3b8;}
+        /* Cola de guardado: naranja = guardando, rojo = no se ha podido guardar todavía */
+        .new-prow.npr-pend{box-shadow:inset 4px 0 0 #f59e0b;}
+        .new-prow.npr-err{box-shadow:inset 4px 0 0 #dc2626;background:#fef2f2;}
         .npr-trend{width:clamp(26px,7.7vw,34px);height:clamp(40px,11.3vw,50px);display:flex;align-items:center;justify-content:center;font-size:clamp(17px,5.1vw,23px);flex-shrink:0;cursor:pointer;border-radius:8px;transition:background .1s;}
         .npr-trend:active{background:#f1f5f9;}
 
@@ -1610,10 +1613,6 @@ async function borrarCharlaModal() {
     const row = _charlaRowActiva;
     if (!val || !row) { cerrarCharlaModal(); return; }
     const [y,m,d] = val.split('-');
-    const nombre = row.dataset.nombre;
-    const estado = row.dataset.estado || '';
-    const tr = row.querySelector('.npr-trend');
-    const valoracion = tr ? (tr.dataset.valor || '-') : '-';
 
     row.dataset.charla = 'NO';
     row.dataset.charlaNote = '';
@@ -1621,16 +1620,7 @@ async function borrarCharlaModal() {
     if (ico) ico.classList.remove('charla-activa');
 
     cerrarCharlaModal();
-
-    try {
-        const r = await fetch('/guardar_asistencia_masiva', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({cambios:[{dia:parseInt(d),nombre,equipo:EQUIPO,estado,valoracion,motivo:'',charla:'NO'}], mes:parseInt(m)})
-        });
-        const data = await r.json();
-        if (data.status==='success') { _patchAsis(d, m, nombre, estado, valoracion, '', 'NO'); toast(`Charla borrada: ${nombre}`); }
-        else toast('Error al borrar',true);
-    } catch(e) { toast('Error de conexión',true); }
+    _encolarAsis([_cambioDeFila(row, d, { motivo: '', charla: 'NO' })], m, `Charla borrada: ${row.dataset.nombre}`);
 }
 
 async function guardarCharlaModal() {
@@ -1639,10 +1629,6 @@ async function guardarCharlaModal() {
     if (!val || !row) { cerrarCharlaModal(); return; }
     const [y,m,d] = val.split('-');
     const nota = document.getElementById('mCharlaTexto').value.trim();
-    const nombre = row.dataset.nombre;
-    const estado = row.dataset.estado || '';
-    const tr = row.querySelector('.npr-trend');
-    const valoracion = tr ? (tr.dataset.valor || '-') : '-';
 
     row.dataset.charla = 'SI';
     row.dataset.charlaNote = nota;
@@ -1650,16 +1636,7 @@ async function guardarCharlaModal() {
     if (ico) ico.classList.add('charla-activa');
 
     cerrarCharlaModal();
-
-    try {
-        const r = await fetch('/guardar_asistencia_masiva', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({cambios:[{dia:parseInt(d),nombre,equipo:EQUIPO,estado,valoracion,motivo:nota,charla:'SI'}], mes:parseInt(m)})
-        });
-        const data = await r.json();
-        if (data.status==='success') { _patchAsis(d, m, nombre, estado, valoracion, nota, 'SI'); toast(`Charla: ${nombre}`); }
-        else toast('Error al guardar',true);
-    } catch(e) { toast('Error de conexión',true); }
+    _encolarAsis([_cambioDeFila(row, d, { motivo: nota, charla: 'SI' })], m, `Charla: ${row.dataset.nombre}`);
 }
 
 async function abrirModalBalones(tipo) {
@@ -1787,23 +1764,11 @@ function ciclarValoracion(el) {
     if (row) _autoGuardarValoracion(row, info.prox);
 }
 
-async function _autoGuardarValoracion(row, valoracion) {
+function _autoGuardarValoracion(row, valoracion) {
     const val = document.getElementById('fechaAsis').value;
     if (!val) return;
     const [y,m,d] = val.split('-');
-    const nombre = row.dataset.nombre;
-    const estado = row.dataset.estado || '';
-    const charla = (row.dataset.charla || '').toUpperCase() === 'SI' ? 'SI' : 'NO';
-    const motivo = charla === 'SI' ? (row.dataset.charlaNote || '') : '';
-    try {
-        const r = await fetch('/guardar_asistencia_masiva', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({cambios:[{dia:parseInt(d),nombre,equipo:EQUIPO,estado,valoracion,motivo,charla}], mes:parseInt(m)})
-        });
-        const data = await r.json();
-        if (data.status==='success') { _patchAsis(d, m, nombre, estado, valoracion, motivo, charla); }
-        else toast('Error al guardar',true);
-    } catch(e) { toast('Error de conexión',true); }
+    _encolarAsis([_cambioDeFila(row, d, { valoracion })], m);
 }
 
 async function anadirJugadorMovil() {
@@ -1918,27 +1883,124 @@ function ciclarEstado(btn) {
     btn.textContent = nuevoEstado || '–';
     btn.className = `npr-btn nb-${nuevoEstado.toLowerCase()||'none'}`;
     _actualizarContadores();
-    if (nuevoEstado) _autoGuardar(row, nuevoEstado);
+    _autoGuardar(row, nuevoEstado); // también guarda el vacío, para poder desmarcar
 }
 
-async function _autoGuardar(row, estado) {
+// ─── COLA DE GUARDADO DE ASISTENCIAS ───
+// Todos los guardados pasan por aquí: se agrupan los toques seguidos en un solo envío,
+// se reintenta solo si falla (Google Sheets corta por límite de lecturas) y los jugadores
+// pendientes se marcan en la lista (naranja = guardando, rojo = no se ha podido guardar aún).
+const _colaAsis = new Map();   // clave mes|dia|nombre → {mes, cambio}
+let _colaTimer = null, _colaEnviando = false, _colaFallos = 0, _colaMsgOk = '';
+const _COLA_REINTENTOS = [5, 10, 20, 30, 45, 60]; // segundos
+
+function _filaJugador(nombre) {
+    return Array.from(document.querySelectorAll('.new-prow')).find(r => r.dataset.nombre === nombre);
+}
+function _marcarFilaCola(c, mes, clase) {
     const val = document.getElementById('fechaAsis').value;
     if (!val) return;
-    const [y,m,d] = val.split('-');
-    const nombre = row.dataset.nombre;
-    const tr = row.querySelector('.npr-trend');
-    const valoracion = tr ? (tr.dataset.valor || '-') : '-';
-    const charla = (row.dataset.charla || '').toUpperCase() === 'SI' ? 'SI' : 'NO';
-    const motivo = charla === 'SI' ? (row.dataset.charlaNote || '') : '';
+    const [, m, d] = val.split('-');
+    if (parseInt(m) !== parseInt(mes) || parseInt(d) !== parseInt(c.dia)) return;
+    const row = _filaJugador(c.nombre);
+    if (!row) return;
+    row.classList.remove('npr-pend', 'npr-err');
+    if (clase) row.classList.add(clase);
+}
+function _avisoCola() {
+    let el = document.getElementById('avisoColaAsis');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'avisoColaAsis';
+        el.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:10000;background:#dc2626;color:white;font-size:12px;font-weight:800;padding:8px 14px;border-radius:20px;box-shadow:0 6px 18px rgba(0,0,0,.25);display:none;cursor:pointer;white-space:nowrap;';
+        el.onclick = () => _flushColaAsis();
+        document.body.appendChild(el);
+    }
+    const n = _colaAsis.size;
+    if (_colaFallos >= 2 && n) {
+        el.textContent = `⚠ ${n} sin guardar · reintentando… (toca para reintentar ya)`;
+        el.style.display = 'block';
+    } else {
+        el.style.display = 'none';
+    }
+}
+
+// cambios: [{dia, nombre, equipo, estado, valoracion, motivo, charla}] del mes indicado
+function _encolarAsis(cambios, mes, msgOk, inmediato) {
+    cambios.forEach(c => {
+        _colaAsis.set(`${parseInt(mes)}|${parseInt(c.dia)}|${c.nombre.trim().toLowerCase()}`, { mes: parseInt(mes), cambio: c });
+        _marcarFilaCola(c, mes, 'npr-pend');
+    });
+    if (msgOk) _colaMsgOk = msgOk;
+    clearTimeout(_colaTimer);
+    _colaTimer = setTimeout(_flushColaAsis, inmediato ? 0 : 800);
+}
+
+async function _flushColaAsis() {
+    clearTimeout(_colaTimer);
+    if (_colaEnviando || !_colaAsis.size) return;
+    _colaEnviando = true;
+    // El endpoint recibe un solo mes por envío: mandamos el primer mes pendiente
+    const mes = _colaAsis.values().next().value.mes;
+    const lote = Array.from(_colaAsis.entries()).filter(([, v]) => v.mes === mes);
+    lote.forEach(([k]) => _colaAsis.delete(k));
+    const cambios = lote.map(([, v]) => v.cambio);
+    let ok = false;
     try {
         const r = await fetch('/guardar_asistencia_masiva', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({cambios:[{dia:parseInt(d),nombre,equipo:EQUIPO,estado,valoracion,motivo,charla}], mes:parseInt(m)})
+            body: JSON.stringify({cambios, mes})
         });
         const data = await r.json();
-        if (data.status==='success') { _patchAsis(d, m, nombre, estado, valoracion, motivo, charla); toast(`${nombre}: ${estado}`); }
-        else toast('Error al guardar',true);
-    } catch(e) { toast('Error de conexión',true); }
+        ok = data.status === 'success';
+    } catch(e) { ok = false; }
+    _colaEnviando = false;
+
+    if (ok) {
+        _colaFallos = 0;
+        cambios.forEach(c => {
+            _patchAsis(c.dia, mes, c.nombre, c.estado, c.valoracion, c.motivo, c.charla);
+            const k = `${mes}|${parseInt(c.dia)}|${c.nombre.trim().toLowerCase()}`;
+            if (!_colaAsis.has(k)) _marcarFilaCola(c, mes, null);
+        });
+        toast(_colaMsgOk || (cambios.length === 1 ? `${cambios[0].nombre}: ${cambios[0].estado || '–'}` : `${cambios.length} guardados`));
+        _colaMsgOk = '';
+        _avisoCola();
+        if (_colaAsis.size) _colaTimer = setTimeout(_flushColaAsis, 300);
+        return;
+    }
+
+    // Falló: devolvemos a la cola lo que no se haya vuelto a tocar mientras tanto y reintentamos
+    lote.forEach(([k, v]) => { if (!_colaAsis.has(k)) _colaAsis.set(k, v); });
+    _colaFallos++;
+    if (_colaFallos >= 2) cambios.forEach(c => _marcarFilaCola(c, mes, 'npr-err'));
+    toast(_colaFallos >= 2 ? `No se ha podido guardar (${_colaAsis.size}). Reintentando…` : 'Guardando… reintentando', true);
+    _avisoCola();
+    const espera = _COLA_REINTENTOS[Math.min(_colaFallos - 1, _COLA_REINTENTOS.length - 1)];
+    _colaTimer = setTimeout(_flushColaAsis, espera * 1000);
+}
+
+window.addEventListener('beforeunload', e => {
+    if (_colaAsis.size || _colaEnviando) { e.preventDefault(); e.returnValue = ''; }
+});
+
+function _cambioDeFila(row, d, extra) {
+    const tr = row.querySelector('.npr-trend');
+    const charla = (row.dataset.charla || '').toUpperCase() === 'SI' ? 'SI' : 'NO';
+    return Object.assign({
+        dia: parseInt(d), nombre: row.dataset.nombre, equipo: EQUIPO,
+        estado: row.dataset.estado || '',
+        valoracion: tr ? (tr.dataset.valor || '-') : '-',
+        motivo: charla === 'SI' ? (row.dataset.charlaNote || '') : '',
+        charla
+    }, extra || {});
+}
+
+function _autoGuardar(row, estado) {
+    const val = document.getElementById('fechaAsis').value;
+    if (!val) return;
+    const [y,m,d] = val.split('-');
+    _encolarAsis([_cambioDeFila(row, d, { estado })], m);
 }
 
 function todoSI() {
@@ -1951,18 +2013,10 @@ function todoSI() {
         row.dataset.estado = 'SI';
         const btn = row.querySelector('.npr-btn');
         if (btn) { btn.textContent='SI'; btn.className='npr-btn nb-si'; }
-        const tr = row.querySelector('.npr-trend');
-        const valoracion = tr ? (tr.dataset.valor || '-') : '-';
-        const charla = (row.dataset.charla || '').toUpperCase() === 'SI' ? 'SI' : 'NO';
-        const motivo = charla === 'SI' ? (row.dataset.charlaNote || '') : '';
-        cambios.push({dia:parseInt(d),nombre:row.dataset.nombre,equipo:EQUIPO,estado:'SI',valoracion,motivo,charla});
+        cambios.push(_cambioDeFila(row, d, { estado: 'SI' }));
     });
     _actualizarContadores();
-    fetch('/guardar_asistencia_masiva',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cambios,mes:parseInt(m)})})
-        .then(r=>r.json()).then(data=>{
-            if(data.status==='success'){cambios.forEach(c=>_patchAsis(c.dia,m,c.nombre,c.estado,c.valoracion,c.motivo,c.charla));toast('Todos marcados como SI');}
-            else toast('Error',true);
-        }).catch(()=>toast('Error de conexión',true));
+    _encolarAsis(cambios, m, 'Todos marcados como SI', true);
 }
 
 function todoNota() {
@@ -1971,18 +2025,10 @@ function todoNota() {
     const [y,m,d] = val.split('-');
     const cambios = [];
     document.querySelectorAll('.new-prow').forEach(row => {
-        const charla = (row.dataset.charla || '').toUpperCase() === 'SI' ? 'SI' : 'NO';
-        const motivo = charla === 'SI' ? (row.dataset.charlaNote || '') : '';
-        cambios.push({dia:parseInt(d),nombre:row.dataset.nombre,equipo:EQUIPO,estado:row.dataset.estado||'',valoracion:'NORMAL',motivo,charla});
+        cambios.push(_cambioDeFila(row, d, { valoracion: 'NORMAL' }));
     });
-    fetch('/guardar_asistencia_masiva',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cambios,mes:parseInt(m)})})
-        .then(r=>r.json()).then(data=>{
-            if(data.status==='success'){
-                cambios.forEach(c=>_patchAsis(c.dia,m,c.nombre,c.estado,c.valoracion,c.motivo,c.charla));
-                document.querySelectorAll('.npr-trend').forEach(el=>{el.dataset.valor='NORMAL';el.textContent='→';el.style.color='#64748b';});
-                toast('Valoración NORMAL para todos');
-            } else toast('Error',true);
-        }).catch(()=>toast('Error de conexión',true));
+    document.querySelectorAll('.npr-trend').forEach(el=>{el.dataset.valor='NORMAL';el.textContent='→';el.style.color='#64748b';});
+    _encolarAsis(cambios, m, 'Valoración NORMAL para todos', true);
 }
 
 function todoCharla() {
@@ -1991,19 +2037,16 @@ function todoCharla() {
     const [y,m,d] = val.split('-');
     const cambios = [];
     document.querySelectorAll('.new-prow').forEach(row => {
-        const tr = row.querySelector('.npr-trend');
-        const valoracion = tr ? (tr.dataset.valor || '-') : '-';
-        cambios.push({dia:parseInt(d),nombre:row.dataset.nombre,equipo:EQUIPO,estado:row.dataset.estado||'',valoracion,motivo:'',charla:'SI'});
+        // Se deja la fila con la charla marcada para que los siguientes guardados de ese jugador no la borren
+        row.dataset.charla = 'SI';
+        row.dataset.charlaNote = '';
+        const ico = row.querySelector('.npr-ico-charla');
+        if (ico) ico.classList.add('charla-activa');
+        cambios.push(_cambioDeFila(row, d, { motivo: '', charla: 'SI' }));
     });
-    fetch('/guardar_asistencia_masiva',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cambios,mes:parseInt(m)})})
-        .then(r=>r.json()).then(data=>{
-            if(data.status==='success'){
-                cambios.forEach(c=>_patchAsis(c.dia,m,c.nombre,c.estado,c.valoracion,c.motivo,c.charla));
-                const btn=document.getElementById('asisHdrCharla');
-                if(btn){btn.style.background='#dbeafe';btn.style.color='#1d4ed8';btn.style.borderColor='#93c5fd';}
-                toast('Charla marcada para todos');
-            } else toast('Error',true);
-        }).catch(()=>toast('Error de conexión',true));
+    const btn=document.getElementById('asisHdrCharla');
+    if(btn){btn.style.background='#dbeafe';btn.style.color='#1d4ed8';btn.style.borderColor='#93c5fd';}
+    _encolarAsis(cambios, m, 'Charla marcada para todos', true);
 }
 
 function guardar() {
@@ -2013,18 +2056,10 @@ function guardar() {
     const [y,m,d] = val.split('-');
     const cambios=[];
     document.querySelectorAll('.new-prow').forEach(row=>{
-        if(row.dataset.estado) {
-            const tr = row.querySelector('.npr-trend');
-            const valoracion = tr ? (tr.dataset.valor || '-') : '-';
-            const charla = (row.dataset.charla || '').toUpperCase() === 'SI' ? 'SI' : 'NO';
-            const motivo = charla === 'SI' ? (row.dataset.charlaNote || '') : '';
-            cambios.push({dia:parseInt(d),nombre:row.dataset.nombre,equipo:EQUIPO,estado:row.dataset.estado,valoracion,motivo,charla});
-        }
+        if(row.dataset.estado) cambios.push(_cambioDeFila(row, d));
     });
     if(!cambios.length) return;
-    fetch('/guardar_asistencia_masiva',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cambios,mes:parseInt(m)})})
-        .then(r=>r.json()).then(data=>{ if(data.status==='success'){cambios.forEach(c=>_patchAsis(c.dia,m,c.nombre,c.estado,c.valoracion,c.motivo,c.charla));toast(`${cambios.length} guardados`);} })
-        .catch(()=>{});
+    _encolarAsis(cambios, m, `${cambios.length} guardados`, true);
 }
 
 // ─── FORMULARIO PARTIDO ───
