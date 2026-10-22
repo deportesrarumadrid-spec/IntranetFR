@@ -117,7 +117,7 @@
                 </div>
                 <a href="/analisis_pp/${encodeURIComponent(a.id)}/pdf" target="_blank" class="btn-fin" style="background:white;color:#E31E24;padding:8px 14px;font-size:10px;text-decoration:none;"><i class="fas fa-file-pdf"></i> PDF</a>
                 <button class="btn-fin" id="anaDDBtnIA" style="background:#E31E24;color:white;padding:8px 14px;font-size:10px;" onclick="anaDDGenerarIA('${esc(a.id)}')"><i class="fas fa-wand-magic-sparkles"></i> ${a.informe_html ? 'REGENERAR' : 'GENERAR'} INFORME IA</button>
-                ${/^[0-9a-f-]{36}$/.test((a.datos || {}).veo_id || '') ? `<button class="btn-fin" style="background:#111827;color:white;padding:8px 14px;font-size:10px;border:1px solid #475569;" onclick="abrirConsultorIA({veo_id:'${esc(a.datos.veo_id)}', titulo:'${esc((a.equipo + ' vs ' + (a.rival || 'rival') + ' · ' + fechaTxt(a.fecha)).replace(/'/g, ''))}'})">🧠 CONSULTOR IA</button>` : ''}
+                ${/^[0-9a-f-]{36}$/.test((a.datos || {}).veo_id || '') ? `<button class="btn-fin" style="background:#111827;color:white;padding:8px 14px;font-size:10px;border:1px solid #475569;" onclick="abrirConsultorIA({veo_id:'${esc(a.datos.veo_id)}', equipo:'${esc((a.equipo || '').replace(/'/g, ''))}', fecha:'${esc(a.fecha)}', titulo:'${esc((a.equipo + ' vs ' + (a.rival || 'rival') + ' · ' + fechaTxt(a.fecha)).replace(/'/g, ''))}'})">🧠 CONSULTOR IA</button>` : ''}
                 <span style="font-size:26px;cursor:pointer;line-height:1;" onclick="document.getElementById('anaDDModal').style.display='none'">&times;</span>
             </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:0;">

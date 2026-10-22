@@ -77,7 +77,7 @@
             if (ult && ult.a && ult.ok !== false) dentro += ficha(ult.x2, ult.y2, ult.a, ult.eq === 'opp' ? AZUL : ROJO);
         }
         (d.puntos || []).forEach(p => {
-            dentro += `<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="1.5" fill="${p.relleno === false ? 'none' : (p.color || ROJO)}" stroke="${p.color || ROJO}" stroke-width="0.45"><title>#${esc(p.etiqueta)} · ${esc(p.min)}'</title></circle>
+            dentro += `<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="1.5" fill="${p.relleno === false ? 'none' : (p.color || ROJO)}" stroke="${p.color || ROJO}" stroke-width="0.45"><title>${esc(p.nombre || ('#' + p.etiqueta))} · ${esc(p.min)}'</title></circle>
                 <text x="${X(p.x)}" y="${(+Y(p.y) - 2).toFixed(2)}" text-anchor="middle" font-size="2.2" fill="#e5e7eb" font-family="Arial">${esc(p.etiqueta)}${p.min != null ? ' · ' + esc(p.min) + "'" : ''}</text>`;
         });
         const ley = fl.length ? `<span style="color:${ROJO};">●</span> Nosotros (→) &nbsp; <span style="color:${AZUL};">●</span> Rival (←) &nbsp; — completado &nbsp; - - fallado` : '';
@@ -178,7 +178,7 @@
     window.abrirConsultorIA = function (opc) {
         const o = overlay();
         if (C.veo_id !== opc.veo_id) { C.historial = []; C.dibujos = {}; C.clips = {}; C.video = null; }
-        C.veo_id = opc.veo_id; C.titulo = opc.titulo || '';
+        C.veo_id = opc.veo_id; C.titulo = opc.titulo || ''; C.equipo = opc.equipo || ''; C.fecha = opc.fecha || '';
         document.getElementById('consTit').textContent = C.titulo;
         o.style.display = 'flex';
         document.body.style.overflow = 'hidden';
@@ -218,7 +218,7 @@
         consPlegar(); pintarMensajes();
         try {
             const r = await fetch('/api/consultor/preguntar', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ veo_id: C.veo_id, pregunta: q, historial: previo }) });
+                body: JSON.stringify({ veo_id: C.veo_id, pregunta: q, historial: previo, equipo: C.equipo, fecha: C.fecha }) });
             const d = await r.json();
             if (d.status !== 'ok') throw new Error(d.message || 'Error');
             // los ids de dibujo se repiten entre preguntas: se renombran para que cada respuesta tenga los suyos

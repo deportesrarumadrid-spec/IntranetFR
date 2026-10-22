@@ -501,7 +501,7 @@
         else if (act === 'consultor') {
             const id = ANA.a && ANA.a.datos.veo_id;
             if (!VEO_ID_OK(id)) { toast('Elige arriba el partido en Veo para usar el Consultor', true); return; }
-            if (typeof abrirConsultorIA === 'function') abrirConsultorIA({ veo_id: id, titulo: `${EQUIPO} vs ${ANA.a.rival || 'rival'} · ${fechaTxt(ANA.a.fecha)}` });
+            if (typeof abrirConsultorIA === 'function') abrirConsultorIA({ veo_id: id, equipo: EQUIPO, fecha: ANA.a.fecha, titulo: `${EQUIPO} vs ${ANA.a.rival || 'rival'} · ${fechaTxt(ANA.a.fecha)}` });
         }
     }
 

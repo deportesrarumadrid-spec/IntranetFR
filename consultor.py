@@ -46,14 +46,115 @@ _REANUDACIONES = {'saque_puerta': 'FootballGoalKick', 'saque_banda': 'FootballTh
 _CORTE = {'pass', 'possession', 'interception', 'tackle', 'dribble', 'FootballShot'}  # acciones con balón de un equipo
 
 
+# ───────────────────── nombres de los jugadores (acta RFFM) ─────────────────────
+
+def _nombre_corto(nombre):
+    """'GRAU PEREZ, GONZALO' → 'Gonzalo Grau'; 'GONZALO GRAU PEREZ' → 'Gonzalo Grau'."""
+    n = ' '.join((nombre or '').replace('(P)', '').replace('(C)', '').split())
+    if not n:
+        return ''
+    particulas = ('DE', 'DEL', 'LA', 'LAS', 'LOS', 'Y', 'SAN', 'SANTA')
+
+    def primer_apellido(palabras):
+        # "DE LA CRUZ DE LA IGLESIA" → "de la Cruz"
+        out = []
+        for w in palabras:
+            out.append(w)
+            if w.upper() not in particulas:
+                break
+        return ' '.join(w.lower() if w.upper() in particulas else w.capitalize() for w in out)
+
+    if ',' in n:
+        apellidos, nom = [x.strip() for x in n.split(',', 1)]
+        return f"{(nom.split() or [''])[0].capitalize()} {primer_apellido(apellidos.split())}".strip()
+    p = n.split()
+    return f"{p[0].capitalize()} {primer_apellido(p[1:])}".strip() if len(p) > 1 else n.capitalize()
+
+
+def alineacion_rffm(equipo, fecha_iso):
+    """Convocados de los dos equipos según el acta de la RFFM ({'own': {dorsal: nombre}, 'opp': {...}}).
+    Usa RFFM_USER/RFFM_PASS del .env; se guarda en caché. None si no se encuentra."""
+    import veo
+    from datetime import date, timedelta
+    cache = os.path.join(veo.CACHE_DIR, f"alineacion_{re.sub(r'[^A-Za-z0-9]+', '_', equipo or '')}_{fecha_iso}.json")
+    if os.path.exists(cache):
+        try:
+            with open(cache, encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            pass
+    if not (os.environ.get('RFFM_USER') and os.environ.get('RFFM_PASS')):
+        return None
+    import competicion_scraper as cs
+    try:
+        d0 = date.fromisoformat(fecha_iso)
+    except Exception:
+        return None
+    s = cs.get_session()
+    r = s.post("https://intranet.ffmadrid.es/nfg/NLogin", data={"NUser": os.environ['RFFM_USER'], "NPass": os.environ['RFFM_PASS'], "LoginAjax": "1"}, timeout=30)
+    if 'estado="1"' not in r.text.replace(' ', ''):
+        m = re.search(r'var estado="(\d+)"', r.text)
+        if not m or m.group(1) != '1':
+            print("RFFM: login incorrecto para la alineación")
+            return None
+    cod_temp, _, _ = cs._temporada_actual()
+    desde, hasta = (d0 - timedelta(days=1)).strftime('%d-%m-%Y'), (d0 + timedelta(days=1)).strftime('%d-%m-%Y')
+    partidos = cs.fetch_temporada_matches(s, cs.CLUB_FUENTELARREYNA_ID, cod_temp, desde, hasta)
+    cat_eq = veo._categoria(equipo)
+    toks = veo._norm(equipo).split()
+    letra_eq = next((x for x in toks[1:] if len(x) == 1 and x in 'ABCDEF'), None)
+    elegido = None
+    for m in partidos:
+        casa = 'FUENTELARREYNA' in (m.get('nombre_casa') or '').upper()
+        fuera = 'FUENTELARREYNA' in (m.get('nombre_fuera') or '').upper()
+        if casa == fuera:
+            continue
+        nuestro = m['nombre_casa'] if casa else m['nombre_fuera']
+        cat, _ = cs.detect_categoria_y_letra(m.get('competicion') or '')
+        if cat_eq and cat and not cat.startswith(cat_eq):
+            continue
+        letra = re.search(r'"([^"]+)"', nuestro or '')
+        if letra_eq and letra and letra.group(1).strip().upper() != letra_eq:
+            continue
+        dias = abs((date(*map(int, reversed(m['fecha'].split('-')))) - d0).days) if re.fullmatch(r'\d{2}-\d{2}-\d{4}', m.get('fecha') or '') else 9
+        if elegido is None or dias < elegido[0]:
+            elegido = (dias, m, not casa)
+    if not elegido:
+        return None
+    _, m, visitante = elegido
+    codacta = cs.fetch_codacta_map(s, cs.CLUB_FUENTELARREYNA_ID, cod_temp, desde, hasta).get(
+        f"{m['fecha']}_{m['hora']}_{m['cod_equipo_casa']}_{m['cod_equipo_fuera']}")
+    if not codacta:
+        return None
+    es11 = 'futbol-11' in (m.get('deporte') or '').lower().replace(' ', '') or veo._categoria(equipo) in ('AFICIONADO', 'JUVENIL', 'CADETE', 'INFANTIL')
+    al = cs.fetch_alineacion_convocados(s, codacta, es11)
+    if not al:
+        return None
+    nuestros, suyos = (al['fuera'], al['casa']) if visitante else (al['casa'], al['fuera'])
+    datos = {'own': {j['numero']: _nombre_corto(j['nombre']) for j in nuestros if j.get('numero')},
+             'opp': {j['numero']: _nombre_corto(j['nombre']) for j in suyos if j.get('numero')},
+             'rival': m['nombre_casa'] if visitante else m['nombre_fuera'], 'codacta': codacta}
+    os.makedirs(veo.CACHE_DIR, exist_ok=True)
+    with open(cache, 'w', encoding='utf-8') as f:
+        json.dump(datos, f, ensure_ascii=False)
+    return datos
+
+
 # ───────────────────────── preparación de los datos ─────────────────────────
 
 class Partido:
     """Acciones del partido ya giradas (nosotros atacando a la derecha) y con minutos de juego."""
 
-    def __init__(self, veo_id):
+    def __init__(self, veo_id, equipo=None, fecha=None):
         import veo
         self.veo_id = veo_id
+        # Nombres de los jugadores según el acta de la RFFM de ese partido (si se encuentra)
+        self.alineacion = None
+        if equipo and fecha:
+            try:
+                self.alineacion = alineacion_rffm(equipo, fecha)
+            except Exception as ex:
+                print(f"Consultor: alineación RFFM no disponible ({ex})")
         rep = veo.informe(veo_id)
         self.resumen = veo.resumen_partido(veo_id)
         self.periodos = rep.get('periods') or []
@@ -64,27 +165,63 @@ class Partido:
         videos = (rep.get('match') or {}).get('videos') or []
         self.video_url = next((v['url'] for v in videos if v.get('render_type') == 'standard'), videos[0]['url'] if videos else None)
         crudos = sorted(veo.eventos(veo_id), key=lambda e: e.get('videoTimeMs') or 0)
+        self.invertido = self._equipos_invertidos(crudos)
         self.ev = []
         for e in crudos:
             eq = 'own' if e.get('team') == 'Own' else ('opp' if e.get('team') == 'Opponent' else None)
+            if eq and self.invertido:  # Veo tiene los equipos cambiados en este partido: se corrigen
+                eq = 'opp' if eq == 'own' else 'own'
             if not eq:
                 continue
             at = {a.get('label'): a.get('value') for a in (e.get('attributes') or [])}
             x, y = self._pos(e.get('x'), e.get('z'), e.get('periodId'))
             rx, ry = self._pos(at.get('receiver_x'), at.get('receiver_z'), e.get('periodId'))
+            num = str(e.get('playerJersey') or '?')
+            rnum = str(at['receiver_jersey']) if at.get('receiver_jersey') not in (None, -1) else None
             self.ev.append({
-                'eq': eq, 'tipo': e.get('eventType'), 'dorsal': str(e.get('playerJersey') or '?'),
-                'receptor': str(at['receiver_jersey']) if at.get('receiver_jersey') not in (None, -1) else None,
+                'eq': eq, 'tipo': e.get('eventType'), 'num': num, 'rnum': rnum,
+                'dorsal': self.etiqueta(eq, num), 'receptor': self.etiqueta(eq, rnum) if rnum else None,
                 'x': x, 'y': y, 'rx': rx, 'ry': ry, 'ok': e.get('outcome') == 1 if e.get('outcome') is not None else None,
                 'dist': round(at['distance'], 1) if isinstance(at.get('distance'), (int, float)) else None,
                 'parte': e.get('periodId'), 'ms': e.get('videoTimeMs') or 0,
                 'min': veo._minuto(e.get('videoTimeMs'), self.periodos),
             })
 
+    def _equipos_invertidos(self, crudos):
+        """¿Veo tiene los equipos al revés? Se comprueba con los dorsales del acta: si lo que Veo llama 'nuestro equipo'
+        coincide con el acta del rival (y al revés), es que al configurar el partido en Veo se cambiaron los equipos."""
+        al = self.alineacion or {}
+        if not al.get('own') or not al.get('opp'):
+            return False
+        def cob(team, lado):
+            c = Counter(str(e.get('playerJersey')) for e in crudos if e.get('team') == team and e.get('playerJersey'))
+            tot = sum(c.values())
+            return 100 * sum(n for d, n in c.items() if d in al[lado]) / tot if tot else 0
+        directo = cob('Own', 'own') + cob('Opponent', 'opp')
+        cruzado = cob('Own', 'opp') + cob('Opponent', 'own')
+        return cruzado >= 160 and cruzado - directo >= 40
+
+    def etiqueta(self, eq, num):
+        """'3' → 'Gonzalo Grau (3)' si el acta tiene ese dorsal; si no, el dorsal tal cual."""
+        nombre = ((self.alineacion or {}).get(eq) or {}).get(str(num)) if num and num != '?' else None
+        return f"{nombre} ({num})" if nombre else str(num)
+
+    @staticmethod
+    def es_jugador(e, quien, receptor=False):
+        """¿La acción es de ese jugador? Acepta dorsal ('3') o nombre ('Gonzalo', 'grau')."""
+        q = str(quien or '').strip().lower().lstrip('#')
+        if not q:
+            return True
+        num, etiq = (e['rnum'], e['receptor']) if receptor else (e['num'], e['dorsal'])
+        return q == str(num) or (not q.isdigit() and q in (etiq or '').lower())
+
     def _pos(self, x, z, periodo):
         if x is None or z is None:
             return None, None
-        if self.lado.get(periodo) == 'right':  # nuestra portería a la derecha: se gira el campo 180º
+        girar = self.lado.get(periodo) == 'right'  # nuestra portería a la derecha: se gira el campo 180º
+        if self.invertido:  # los lados de Veo son los del otro equipo
+            girar = not girar
+        if girar:
             x, z = 1 - x, 1 - z
         return round(min(1, max(0, x)), 4), round(min(1, max(0, 1 - z)), 4)
 
@@ -128,7 +265,8 @@ class Partido:
 
 def _flecha(p, n=None):
     return {'x1': p['x'], 'y1': p['y'], 'x2': p['rx'] if p['rx'] is not None else p['x'], 'y2': p['ry'] if p['ry'] is not None else p['y'],
-            'de': p['dorsal'], 'a': p['receptor'] or '?', 'ok': p['ok'], 'n': n, 'min': p['min'], 'eq': p['eq']}
+            'de': p['num'], 'a': p['rnum'] or '?', 'de_nombre': p['dorsal'], 'a_nombre': p['receptor'] or '?',
+            'ok': p['ok'], 'n': n, 'min': p['min'], 'eq': p['eq']}
 
 
 def _secuencia_desde(P, idx, eq, max_s=40):
@@ -192,9 +330,13 @@ def _herramientas(P):
     def estadisticas_partido() -> dict:
         """Marcador, goles y todas las estadísticas de equipo del Informe de Veo (nosotros vs rival, por partes)."""
         r = P.resumen
-        return {'nosotros': P.nombres['own'], 'rival': P.nombres['opp'], 'marcador': r.get('marcador'),
-                'goles': r.get('goleadores'), 'secciones': [{'titulo': s['titulo'], 'datos': [
-                    {'dato': f['etiqueta'], 'nosotros': f['nuestro'], 'rival': f['rival'], 'por_partes': f['partes']} for f in s['filas']]}
+        inv = P.invertido  # si Veo tiene los equipos al revés, se dan la vuelta a las cifras
+        return {'nosotros': P.nombres['own'], 'rival': P.nombres['opp'],
+                'marcador': list(reversed(r.get('marcador') or [])) if inv else r.get('marcador'),
+                'aviso': 'Veo tenía los equipos cambiados en este partido; cifras corregidas' if inv else None,
+                'secciones': [{'titulo': s['titulo'], 'datos': [
+                    {'dato': f['etiqueta'], 'nosotros': f['rival'] if inv else f['nuestro'], 'rival': f['nuestro'] if inv else f['rival'],
+                     'por_partes': [list(reversed(x)) for x in f['partes']] if inv else f['partes']} for f in s['filas']]}
                     for s in r.get('secciones', [])]}
 
     def secuencias_tras_reanudacion(equipo: str, tipo: str, parte: str = "todo") -> dict:
@@ -277,12 +419,12 @@ def _herramientas(P):
     def buscar_pases(equipo: str, jugador: str = "", receptor: str = "", zona_origen: str = "cualquiera", zona_destino: str = "cualquiera",
                      parte: str = "todo", solo_completados: bool = False, dibujar: bool = True) -> dict:
         """Filtra pases y devuelve totales, acierto, a quién se pasa, zonas y un dibujo (hasta 30 pases).
-        equipo: 'nosotros' o 'rival'. jugador/receptor: dorsal ('' = todos). zona_origen/zona_destino: 'cualquiera', 'campo propio',
+        equipo: 'nosotros' o 'rival'. jugador/receptor: dorsal o nombre del jugador ('' = todos). zona_origen/zona_destino: 'cualquiera', 'campo propio',
         'zona media', 'campo rival' o con carril, p. ej. 'campo propio, carril izquierdo' (vistas desde ese equipo). parte: 'todo','1','2'."""
         eq = 'own' if (equipo or '').lower().startswith(('nos', 'pro', 'own')) else 'opp'
         sel = []
         for p in P.filtra(equipo, parte):
-            if p['tipo'] != 'pass' or (jugador and p['dorsal'] != str(jugador)) or (receptor and p['receptor'] != str(receptor)):
+            if p['tipo'] != 'pass' or not P.es_jugador(p, jugador) or (receptor and not P.es_jugador(p, receptor, receptor=True)):
                 continue
             if solo_completados and not p['ok']:
                 continue
@@ -305,7 +447,8 @@ def _herramientas(P):
     def buscar_acciones(equipo: str, tipo: str, parte: str = "todo", zona: str = "cualquiera", jugador: str = "") -> dict:
         """Lista y dibuja acciones de un equipo. tipo: 'tiro', 'gol', 'perdida' (pases fallados + balones perdidos), 'recuperacion'
         (intercepciones + entradas), 'duelo', 'falta', 'regate', 'corner', 'saque_banda', 'saque_puerta'.
-        equipo: 'nosotros' o 'rival'. zona: 'cualquiera', 'campo propio', 'zona media', 'campo rival' (vista desde ese equipo)."""
+        equipo: 'nosotros' o 'rival'. zona: 'cualquiera', 'campo propio', 'zona media', 'campo rival' (vista desde ese equipo).
+        jugador: dorsal o nombre ('' = todos)."""
         eq = 'own' if (equipo or '').lower().startswith(('nos', 'pro', 'own')) else 'opp'
         mapa = {'tiro': {'FootballShot'}, 'gol': {'FootballGoal'}, 'perdida': {'loose'}, 'recuperacion': {'interception', 'tackle'},
                 'duelo': {'duel'}, 'falta': {'FootballFoul'}, 'regate': {'dribble'}, 'corner': {'FootballCornerKick'},
@@ -314,7 +457,7 @@ def _herramientas(P):
         if t not in mapa:
             return {'error': f"tipo no válido; usa uno de {list(mapa)}"}
         sel = [e for e in P.filtra(equipo, parte) if (e['tipo'] in mapa[t] or (t == 'perdida' and e['tipo'] == 'pass' and e['ok'] is False))
-               and (not jugador or e['dorsal'] == str(jugador))]
+               and P.es_jugador(e, jugador)]
         if zona and zona != 'cualquiera':
             sel = [e for e in sel if P.zona(eq, e['x'], e['y']).startswith(zona)]
         colores = {'tiro': '#E31E24', 'gol': '#16a34a', 'perdida': '#f59e0b', 'recuperacion': '#22c55e'}
@@ -325,7 +468,7 @@ def _herramientas(P):
                 'por_zona': Counter(P.zona(eq, e['x'], e['y']) for e in sel).most_common(9),
                 'por_parte': Counter(f"{e['parte']}ª parte" for e in sel), 'minutos': [e['min'] for e in sel][:40],
                 'dibujo': P.nuevo_dibujo(f"{t.replace('_', ' ').capitalize()} · {'nosotros' if eq == 'own' else 'rival'}",
-                                         puntos=[{'x': e['x'], 'y': e['y'], 'etiqueta': e['dorsal'], 'min': e['min'], 'color': colores.get(t, '#3b82f6'),
+                                         puntos=[{'x': e['x'], 'y': e['y'], 'etiqueta': e['num'], 'nombre': e['dorsal'], 'min': e['min'], 'color': colores.get(t, '#3b82f6'),
                                                   'relleno': bool(e['ok']) if t == 'tiro' else True} for e in sel if e['x'] is not None][:60],
                                          nota=f"{len(sel)} acciones") if sel else None}
 
@@ -400,16 +543,24 @@ Reglas:
 - Responde en español, en formato Markdown, de forma profesional, concreta y accionable: puntos clave en **negrita**,
   cifras exactas, minutos para revisar en el vídeo y, al final, una recomendación táctica breve para el cuerpo técnico.
 - Si los datos son pocos o faltan dorsales ('?'), dilo con naturalidad (es una limitación de la detección de Veo).
+- Los jugadores vienen como "Nombre Apellido (dorsal)" (sacado del acta de la federación). Refiérete a ellos SIEMPRE así,
+  con nombre y dorsal; si solo viene el número, usa "dorsal N".
 - Nuestro equipo es "{nosotros}"; el rival es "{rival}". Marcador: {marcador}."""
 
 
-def responder(veo_id, pregunta, historial):
+def responder(veo_id, pregunta, historial, equipo=None, fecha=None):
     from analisis_postpartido import _modelo_gemini, markdown_a_html
-    P = Partido(veo_id)
+    P = Partido(veo_id, equipo, fecha)
     genai, modelo_base = _modelo_gemini()
-    modelo = genai.GenerativeModel(modelo_base.model_name, tools=_herramientas(P),
-                                   system_instruction=_SISTEMA.format(nosotros=P.nombres['own'], rival=P.nombres['opp'],
-                                                                      marcador='-'.join(str(x) for x in P.resumen.get('marcador') or [])))
+    marcador = list(P.resumen.get('marcador') or [])
+    if P.invertido:
+        marcador.reverse()
+    sistema = _SISTEMA.format(nosotros=P.nombres['own'], rival=P.nombres['opp'], marcador='-'.join(str(x) for x in marcador))
+    if P.invertido:
+        sistema += ("\n- IMPORTANTE: en Veo este partido tenía los equipos CAMBIADOS (comprobado con los dorsales del acta de la federación). "
+                    "Los datos que recibes YA están corregidos. Avisa al principio de tu respuesta, en una línea, de que Veo tiene los "
+                    "equipos cambiados en este partido y que conviene corregirlo en Veo (Editar partido) para que sus estadísticas salgan bien.")
+    modelo = genai.GenerativeModel(modelo_base.model_name, tools=_herramientas(P), system_instruction=sistema)
     hist = []
     for m in (historial or [])[-6:]:
         if m.get('rol') in ('user', 'model') and (m.get('texto') or '').strip():
@@ -426,7 +577,8 @@ def responder(veo_id, pregunta, historial):
     clips = {k: P.clips[k] for k in re.findall(r'\[\[CLIP:(C\d+)\]\]', texto) if k in P.clips}
     html = re.sub(r'\[\[CLIP:(C\d+)\]\]', lambda m: (f'<button class="cons-clip" data-c="{m.group(1)}">▶ Ver jugada · min {P.clips[m.group(1)]["min"]}</button>'
                                                     if m.group(1) in P.clips else ''), html)
-    return {'texto': texto, 'html': html, 'dibujos': {k: P.dibujos[k] for k in usados}, 'clips': clips, 'video_url': P.video_url}
+    return {'texto': texto, 'html': html, 'dibujos': {k: P.dibujos[k] for k in usados}, 'clips': clips, 'video_url': P.video_url,
+            'equipos_invertidos': P.invertido, 'con_nombres': bool(P.alineacion)}
 
 
 # ───────────────────────── plantilla de preguntas ─────────────────────────
@@ -461,7 +613,8 @@ def api_preguntar():
     if not pregunta:
         return jsonify({"status": "error", "message": "Escribe una pregunta"}), 400
     try:
-        return jsonify({"status": "ok", **responder(veo_id, pregunta[:1500], d.get('historial') or [])})
+        return jsonify({"status": "ok", **responder(veo_id, pregunta[:1500], d.get('historial') or [],
+                                                    (d.get('equipo') or '').strip() or None, (d.get('fecha') or '').strip() or None)})
     except Exception as e:
         print(f"Error consultor IA: {e}")
         return jsonify({"status": "error", "message": f"No se ha podido responder: {e}"}), 500
