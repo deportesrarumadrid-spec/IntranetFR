@@ -33,6 +33,7 @@ REDIRECT = 'https://app.veo.co/signin-redirect/'
 API = 'https://app.veo.co/api/app'
 TTL_LISTA = 15 * 60          # la lista de grabaciones se refresca cada 15 min
 TTL_INFORME_FRESCO = 6 * 3600  # informes de partidos recientes (<3 días) se refrescan cada 6 h (Veo sigue procesando)
+VERSION_VISUAL = 2           # subir este número cuando cambien los gráficos que se descargan (invalida la caché vieja)
 _lock = threading.Lock()
 
 
@@ -559,7 +560,7 @@ def visual(veo_id, rep=None):
         return out
 
     g = next((x for x in grabaciones() if x['id'] == veo_id), None)
-    datos = dict(_cache(f'visual_{veo_id}.json', TTL_INFORME_FRESCO if (g and _reciente(g)) else None, traer))
+    datos = dict(_cache(f'visual_v{VERSION_VISUAL}_{veo_id}.json', TTL_INFORME_FRESCO if (g and _reciente(g)) else None, traer))
 
     # Lo que ya viene en el informe: localización y cadenas de pases, dirección de pases, conversión y zonas de velocidad
     pas = rep.get('passing') or {}
