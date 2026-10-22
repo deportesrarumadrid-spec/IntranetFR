@@ -563,6 +563,13 @@ def pdf(analisis_id):
                                   ''.join(f"<td class='n'>{j.get(t) if j.get(t) is not None else ''}</td>" for t in cols) + '</tr>'
                                   for j in veo_r['jugadores'])
                 partes.append(f"<h4>{titulo_g}</h4><table class='j'><tr>{cab_j}</tr>{filas_j}</table>")
+        try:
+            import veo
+            lineas = [x[2:] for x in veo.texto_visual_para_ia(veo_r.get('visual')).splitlines() if x.startswith('- ')]
+            if lineas:
+                partes.append("<h4>Gráficos de Veo (resumen)</h4><ul>" + ''.join(f"<li>{e(x.replace('→', '>'))}</li>" for x in lineas) + "</ul>")
+        except Exception as ex:
+            print(f"PDF gráficos Veo: {ex}")
 
     import fitz
     story = fitz.Story(html='<body>' + '\n'.join(partes) + '</body>', user_css=_CSS_PDF)

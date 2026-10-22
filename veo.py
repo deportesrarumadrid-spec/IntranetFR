@@ -352,7 +352,14 @@ def resumen_partido(veo_id):
             minuto = round((s.get('period_time_ms') or 0) / 60000)
             goleadores.append({'equipo': quien, 'dorsal': s.get('player_jersey'), 'parte': s.get('period_number'), 'minuto': minuto})
 
+    try:
+        graficos = visual(veo_id, rep)
+    except Exception as e:
+        print(f"Veo gráficos {veo_id}: {e}")
+        graficos = {}
+
     return {
+        'visual': graficos,
         'id': veo_id, 'titulo': (g or {}).get('titulo') or (rep.get('match') or {}).get('title', ''),
         'fecha': (g or {}).get('fecha'), 'url': (g or {}).get('url') or f"https://app.veo.co/matches/{(rep.get('match') or {}).get('slug', '')}/",
         'miniatura': (g or {}).get('miniatura'),
@@ -361,6 +368,174 @@ def resumen_partido(veo_id):
         'goleadores': goleadores, 'secciones': secciones,
         'jugadores': jugadores, 'columnas_jugador': [[t, e] for t, e, _ in _JUG],
     }
+
+
+# ───────────────────── datos de los gráficos (como en Veo) ─────────────────────
+# Coordenadas normalizadas: x 0→1 de nuestra portería a la del rival (siempre atacando a la derecha),
+# y 0→1 de arriba (banda izquierda del ataque) a abajo (banda derecha).
+
+def _api_mes(path, body):
+    return _api('POST', 'https://app.veo.co/api/mes/v2' + path, json=body)
+
+
+def _minuto(video_ms, periodos):
+    """Minuto de juego como lo muestra Veo: tiempo de vídeo menos las pausas entre partes."""
+    t = (video_ms or 0) / 1000
+    pausa, fin_ant = 0, None
+    for p in sorted(periodos, key=lambda p: p.get('start_time') or 0):
+        if t < (p.get('start_time') or 0):
+            break
+        if fin_ant is not None:
+            pausa += (p.get('start_time') or 0) - fin_ant
+        fin_ant = p.get('end_time') or 0
+    return max(0, round((t - pausa) / 60))
+
+
+def _mapa(veo_id, team_id, tipo, periodos):
+    d = _api('POST', '/analysis/player-event-maps/',
+             json={'type': 'match_all_players', 'map_kind': tipo, 'match_id': veo_id, 'team_id': team_id})
+    out = []
+    for it in d.get('items', []):
+        dorsal = (it.get('player') or {}).get('jersey_number')
+        for e in it.get('events', []):
+            if e.get('x') is None or e.get('z') is None:
+                continue
+            out.append({'dorsal': dorsal, 'x': round(e['x'], 4), 'y': round(1 - e['z'], 4), 'parte': e.get('period'),
+                        'min': _minuto(e.get('video_time_ms'), periodos), 'gol': e.get('outcome') == 1})
+    return out
+
+
+def _posiciones_medias(veo_id, team_id, fin_s):
+    """Posición media de cada dorsal = centro del mapa de calor que calcula Veo."""
+    d = _api('POST', '/analysis/player-heatmaps/', json={'type': 'match_all_players', 'match_id': veo_id,
+                                                          'team_id': team_id, 'start_time': 0, 'end_time': fin_s, 'smoothing': 1.5})
+    out = []
+    for it in d.get('items', []):
+        m = it.get('matrix') or {}
+        try:
+            v = base64.b64decode(m['values']); w, h = m['width'], m['height']
+        except Exception:
+            continue
+        s = sum(v)
+        if not s:
+            continue
+        cx = sum(v[r * w + c] * (c + .5) for r in range(h) for c in range(w)) / s / w
+        cy = sum(v[r * w + c] * (r + .5) for r in range(h) for c in range(w)) / s / h
+        out.append({'dorsal': (it.get('player') or {}).get('jersey_number'), 'x': round(cx, 4), 'y': round(cy, 4)})
+    return out
+
+
+def visual(veo_id, rep=None):
+    """Datos de todos los gráficos del informe de Veo para nuestro equipo."""
+    rep = rep or informe(veo_id)
+    lado = (rep.get('teams') or {}).get('own_side') or 'home'
+    team_id = ((rep.get('teams') or {}).get(lado) or {}).get('team_id')
+    if not team_id:
+        return {}
+
+    def traer():
+        periodos = rep.get('periods') or []
+        fin_s = max([p.get('end_time') or 0 for p in periodos] or [0]) or int((rep.get('match') or {}).get('duration') or 6000)
+        out = {}
+        try:
+            red = _api_mes(f'/{veo_id}/passing-network', {
+                'periods': [{'periodId': i + 1, 'ownSide': p.get('own_side') or 'left'} for i, p in enumerate(periodos)], 'team': 'Own'})
+            out['red_pases'] = {
+                'nodos': [{'dorsal': n.get('jerseyNumber'), 'x': round((n.get('averageTouchLocation') or {}).get('x', 0), 4),
+                           'y': round(1 - (n.get('averageTouchLocation') or {}).get('z', 0), 4),
+                           'dados': n.get('passesMade', 0), 'recibidos': n.get('passesReceived', 0)} for n in red.get('nodes', [])],
+                'conexiones': [{'de': e.get('fromJersey'), 'a': e.get('toJersey'), 'n': e.get('completedPasses', 0)}
+                               for e in red.get('edges', []) if e.get('completedPasses')]}
+        except Exception as e:
+            print(f"Veo red de pases {veo_id}: {e}")
+        for clave, tipo in (('tiros', 'SHOTMAP'), ('entradas', 'TACKLE_MAP'), ('intercepciones', 'INTERCEPTION_MAP'),
+                            ('recuperaciones', 'BALL_RECOVERY_MAP')):
+            try:
+                out[clave] = _mapa(veo_id, team_id, tipo, periodos)
+            except Exception as e:
+                print(f"Veo mapa {tipo} {veo_id}: {e}")
+        try:
+            out['posiciones'] = _posiciones_medias(veo_id, team_id, fin_s)
+        except Exception as e:
+            print(f"Veo posiciones {veo_id}: {e}")
+        return out
+
+    g = next((x for x in grabaciones() if x['id'] == veo_id), None)
+    datos = dict(_cache(f'visual_{veo_id}.json', TTL_INFORME_FRESCO if (g and _reciente(g)) else None, traer))
+
+    # Lo que ya viene en el informe: localización y cadenas de pases, dirección de pases, conversión y zonas de velocidad
+    pas = rep.get('passing') or {}
+    pl = pas.get('pass_locations') or {}
+    try:
+        tot = sum(pl[t][l]['successful_passes']['full_time']['own'] for t in pl for l in pl[t]) or 1
+        datos['localizacion_pases'] = [[round(100 * pl[t][l]['successful_passes']['full_time']['own'] / tot)
+                                        for t in ('defensive', 'middle', 'attacking')] for l in ('left', 'middle', 'right')]
+    except Exception:
+        pass
+    ft = lambda sec, k: (((rep.get(sec) or {}).get(k) or {}).get('full_time') or {}).get('own')
+    datos['direccion_pases'] = [{'etiqueta': et, 'total': ft('passing', k), 'ok': ft('passing', 'successful_' + k)}
+                                for et, k in (('Hacia adelante', 'forward_passes'), ('Hacia los lados', 'sideways_passes'),
+                                              ('Hacia atrás', 'backward_passes'))]
+    datos['cadenas_pases'] = ((pas.get('pass_strings') or {}).get('full_time') or {}).get('own') or []
+    datos['conversion'] = [{'etiqueta': et, 'pct': ft('attacking', k), 'ocasiones': ft('attacking', o), 'goles': ft('attacking', gk)}
+                           for et, k, o, gk in (('General', 'conversion_rate_overall', 'total_shots', 'goals'),
+                                                ('Dentro del área', 'conversion_rate_inside_box', 'shots_inside_box', 'goals_inside_box'),
+                                                ('Fuera del área', 'conversion_rate_outside_box', 'shots_outside_box', 'goals_outside_box'))]
+    sz = (rep.get('physical') or {}).get('speed_zones') or {}
+    datos['zonas_velocidad'] = [{'desde': round(i['start_ms'] / 60000), 'hasta': round(i['end_ms'] / 60000),
+                                 'hsr': round(((i.get('own') or {}).get('percentages') or {}).get('hsr') or 0, 2),
+                                 'sprint': round(((i.get('own') or {}).get('percentages') or {}).get('sprint') or 0, 2)}
+                                for i in sz.get('items', [])]
+    return datos
+
+
+def _zona(x, y):
+    tercio = 'campo propio' if x < 1 / 3 else ('zona media' if x < 2 / 3 else 'campo rival')
+    banda = 'banda izquierda' if y < 1 / 3 else ('carril central' if y < 2 / 3 else 'banda derecha')
+    return f"{tercio}, {banda}"
+
+
+
+def texto_visual_para_ia(v):
+    """Los gráficos de Veo descritos en texto para la IA."""
+    if not v:
+        return ''
+    lin = ["### Gráficos de Veo (nuestro equipo atacando hacia la derecha)"]
+    if v.get('localizacion_pases'):
+        m = v['localizacion_pases']
+        lin.append("- Localización de pases completados (% del total; filas banda izq/centro/banda dcha, columnas propio/medio/rival): "
+                   + ' | '.join(f"{n}: {'/'.join(str(x) for x in fila)}" for n, fila in zip(('izq', 'centro', 'dcha'), m)))
+    if v.get('direccion_pases'):
+        lin.append("- Dirección de pases (completados/total): " + ', '.join(f"{d['etiqueta']} {d['ok']}/{d['total']}" for d in v['direccion_pases']))
+    if v.get('cadenas_pases'):
+        lin.append("- Cadenas de pases (pases enlazados: veces): " + ', '.join(f"{c['length']}: {c['count']}" for c in v['cadenas_pases']))
+    if v.get('posiciones'):
+        lin.append("- Posición media por dorsal: " + '; '.join(f"#{p['dorsal']} {_zona(p['x'], p['y'])}" for p in sorted(v['posiciones'], key=lambda p: p['x'])))
+    red = v.get('red_pases') or {}
+    if red.get('nodos'):
+        top = sorted(red['nodos'], key=lambda n: -(n['dados'] + n['recibidos']))[:6]
+        lin.append("- Red de pases, jugadores más implicados (dados/recibidos): " + ', '.join(f"#{n['dorsal']} {n['dados']}/{n['recibidos']}" for n in top))
+        conex = sorted(red.get('conexiones', []), key=lambda c: -c['n'])[:8]
+        lin.append("- Conexiones más repetidas: " + ', '.join(f"#{c['de']}→#{c['a']} ({c['n']})" for c in conex))
+    if v.get('tiros') is not None:
+        t = v['tiros']
+        por_dorsal = {}
+        for s in t:
+            por_dorsal[s['dorsal']] = por_dorsal.get(s['dorsal'], 0) + 1
+        goles = [s for s in t if s['gol']]
+        lin.append(f"- Mapa de tiros: {len(t)} tiros; por dorsal: " + ', '.join(f"#{d} {n}" for d, n in sorted(por_dorsal.items(), key=lambda x: -x[1]))
+                   + "; goles: " + (', '.join(f"#{g['dorsal']} min {g['min']} ({_zona(g['x'], g['y'])})" for g in goles) or 'ninguno'))
+    for clave, nombre in (('recuperaciones', 'Recuperaciones'), ('intercepciones', 'Intercepciones'), ('entradas', 'Entradas')):
+        ev = v.get(clave)
+        if ev:
+            tercios = [0, 0, 0]
+            for e in ev:
+                tercios[min(2, int(e['x'] * 3))] += 1
+            lin.append(f"- {nombre}: {len(ev)} (campo propio {tercios[0]}, zona media {tercios[1]}, campo rival {tercios[2]})")
+    if v.get('zonas_velocidad'):
+        lin.append("- Zonas de velocidad por tramo (% tiempo en alta intensidad / sprint): "
+                   + ', '.join(f"{z['desde']}-{z['hasta']}' {z['hsr']}%/{z['sprint']}%" for z in v['zonas_velocidad']))
+    return '\n'.join(lin)
 
 
 def texto_para_ia(r):
@@ -383,6 +558,9 @@ def texto_para_ia(r):
         for j in r['jugadores']:
             datos = [f"{e} {j.get(t)}" for t, e in r['columnas_jugador'] if j.get(t)]
             lin.append(f"- Dorsal {j['dorsal']}: " + ', '.join(datos))
+    vis = texto_visual_para_ia(r.get('visual'))
+    if vis:
+        lin.append(vis)
     return '\n'.join(lin)
 
 
