@@ -77,9 +77,83 @@
             <div style="font-size:9.5px;color:#93a39b;">${ocasiones ?? 0} ocasiones · ${goles ?? 0} goles</div></div>`;
     }
 
+    // ───── Tarjeta "Analytics" interactiva (equipo y parte) ─────
+    const ESTADO_A = {};
+    let contA = 0;
+
+    function rampa(t) {
+        // azul claro → amarillo → naranja → rojo (como el mapa de calor de Veo)
+        const stops = [[0, [214, 230, 242]], [0.35, [125, 211, 252]], [0.6, [253, 224, 71]], [0.8, [249, 115, 22]], [1, [220, 38, 38]]];
+        for (let i = 1; i < stops.length; i++) {
+            if (t <= stops[i][0]) {
+                const [a, ca] = stops[i - 1], [b, cb] = stops[i], f = (t - a) / (b - a);
+                return `rgb(${ca.map((c, j) => Math.round(c + (cb[j] - c) * f)).join(',')})`;
+            }
+        }
+        return 'rgb(220,38,38)';
+    }
+
+    function calorSvg(b64, w, h) {
+        let bytes;
+        try { bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0)); } catch (e) { return ''; }
+        const cw = 105 / w, ch = 68 / h, celdas = [];
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+            const v = bytes[y * w + x] / 255;
+            if (v > 0.04) celdas.push(`<rect x="${(x * cw).toFixed(2)}" y="${(y * ch).toFixed(2)}" width="${(cw + 0.05).toFixed(2)}" height="${(ch + 0.05).toFixed(2)}" fill="${rampa(v)}"/>`);
+        }
+        const l = 'stroke="#ffffff" stroke-width="0.4" fill="none" opacity="0.85"';
+        return `<svg viewBox="-2 -2 109 72"><rect x="0" y="0" width="105" height="68" rx="2" fill="rgb(214,230,242)"/>${celdas.join('')}
+            <rect x="0" y="0" width="105" height="68" rx="2" ${l}/><line x1="52.5" y1="0" x2="52.5" y2="68" ${l}/><circle cx="52.5" cy="34" r="9.15" ${l}/>
+            <rect x="0" y="13.84" width="16.5" height="40.32" ${l}/><rect x="88.5" y="13.84" width="16.5" height="40.32" ${l}/></svg>`;
+    }
+
+    function tercioSvg(t) {
+        if (!t) return '<div style="font-size:11px;color:#93a39b;padding:16px 0;text-align:center;">Sin datos</div>';
+        const max = Math.max(...t), l = `stroke="#cbd5d0" stroke-width="0.45" fill="none"`;
+        return `<svg viewBox="-2 -2 109 82">
+            <rect x="0" y="0" width="35" height="68" fill="#2a332f"/><rect x="35" y="0" width="35" height="68" fill="#d6ecf6"/><rect x="70" y="0" width="35" height="68" fill="#2a332f"/>
+            <rect x="0" y="0" width="105" height="68" rx="2" ${l}/><line x1="52.5" y1="0" x2="52.5" y2="68" ${l}/>
+            <rect x="0" y="13.84" width="16.5" height="40.32" ${l}/><rect x="88.5" y="13.84" width="16.5" height="40.32" ${l}/>
+            ${t.map((p, i) => `<circle cx="${17.5 + i * 35}" cy="34" r="${7 + 9 * Math.sqrt(p / (max || 1))}" fill="${p === max ? '#26302b' : '#3a4540'}"/>
+                <text x="${17.5 + i * 35}" y="36" text-anchor="middle" font-size="5.5" font-weight="800" fill="#fff" font-family="Arial">${p}%</text>`).join('')}
+            ${['Defensa', 'Medio', 'Ataque'].map((n, i) => `<text x="${17.5 + i * 35}" y="77" text-anchor="middle" font-size="4.2" font-weight="700" fill="#e5e7eb" font-family="Arial">${n}</text>`).join('')}</svg>`;
+    }
+
+    function analyticsHtml(k) {
+        const s = ESTADO_A[k], a = s.a, eq = s.eq, p = s.p;
+        const boton = (campo, valor, texto, act) => `<button onclick="anaVeoA(${k},'${campo}','${valor}')" style="border:1px solid ${act ? '#4ade80' : '#3a4540'};background:${act ? '#26302b' : 'transparent'};color:${act ? '#fff' : '#cbd5d0'};border-radius:16px;padding:5px 11px;font-size:10.5px;font-weight:800;cursor:pointer;font-family:inherit;">${texto}</button>`;
+        const flecha = eq === 'own' ? 'Nosotros →' : '← Rival';
+        const sub = (titulo, ayuda, cuerpo) => `<div style="margin-top:12px;"><div style="font-size:12px;font-weight:800;color:#fff;">${titulo}</div>
+            <div style="font-size:8.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#93a39b;margin:2px 0 6px;">${ayuda}</div>${cuerpo}</div>`;
+        const calor = ((a.calor || {})[eq] || {})[p];
+        return `<div class="veo-g" id="veoA_${k}" style="grid-column:1/-1;">
+            <h5>Analytics</h5><div class="sub">Elige equipo y parte del partido</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                ${boton('eq', 'own', 'Nosotros', eq === 'own')}${boton('eq', 'opp', 'Rival', eq === 'opp')}
+                <span style="width:8px;"></span>${(a.periodos || []).map(x => boton('p', x.id, x.nombre, p === x.id)).join('')}
+                <span style="margin-left:auto;font-size:10.5px;font-weight:800;color:#cbd5d0;">${flecha}</span></div>
+            <div class="veo-graf" style="margin-top:0;">
+                ${sub('Localización de pases', 'Zona del campo en la que el equipo dio sus pases', tercioSvg(((a.pases || {})[eq] || {})[p]))}
+                ${sub('Localización de posesión', 'Zona del campo en la que el equipo tuvo el balón', tercioSvg(((a.posesion || {})[eq] || {})[p]))}
+                ${sub('Mapa de calor', eq === 'own' ? 'Dónde estuvieron nuestros jugadores' : 'Dónde actuó el rival (según sus acciones)', calor ? calorSvg(calor, (a.rejilla || [60, 30])[0], (a.rejilla || [60, 30])[1]) : '<div style="font-size:11px;color:#93a39b;padding:16px 0;text-align:center;">Sin datos</div>')}
+            </div></div>`;
+    }
+
+    window.anaVeoA = function (k, campo, valor) {
+        if (!ESTADO_A[k]) return;
+        ESTADO_A[k][campo] = valor;
+        const el = document.getElementById('veoA_' + k);
+        if (el) el.outerHTML = analyticsHtml(k);
+    };
+
     window.anaVeoGraficosHtml = function (v) {
         if (!v || !Object.keys(v).length) return '';
         const out = [];
+        if (v.analytics && v.analytics.periodos) {
+            const k = ++contA;
+            ESTADO_A[k] = { a: v.analytics, eq: 'own', p: 'all' };
+            out.push(analyticsHtml(k));
+        }
         if (v.posiciones && v.posiciones.length) {
             out.push(tarjeta('Posición media', 'Posición media en el campo por jugador',
                 campo(v.posiciones.map(p => camiseta(p.x, p.y, p.dorsal)).join(''))));

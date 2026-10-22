@@ -425,6 +425,100 @@ def _posiciones_medias(veo_id, team_id, fin_s):
     return out
 
 
+def _suavizar(rejilla, w, h, sigma=1.6):
+    """Desenfoque gaussiano simple (separable) de una rejilla w x h."""
+    import math
+    rad = int(sigma * 3)
+    k = [math.exp(-(i * i) / (2 * sigma * sigma)) for i in range(-rad, rad + 1)]
+    tmp = [0.0] * (w * h)
+    for y in range(h):
+        for x in range(w):
+            tmp[y * w + x] = sum(rejilla[y * w + min(w - 1, max(0, x + i))] * k[i + rad] for i in range(-rad, rad + 1))
+    out = [0.0] * (w * h)
+    for y in range(h):
+        for x in range(w):
+            out[y * w + x] = sum(tmp[min(h - 1, max(0, y + i)) * w + x] * k[i + rad] for i in range(-rad, rad + 1))
+    return out
+
+
+def _a_bytes(valores):
+    m = max(valores) or 1
+    return base64.b64encode(bytes(int(255 * v / m) for v in valores)).decode()
+
+
+def _analytics(veo_id, team_id, periodos):
+    """Panel 'Analytics' de Veo: localización de pases y de posesión por tercios y mapa de calor,
+    para nosotros y el rival, en el partido completo y en cada parte. Coordenadas como en el resto:
+    nosotros atacando hacia la derecha (el rival ataca hacia la izquierda)."""
+    W, H = 60, 30
+    ev = _api('GET', f'https://app.veo.co/api/mes/v2/{veo_id}/match-events', params={'aggregatedDuels': 'true'}).get('events', [])
+    lado_p = {i + 1: (p.get('own_side') or 'left') for i, p in enumerate(periodos)}
+    ids_p = sorted(lado_p)
+
+    def pos(e):
+        # Si en esa parte nuestra portería está a la derecha, se gira el campo 180º (igual que hace Veo)
+        x, z = e['x'], e['z']
+        if lado_p.get(e.get('periodId')) == 'right':
+            x, z = 1 - x, 1 - z
+        return min(1, max(0, x)), min(1, max(0, 1 - z))
+
+    def tercios(eventos, equipo):
+        t = [0, 0, 0]
+        for e in eventos:
+            x, _ = pos(e)
+            if equipo == 'opp':
+                x = 1 - x  # tercios vistos desde el rival (su defensa está a la derecha)
+            t[min(2, int(x * 3))] += 1
+        s = sum(t)
+        return [round(100 * v / s) for v in t] if s else None
+
+    datos = {'pases': {}, 'posesion': {}, 'calor': {}}
+    for equipo, nombre in (('own', 'Own'), ('opp', 'Opponent')):
+        for clave_p in ['all'] + ids_p:
+            sel = [e for e in ev if e.get('team') == nombre and e.get('x') is not None and e.get('z') is not None
+                   and (clave_p == 'all' or e.get('periodId') == clave_p)]
+            datos['pases'].setdefault(equipo, {})[str(clave_p)] = tercios([e for e in sel if e['eventType'] == 'pass'], equipo)
+            datos['posesion'].setdefault(equipo, {})[str(clave_p)] = tercios([e for e in sel if e['eventType'] in ('possession', 'pass', 'dribble', 'FootballShot')], equipo)
+            if equipo == 'opp':
+                # Mapa de calor del rival: con todas sus acciones (Veo no lo da para equipos sin cuenta)
+                # Solo acciones con balón en juego (sin saques ni balones fuera, que se amontonan en las líneas)
+                juego = {'pass', 'duel', 'possession', 'tackle', 'interception', 'dribble', 'FootballShot', 'loose'}
+                rej = [0.0] * (W * H)
+                for e in sel:
+                    if e['eventType'] not in juego:
+                        continue
+                    x, y = pos(e)
+                    rej[min(H - 1, int(y * H)) * W + min(W - 1, int(x * W))] += 1
+                if any(rej):
+                    suave = _suavizar(rej, W, H, sigma=2.6)
+                    datos['calor'].setdefault('opp', {})[str(clave_p)] = _a_bytes([v ** 0.75 for v in suave])
+
+    # Mapa de calor de nuestro equipo: el de Veo (seguimiento de jugadores), sumando todos los jugadores
+    tramos = {'all': (0, max([p.get('end_time') or 0 for p in periodos] or [0]))}
+    for i, p in enumerate(periodos):
+        tramos[i + 1] = (p.get('start_time') or 0, p.get('end_time') or 0)
+    for clave_p, (ini, fin) in tramos.items():
+        if fin <= ini:
+            continue
+        try:
+            d = _api('POST', '/analysis/player-heatmaps/', json={'type': 'match_all_players', 'match_id': veo_id, 'team_id': team_id,
+                                                                 'start_time': ini, 'end_time': fin, 'smoothing': 1.5})
+            suma = [0.0] * (W * H)
+            for it in d.get('items', []):
+                m = it.get('matrix') or {}
+                if m.get('width') != W or m.get('height') != H:
+                    continue
+                for i, b in enumerate(base64.b64decode(m['values'])):
+                    suma[i] += b
+            if any(suma):
+                datos['calor'].setdefault('own', {})[str(clave_p)] = _a_bytes(suma)
+        except Exception as e:
+            print(f"Veo mapa de calor {veo_id} {clave_p}: {e}")
+    datos['periodos'] = [{'id': 'all', 'nombre': 'Partido completo'}] + [{'id': str(i), 'nombre': f'{i}ª parte'} for i in ids_p]
+    datos['rejilla'] = [W, H]
+    return datos
+
+
 def visual(veo_id, rep=None):
     """Datos de todos los gráficos del informe de Veo para nuestro equipo."""
     rep = rep or informe(veo_id)
@@ -458,6 +552,10 @@ def visual(veo_id, rep=None):
             out['posiciones'] = _posiciones_medias(veo_id, team_id, fin_s)
         except Exception as e:
             print(f"Veo posiciones {veo_id}: {e}")
+        try:
+            out['analytics'] = _analytics(veo_id, team_id, periodos)
+        except Exception as e:
+            print(f"Veo analytics {veo_id}: {e}")
         return out
 
     g = next((x for x in grabaciones() if x['id'] == veo_id), None)
@@ -532,6 +630,17 @@ def texto_visual_para_ia(v):
             for e in ev:
                 tercios[min(2, int(e['x'] * 3))] += 1
             lin.append(f"- {nombre}: {len(ev)} (campo propio {tercios[0]}, zona media {tercios[1]}, campo rival {tercios[2]})")
+    an = v.get('analytics') or {}
+    for clave, nombre in (('pases', 'Pases por tercios'), ('posesion', 'Posesión por tercios')):
+        d = an.get(clave) or {}
+        partes = []
+        for eq, et in (('own', 'nosotros'), ('opp', 'rival')):
+            for p in an.get('periodos', []):
+                t = (d.get(eq) or {}).get(p['id'])
+                if t:
+                    partes.append(f"{et} {p['nombre'].lower()} {t[0]}/{t[1]}/{t[2]}")
+        if partes:
+            lin.append(f"- {nombre} (defensa/medio/ataque de cada equipo, %): " + '; '.join(partes))
     if v.get('zonas_velocidad'):
         lin.append("- Zonas de velocidad por tramo (% tiempo en alta intensidad / sprint): "
                    + ', '.join(f"{z['desde']}-{z['hasta']}' {z['hsr']}%/{z['sprint']}%" for z in v['zonas_velocidad']))
