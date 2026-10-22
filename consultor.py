@@ -60,6 +60,9 @@ class Partido:
         self.lado = {i + 1: (p.get('own_side') or 'left') for i, p in enumerate(self.periodos)}
         self.nombres = {'own': self.resumen.get('nuestro') or 'Nosotros', 'opp': self.resumen.get('rival') or 'Rival'}
         self.dibujos = {}
+        self.clips = {}
+        videos = (rep.get('match') or {}).get('videos') or []
+        self.video_url = next((v['url'] for v in videos if v.get('render_type') == 'standard'), videos[0]['url'] if videos else None)
         crudos = sorted(veo.eventos(veo_id), key=lambda e: e.get('videoTimeMs') or 0)
         self.ev = []
         for e in crudos:
@@ -107,6 +110,16 @@ class Partido:
         num = 1 if p.startswith('1') or 'primera' in p else (2 if p.startswith('2') or 'segunda' in p else None)
         return [e for e in self.ev if (not eq or e['eq'] == eq) and (not num or e['parte'] == num)]
 
+    def nuevo_clip(self, titulo, ms_ini, ms_fin, minuto):
+        """Trozo de vídeo de una jugada: 3 s antes de empezar hasta 3 s después de terminar."""
+        if not self.video_url:
+            return None
+        k = f"C{len(self.clips) + 1}"
+        ini = max(0, ms_ini / 1000 - 3)
+        fin = max(ini + 6, ms_fin / 1000 + 3)
+        self.clips[k] = {'id': k, 'titulo': titulo, 'inicio': round(ini, 1), 'fin': round(min(fin, ini + 120), 1), 'min': minuto}
+        return k
+
     def nuevo_dibujo(self, titulo, flechas=None, puntos=None, nota=''):
         k = f"D{len(self.dibujos) + 1}"
         self.dibujos[k] = {'id': k, 'titulo': titulo, 'flechas': flechas or [], 'puntos': puntos or [], 'nota': nota}
@@ -122,7 +135,9 @@ def _secuencia_desde(P, idx, eq, max_s=40):
     """Pases seguidos del equipo eq desde el índice idx hasta que el rival toca el balón, sale fuera o hay falta."""
     ini = P.ev[idx]['ms']
     pases, fin = [], 'se corta la jugada'
+    P._fin_ms = ini + max_s * 1000
     for e in P.ev[idx + 1:]:
+        P._fin_ms = e['ms']
         if e['ms'] - ini > max_s * 1000:
             fin = 'sigue la posesión'; break
         if e['tipo'] in ('FootballOutOfPlay',):
@@ -197,9 +212,11 @@ def _herramientas(P):
             if e['tipo'] != tipo_veo or e['eq'] != eq or id(e) not in validos:
                 continue
             pases, fin = _secuencia_desde(P, i, eq)
+            fin_ms = P._fin_ms
             finales[fin.split(' (')[0]] += 1
+            clip = P.nuevo_clip(f"{'Nosotros' if eq == 'own' else 'Rival'} · {tipo.replace('_', ' ')} min {e['min']} → {fin}", e['ms'], fin_ms, e['min'])
             if not pases:
-                lista.append({'minuto': e['min'], 'pases': 0, 'final': fin}); continue
+                lista.append({'minuto': e['min'], 'pases': 0, 'final': fin, 'clip': clip}); continue
             p0 = pases[0]
             primeros['largo (>=25 m)' if (p0['dist'] or 0) >= 25 else 'corto (<25 m)'] += 1
             receptores[p0['receptor'] or '?'] += 1
@@ -210,7 +227,7 @@ def _herramientas(P):
             caminos[camino[:4]].append(pases[:3])
             d = P.nuevo_dibujo(f"{'Nosotros' if eq == 'own' else 'Rival'} · {tipo.replace('_', ' ')} min {e['min']}",
                                flechas=[_flecha(p, n + 1) for n, p in enumerate(pases[:8])], nota=f"Termina: {fin}")
-            lista.append({'minuto': e['min'], 'pases': len(pases), 'camino_dorsales': ' → '.join(camino), 'final': fin, 'dibujo': d})
+            lista.append({'minuto': e['min'], 'pases': len(pases), 'camino_dorsales': ' → '.join(camino), 'final': fin, 'dibujo': d, 'clip': clip})
         mas = sorted(caminos.items(), key=lambda kv: (-len(kv[1]), -len(kv[0])))
         repetida = None
         if mas and len(mas[0][1]) >= 2:
@@ -221,7 +238,7 @@ def _herramientas(P):
                                                 nota=f"Repetida {len(mas[0][1])} veces (posición media)")}
         return {'equipo': P.nombres[eq], 'reanudaciones': len(lista), 'primer_pase': dict(primeros), 'receptor_primer_pase': receptores.most_common(6),
                 'carril_primer_pase': dict(carriles), 'como_terminan': dict(finales), 'quien_mas_toca': toques.most_common(6),
-                'secuencia_mas_repetida': repetida, 'detalle': lista[:15],
+                'secuencia_mas_repetida': repetida, 'detalle': lista[:30],
                 'aviso': "'?' = dorsal no detectado por Veo"}
 
     def cadenas_pases_repetidas(equipo: str, longitud_minima: int = 3, zona_inicio: str = "cualquiera", zona_final: str = "cualquiera",
@@ -250,6 +267,7 @@ def _herramientas(P):
         out = []
         for camino, ocs in ranking:
             out.append({'camino_dorsales': ' → '.join(camino), 'veces': len(ocs), 'minutos': [o[0]['min'] for o in ocs],
+                        'clips': [P.nuevo_clip(f"{' → '.join(camino)} · min {o[0]['min']}", o[0]['ms'], o[-1]['ms'], o[0]['min']) for o in ocs[:10]],
                         'zona_inicio': P.zona(eq, ocs[0][0]['x'], ocs[0][0]['y']),
                         'dibujo': _dibujo_media(P, f"{'Nosotros' if eq == 'own' else 'Rival'} · {' → '.join(camino)} ({len(ocs)} {'vez' if len(ocs) == 1 else 'veces'})", ocs,
                                                 nota=f"Minutos: {', '.join(str(o[0]['min']) for o in ocs)}")})
@@ -300,7 +318,10 @@ def _herramientas(P):
         if zona and zona != 'cualquiera':
             sel = [e for e in sel if P.zona(eq, e['x'], e['y']).startswith(zona)]
         colores = {'tiro': '#E31E24', 'gol': '#16a34a', 'perdida': '#f59e0b', 'recuperacion': '#22c55e'}
-        return {'equipo': P.nombres[eq], 'total': len(sel), 'por_jugador': Counter(e['dorsal'] for e in sel).most_common(8),
+        acciones = [{'minuto': e['min'], 'dorsal': e['dorsal'], 'zona': P.zona(eq, e['x'], e['y']),
+                     'clip': P.nuevo_clip(f"{t.replace('_', ' ').capitalize()} #{e['dorsal']} · min {e['min']}", e['ms'] - 3000, e['ms'] + 2000, e['min'])}
+                    for e in sel[:30]]
+        return {'equipo': P.nombres[eq], 'total': len(sel), 'acciones': acciones, 'por_jugador': Counter(e['dorsal'] for e in sel).most_common(8),
                 'por_zona': Counter(P.zona(eq, e['x'], e['y']) for e in sel).most_common(9),
                 'por_parte': Counter(f"{e['parte']}ª parte" for e in sel), 'minutos': [e['min'] for e in sel][:40],
                 'dibujo': P.nuevo_dibujo(f"{t.replace('_', ' ').capitalize()} · {'nosotros' if eq == 'own' else 'rival'}",
@@ -373,6 +394,9 @@ Reglas:
 - Cuando una herramienta devuelva un dibujo relevante (campo "dibujo": "Dn"), muéstralo escribiendo [[DIBUJO:Dn]] en su propia línea,
   JUSTO DESPUÉS del texto que habla de ESA jugada. Usa exactamente el id "Dn" que viene en el mismo elemento del que hablas
   (no mezcles ids de llamadas distintas). Si te piden dibujar algo, incluye siempre al menos un dibujo.
+- Las herramientas devuelven también "clip": "Cn" (trozo de vídeo de esa jugada). Cuando listes jugadas concretas, o te pidan
+  verlas, el vídeo o clips, escribe [[CLIP:Cn]] al final de la línea de CADA jugada (con su id exacto) para que el entrenador
+  pueda darle al play. Si piden "todos", lista todas las que devuelva la herramienta, una por línea, cada una con su clip.
 - Responde en español, en formato Markdown, de forma profesional, concreta y accionable: puntos clave en **negrita**,
   cifras exactas, minutos para revisar en el vídeo y, al final, una recomendación táctica breve para el cuerpo técnico.
 - Si los datos son pocos o faltan dorsales ('?'), dilo con naturalidad (es una limitación de la detección de Veo).
@@ -390,7 +414,7 @@ def responder(veo_id, pregunta, historial):
     for m in (historial or [])[-6:]:
         if m.get('rol') in ('user', 'model') and (m.get('texto') or '').strip():
             # sin las marcas de dibujo de respuestas anteriores (si no, la IA las copia y saldría un dibujo viejo)
-            texto = re.sub(r'\[\[DIBUJO:D\d+\]\]', '', m['texto'])
+            texto = re.sub(r'\[\[(DIBUJO|CLIP):[DC]\d+\]\]', '', m['texto'])
             hist.append({'role': m['rol'], 'parts': [texto[:4000]]})
     chat = modelo.start_chat(history=hist, enable_automatic_function_calling=True)
     resp = chat.send_message(pregunta, request_options={"timeout": 150})
@@ -399,7 +423,10 @@ def responder(veo_id, pregunta, historial):
     html = markdown_a_html(texto)
     html = re.sub(r'(<p>)?\s*\[\[DIBUJO:(D\d+)\]\]\s*(</p>)?',
                   lambda m: f'<div class="cons-dibujo" data-d="{m.group(2)}"></div>' if m.group(2) in P.dibujos else '', html)
-    return {'texto': texto, 'html': html, 'dibujos': {k: P.dibujos[k] for k in usados}}
+    clips = {k: P.clips[k] for k in re.findall(r'\[\[CLIP:(C\d+)\]\]', texto) if k in P.clips}
+    html = re.sub(r'\[\[CLIP:(C\d+)\]\]', lambda m: (f'<button class="cons-clip" data-c="{m.group(1)}">▶ Ver jugada · min {P.clips[m.group(1)]["min"]}</button>'
+                                                    if m.group(1) in P.clips else ''), html)
+    return {'texto': texto, 'html': html, 'dibujos': {k: P.dibujos[k] for k in usados}, 'clips': clips, 'video_url': P.video_url}
 
 
 # ───────────────────────── plantilla de preguntas ─────────────────────────

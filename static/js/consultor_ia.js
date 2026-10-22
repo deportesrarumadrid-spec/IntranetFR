@@ -2,7 +2,7 @@
  * Uso: abrirConsultorIA({ veo_id, titulo }). Compartido por el móvil y Dirección Deportiva. */
 (function () {
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    const C = { veo_id: null, titulo: '', historial: [], plantilla: null, ocupado: false, dibujos: {} };
+    const C = { veo_id: null, titulo: '', historial: [], plantilla: null, ocupado: false, dibujos: {}, clips: {}, video: null };
     const ROJO = '#E31E24', AZUL = '#60a5fa';
 
     const st = document.createElement('style');
@@ -33,7 +33,12 @@
     #consIA .btn{border:none;border-radius:11px;padding:11px 14px;font-weight:900;font-size:11px;letter-spacing:.5px;cursor:pointer;font-family:inherit;}
     #consIA .btn:disabled{opacity:.5;}
     #consIA .spin{display:inline-block;width:13px;height:13px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:consspin .7s linear infinite;vertical-align:-2px;}
-    @keyframes consspin{to{transform:rotate(360deg)}}`;
+    @keyframes consspin{to{transform:rotate(360deg)}}
+    #consIA .cons-clip{display:inline-flex;align-items:center;gap:4px;margin:2px 0 2px 6px;border:none;border-radius:8px;background:#16a34a;color:#fff;font-size:10.5px;font-weight:900;padding:4px 9px;cursor:pointer;font-family:inherit;white-space:nowrap;}
+    #consVid{position:fixed;inset:0;z-index:31000;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;padding:12px;}
+    #consVid video{width:100%;max-width:1100px;max-height:72vh;background:#000;border-radius:10px;}
+    #consVid .bar{display:flex;gap:8px;align-items:center;width:100%;max-width:1100px;margin-top:10px;color:#fff;}
+    #consVid .bar b{flex:1;font-size:13px;} #consVid button{border:none;border-radius:9px;padding:9px 13px;font-weight:900;font-size:11px;cursor:pointer;font-family:inherit;}`;
     document.head.appendChild(st);
 
     // ───── dibujo de secuencias ─────
@@ -139,12 +144,40 @@
             : x.rol === 'error' ? `<div class="m-e">${esc(x.texto)}</div>` : `<div class="m-a">${x.html}</div>`).join('')
             + (C.ocupado ? '<div class="m-a" style="color:#6b7280;"><span class="spin"></span> Analizando todas las acciones del partido… (puede tardar unos 30 segundos)</div>' : '');
         m.querySelectorAll('.cons-dibujo').forEach(el => { const d = C.dibujos[el.dataset.d]; if (d) el.outerHTML = dibujoSvg(d); });
+        m.querySelectorAll('.cons-clip').forEach(b => { b.onclick = () => verClip(b.dataset.c); });
         m.scrollTop = m.scrollHeight;
     }
 
+    // ───── reproductor de jugadas ─────
+    function verClip(id) {
+        const c = C.clips[id];
+        if (!c || !C.video) return;
+        let v = document.getElementById('consVid');
+        if (!v) {
+            v = document.createElement('div');
+            v.id = 'consVid';
+            v.innerHTML = `<video id="consVideo" controls playsinline preload="metadata"></video>
+                <div class="bar"><b id="consVidTit"></b>
+                <button style="background:#374151;color:#fff;" onclick="consRepetir()">↺ REPETIR</button>
+                <button style="background:#fff;color:#111827;" onclick="consCerrarVid()">✕ CERRAR</button></div>`;
+            document.body.appendChild(v);
+            const vid = v.querySelector('video');
+            vid.addEventListener('timeupdate', () => { if (C.clipAct && vid.currentTime >= C.clipAct.fin) vid.pause(); });
+        }
+        C.clipAct = c;
+        document.getElementById('consVidTit').textContent = `${c.titulo} (${Math.round(c.fin - c.inicio)} s)`;
+        const vid = document.getElementById('consVideo');
+        v.style.display = 'flex';
+        const ir = () => { vid.currentTime = c.inicio; vid.play().catch(() => {}); };
+        if (vid.getAttribute('src') !== C.video) { vid.src = C.video; vid.addEventListener('loadedmetadata', ir, { once: true }); vid.load(); }
+        else ir();
+    }
+    window.consRepetir = function () { const vid = document.getElementById('consVideo'); if (vid && C.clipAct) { vid.currentTime = C.clipAct.inicio; vid.play().catch(() => {}); } };
+    window.consCerrarVid = function () { const v = document.getElementById('consVid'); const vid = document.getElementById('consVideo'); if (vid) vid.pause(); if (v) v.style.display = 'none'; };
+
     window.abrirConsultorIA = function (opc) {
         const o = overlay();
-        if (C.veo_id !== opc.veo_id) { C.historial = []; C.dibujos = {}; }
+        if (C.veo_id !== opc.veo_id) { C.historial = []; C.dibujos = {}; C.clips = {}; C.video = null; }
         C.veo_id = opc.veo_id; C.titulo = opc.titulo || '';
         document.getElementById('consTit').textContent = C.titulo;
         o.style.display = 'flex';
@@ -190,6 +223,12 @@
             if (d.status !== 'ok') throw new Error(d.message || 'Error');
             // los ids de dibujo se repiten entre preguntas: se renombran para que cada respuesta tenga los suyos
             let html = d.html;
+            if (d.video_url) C.video = d.video_url;
+            Object.keys(d.clips || {}).forEach(k => {
+                const nuevo = k + '_' + C.historial.length;
+                C.clips[nuevo] = d.clips[k];
+                html = html.split(`data-c="${k}"`).join(`data-c="${nuevo}"`);
+            });
             Object.keys(d.dibujos || {}).forEach(k => {
                 const nuevo = k + '_' + C.historial.length;
                 C.dibujos[nuevo] = d.dibujos[k];
