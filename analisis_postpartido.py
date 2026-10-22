@@ -341,10 +341,31 @@ def _modelo_gemini():
         raise RuntimeError("No hay clave de Gemini configurada")
     genai.configure(api_key=api_key)
     modelos = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-    nombre = next((m for m in modelos if 'gemini-2.5-flash' in m),
-                  next((m for m in modelos if 'gemini-2.0-flash' in m),
-                       next((m for m in modelos if 'flash' in m), modelos[0] if modelos else 'models/gemini-1.5-flash')))
-    return genai.GenerativeModel(model_name=nombre)
+    # Google retira modelos antiguos para claves nuevas: preferimos el alias "flash-lite-latest" (≈7 s; el Flash normal
+    # tarda 60-100 s y el servidor corta antes) y si no existe, el Flash-Lite estable más nuevo
+    if 'models/gemini-flash-lite-latest' in modelos:
+        nombre = 'models/gemini-flash-lite-latest'
+    else:
+        estables = []
+        for m in modelos:
+            v = re.fullmatch(r'models/gemini-(\d+(?:\.\d+)?)-flash-lite', m)
+            if v:
+                estables.append((float(v.group(1)), m))
+        nombre = max(estables)[1] if estables else next((m for m in modelos if 'flash' in m), 'models/gemini-flash-lite-latest')
+    return genai, genai.GenerativeModel(model_name=nombre)
+
+
+def _generar_ia(prompt):
+    """Genera el texto; si Google responde que hay que usar otro modelo ("use models/xxx"), reintenta con ese."""
+    genai, modelo = _modelo_gemini()
+    try:
+        return (modelo.generate_content(prompt, request_options={"timeout": 120}).text or '').strip()
+    except Exception as e:
+        sugerido = re.search(r'models/(gemini-[\w.\-]+)', str(e))
+        if not sugerido or sugerido.group(0) == modelo.model_name:
+            raise
+        print(f"IA analisis_pp: {modelo.model_name} rechazado, reintentando con {sugerido.group(0)}")
+        return (genai.GenerativeModel(sugerido.group(0)).generate_content(prompt, request_options={"timeout": 120}).text or '').strip()
 
 
 _PROMPT_IA = """Eres un analista táctico de fútbol con Licencia UEFA Pro y experiencia en análisis de datos de rendimiento.
@@ -390,8 +411,7 @@ def api_ia():
     if texto.count('\n') < 4:
         return jsonify({"status": "error", "message": "Rellena alguna pregunta antes de generar el análisis"}), 400
     try:
-        resp = _modelo_gemini().generate_content(_PROMPT_IA + texto, request_options={"timeout": 120})
-        informe = (resp.text or '').strip()
+        informe = _generar_ia(_PROMPT_IA + texto)
     except Exception as e:
         print(f"Error IA analisis_pp: {e}")
         return jsonify({"status": "error", "message": f"Error de la IA: {e}"}), 500
