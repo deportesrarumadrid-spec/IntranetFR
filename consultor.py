@@ -367,7 +367,8 @@ _SISTEMA = """Eres el analista táctico jefe de un club de fútbol (nivel Licenc
 Respondes preguntas sobre UN partido usando EXCLUSIVAMENTE las herramientas disponibles, que consultan todas las acciones
 registradas por la cámara Veo (pases con pasador, receptor, origen y destino, saques, duelos, tiros...).
 Reglas:
-- Usa siempre las herramientas antes de responder; puedes llamar a varias. NUNCA inventes cifras, dorsales ni minutos.
+- Usa siempre las herramientas antes de responder, TAMBIÉN en las preguntas de seguimiento (los datos y dibujos de respuestas
+  anteriores no se pueden reutilizar: vuelve a consultar). Puedes llamar a varias. NUNCA inventes cifras, dorsales ni minutos.
 - "Salida de balón" = acciones que empiezan en campo propio del equipo. "Último tercio" = campo rival.
 - Cuando una herramienta devuelva un dibujo relevante (campo "dibujo": "Dn"), muéstralo escribiendo [[DIBUJO:Dn]] en su propia línea,
   JUSTO DESPUÉS del texto que habla de ESA jugada. Usa exactamente el id "Dn" que viene en el mismo elemento del que hablas
@@ -388,13 +389,16 @@ def responder(veo_id, pregunta, historial):
     hist = []
     for m in (historial or [])[-6:]:
         if m.get('rol') in ('user', 'model') and (m.get('texto') or '').strip():
-            hist.append({'role': m['rol'], 'parts': [m['texto'][:4000]]})
+            # sin las marcas de dibujo de respuestas anteriores (si no, la IA las copia y saldría un dibujo viejo)
+            texto = re.sub(r'\[\[DIBUJO:D\d+\]\]', '', m['texto'])
+            hist.append({'role': m['rol'], 'parts': [texto[:4000]]})
     chat = modelo.start_chat(history=hist, enable_automatic_function_calling=True)
     resp = chat.send_message(pregunta, request_options={"timeout": 150})
     texto = (resp.text or '').strip()
     usados = [k for k in re.findall(r'\[\[DIBUJO:(D\d+)\]\]', texto) if k in P.dibujos]
     html = markdown_a_html(texto)
-    html = re.sub(r'(<p>)?\s*\[\[DIBUJO:(D\d+)\]\]\s*(</p>)?', lambda m: f'<div class="cons-dibujo" data-d="{m.group(2)}"></div>', html)
+    html = re.sub(r'(<p>)?\s*\[\[DIBUJO:(D\d+)\]\]\s*(</p>)?',
+                  lambda m: f'<div class="cons-dibujo" data-d="{m.group(2)}"></div>' if m.group(2) in P.dibujos else '', html)
     return {'texto': texto, 'html': html, 'dibujos': {k: P.dibujos[k] for k in usados}}
 
 

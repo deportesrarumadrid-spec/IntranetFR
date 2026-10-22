@@ -188,7 +188,6 @@
                 body: JSON.stringify({ veo_id: C.veo_id, pregunta: q, historial: previo }) });
             const d = await r.json();
             if (d.status !== 'ok') throw new Error(d.message || 'Error');
-            Object.assign(C.dibujos, d.dibujos || {});
             // los ids de dibujo se repiten entre preguntas: se renombran para que cada respuesta tenga los suyos
             let html = d.html;
             Object.keys(d.dibujos || {}).forEach(k => {
