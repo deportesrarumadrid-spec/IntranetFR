@@ -35,6 +35,9 @@
     #consIA .spin{display:inline-block;width:13px;height:13px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:consspin .7s linear infinite;vertical-align:-2px;}
     @keyframes consspin{to{transform:rotate(360deg)}}
     #consIA .cons-clip{display:inline-flex;align-items:center;gap:4px;margin:2px 0 2px 6px;border:none;border-radius:8px;background:#16a34a;color:#fff;font-size:10.5px;font-weight:900;padding:4px 9px;cursor:pointer;font-family:inherit;white-space:nowrap;}
+    #consIA .mic{flex-shrink:0;width:46px;height:46px;border-radius:50%;border:none;background:#f3f4f6;font-size:20px;cursor:pointer;align-self:center;}
+    #consIA .mic.on{background:${ROJO};color:#fff;animation:conslat 1s ease-in-out infinite;}
+    @keyframes conslat{0%,100%{box-shadow:0 0 0 0 rgba(227,30,36,.55)}50%{box-shadow:0 0 0 10px rgba(227,30,36,0)}}
     #consVid{position:fixed;inset:0;z-index:31000;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;padding:12px;}
     #consVid video{width:100%;max-width:1100px;max-height:72vh;background:#000;border-radius:10px;}
     #consVid .bar{display:flex;gap:8px;align-items:center;width:100%;max-width:1100px;margin-top:10px;color:#fff;}
@@ -96,6 +99,7 @@
             <div class="sug" id="consSug"></div>
             <div class="msgs" id="consMsgs"></div>
             <div class="pie">
+                <button class="mic" id="consMic" onclick="consMic()" title="Dictar la pregunta por voz">🎤</button>
                 <textarea id="consTxt" rows="2" placeholder="Pregunta lo que quieras del partido… p. ej. dibújame la secuencia más repetida del rival en su salida de balón"></textarea>
                 <div style="display:flex;flex-direction:column;gap:6px;">
                     <button class="btn" style="background:${ROJO};color:#fff;" id="consEnviar" onclick="consEnviar()">ENVIAR</button>
@@ -148,6 +152,90 @@
         m.scrollTop = m.scrollHeight;
     }
 
+    // ───── dictado por voz ─────
+    // 1º el dictado del propio navegador (texto en directo); si no existe o falla, se graba el audio y lo transcribe la IA
+    const V = { activo: false, rec: null, mr: null, trozos: [], base: '', temporizador: null };
+
+    function micUI(on, aviso) {
+        V.activo = on;
+        const b = document.getElementById('consMic'), t = document.getElementById('consTxt');
+        if (b) { b.classList.toggle('on', on); b.textContent = on ? '■' : '🎤'; }
+        if (t) t.placeholder = aviso || 'Pregunta lo que quieras del partido… o pulsa 🎤 y díctala';
+    }
+
+    function dictadoNavegador() {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) return false;
+        const t = document.getElementById('consTxt');
+        const r = new SR();
+        r.lang = 'es-ES'; r.interimResults = true; r.continuous = true;
+        V.base = t.value ? t.value.trim() + ' ' : '';
+        let final = '';
+        r.onresult = e => {
+            let provisional = '';
+            for (let i = e.resultIndex; i < e.results.length; i++) {
+                if (e.results[i].isFinal) final += e.results[i][0].transcript + ' ';
+                else provisional += e.results[i][0].transcript;
+            }
+            t.value = (V.base + final + provisional).replace(/\s+/g, ' ');
+        };
+        r.onerror = e => {
+            V.rec = null;
+            if (e.error === 'not-allowed' && !V.yaAvisado) { V.yaAvisado = true; alert('Permite el acceso al micrófono para dictar la pregunta.'); micUI(false); return; }
+            if (['service-not-allowed', 'network', 'audio-capture', 'language-not-supported'].includes(e.error)) {
+                micUI(false); grabarAudio();  // este móvil no deja dictar: se graba y transcribe la IA
+            }
+        };
+        r.onend = () => { if (V.rec === r) { V.rec = null; micUI(false); t.focus(); } };
+        V.rec = r;
+        try { r.start(); } catch (e) { V.rec = null; return false; }
+        micUI(true, 'Escuchando… habla y pulsa ■ para terminar');
+        return true;
+    }
+
+    async function grabarAudio() {
+        if (!navigator.mediaDevices || !window.MediaRecorder) { alert('Este móvil no permite dictar por voz desde la intranet.'); return; }
+        let stream;
+        try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+        catch (e) { alert('Permite el acceso al micrófono para dictar la pregunta.'); return; }
+        const tipo = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'].find(x => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(x)) || '';
+        const mr = new MediaRecorder(stream, tipo ? { mimeType: tipo } : undefined);
+        V.trozos = [];
+        mr.ondataavailable = e => { if (e.data && e.data.size) V.trozos.push(e.data); };
+        mr.onstop = async () => {
+            stream.getTracks().forEach(tr => tr.stop());
+            clearTimeout(V.temporizador);
+            V.mr = null;
+            micUI(false, 'Pasando el audio a texto…');
+            const blob = new Blob(V.trozos, { type: (mr.mimeType || tipo || 'audio/webm').split(';')[0] });
+            if (blob.size < 1500) { micUI(false); return; }
+            const fd = new FormData();
+            fd.append('audio', blob, 'pregunta.' + (blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm'));
+            try {
+                const d = await (await fetch('/api/consultor/transcribir', { method: 'POST', body: fd })).json();
+                if (d.status !== 'ok') throw new Error(d.message);
+                const t = document.getElementById('consTxt');
+                t.value = ((t.value ? t.value.trim() + ' ' : '') + d.texto).trim();
+                t.focus();
+            } catch (e) { alert('No se ha podido pasar el audio a texto. Prueba otra vez o escríbelo.'); }
+            micUI(false);
+        };
+        mr.start();
+        V.mr = mr;
+        V.temporizador = setTimeout(() => { if (V.mr) V.mr.stop(); }, 60000);  // máximo 1 minuto
+        micUI(true, 'Grabando… habla y pulsa ■ para terminar');
+    }
+
+    window.consMic = function () {
+        if (V.activo) {
+            if (V.rec) { const r = V.rec; V.rec = null; try { r.stop(); } catch (e) {} micUI(false); document.getElementById('consTxt').focus(); }
+            if (V.mr) V.mr.stop();
+            return;
+        }
+        if (C.ocupado) return;
+        if (!dictadoNavegador()) grabarAudio();
+    };
+
     // ───── reproductor de jugadas ─────
     function verClip(id) {
         const c = C.clips[id];
@@ -186,6 +274,7 @@
         if (!C.plantilla) cargarPlantilla();
     };
     window.cerrarConsultorIA = function () {
+        if (V.activo) consMic();
         const o = document.getElementById('consIA');
         if (o) o.style.display = 'none';
         document.body.style.overflow = '';

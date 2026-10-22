@@ -620,6 +620,33 @@ def api_preguntar():
         return jsonify({"status": "error", "message": f"No se ha podido responder: {e}"}), 500
 
 
+@consultor_bp.route('/api/consultor/transcribir', methods=['POST'])
+def api_transcribir():
+    """Pasa a texto una pregunta dictada por voz (para móviles sin dictado del navegador)."""
+    if not session.get('usuario'):
+        return jsonify({"status": "error"}), 401
+    f = request.files.get('audio')
+    if not f:
+        return jsonify({"status": "error", "message": "No llega el audio"}), 400
+    datos = f.read()
+    if not datos or len(datos) > 10 * 1024 * 1024:
+        return jsonify({"status": "error", "message": "Audio vacío o demasiado largo"}), 400
+    mime = (f.mimetype or 'audio/webm').split(';')[0]
+    try:
+        from analisis_postpartido import _modelo_gemini
+        _, modelo = _modelo_gemini()
+        r = modelo.generate_content([
+            {'mime_type': mime, 'data': datos},
+            "Transcribe literalmente en español esta pregunta sobre un partido de fútbol. "
+            "Devuelve SOLO el texto transcrito, sin comillas ni comentarios. Escribe los dorsales con números."],
+            request_options={"timeout": 60})
+        texto = (r.text or '').strip().strip('"')
+        return jsonify({"status": "ok", "texto": texto})
+    except Exception as e:
+        print(f"Error transcribiendo audio: {e}")
+        return jsonify({"status": "error", "message": f"No se ha podido transcribir: {e}"}), 500
+
+
 @consultor_bp.route('/api/consultor/plantilla', methods=['GET', 'POST', 'DELETE'])
 def api_plantilla():
     """GET: preguntas sugeridas + las mías. POST {texto, cat}: añadir. DELETE {id}: borrar una mía."""
