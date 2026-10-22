@@ -74,7 +74,7 @@ def inicializar_ia():
     try:
         with open('secretos.json', 'r') as f:
             config = json.load(f)
-            api_key = config.get('gemini_api_key')
+            api_key = config.get('gemini_api_key') or os.environ.get('GEMINI_API_KEY')
             if api_key:
                 genai.configure(api_key=api_key)
                 print(f"--- SDK Gemini v{genai.__version__} configurado correctamente ---")

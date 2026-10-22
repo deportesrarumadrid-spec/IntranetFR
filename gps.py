@@ -501,7 +501,7 @@ def _modelo_gemini():
 
     with open('secretos.json', encoding='utf-8') as f:
         cfg = json.load(f)
-    api_key = cfg.get('gemini_api_key')
+    api_key = cfg.get('gemini_api_key') or os.environ.get('GEMINI_API_KEY')
     if not api_key:
         raise RuntimeError("No se encontró gemini_api_key en secretos.json")
     genai.configure(api_key=api_key)

@@ -336,7 +336,7 @@ def _modelo_gemini():
     import google.generativeai as genai
     with open(os.path.join(BASE_DIR, 'secretos.json'), encoding='utf-8') as f:
         cfg = json.load(f)
-    api_key = cfg.get('gemini_api_key') or cfg.get('GEMINI_API_KEY')
+    api_key = cfg.get('gemini_api_key') or cfg.get('GEMINI_API_KEY') or os.environ.get('GEMINI_API_KEY')
     if not api_key:
         raise RuntimeError("No hay clave de Gemini configurada")
     genai.configure(api_key=api_key)

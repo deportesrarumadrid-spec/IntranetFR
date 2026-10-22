@@ -4234,7 +4234,7 @@ def obs_comentario_ia():
         import google.generativeai as genai
         with open('secretos.json', encoding='utf-8') as f:
             cfg = json.load(f)
-        api_key = cfg.get('gemini_api_key') or cfg.get('GEMINI_API_KEY', '')
+        api_key = cfg.get('gemini_api_key') or cfg.get('GEMINI_API_KEY', '') or os.environ.get('GEMINI_API_KEY', '')
         if not api_key:
             return jsonify({"status": "error", "message": "No hay clave Gemini configurada"}), 500
         genai.configure(api_key=api_key)
