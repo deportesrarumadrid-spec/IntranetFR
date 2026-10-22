@@ -403,8 +403,35 @@ Reglas estrictas:
 - **Consignas:** 2 o 3 consignas separadas por " · ".
 (2 o 3 tareas en total, con el mismo formato)
 
+Si al final aparecen "Datos objetivos de Veo" (estadísticas de la cámara del partido):
+- Úsalos para respaldar cada punto con CIFRAS concretas (p. ej. "posesión 67% vs 33%", "13 remates dentro del área").
+- Contrástalos con lo que marcó el entrenador (si coinciden o se contradicen, dilo).
+- Añade justo después de "Diagnóstico colectivo" esta sección:
+## 📈 Datos Veo clave
+- **Dato:** cifra nuestra vs rival — lectura táctica breve.
+(4 puntos, los más reveladores, mirando también las diferencias entre 1ª y 2ª parte)
+- En "Línea por línea" puedes citar dorsales concretos si sus datos son relevantes.
+
 Datos del partido y respuestas del entrenador:
 """
+
+
+def _veo_id(datos):
+    v = ((datos or {}).get('veo_id') or '').strip()
+    return v if re.fullmatch(r'[0-9a-f-]{36}', v) else None
+
+
+def _veo_resumen(datos):
+    """Resumen del partido de Veo vinculado al análisis (None si no hay o falla la conexión)."""
+    vid = _veo_id(datos)
+    if not vid:
+        return None
+    try:
+        import veo
+        return veo.resumen_partido(vid) if veo.configurado() else None
+    except Exception as e:
+        print(f"Veo en analisis_pp: {e}")
+        return None
 
 
 @analisis_bp.route('/api/analisis_pp/ia', methods=['POST'])
@@ -425,6 +452,10 @@ def api_ia():
     texto = _texto_para_ia(arbol, cab, datos)
     if texto.count('\n') < 4:
         return jsonify({"status": "error", "message": "Rellena alguna pregunta antes de generar el análisis"}), 400
+    veo_r = _veo_resumen(datos)
+    if veo_r:
+        import veo
+        texto += '\n\n' + veo.texto_para_ia(veo_r)
     try:
         informe = _generar_ia(_PROMPT_IA + texto)
     except Exception as e:
@@ -464,6 +495,12 @@ li { margin-bottom: 2pt; }
 .cab { color: #475569; font-size: 10pt; margin-bottom: 6pt; }
 .q { font-weight: bold; margin-top: 5pt; }
 .r { margin-left: 10pt; }
+table { border-collapse: collapse; width: 100%; margin: 2pt 0 6pt 0; font-size: 8.5pt; }
+th { background-color: #1e293b; color: white; padding: 2pt 3pt; text-align: left; }
+td { border-bottom: 1px solid #e2e8f0; padding: 2pt 3pt; }
+td.n { text-align: center; font-weight: bold; }
+td.p { color: #64748b; }
+table.j { font-size: 7pt; }
 """
 
 
@@ -499,6 +536,33 @@ def pdf(analisis_id):
             partes.append(f"<h4>{e(titulo)}</h4><ul>" + ''.join(f"<li>{e(r)}</li>" for r in rs) + "</ul>")
     if obs:
         partes += ["<h2>Observaciones</h2>", f"<p>{e(obs)}</p>"]
+    veo_r = _veo_resumen(a['datos'])
+    if veo_r:
+        partes.append(f"<h2>Estadísticas Veo · {e(veo_r['nuestro'])} {veo_r['marcador'][0]} - {veo_r['marcador'][1]} {e(veo_r['rival'])}</h2>")
+        for s in veo_r['secciones']:
+            filas = ''.join(
+                f"<tr><td>{e(f['etiqueta'])}</td><td class='n'>{f['nuestro']}</td><td class='n'>{f['rival']}</td>"
+                f"<td class='p'>{' / '.join(f'{x}-{y}' for x, y in f['partes'])}</td></tr>" for f in s['filas'])
+            partes.append(f"<h4>{e(s['titulo'])}</h4><table><tr><th>Dato</th><th>Nosotros</th><th>Rival</th><th>1ª / 2ª parte</th></tr>{filas}</table>")
+        if veo_r['jugadores']:
+            # En tres tablas para que quepan en el ancho de la página
+            grupos = [('Por jugador · Físico', ('seconds_played_total', 'distance_total_meters', 'top_speed_kmh',
+                                                'average_speed_kmh', 'sprints_total', 'high_intensity_runs_total')),
+                      ('Por jugador · Con balón', ('football_goal_total', 'football_attempts_total', 'football_passes_total',
+                                                   'football_passes_completed_total', 'football_dribble_total', 'football_loose_total',
+                                                   'football_corner_total', 'football_free_kick_total', 'football_throw_in_total')),
+                      ('Por jugador · Sin balón', ('football_duel_total', 'football_tackle_total', 'football_interception_total',
+                                                   'football_foul_total', 'football_goal_kick_total', 'football_save_total'))]
+            etiquetas = dict(veo_r['columnas_jugador'])
+            for titulo_g, tipos in grupos:
+                cols = [t for t in tipos if any(j.get(t) for j in veo_r['jugadores'])]
+                if not cols:
+                    continue
+                cab_j = '<th>Dorsal</th>' + ''.join(f"<th>{e(etiquetas.get(t, t))}</th>" for t in cols)
+                filas_j = ''.join('<tr><td>' + e(str(j['dorsal'])) + '</td>' +
+                                  ''.join(f"<td class='n'>{j.get(t) if j.get(t) is not None else ''}</td>" for t in cols) + '</tr>'
+                                  for j in veo_r['jugadores'])
+                partes.append(f"<h4>{titulo_g}</h4><table class='j'><tr>{cab_j}</tr>{filas_j}</table>")
 
     import fitz
     story = fitz.Story(html='<body>' + '\n'.join(partes) + '</body>', user_css=_CSS_PDF)

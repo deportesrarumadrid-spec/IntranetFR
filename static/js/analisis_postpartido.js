@@ -9,8 +9,10 @@
     const ANA = {
         iniciado: false, arbol: null, vista: 'lista', paso: 0,
         lista: null, partidos: null, a: null, dirty: false,
-        fase: {}, cerradas: new Set(), ocupado: false
+        fase: {}, cerradas: new Set(), ocupado: false,
+        veo: { estado: null, para: '', grab: [], sugerido: null }, veoDatos: {}
     };
+    const VEO_ID_OK = id => /^[0-9a-f-]{36}$/.test(id || '');
     const BORRADOR = 'ana_pp_borrador_' + (typeof EQUIPO !== 'undefined' ? EQUIPO : '');
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const hoyIso = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
@@ -196,6 +198,7 @@
                 <div><label>Fecha del partido</label><input type="date" id="anaFecha" value="${esc(a.fecha)}"></div>
                 <div><label>Resultado</label><input id="anaResultado" placeholder="Ej. 2 - 1" value="${esc(a.resultado)}"></div>
                 <div style="grid-column:1/-1;"><label>Rival</label><input id="anaRival" placeholder="Rival" value="${esc(a.rival)}"></div>
+                <div style="grid-column:1/-1;" id="anaVeoCampo">${campoVeo()}</div>
             </div>
             <div class="ana-pasos" id="anaPasos">${chips}</div>
             <div id="anaCuerpo">${cuerpo}</div>
@@ -206,6 +209,66 @@
         const act = document.querySelector('#anaPasos .ana-paso.act');
         if (act) act.scrollIntoView({ block: 'nearest', inline: 'center' });
         barra(true);
+        if (ANA.veo.para !== a.fecha) cargarVeo();
+    }
+
+    // ───── VEO: partido vinculado y sus estadísticas ─────
+    function campoVeo() {
+        const v = ANA.veo, a = ANA.a;
+        if (v.estado === 'sin_configurar' || v.estado === 'error') return '';
+        if (v.estado !== 'ok') return '<label>Partido en Veo</label><div style="font-size:12px;color:var(--soft);padding:8px 0;"><span class="ana-spin"></span> Buscando el partido en Veo…</div>';
+        const sel = a.datos.veo_id || '';
+        const ops = v.grab.map(g => `<option value="${esc(g.id)}" ${g.id === sel ? 'selected' : ''}>${g.id === v.sugerido ? '★ ' : ''}${esc(fechaTxt(g.fecha))} · ${esc(g.titulo)}</option>`).join('');
+        const aviso = !sel ? '<div style="font-size:10.5px;color:#d97706;font-weight:700;margin-top:4px;">No se ha encontrado solo: elige el partido si se grabó con Veo.</div>' : '';
+        return `<label>Partido en Veo</label>
+            <select id="anaVeo" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:8px;padding:9px;font-size:12.5px;font-family:inherit;font-weight:700;background:#fff;">
+                <option value="" ${!sel ? 'selected' : ''}>— Elegir partido de Veo —</option>
+                <option value="NO" ${sel === 'NO' ? 'selected' : ''}>Sin vídeo de Veo</option>${ops}
+            </select>${aviso}`;
+    }
+
+    async function cargarVeo() {
+        const a = ANA.a;
+        if (!a || !a.fecha) return;
+        ANA.veo.para = a.fecha; ANA.veo.estado = null;
+        const pintar = () => { const c = document.getElementById('anaVeoCampo'); if (c) c.innerHTML = campoVeo(); };
+        pintar();
+        try {
+            const q = `equipo=${encodeURIComponent(EQUIPO)}&fecha=${encodeURIComponent(a.fecha)}&rival=${encodeURIComponent(a.rival || '')}`;
+            const [rc, rg] = await Promise.all([fetch('/api/veo/candidatos?' + q).then(r => r.json()),
+                                                fetch('/api/veo/grabaciones?fecha=' + encodeURIComponent(a.fecha)).then(r => r.json())]);
+            if (rc.status === 'sin_configurar') { ANA.veo.estado = 'sin_configurar'; pintar(); return; }
+            if (rc.status !== 'ok') throw new Error(rc.message);
+            const vistos = new Set();
+            ANA.veo.grab = (rc.candidatos || []).concat(rg.grabaciones || []).filter(g => !vistos.has(g.id) && vistos.add(g.id));
+            ANA.veo.sugerido = rc.sugerido;
+            ANA.veo.estado = 'ok';
+            if (ANA.a === a && !a.datos.veo_id && rc.sugerido) { a.datos.veo_id = rc.sugerido; a.datos.veo_auto = true; cambio(); }
+        } catch (e) {
+            ANA.veo.estado = 'error';
+        }
+        if (ANA.a === a) { pintar(); if (VEO_ID_OK(a.datos.veo_id)) cargarVeoDatos(a.datos.veo_id); }
+    }
+
+    async function cargarVeoDatos(id) {
+        if (ANA.veoDatos[id]) return;
+        ANA.veoDatos[id] = 'cargando';
+        try {
+            const d = await (await fetch('/api/veo/partido/' + encodeURIComponent(id))).json();
+            ANA.veoDatos[id] = d.status === 'ok' ? d.partido : 'error';
+        } catch (e) { ANA.veoDatos[id] = 'error'; }
+        if (ANA.vista === 'editor' && pasos()[ANA.paso].tipo === 'inf') refrescarCuerpo();
+    }
+
+    function tarjetaVeo() {
+        const id = ANA.a.datos.veo_id;
+        if (!VEO_ID_OK(id)) return '';
+        const r = ANA.veoDatos[id];
+        if (!r) cargarVeoDatos(id);
+        const cuerpo = !r || r === 'cargando' ? '<div class="ana-vacio"><span class="ana-spin"></span> Cargando estadísticas de Veo…</div>'
+            : r === 'error' ? '<div class="ana-vacio">No se han podido cargar las estadísticas de Veo.</div>'
+            : anaVeoHtml(r, true);
+        return `<div class="ana-card" style="padding:12px 14px;"><div style="font-size:10px;font-weight:900;color:#16a34a;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">📹 Estadísticas Veo</div>${cuerpo}</div>`;
     }
 
     function renderBloque(b) {
@@ -280,6 +343,7 @@
                 : '<div class="ana-vacio">Pulsa <b>Análisis IA</b> para generar el informe a partir de tus respuestas.</div>');
         return `<div class="ana-bloque-tit">Informe</div><div class="ana-bloque-sub">Resumen de lo marcado e informe de la IA</div>
             <div class="ana-card"><div style="padding:12px 14px 6px;font-size:10px;font-weight:900;color:var(--soft);letter-spacing:1px;text-transform:uppercase;">Respuestas</div>${resumen}</div>
+            ${tarjetaVeo()}
             <button class="ana-btn" style="width:100%;margin-bottom:10px;background:#fff;color:var(--red);border:2px solid var(--red);" data-act="pdf">⬇ Descargar PDF</button>
             <div class="ana-card"><div style="padding:12px 14px 0;font-size:10px;font-weight:900;color:var(--red);letter-spacing:1px;text-transform:uppercase;">Análisis de élite (IA)</div>${informe}</div>`;
     }
@@ -445,9 +509,17 @@
 
     function entrada(e) {
         const id = e.target.id;
-        if (!ANA.a || !['anaFecha', 'anaRival', 'anaResultado', 'anaObs'].includes(id)) return;
+        if (!ANA.a || !['anaFecha', 'anaRival', 'anaResultado', 'anaObs', 'anaVeo'].includes(id)) return;
+        if (id === 'anaVeo') {
+            if (ANA.a.datos.veo_id === e.target.value) return;
+            ANA.a.datos.veo_id = e.target.value; ANA.a.datos.veo_auto = false;
+            if (VEO_ID_OK(e.target.value)) cargarVeoDatos(e.target.value);
+            cambio(); return;
+        }
         if (id === 'anaFecha') {
             ANA.a.fecha = e.target.value;
+            // Si el partido de Veo se eligió solo, se vuelve a buscar para la nueva fecha
+            if (ANA.a.datos.veo_auto) { ANA.a.datos.veo_id = ''; }
             const p = partidoDe(ANA.a.fecha);
             if (p) {
                 ANA.a.rival = p.rival; ANA.a.resultado = p.resultado;
@@ -455,6 +527,7 @@
                 document.getElementById('anaResultado').value = p.resultado;
                 toast('Rival y resultado rellenados');
             }
+            cargarVeo();
         }
         else if (id === 'anaRival') ANA.a.rival = e.target.value;
         else if (id === 'anaResultado') ANA.a.resultado = e.target.value;

@@ -123,6 +123,7 @@
                 <div style="padding:20px 22px;border-right:1px solid #f1f5f9;">
                     <div style="font-size:10px;font-weight:900;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Informe de análisis (IA)</div>
                     <div id="anaDDInforme">${informe}</div>
+                    <div id="anaDDVeo"></div>
                 </div>
                 <div style="padding:20px 22px;background:#fcfcfd;">
                     <div style="font-size:10px;font-weight:900;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Respuestas del entrenador</div>
@@ -134,6 +135,24 @@
             </div>
         </div>`;
         m.dataset.analisis = JSON.stringify(a);
+        pintarVeo(a);
+    }
+
+    // Estadísticas de Veo del partido vinculado (si el entrenador lo eligió o se detectó solo)
+    async function pintarVeo(a) {
+        const cont = document.getElementById('anaDDVeo');
+        const id = ((a.datos || {}).veo_id || '');
+        if (!cont || !/^[0-9a-f-]{36}$/.test(id)) return;
+        const marco = h => `<div style="margin-top:18px;border:1px solid #e2e8f0;border-radius:12px;padding:14px;">
+            <div style="font-size:10px;font-weight:900;color:#16a34a;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">📹 Estadísticas Veo</div>${h}</div>`;
+        cont.innerHTML = marco('<div style="color:#94a3b8;font-size:12px;"><i class="fas fa-spinner fa-spin"></i> Cargando estadísticas de Veo…</div>');
+        try {
+            const d = await (await fetch('/api/veo/partido/' + encodeURIComponent(id))).json();
+            if (d.status !== 'ok') throw new Error(d.message || 'Error');
+            cont.innerHTML = marco(window.anaVeoHtml ? window.anaVeoHtml(d.partido, true) : '');
+        } catch (e) {
+            cont.innerHTML = marco(`<div style="color:#dc2626;font-size:12px;font-weight:800;">No se han podido cargar las estadísticas de Veo.</div>`);
+        }
     }
 
     window.anaDDGenerarIA = async function (id) {

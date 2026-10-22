@@ -9,3 +9,4 @@ static/data/push_schedule.json
 static/data/ejercicios_push_log.json
 
 .asistencias.lock
+.veo_cache/
