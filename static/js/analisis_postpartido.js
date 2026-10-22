@@ -353,7 +353,7 @@
         if (!b) {
             b = document.createElement('div');
             b.id = 'anaBar'; b.className = 'ana-bar';
-            b.innerHTML = '<button class="ana-btn ana-btn-dark" data-act="guardar">💾 Guardar</button><button class="ana-btn ana-btn-red" data-act="ia">✨ Análisis IA</button>';
+            b.innerHTML = '<button class="ana-btn ana-btn-dark" data-act="guardar">💾 Guardar</button><button class="ana-btn ana-btn-red" data-act="ia">✨ Análisis IA</button><button class="ana-btn" style="background:#111827;color:#fff;" data-act="consultor">🧠 Consultor</button>';
             b.addEventListener('click', clic);
             document.body.appendChild(b);
         }
@@ -498,6 +498,11 @@
         else if (act === 'guardar') guardar(false);
         else if (act === 'ia') generarIA();
         else if (act === 'pdf') descargarPdf();
+        else if (act === 'consultor') {
+            const id = ANA.a && ANA.a.datos.veo_id;
+            if (!VEO_ID_OK(id)) { toast('Elige arriba el partido en Veo para usar el Consultor', true); return; }
+            if (typeof abrirConsultorIA === 'function') abrirConsultorIA({ veo_id: id, titulo: `${EQUIPO} vs ${ANA.a.rival || 'rival'} · ${fechaTxt(ANA.a.fecha)}` });
+        }
     }
 
     // Re-pinta solo el paso actual manteniendo el scroll (para tocar opciones sin saltos)

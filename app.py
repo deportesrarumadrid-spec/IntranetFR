@@ -4128,6 +4128,7 @@ from fisioterapia import fisio_bp
 from rrss import rrss_bp
 from analisis_postpartido import analisis_bp
 from veo import veo_bp
+from consultor import consultor_bp
 from loteria import loteria_bp
 app.register_blueprint(financiero_bp)
 app.register_blueprint(loteria_bp)
@@ -4148,6 +4149,7 @@ app.register_blueprint(fisio_bp)
 app.register_blueprint(rrss_bp)
 app.register_blueprint(analisis_bp)
 app.register_blueprint(veo_bp)
+app.register_blueprint(consultor_bp)
 
 # --- SEGUIMIENTO COORD ENTRENAMIENTOS ---
 _SEG_COORD_FILE = os.path.join('static', 'data', 'seguimiento_coord_comentarios.json')

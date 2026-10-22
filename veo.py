@@ -165,6 +165,14 @@ def informe(veo_id):
     return _cache(f'informe_{veo_id}.json', ttl, lambda: _api('GET', f'/analysis/matches/{veo_id}/match-report/'))
 
 
+def eventos(veo_id):
+    """Todas las acciones del partido registradas por Veo (pases con pasador/receptor y coordenadas, saques, duelos...)."""
+    g = next((x for x in grabaciones() if x['id'] == veo_id), None)
+    ttl = TTL_INFORME_FRESCO if (g and _reciente(g)) else None
+    return _cache(f'eventos_{veo_id}.json', ttl, lambda: _api(
+        'GET', f'https://app.veo.co/api/mes/v2/{veo_id}/match-events', params={'aggregatedDuels': 'true'}).get('events', []))
+
+
 def stats_jugadores(veo_id, team_id):
     g = next((x for x in grabaciones() if x['id'] == veo_id), None)
     ttl = TTL_INFORME_FRESCO if (g and _reciente(g)) else None
@@ -452,7 +460,7 @@ def _analytics(veo_id, team_id, periodos):
     para nosotros y el rival, en el partido completo y en cada parte. Coordenadas como en el resto:
     nosotros atacando hacia la derecha (el rival ataca hacia la izquierda)."""
     W, H = 60, 30
-    ev = _api('GET', f'https://app.veo.co/api/mes/v2/{veo_id}/match-events', params={'aggregatedDuels': 'true'}).get('events', [])
+    ev = eventos(veo_id)
     lado_p = {i + 1: (p.get('own_side') or 'left') for i, p in enumerate(periodos)}
     ids_p = sorted(lado_p)
 
