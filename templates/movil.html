@@ -201,13 +201,13 @@
         .toast.err{background:var(--red);}
 
         /* TAB BAR */
-        .tab-bar{position:fixed;bottom:0;left:0;right:0;height:clamp(62px,17.9vw,78px);background:white;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr 1fr;z-index:200;}
+        .tab-bar{position:fixed;bottom:0;left:0;right:0;height:clamp(62px,17.9vw,78px);background:white;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr 1fr .78fr;z-index:200;}
         .tab-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border:none;background:none;cursor:pointer;color:var(--soft);font-family:inherit;position:relative;}
         .tab-btn::after{content:'';position:absolute;top:0;left:20%;right:20%;height:3px;background:var(--red);border-radius:0 0 3px 3px;opacity:0;transition:opacity .15s;}
         .tab-btn.active{color:var(--red);}
         .tab-btn.active::after{opacity:1;}
         .tab-icon{width:clamp(22px,6.7vw,30px);height:clamp(22px,6.7vw,30px);}
-        .tab-label{font-size:clamp(9px,2.8vw,13px);font-weight:700;letter-spacing:.8px;text-transform:uppercase;}
+        .tab-label{font-size:clamp(8.5px,2.6vw,13px);font-weight:700;letter-spacing:.3px;text-transform:uppercase;white-space:nowrap;}
 
         /* LIGHTBOX */
         .lightbox{display:none;position:fixed;inset:0;background:#000;z-index:9000;overflow:hidden;touch-action:none;}
@@ -593,6 +593,13 @@
     <div class="spacer"></div>
 </div>
 
+<!-- ═══ PANEL ANÁLISIS POST PARTIDO ═══ -->
+<div id="panelAna" class="panel">
+    <div class="sl">Análisis post partido</div>
+    <div id="anaApp"></div>
+    <div class="spacer"></div>
+</div>
+
 <!-- TAB BAR -->
 <nav class="tab-bar">
     <button class="tab-btn active" id="tabEnt" onclick="cambiarTab('ent')">
@@ -606,6 +613,10 @@
     <button class="tab-btn" id="tabAsis" onclick="cambiarTab('asis')">
         <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
         <span class="tab-label">Asistencias</span>
+    </button>
+    <button class="tab-btn" id="tabAna" onclick="cambiarTab('ana')">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>
+        <span class="tab-label">Análisis</span>
     </button>
 </nav>
 
@@ -621,6 +632,7 @@ document.addEventListener('click', function(e) {
 });
 
 const EQUIPO = {{ equipo | tojson }};
+const EQUIPO_FORMATO = {{ (equipo_formato or 'F11') | tojson }};
 const EQ_FILE = EQUIPO.replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'SINEQUIPO';
 const EJERCICIOS_SEM = {{ ejercicios_semanales | tojson | safe }};
 const DIAS_ENTRENO = new Set({{ dias_entreno_nums | tojson }});
@@ -678,9 +690,13 @@ function cambiarTab(t) {
     document.getElementById('tabEnt').classList.toggle('active', t==='ent');
     document.getElementById('tabAsis').classList.toggle('active', t==='asis');
     document.getElementById('tabClasif').classList.toggle('active', t==='clasif');
+    document.getElementById('panelAna').classList.toggle('active', t==='ana');
+    document.getElementById('tabAna').classList.toggle('active', t==='ana');
     const sb = document.getElementById('saveBar');
     if (sb) sb.style.display = 'none';
     if (t === 'clasif') clasiCargar();
+    if (t === 'ana' && typeof anaIniciar === 'function') anaIniciar();
+    if (typeof anaAlCambiarTab === 'function') anaAlCambiarTab(t);
 }
 
 // ─── CLASIFICACIÓN ───
@@ -2390,5 +2406,6 @@ document.addEventListener('DOMContentLoaded', () => {
     _agruparBajasMovil();
 });
 </script>
+<script src="/static/js/analisis_postpartido.js?v=1"></script>
 </body>
 </html>

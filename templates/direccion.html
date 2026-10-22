@@ -568,6 +568,7 @@
         <div class="tab-item" onclick="switchTab(event, 'tab-horarios-temp')">HORARIOS TEMP.</div>
         <div class="tab-item" onclick="switchTab(event, 'tab-calendario-2627')">CALENDARIO 26-27</div>
         <div class="tab-item" onclick="switchTab(event, 'tab-obj-semanales')">OBJ FINES DE SEMANA</div>
+        <div class="tab-item" onclick="switchTab(event, 'tab-analisis-pp')">ANÁLISIS POSTPARTIDO</div>
     </div>
 
     <!-- SUBPESTAÑA: COORDINACIÓN -->
@@ -2665,6 +2666,23 @@
     </div>
 
     <!-- TAB OBJ SEMANALES -->
+    <!-- SUBPESTAÑA: ANÁLISIS POSTPARTIDO (lo rellenan los entrenadores desde el móvil) -->
+    <div id="tab-analisis-pp" class="tab-content">
+        <div style="background:white;border-radius:16px;padding:22px;border:1px solid #f1f5f9;box-shadow:0 4px 15px rgba(0,0,0,0.04);">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+                <h3 style="margin:0;font-weight:900;text-transform:uppercase;color:#1e293b;font-size:14px;">
+                    <i class="fas fa-chart-line" style="color:#E31E24;margin-right:6px;"></i> Análisis postpartido
+                </h3>
+                <select id="anaDDEquipo" onchange="anaDDRender()" style="padding:7px 12px;border-radius:8px;border:1px solid #e2e8f0;font-weight:800;font-size:11px;font-family:inherit;">
+                    <option value="">TODOS LOS EQUIPOS</option>
+                </select>
+                <span id="anaDDTotal" style="font-size:11px;font-weight:800;color:#94a3b8;"></span>
+                <button class="btn-fin" style="background:#f1f5f9;color:#475569;padding:6px 12px;font-size:10px;margin-left:auto;" onclick="anaDDCargar(true)"><i class="fas fa-rotate"></i> ACTUALIZAR</button>
+            </div>
+            <div id="anaDDLista"><div style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;">Cargando…</div></div>
+        </div>
+    </div>
+
     <div id="tab-obj-semanales" class="tab-content">
         <div class="card-coord" style="padding:18px 22px;">
             <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
@@ -4746,6 +4764,9 @@
             }
             if (tabId === 'tab-obj-semanales') {
                 objSemanalesCargar();
+            }
+            if (tabId === 'tab-analisis-pp' && typeof anaDDCargar === 'function') {
+                anaDDCargar();
             }
             if (tabId === 'tab-calendario-2627') {
                 if (typeof window.cal2627Init === 'function') window.cal2627Init();
@@ -12363,4 +12384,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<script src="/static/js/analisis_postpartido_dd.js?v=1"></script>
 {% endblock %}

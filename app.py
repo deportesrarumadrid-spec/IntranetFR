@@ -610,6 +610,14 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
+def _formato_equipo_analisis(equipo):
+    try:
+        from analisis_postpartido import formato_equipo
+        return formato_equipo(equipo)
+    except Exception:
+        return 'F11'
+
+
 @app.route('/movil')
 def movil():
     usuario = session.get('usuario')
@@ -714,7 +722,8 @@ def movil():
                            ejercicios_semanales=ejercicios_semanales,
                            fotos_subidas=fotos_subidas,
                            equipos_usuario=session.get('equipos_permitidos', []),
-                           dias_entreno_nums=dias_entreno_nums)
+                           dias_entreno_nums=dias_entreno_nums,
+                           equipo_formato=_formato_equipo_analisis(equipo))
 
 @app.route('/api/fotos_mes')
 def api_fotos_mes():
@@ -4117,6 +4126,7 @@ from videoanalisis import videoanalisis_bp
 from gps import gps_bp
 from fisioterapia import fisio_bp
 from rrss import rrss_bp
+from analisis_postpartido import analisis_bp
 from loteria import loteria_bp
 app.register_blueprint(financiero_bp)
 app.register_blueprint(loteria_bp)
@@ -4135,6 +4145,7 @@ app.register_blueprint(videoanalisis_bp)
 app.register_blueprint(gps_bp)
 app.register_blueprint(fisio_bp)
 app.register_blueprint(rrss_bp)
+app.register_blueprint(analisis_bp)
 
 # --- SEGUIMIENTO COORD ENTRENAMIENTOS ---
 _SEG_COORD_FILE = os.path.join('static', 'data', 'seguimiento_coord_comentarios.json')

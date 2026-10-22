@@ -1,0 +1,536 @@
+{
+  "version": 1,
+  "formato": "F11",
+  "titulo": "Árbol táctico integral de análisis pospartido",
+  "bloques": [
+    {
+      "id": "B1",
+      "titulo": "Fase defensiva",
+      "subtitulo": "Organización y comportamiento sin balón",
+      "secciones": [
+        {
+          "id": "1.1",
+          "titulo": "Bloque alto / Presión de alta intensidad",
+          "preguntas": [
+            {
+              "id": "P1.1.1",
+              "texto": "¿Cuál fue la estructura base de salto y emparejamiento sobre el reinicio/salida del rival?",
+              "tipo": "unica",
+              "opciones": [
+                {"id": "A", "texto": "Presión hombre a hombre (man-oriented) con saltos directos"},
+                {"id": "B", "texto": "Presión zonal / orientada a pasillos (zone-oriented / lane-blocking)"},
+                {"id": "C", "texto": "Presión asimétrica o mixta (fijando un lado/perfil del campo)"}
+              ]
+            },
+            {
+              "id": "P1.1.2",
+              "texto": "Desencadenante (trigger) de la presión: ¿el equipo activó la presión sincronizada en el momento correcto?",
+              "tipo": "unica",
+              "opciones": [
+                {"id": "SI", "texto": "Sí", "sub": {"texto": "Trigger aprovechado", "tipo": "multi", "opciones": [
+                  {"id": "1", "texto": "Pase hacia atrás a central"},
+                  {"id": "2", "texto": "Pase a lateral perfilado hacia banda"},
+                  {"id": "3", "texto": "Control defectuoso rival"},
+                  {"id": "4", "texto": "Balón en el aire"}
+                ]}},
+                {"id": "NO", "texto": "No - Desajuste", "sub": {"texto": "Diagnóstico del fallo", "tipo": "multi", "opciones": [
+                  {"id": "1", "texto": "Falta de sincronía temporal: la 1ª línea saltó pero la 2ª (interiores/pivote) no acortó la distancia vertical (líneas \"estiradas\")"},
+                  {"id": "2", "texto": "Mala gestión del perfil/sombra de pase (cover shadow): el atacante saltó al central/portero sin tapar la línea de pase interior hacia el mediocentro rival"},
+                  {"id": "3", "texto": "Salida del lateral propio a destiempo: no hundió/saltó al carrilero rival, dejando al extremo rival aislado en 1v1 o recibiendo libre"},
+                  {"id": "4", "texto": "Gestión del espacio a la espalda: la línea defensiva no tiró el fuera de juego ni acortó cuando el poseedor no tenía presión (no-pressure situation)"}
+                ]}}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1.2",
+          "titulo": "Bloque medio y gestión de espacios interiores",
+          "preguntas": [
+            {
+              "id": "P1.2.1",
+              "texto": "¿Cómo se gestionó la compacidad del bloque (longitudinal y transversal)?",
+              "tipo": "unica",
+              "opciones": [
+                {"id": "A", "texto": "Compacidad óptima (<25 m entre líneas y <30 m de amplitud): oclusión exitosa de pasillos internos"},
+                {"id": "B", "texto": "Pérdida de compacidad longitudinal (líneas distantes)", "sub": {"texto": "Causa micro-táctica", "tipo": "multi", "opciones": [
+                  {"id": "1", "texto": "La línea de delanteros no replegó cuando el balón superó la primera línea (falta de repliegue de acoso / efecto tenaza)"},
+                  {"id": "2", "texto": "Los pivotes/medios se hundieron prematuramente hacia la línea defensiva dejando libre la zona del \"balcón/intervalo\""}
+                ]}},
+                {"id": "C", "texto": "Pérdida de compacidad transversal (desajuste en basculación)", "sub": {"texto": "Causa micro-táctica", "tipo": "multi", "opciones": [
+                  {"id": "1", "texto": "Basculación tardía ante pases lejanos / cambios de orientación (overload to isolate rival)"},
+                  {"id": "2", "texto": "Espacio excesivo en el intervalo central-lateral (intervalo C-L abierto > 8-10 m)"}
+                ]}}
+              ]
+            },
+            {
+              "id": "P1.2.2",
+              "texto": "Intervención sobre el mediocentro/interiores rivales en zona de creación: ¿se permitió la recepción orientada de los organizadores rivales entre líneas?",
+              "tipo": "unica",
+              "opciones": [
+                {"id": "NO", "texto": "No, neutralizado", "desc": "Excelente trabajo de saltos de acoso del pivote/interior propio o fijación de sombra"},
+                {"id": "SI", "texto": "Sí, filtraron pases a la espalda de la medular", "sub": {"texto": "Fallo específico", "tipo": "multi", "opciones": [
+                  {"id": "1", "texto": "Falta de \"comunicación de permutas\" entre pivote y central para saltar al intermediador"},
+                  {"id": "2", "texto": "Orientación corporal defectuosa de los centrocampistas (perfilados de espaldas a su portería sin visión periférica del rival a su espalda)"}
+                ]}}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1.3",
+          "titulo": "Bloque bajo, defensa de área y protección de caja",
+          "preguntas": [
+            {
+              "id": "P1.3.1",
+              "texto": "Comportamiento y altura de la línea defensiva dentro del área propia",
+              "tipo": "unica",
+              "opciones": [
+                {"id": "A", "texto": "Altura correcta: línea en el borde del área grande, no pegada a puerta"},
+                {"id": "B", "texto": "Hundimiento crítico: línea colapsada dentro del área pequeña", "desc": "Causa: incapacidad de la medular para retener el avance rival; pánico espacial"}
+              ]
+            },
+            {
+              "id": "P1.3.2",
+              "texto": "Interceptación de centros y balones al área: ¿cómo se comportó el bloque en la defensa del centro lateral?",
+              "tipo": "unica",
+              "opciones": [
+                {"id": "OPT", "texto": "Óptimo", "desc": "Correcta orientación del cuerpo (viendo balón y marca), ataque aéreo al primer palo y ocupación del punto de penalti"},
+                {"id": "DEF", "texto": "Deficiente / ocasiones concedidas", "sub": {"texto": "Fallo técnico/táctico", "tipo": "multi", "opciones": [
+                  {"id": "1", "texto": "Pérdida de referencia marca/balón: central/lateral mirando solo el balón sin sentir/tactar al rematador a su espalda"},
+                  {"id": "2", "texto": "Desprotección de la zona 14 (balcón del área): rechaces y balones sueltos cayeron sistemáticamente en pies del rival por falta de mediocentros en vigilancia de rechace"},
+                  {"id": "3", "texto": "Mala gestión del 2º palo: lateral opuesto superado en diagonal a la espalda o mal perfilado para la disputa aérea"}
+                ]}}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B2",
+      "titulo": "Transición defensa → ataque",
+      "subtitulo": "Recuperación / contraataque",
+      "secciones": [
+        {
+          "id": "2.1",
+          "titulo": "Toma de decisión inmediata (0 a 3 segundos posrecuperación)",
+          "preguntas": [
+            {
+              "id": "P2.1.1",
+              "texto": "¿Cuál fue la orientación del primer pase o acción tras recuperar el balón?",
+              "tipo": "unica",
+              "opciones": [
+                {"id": "A", "texto": "Pase vertical de ruptura (buscar la espalda de la defensa rival desorganizada)"},
+                {"id": "B", "texto": "Pase de conexión/seguridad fuera de la zona de densidad de presión (pase de salida)"},
+                {"id": "C", "texto": "Conducción individual de ruptura espacio-temporal"}
+              ]
+            },
+            {
+              "id": "P2.1.2",
+              "texto": "Eficiencia en el contraataque: si se optó por la transición rápida, ¿por qué no fructificó?",
+              "tipo": "multi",
+              "opciones": [
+                {"id": "1", "texto": "Aceleración incorrecta / precipitación: se buscó el pase difícil vertical cuando el rival tenía la línea de vigilancia bien montada"},
+                {"id": "2", "texto": "Falta de escalonamiento de apoyos: el recuperador no encontró un pase de apoyo de cara (tercer hombre) para proyectar al extremo/punta"},
+                {"id": "3", "texto": "Despliegue insuficiente de efectivos: pocos jugadores acompañando por el carril opuesto (falta de llegada de 2ª línea a máxima velocidad)"},
+                {"id": "4", "texto": "Toma de decisión en el último tercio: error en la elección entre disparo, pase al espacio o fijación del central"}
+              ]
+            },
+            {
+              "id": "P2.1.3",
+              "texto": "Consolidación y control del ritmo: si se optó por conservar y salir de la zona de presión rival…",
+              "tipo": "unica",
+              "opciones": [
+                {"id": "EX", "texto": "Éxito", "desc": "Reducción de pulsaciones del partido, posesión efectiva y reinicio de estructura ofensiva"},
+                {"id": "RP", "texto": "Re-pérdida crítica", "desc": "Pérdida de balón en zonas de inicio/creación por lentitud en el \"pase de emergencia\" o retención excesiva del balón"}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B3",
+      "titulo": "Fase ofensiva",
+      "subtitulo": "Organización y construcción con balón",
+      "secciones": [
+        {
+          "id": "3.1",
+          "titulo": "Salida de balón e iniciación (primera línea)",
+          "preguntas": [
+            {
+              "id": "P3.1.1",
+              "texto": "Mecanismo táctico utilizado para superar la primera línea de presión rival",
+              "tipo": "unica",
+              "opciones": [
+                {"id": "A", "texto": "Salida con superioridad numérica (+1 con portero / salida de 3)"},
+                {"id": "B", "texto": "Salida posicional fija (2 centrales + 2 laterales)"},
+                {"id": "C", "texto": "Salida asimétrica (incrustación de pivote o lateral por dentro / inverted fullback)"},
+                {"id": "D", "texto": "Salida directa hacia referencia (juego de espaldas / posición lejana)"}
+              ]
+            },
+            {
+              "id": "P3.1.2",
+              "texto": "Bloqueos o pérdidas en la iniciación: ¿dónde y por qué se atascó o perdió el balón el equipo en campo propio?",
+              "tipo": "multi",
+              "opciones": [
+                {"id": "1", "texto": "Falta de distancia de relación: jugadores demasiado juntos (no generan líneas de pase) o demasiado alejados (pases muy largos y lentos)"},
+                {"id": "2", "texto": "Incapacidad de fijar y atraer: los centrales soltaban el balón muy rápido sin atraer la marca rival para liberar al compañero libre"},
+                {"id": "3", "texto": "Perfiles de recepción deficientes: receptores recibiendo mirando a su propia portería sin posibilidad de girar o batir líneas (cuerpo cerrado)"},
+                {"id": "4", "texto": "Uso ineficiente del portero: no se utilizó al guardameta como hombre libre para cambiar la orientación de la presión"}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "3.2",
+          "titulo": "Canalización, creación y progreso (medular y bandas)",
+          "preguntas": [
+            {
+              "id": "P3.2.1",
+              "texto": "Pasillo central / entre líneas: ¿se logró activar al intermediador / mediapunta / interior en la \"zona de incertidumbre\" rival?",
+              "tipo": "unica",
+              "opciones": [
+                {"id": "SI", "texto": "Sí, con fluidez", "sub": {"texto": "Mecanismo", "tipo": "multi", "opciones": [
+                  {"id": "1", "texto": "Tercer hombre perfecto"},
+                  {"id": "2", "texto": "Pases filtrados rompiendo 2 líneas"},
+                  {"id": "3", "texto": "Movimiento de distracción de la referencia"}
+                ]}},
+                {"id": "NO", "texto": "No, juego esterilizado por fuera", "sub": {"texto": "Causa micro-táctica", "tipo": "multi", "opciones": [
+                  {"id": "1", "texto": "Interiores/medios a la misma altura (alineados horizontalmente, sin escalonamiento)"},
+                  {"id": "2", "texto": "Poca movilidad para ofrecer líneas de pase a espaldas de la medular rival"},
+                  {"id": "3", "texto": "Circulación de balón lenta (pocos toques de aceleración, demasiado tiempo de conducción)"}
+                ]}}
+              ]
+            },
+            {
+              "id": "P3.2.2",
+              "texto": "Pasillos exteriores (bandas): ¿cómo se atacó la estructura lateral del rival?",
+              "tipo": "multi",
+              "opciones": [
+                {"id": "A", "texto": "Situaciones de 2v1 en banda (doblado por fuera o por dentro, overlap / underlap)"},
+                {"id": "B", "texto": "Situaciones de 1v1 aislado (aprovechamiento del extremo especialista)"},
+                {"id": "C", "texto": "Centros al área", "sub": {"texto": "Evaluación del centro", "tipo": "unica", "opciones": [
+                  {"id": "1", "texto": "Centros con ventaja táctica (tensos, a la espalda de la línea, desde zona de remate)"},
+                  {"id": "2", "texto": "Centros a la desesperada (desde campo propio o banda lejana)"}
+                ]}}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "3.3",
+          "titulo": "Finalización, ocupación de área y xG",
+          "preguntas": [
+            {
+              "id": "P3.3.1",
+              "texto": "Calidad de los ataques e intencionalidad en el área rival",
+              "tipo": "unica",
+              "opciones": [
+                {"id": "A", "texto": "Alta producción de juego y ocasiones claras (generación de xG alto)"},
+                {"id": "B", "texto": "Dominio territorial sin peligro real (posesión inofensiva)"},
+                {"id": "C", "texto": "Incapacidad para llegar a zona de disparo"}
+              ]
+            },
+            {
+              "id": "P3.3.2",
+              "texto": "Ocupación del área: ¿qué puntos clave se ocuparon en situaciones de centro o pase atrás? (marca los que sí se ocuparon)",
+              "tipo": "multi",
+              "opciones": [
+                {"id": "1", "texto": "Primer palo: ataque al espacio con desmarque agresivo"},
+                {"id": "2", "texto": "Segundo palo: entrada en carrera del extremo opuesto / lateral"},
+                {"id": "3", "texto": "Punto de penalti: fijación del central por el delantero centro"},
+                {"id": "4", "texto": "Zona de rechace / balcón del área: mediocentro/interior posicionado para 2ª jugada o remate"}
+              ]
+            },
+            {
+              "id": "P3.3.3",
+              "texto": "Fallo detectado en la ocupación del área",
+              "tipo": "multi",
+              "opciones": [
+                {"id": "1", "texto": "Área despoblada"},
+                {"id": "2", "texto": "Todos los atacantes al mismo punto"},
+                {"id": "3", "texto": "Falta de desmarques cruzados"}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B4",
+      "titulo": "Transición ataque → defensa",
+      "subtitulo": "Pérdida de balón",
+      "secciones": [
+        {
+          "id": "4.1",
+          "titulo": "Estructura preventiva mientras se ataca (vigilancias ofensivas)",
+          "preguntas": [
+            {
+              "id": "P4.1.1",
+              "texto": "¿El equipo atacaba estando bien estructurado defensivamente a la espalda del balón?",
+              "tipo": "unica",
+              "opciones": [
+                {"id": "SI", "texto": "Sí", "desc": "Mantenedores (centrales/pivotes) fijando marcas lejanas y controlando las referencias de contraataque del rival"},
+                {"id": "NO", "texto": "No", "desc": "Equipo totalmente descompensado / exceso de efectivos por delante del balón sin equilibrio por detrás"}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "4.2",
+          "titulo": "Comportamiento inmediato tras la pérdida (presión tras pérdida vs repliegue)",
+          "preguntas": [
+            {
+              "id": "P4.1.2",
+              "texto": "Si el modelo es presión tras pérdida (PTP): ¿cómo se ejecutó el acoso en los primeros 3 a 5 segundos?",
+              "tipo": "unica",
+              "opciones": [
+                {"id": "EF", "texto": "Efectiva / recuperación rápida o falta táctica inteligente"},
+                {"id": "IN", "texto": "Inefectiva / superada por el rival", "sub": {"texto": "Causa del fallo", "tipo": "multi", "opciones": [
+                  {"id": "1", "texto": "Acoso individual desorganizado: saltó solo el jugador que perdió el balón sin que los compañeros cercanos cerraran el pase corto adyacente"},
+                  {"id": "2", "texto": "Distancia excesiva de los defensores lejanos: poca agresividad para anticipar antes del primer control del rival"},
+                  {"id": "3", "texto": "Mala decisión de hacer PTP en lugar de recular: se presionó cuando el rival ya tenía orientación corporal favorable y espacio libre"}
+                ]}}
+              ]
+            },
+            {
+              "id": "P4.1.3",
+              "texto": "Si el modelo es repliegue inmediato: ¿se frenó la progresión rival y se recuperó el dibujo defensivo?",
+              "tipo": "unica",
+              "opciones": [
+                {"id": "EX", "texto": "Éxito", "desc": "Temporización del jugador más cercano y repliegue veloz de las unidades"},
+                {"id": "FR", "texto": "Fracaso", "desc": "Falta de temporización (venderse al 1v1) o lentitud en las carreras de retorno de atacantes/extremos"}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B5",
+      "titulo": "Acciones a balón parado (ABP)",
+      "subtitulo": "Análisis de detalle",
+      "secciones": [
+        {
+          "id": "5.1",
+          "titulo": "ABP defensivas (córners / faltas colgadas)",
+          "preguntas": [
+            {
+              "id": "P5.1.1",
+              "texto": "Tipo de organización defensiva",
+              "tipo": "unica",
+              "opciones": [
+                {"id": "Z", "texto": "Marcaje zonal"},
+                {"id": "I", "texto": "Marcaje individual"},
+                {"id": "M", "texto": "Marcaje mixto"}
+              ]
+            },
+            {
+              "id": "P5.1.2",
+              "texto": "Puntos de vulnerabilidad detectados en el partido",
+              "tipo": "multi",
+              "opciones": [
+                {"id": "1", "texto": "Pérdida de duelo individual en zona de remate clave"},
+                {"id": "2", "texto": "Bloqueos rivales no leídos o no superados por los defensores"},
+                {"id": "3", "texto": "Ataque a las \"zonas muertas\" de la zona (p. ej. espacio entre portero y primera línea zonal)"},
+                {"id": "4", "texto": "Desajuste en la recogida del rechace / 2ª jugada tras despeje parcial"}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "5.2",
+          "titulo": "ABP ofensivas (córners / faltas colgadas / saques de banda)",
+          "preguntas": [
+            {
+              "id": "P5.2.1",
+              "texto": "Ejecución y diseño de jugadas ensayadas: marca lo que se hizo BIEN",
+              "tipo": "multi",
+              "opciones": [
+                {"id": "1", "texto": "Calidad de envío/golpeo del lanzador (altura, velocidad y zona objetivo cumplida)"},
+                {"id": "2", "texto": "Sincronía entre la carrera de ataque y el impacto al balón"},
+                {"id": "3", "texto": "Efectividad de las pantallas/bloqueos para liberar al rematador principal"},
+                {"id": "4", "texto": "Estructura de prevención contra el contraataque rival tras saque de esquina propio"}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B6",
+      "titulo": "Micro-duelos y rendimiento por líneas",
+      "subtitulo": "Duelos y rendimiento individual por líneas",
+      "secciones": [
+        {
+          "id": "6.1",
+          "titulo": "Duelos físicos y disputas directas",
+          "preguntas": [
+            {
+              "id": "P6.1.1",
+              "texto": "Dominio en duelos terrestres (1v1 defensivos y ofensivos)",
+              "tipo": "unica",
+              "opciones": [
+                {"id": "A", "texto": "Dominador (>55% de duelos ganados)", "desc": "Capacidad de sostener emparejamientos en igualdad o inferioridad"},
+                {"id": "C", "texto": "Equilibrado (45-55% de duelos ganados)"},
+                {"id": "B", "texto": "Deficiente / vulnerable (<45% de duelos ganados)", "sub": {"texto": "Causa micro-táctica", "tipo": "multi", "opciones": [
+                  {"id": "1", "texto": "Apoyos de cobertura inexistentes tras ser rebasado el jugador en el 1v1"},
+                  {"id": "2", "texto": "Mala entrada / acoso demasiado agresivo sin temporizar (venderse en la entrada)"},
+                  {"id": "3", "texto": "Incapacidad para desbordar o proteger el balón de espaldas en ataque"}
+                ]}}
+              ]
+            },
+            {
+              "id": "P6.1.2",
+              "texto": "Dominio en duelos aéreos (juego directo, ABP y centros)",
+              "tipo": "unica",
+              "opciones": [
+                {"id": "A", "texto": "Control del espacio aéreo en ambas áreas", "desc": "Ganancia sistemática de primeras jugadas"},
+                {"id": "B", "texto": "Pérdida de disputas aéreas críticas", "sub": {"texto": "Causa micro-táctica", "tipo": "multi", "opciones": [
+                  {"id": "1", "texto": "Ataque al balón sin carrera de impulso / salto en estático"},
+                  {"id": "2", "texto": "Mala lectura de la trayectoria del balón por viento o efecto"},
+                  {"id": "3", "texto": "Falta de agresividad/contacto corporal previo al salto (fijar con el cuerpo)"}
+                ]}}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "6.2",
+          "titulo": "Rendimiento específico por líneas de juego",
+          "preguntas": [
+            {
+              "id": "P6.2.1",
+              "texto": "Línea defensiva y portería: ¿cómo respondió en situaciones límite?",
+              "tipo": "unica",
+              "opciones": [
+                {"id": "A", "texto": "Solvencia y lectura alta", "desc": "Corrección de coberturas, basculación sincronizada y liderazgo en área"},
+                {"id": "B", "texto": "Desajustes individuales / de línea", "sub": {"texto": "¿Dónde?", "tipo": "multi", "opciones": [
+                  {"id": "1", "texto": "Centrales: mala gestión de la profundidad / salidas a campo rival dejando espacio a la espalda"},
+                  {"id": "2", "texto": "Laterales/carrileros: sufrimiento en la transición defensiva tras incorporaciones al ataque"},
+                  {"id": "3", "texto": "Portero: dudas en salidas fuera del área / blocaje inseguro o mal despeje de remates"}
+                ]}}
+              ]
+            },
+            {
+              "id": "P6.2.2",
+              "texto": "Línea medular: ¿cuál fue su peso técnico-táctico en la sala de máquinas?",
+              "tipo": "unica",
+              "opciones": [
+                {"id": "A", "texto": "Dominio del ritmo del partido", "desc": "Capacidad para alternar pausa y aceleración, equilibrio y robos en transición"},
+                {"id": "B", "texto": "Pérdida del control de la medular", "sub": {"texto": "¿Dónde?", "tipo": "multi", "opciones": [
+                  {"id": "1", "texto": "Pivote(s): superado por acumulación de rivales a su espalda / pérdidas en zona de inicio"},
+                  {"id": "2", "texto": "Interiores: poca llegada a 2ª línea o falta de retorno defensivo en repliegues"}
+                ]}}
+              ]
+            },
+            {
+              "id": "P6.2.3",
+              "texto": "Línea de ataque: ¿cómo fue su comportamiento y efectividad?",
+              "tipo": "unica",
+              "opciones": [
+                {"id": "A", "texto": "Atacantes determinantes", "desc": "Movilidad constante, fijación de centrales, capacidad de asociación y pegada"},
+                {"id": "B", "texto": "Atacantes aislados / inefectivos", "sub": {"texto": "¿Dónde?", "tipo": "multi", "opciones": [
+                  {"id": "1", "texto": "Delantero centro: incapacidad para sostener balones de espaldas / falta de agresividad en el remate"},
+                  {"id": "2", "texto": "Extremos: poca profundidad / malas decisiones en el último tercio (regate innecesario vs pase claro)"}
+                ]}}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "checklist": {
+    "titulo": "Checklist de fallos por líneas",
+    "lineas": [
+      {
+        "id": "POR", "nombre": "Portero",
+        "ofe": [
+          {"id": "1", "texto": "Juego de pie impreciso en la salida (pases cortos que comprometen a los centrales)"},
+          {"id": "2", "texto": "No se ofrece como hombre libre / apoyo en la salida"},
+          {"id": "3", "texto": "Mala elección entre juego en corto y en largo"},
+          {"id": "4", "texto": "Saques en largo sin destino ni referencia (pérdida directa)"},
+          {"id": "5", "texto": "Lentitud al reanudar el juego tras blocaje (no aprovecha la transición)"}
+        ],
+        "def": [
+          {"id": "1", "texto": "Mala colocación en la portería ante remates (ángulo/altura)"},
+          {"id": "2", "texto": "Dudas en las salidas fuera del área / balones a la espalda de la defensa"},
+          {"id": "3", "texto": "Blocaje inseguro o despejes hacia el centro"},
+          {"id": "4", "texto": "No domina el área pequeña en centros y ABP"},
+          {"id": "5", "texto": "Falta de comunicación / no ordena a la línea defensiva"}
+        ]
+      },
+      {
+        "id": "DEF", "nombre": "Defensa",
+        "ofe": [
+          {"id": "1", "texto": "Pases arriesgados en zona de inicio (pérdidas en campo propio)"},
+          {"id": "2", "texto": "Conducción sin fijar ni atraer al rival"},
+          {"id": "3", "texto": "Laterales sin profundidad / no dan amplitud"},
+          {"id": "4", "texto": "Envíos en largo precipitados sin buscar alternativa"},
+          {"id": "5", "texto": "Malos perfiles de recepción (cuerpo cerrado)"}
+        ],
+        "def": [
+          {"id": "1", "texto": "Línea descoordinada (no tira el fuera de juego / línea rota)"},
+          {"id": "2", "texto": "Intervalo central-lateral abierto"},
+          {"id": "3", "texto": "Pérdida de marca en centros y en el segundo palo"},
+          {"id": "4", "texto": "Salidas a destiempo que dejan espacio a la espalda"},
+          {"id": "5", "texto": "Coberturas tardías tras un 1v1 superado"},
+          {"id": "6", "texto": "Duelos aéreos perdidos"}
+        ]
+      },
+      {
+        "id": "MED", "nombre": "Medios",
+        "ofe": [
+          {"id": "1", "texto": "No se ofrecen entre líneas (falta de movilidad)"},
+          {"id": "2", "texto": "Alineados a la misma altura, sin escalonamiento"},
+          {"id": "3", "texto": "Circulación lenta / exceso de toques"},
+          {"id": "4", "texto": "Pérdidas en zona de inicio o de creación"},
+          {"id": "5", "texto": "Poca llegada de 2ª línea al área"},
+          {"id": "6", "texto": "No cambian la orientación del juego"}
+        ],
+        "def": [
+          {"id": "1", "texto": "No protegen la zona 14 / no recogen rechaces"},
+          {"id": "2", "texto": "Saltos a destiempo o sin cobertura (dejan la espalda libre)"},
+          {"id": "3", "texto": "Hundimiento excesivo hacia la línea defensiva"},
+          {"id": "4", "texto": "Falta de repliegue tras pérdida"},
+          {"id": "5", "texto": "Permiten recepciones orientadas entre líneas"}
+        ]
+      },
+      {
+        "id": "EXT", "nombre": "Extremos",
+        "ofe": [
+          {"id": "1", "texto": "Poca profundidad / no atacan la espalda del lateral"},
+          {"id": "2", "texto": "Malas decisiones en el último tercio (regate innecesario vs pase claro)"},
+          {"id": "3", "texto": "Centros sin intención o a la desesperada"},
+          {"id": "4", "texto": "No atacan el segundo palo"},
+          {"id": "5", "texto": "Falta de desborde en el 1v1"}
+        ],
+        "def": [
+          {"id": "1", "texto": "No repliegan / falta de retorno tras pérdida"},
+          {"id": "2", "texto": "Dejan solo al lateral propio (2v1 en banda)"},
+          {"id": "3", "texto": "Presión sin cerrar la línea de pase interior"},
+          {"id": "4", "texto": "No vigilan al lateral/carrilero rival"}
+        ]
+      },
+      {
+        "id": "DEL", "nombre": "Delanteros",
+        "ofe": [
+          {"id": "1", "texto": "No sostiene balones de espaldas / no descarga"},
+          {"id": "2", "texto": "Falta de desmarques de ruptura"},
+          {"id": "3", "texto": "No fija a los centrales"},
+          {"id": "4", "texto": "Falta de agresividad en el remate / poca pegada"},
+          {"id": "5", "texto": "No ocupa el área (punto de penalti / primer palo)"}
+        ],
+        "def": [
+          {"id": "1", "texto": "No orienta la presión (no tapa la línea de pase interior)"},
+          {"id": "2", "texto": "Presión individual sin el equipo detrás"},
+          {"id": "3", "texto": "Falta de repliegue cuando el balón supera la primera línea"},
+          {"id": "4", "texto": "No acosa al pivote rival"}
+        ]
+      }
+    ]
+  }
+}
