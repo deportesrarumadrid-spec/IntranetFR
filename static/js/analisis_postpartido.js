@@ -67,10 +67,15 @@
     .ana-bar{display:none;position:fixed;left:0;right:0;bottom:clamp(62px,17.9vw,78px);background:rgba(255,255,255,.97);border-top:1px solid var(--border);padding:8px 12px;gap:8px;z-index:190;box-shadow:0 -4px 14px rgba(0,0,0,.06);}
     .ana-bar .ana-btn{flex:1;padding:12px 8px;}
     .ana-informe{padding:14px;font-size:12.5px;line-height:1.5;color:#334155;}
-    .ana-informe h2,.ana-informe h3{font-size:13px;font-weight:900;color:var(--red);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 6px;}
+    .ana-informe{font-size:12.5px;line-height:1.4;}
+    .ana-informe h2,.ana-informe h3{background:#1e293b;color:#fff;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.4px;padding:8px 10px;border-radius:8px;margin:16px 0 8px;}
     .ana-informe h2:first-child,.ana-informe h3:first-child{margin-top:0;}
-    .ana-informe h4{font-size:12.5px;font-weight:900;color:var(--text);margin:10px 0 4px;}
-    .ana-informe ul,.ana-informe ol{padding-left:18px;margin:4px 0 8px;} .ana-informe li{margin-bottom:4px;}
+    .ana-informe h4{font-size:12.5px;font-weight:900;color:var(--red);margin:12px 0 6px;}
+    .ana-informe ul{list-style:none;padding:0;margin:0 0 8px;}
+    .ana-informe ul li{background:#f8fafc;border-left:3px solid var(--red);border-radius:6px;padding:8px 10px;margin-bottom:6px;}
+    .ana-informe ol{list-style:none;counter-reset:foco;padding:0;margin:0 0 8px;}
+    .ana-informe ol li{counter-increment:foco;position:relative;background:#fff1f2;border-radius:8px;padding:8px 10px 8px 38px;margin-bottom:6px;}
+    .ana-informe ol li::before{content:counter(foco);position:absolute;left:10px;top:8px;width:20px;height:20px;border-radius:50%;background:var(--red);color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;}
     .ana-informe p{margin:4px 0 8px;}
     .ana-vacio{padding:26px 16px;text-align:center;color:var(--soft);font-size:12px;font-weight:600;}
     .ana-spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:anaspin .7s linear infinite;}

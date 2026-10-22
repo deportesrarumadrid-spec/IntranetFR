@@ -368,25 +368,40 @@ def _generar_ia(prompt):
         return (genai.GenerativeModel(sugerido.group(0)).generate_content(prompt, request_options={"timeout": 120}).text or '').strip()
 
 
-_PROMPT_IA = """Eres un analista táctico de fútbol con Licencia UEFA Pro y experiencia en análisis de datos de rendimiento.
+_PROMPT_IA = """Eres un analista táctico de fútbol con Licencia UEFA Pro.
 Un entrenador de cantera del club ha rellenado, tras el partido, un árbol de análisis táctico y un checklist de fallos por líneas.
 Analiza SOLO lo que se ha marcado (no inventes datos que no aparezcan) y adapta el nivel a la categoría del equipo (fútbol formativo).
-Escribe en español, con lenguaje técnico de alta competencia pero claro y accionable para el cuerpo técnico.
 
-Devuelve el informe en Markdown con EXACTAMENTE estas secciones:
+El entrenador lo va a leer en el MÓVIL en 1 minuto: escribe PUNTOS CLAVE, nada de párrafos.
+Reglas estrictas:
+- Cada punto: una sola frase de 15 palabras como máximo, con la idea clave en **negrita** al principio.
+- Lenguaje técnico pero directo y accionable. Sin introducciones ni conclusiones.
+- Usa EXACTAMENTE este formato Markdown (mismos títulos, mismos emojis), sin añadir nada más:
 
-## Diagnóstico estructural colectivo
-Causas raíz de lo ocurrido (por qué falló o funcionó la salida, la presión, las transiciones y las vigilancias), relacionando las fases entre sí.
+## 🔎 Diagnóstico colectivo
+- **Causa raíz:** …
+- **Consecuencia:** …
+- **Clave del partido:** …
+(entre 3 y 4 puntos)
 
-## Evaluación línea por línea
-Un apartado breve para Portero, Defensa, Medios y Atacantes (extremos y delanteros).
+## 📊 Línea por línea
+- 🧤 **Portero** 🟢|🟡|🔴 — …
+- 🛡️ **Defensa** 🟢|🟡|🔴 — …
+- ⚙️ **Medios** 🟢|🟡|🔴 — …
+- ⚡ **Atacantes** 🟢|🟡|🔴 — …
+(pon UN solo semáforo por línea: 🟢 bien, 🟡 a mejorar, 🔴 problema; si no hay datos de una línea pon 🟡 y "Sin datos suficientes")
 
-## Focos prioritarios para el microciclo
-Los 3 problemas tácticos más críticos, numerados, de más a menos importante, con una frase sobre por qué.
+## 🎯 3 focos para esta semana
+1. **Título corto** — por qué importa.
+2. **Título corto** — por qué importa.
+3. **Título corto** — por qué importa.
 
-## Propuesta de tareas de entrenamiento
-De 2 a 3 tareas concretas ajustadas a las deficiencias detectadas. Para cada una: nombre, día recomendado del microciclo,
-objetivo, organización (espacio, número de jugadores, duración) y consignas clave del entrenador.
+## 🏋️ Tareas de entrenamiento
+### Tarea 1 · Nombre corto (día del microciclo)
+- **Objetivo:** …
+- **Organización:** espacio, jugadores y duración en una línea.
+- **Consignas:** 2 o 3 consignas separadas por " · ".
+(2 o 3 tareas en total, con el mismo formato)
 
 Datos del partido y respuestas del entrenador:
 """
@@ -428,6 +443,15 @@ def api_ia():
     return jsonify({"status": "ok", "informe": informe, "informe_html": markdown_a_html(informe)})
 
 
+def _html_para_pdf(h):
+    """La fuente del PDF no tiene emojis: los semáforos pasan a texto de color y el resto se quitan."""
+    h = (h.replace('🟢', '<b style="color:#16a34a;">[BIEN]</b>')
+          .replace('🟡', '<b style="color:#d97706;">[A MEJORAR]</b>')
+          .replace('🔴', '<b style="color:#dc2626;">[PROBLEMA]</b>')
+          .replace('—', '-'))
+    return re.sub(r'[\U0001F000-\U0001FAFF☀-➿️‍]', '', h)
+
+
 _CSS_PDF = """
 body { font-family: sans-serif; font-size: 9.5pt; color: #1e293b; }
 h1 { font-size: 16pt; color: #E31E24; margin: 0 0 2pt 0; }
@@ -460,7 +484,7 @@ def pdf(analisis_id):
               f"<div class='cab'>{e(a['fecha'])} · Rival: {e(a['rival'] or '-')} · Resultado: {e(a['resultado'] or '-')}"
               f" · Autor: {e(a['autor'])}</div>"]
     if a.get('informe_ia'):
-        partes += ["<h2>Informe de análisis (IA)</h2>", markdown_a_html(a['informe_ia'])]
+        partes += ["<h2>Informe de análisis (IA)</h2>", _html_para_pdf(markdown_a_html(a['informe_ia']))]
     partes.append("<h2>Respuestas del árbol táctico</h2>")
     if not bloques:
         partes.append("<p>Sin respuestas.</p>")

@@ -2,6 +2,17 @@
  * Lista de análisis de todos los equipos, detalle con respuestas e informe IA, PDF y regenerar informe. */
 (function () {
     let lista = null;
+    const st = document.createElement('style');
+    st.textContent = `
+    .ana-dd-informe h2,.ana-dd-informe h3{background:#1e293b;color:#fff;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.4px;padding:8px 10px;border-radius:8px;margin:16px 0 8px;}
+    .ana-dd-informe h2:first-child,.ana-dd-informe h3:first-child{margin-top:0;}
+    .ana-dd-informe h4{font-size:12.5px;font-weight:900;color:#E31E24;margin:12px 0 6px;}
+    .ana-dd-informe ul{list-style:none;padding:0;margin:0 0 8px;}
+    .ana-dd-informe ul li{background:#f8fafc;border-left:3px solid #E31E24;border-radius:6px;padding:7px 10px;margin-bottom:5px;}
+    .ana-dd-informe ol{list-style:none;counter-reset:foco;padding:0;margin:0 0 8px;}
+    .ana-dd-informe ol li{counter-increment:foco;position:relative;background:#fff1f2;border-radius:8px;padding:7px 10px 7px 38px;margin-bottom:5px;}
+    .ana-dd-informe ol li::before{content:counter(foco);position:absolute;left:10px;top:7px;width:20px;height:20px;border-radius:50%;background:#E31E24;color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;}`;
+    document.head.appendChild(st);
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const fechaTxt = iso => { const p = (iso || '').split('-'); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : (iso || ''); };
 
