@@ -257,14 +257,34 @@ class Partido:
         self.clips[k] = {'id': k, 'titulo': titulo, 'inicio': round(ini, 1), 'fin': round(min(fin, ini + 120), 1), 'min': minuto}
         return k
 
+    def girado(self, parte):
+        """¿En esa parte el vídeo está 'al revés' respecto a nuestra vista normalizada (nosotros atacando a la derecha)?"""
+        g = self.lado.get(parte) == 'right'
+        return (not g) if self.invertido else g
+
+    def vista(self, x, y, parte):
+        """Coordenadas normalizadas → como se ve en el vídeo en esa parte (para que el dibujo cuadre con el clip)."""
+        if x is None or y is None:
+            return x, y
+        return (round(1 - x, 4), round(1 - y, 4)) if self.girado(parte) else (x, y)
+
     def nuevo_dibujo(self, titulo, flechas=None, puntos=None, nota=''):
         k = f"D{len(self.dibujos) + 1}"
-        self.dibujos[k] = {'id': k, 'titulo': titulo, 'flechas': flechas or [], 'puntos': puntos or [], 'nota': nota}
+        partes = sorted({e.get('parte') for e in (flechas or []) + (puntos or []) if e.get('parte')})
+        # hacia dónde atacamos NOSOTROS en el vídeo en cada parte que sale en el dibujo
+        sentidos = {str(pt): ('←' if self.girado(pt) else '→') for pt in partes}
+        self.dibujos[k] = {'id': k, 'titulo': titulo, 'flechas': flechas or [], 'puntos': puntos or [], 'nota': nota, 'sentidos': sentidos}
         return k
 
 
-def _flecha(p, n=None):
-    return {'x1': p['x'], 'y1': p['y'], 'x2': p['rx'] if p['rx'] is not None else p['x'], 'y2': p['ry'] if p['ry'] is not None else p['y'],
+def _flecha(p, n=None, P=None, parte=None):
+    x1, y1 = p['x'], p['y']
+    x2, y2 = (p['rx'], p['ry']) if p['rx'] is not None else (p['x'], p['y'])
+    parte = parte or p['parte']
+    if P:  # en el lado real de esa parte (como en el vídeo)
+        x1, y1 = P.vista(x1, y1, parte)
+        x2, y2 = P.vista(x2, y2, parte)
+    return {'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2, 'parte': parte,
             'de': p['num'], 'a': p['rnum'] or '?', 'de_nombre': p['dorsal'], 'a_nombre': p['receptor'] or '?',
             'ok': p['ok'], 'n': n, 'min': p['min'], 'eq': p['eq']}
 
@@ -318,8 +338,11 @@ def _dibujo_media(P, titulo, ocurrencias, nota=''):
         ps = [o[i] for o in ocurrencias]
         med = lambda k: round(sum(p[k] for p in ps if p[k] is not None) / max(1, sum(1 for p in ps if p[k] is not None)), 4)
         f = _flecha(ps[0], i + 1)
-        f.update({'x1': med('x'), 'y1': med('y'), 'x2': med('rx') if any(p['rx'] is not None for p in ps) else med('x'),
-                  'y2': med('ry') if any(p['ry'] is not None for p in ps) else med('y'), 'min': None})
+        parte = ocurrencias[0][0]['parte']  # se dibuja en el lado de la primera vez que ocurrió
+        x1, y1 = P.vista(med('x'), med('y'), parte)
+        x2, y2 = P.vista(med('rx') if any(p['rx'] is not None for p in ps) else med('x'),
+                         med('ry') if any(p['ry'] is not None for p in ps) else med('y'), parte)
+        f.update({'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2, 'parte': parte, 'min': None})
         flechas.append(f)
     return P.nuevo_dibujo(titulo, flechas=flechas, nota=nota)
 
@@ -368,7 +391,7 @@ def _herramientas(P):
             camino = tuple([p['dorsal'] for p in pases] + ([pases[-1]['receptor']] if pases[-1]['ok'] and pases[-1]['receptor'] else []))
             caminos[camino[:4]].append(pases[:3])
             d = P.nuevo_dibujo(f"{'Nosotros' if eq == 'own' else 'Rival'} · {tipo.replace('_', ' ')} min {e['min']}",
-                               flechas=[_flecha(p, n + 1) for n, p in enumerate(pases[:8])], nota=f"Termina: {fin}")
+                               flechas=[_flecha(p, n + 1, P) for n, p in enumerate(pases[:8])], nota=f"Termina: {fin}")
             lista.append({'minuto': e['min'], 'pases': len(pases), 'camino_dorsales': ' → '.join(camino), 'final': fin, 'dibujo': d, 'clip': clip})
         mas = sorted(caminos.items(), key=lambda kv: (-len(kv[1]), -len(kv[0])))
         repetida = None
@@ -441,7 +464,7 @@ def _herramientas(P):
                'distancia_media_m': round(sum(p['dist'] for p in sel if p['dist']) / max(1, sum(1 for p in sel if p['dist'])), 1) if sel else None}
         if dibujar and sel:
             res['dibujo'] = P.nuevo_dibujo(f"Pases {('nosotros' if eq == 'own' else 'rival')}" + (f" de #{jugador}" if jugador else '') + (f" a #{receptor}" if receptor else ''),
-                                           flechas=[_flecha(p) for p in sel[:30]], nota=f"{len(sel)} pases ({ok} completados)" + (' · se dibujan 30' if len(sel) > 30 else ''))
+                                           flechas=[_flecha(p, P=P) for p in sel[:30]], nota=f"{len(sel)} pases ({ok} completados)" + (' · se dibujan 30' if len(sel) > 30 else ''))
         return res
 
     def buscar_acciones(equipo: str, tipo: str, parte: str = "todo", zona: str = "cualquiera", jugador: str = "") -> dict:
@@ -468,7 +491,8 @@ def _herramientas(P):
                 'por_zona': Counter(P.zona(eq, e['x'], e['y']) for e in sel).most_common(9),
                 'por_parte': Counter(f"{e['parte']}ª parte" for e in sel), 'minutos': [e['min'] for e in sel][:40],
                 'dibujo': P.nuevo_dibujo(f"{t.replace('_', ' ').capitalize()} · {'nosotros' if eq == 'own' else 'rival'}",
-                                         puntos=[{'x': e['x'], 'y': e['y'], 'etiqueta': e['num'], 'nombre': e['dorsal'], 'min': e['min'], 'color': colores.get(t, '#3b82f6'),
+                                         puntos=[{'x': P.vista(e['x'], e['y'], e['parte'])[0], 'y': P.vista(e['x'], e['y'], e['parte'])[1], 'parte': e['parte'],
+                                                  'etiqueta': e['num'], 'nombre': e['dorsal'], 'min': e['min'], 'color': colores.get(t, '#3b82f6'),
                                                   'relleno': bool(e['ok']) if t == 'tiro' else True} for e in sel if e['x'] is not None][:60],
                                          nota=f"{len(sel)} acciones") if sel else None}
 
@@ -632,14 +656,26 @@ def api_transcribir():
     if not datos or len(datos) > 10 * 1024 * 1024:
         return jsonify({"status": "error", "message": "Audio vacío o demasiado largo"}), 400
     mime = (f.mimetype or 'audio/webm').split(';')[0]
+    # Nombres de los jugadores del partido (acta RFFM ya descargada) para que los escriba bien
+    nombres = []
+    equipo, fecha = (request.form.get('equipo') or '').strip(), (request.form.get('fecha') or '').strip()
+    if equipo and fecha:
+        try:
+            al = alineacion_rffm(equipo, fecha) or {}
+            nombres = sorted(set(list((al.get('own') or {}).values()) + list((al.get('opp') or {}).values())))
+        except Exception:
+            pass
+    instrucciones = ("Eres un transcriptor. Transcribe EXACTAMENTE lo que dice el entrenador en este audio (español de España): "
+                     "una pregunta sobre un partido de fútbol. Escribe cada palabra UNA sola vez (no repitas palabras ni frases), "
+                     "corrige solo la puntuación, escribe los dorsales con números y usa vocabulario futbolístico "
+                     "(saque de puerta, salida de balón, carril, presión tras pérdida, último tercio, ABP, córner...). "
+                     "Devuelve SOLO el texto, sin comillas ni comentarios.")
+    if nombres:
+        instrucciones += " Jugadores que pueden mencionarse (escríbelos así): " + ', '.join(nombres) + "."
     try:
         from analisis_postpartido import _modelo_gemini
         _, modelo = _modelo_gemini()
-        r = modelo.generate_content([
-            {'mime_type': mime, 'data': datos},
-            "Transcribe literalmente en español esta pregunta sobre un partido de fútbol. "
-            "Devuelve SOLO el texto transcrito, sin comillas ni comentarios. Escribe los dorsales con números."],
-            request_options={"timeout": 60})
+        r = modelo.generate_content([{'mime_type': mime, 'data': datos}, instrucciones], request_options={"timeout": 60})
         texto = (r.text or '').strip().strip('"')
         return jsonify({"status": "ok", "texto": texto})
     except Exception as e:

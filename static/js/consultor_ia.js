@@ -83,7 +83,9 @@
             dentro += `<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="1.5" fill="${p.relleno === false ? 'none' : (p.color || ROJO)}" stroke="${p.color || ROJO}" stroke-width="0.45"><title>${esc(p.nombre || ('#' + p.etiqueta))} · ${esc(p.min)}'</title></circle>
                 <text x="${X(p.x)}" y="${(+Y(p.y) - 2).toFixed(2)}" text-anchor="middle" font-size="2.2" fill="#e5e7eb" font-family="Arial">${esc(p.etiqueta)}${p.min != null ? ' · ' + esc(p.min) + "'" : ''}</text>`;
         });
-        const ley = fl.length ? `<span style="color:${ROJO};">●</span> Nosotros (→) &nbsp; <span style="color:${AZUL};">●</span> Rival (←) &nbsp; — completado &nbsp; - - fallado` : '';
+        const sent = Object.entries(d.sentidos || {}).map(([pt, f]) => `${pt}ª parte: atacamos ${f}`).join(' · ');
+        const ley = (sent ? `<b style="color:#fff;">Como en el vídeo</b> · ${sent} · ` : '')
+            + `<span style="color:${ROJO};">●</span> Nosotros &nbsp; <span style="color:${AZUL};">●</span> Rival` + (fl.length ? ' &nbsp; — completado &nbsp; - - fallado' : '');
         return `<div class="dib"><div class="t">${esc(d.titulo)}</div>${campo(dentro)}<div class="n">${esc(d.nota || '')}${d.nota && ley ? ' · ' : ''}${ley}</div></div>`;
     }
 
@@ -211,6 +213,7 @@
             if (blob.size < 1500) { micUI(false); return; }
             const fd = new FormData();
             fd.append('audio', blob, 'pregunta.' + (blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm'));
+            fd.append('equipo', C.equipo || ''); fd.append('fecha', C.fecha || '');  // para que conozca los nombres de los jugadores
             try {
                 const d = await (await fetch('/api/consultor/transcribir', { method: 'POST', body: fd })).json();
                 if (d.status !== 'ok') throw new Error(d.message);
@@ -233,7 +236,8 @@
             return;
         }
         if (C.ocupado) return;
-        if (!dictadoNavegador()) grabarAudio();
+        // Siempre se graba y transcribe la IA: el dictado del navegador en Android repite palabras y entiende peor los nombres
+        grabarAudio();
     };
 
     // ───── reproductor de jugadas ─────

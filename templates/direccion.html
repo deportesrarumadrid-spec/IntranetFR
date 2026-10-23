@@ -9897,7 +9897,6 @@
             if (!modoResultados) {
                 var idxP = obsData.indexOf(p);
                 objCelda = '<div style="display:flex;align-items:center;gap:4px;position:relative;z-index:1;">' + objChip
-                    + (p.objetivo_manual ? '<span title="Fijado a mano" style="font-size:8px;font-weight:900;color:#2563eb;flex-shrink:0;">M</span>' : '')
                     + '<button class="no-img" title="Editar objetivo" onclick="obsEditarObjetivo('+idxP+', this)" style="background:none;border:none;cursor:pointer;color:#94a3b8;padding:2px 4px;font-size:10px;flex-shrink:0;"><i class="fas fa-pen"></i></button>'
                     + '</div>';
             }
@@ -12385,6 +12384,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script src="/static/js/analisis_veo.js?v=3"></script>
-<script src="/static/js/consultor_ia.js?v=5"></script>
+<script src="/static/js/consultor_ia.js?v=6"></script>
 <script src="/static/js/analisis_postpartido_dd.js?v=6"></script>
 {% endblock %}
