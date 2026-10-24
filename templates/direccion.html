@@ -9028,6 +9028,7 @@
         var filtro = _ceNorm(window._equipoIndivActual || '');
         return ((_EQUIPOS_CFG && _EQUIPOS_CFG.equipos) || [])
             .filter(function(e) { return (e.nombre || '').trim() && (e.dias || []).length && (!filtro || _ceNorm(e.nombre) === filtro); })
+            .filter(function(e) { return _ceNorm(e.nombre).indexOf('AFICIONADO') !== 0; })  // los aficionados no pasan lista aquí
             .map(function(e) {
                 return { nombre: e.nombre.trim(), dias: (e.dias || []).map(_normDia) };
             });
