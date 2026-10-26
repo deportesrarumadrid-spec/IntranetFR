@@ -11925,7 +11925,7 @@ async function _asistMatrizUno(equipo, cont) {
         }
         const badge = window._isBadge || function(v,t){ return v?'SÍ':'NO'; };
         body.innerHTML = equipos.map(eq => {
-            const g = !eq.tiene_partido;
+            const g = false;  // no se tacha ningún equipo: todos con su formulario y su audio
             const td = g ? _TDG : _TD;
             const enc = encodeURIComponent(eq.nombre);
             return `<tr data-equipo="${enc}" data-finde="${findeIso}">
@@ -12154,7 +12154,7 @@ async function _asistMatrizUno(equipo, cont) {
             return;
         }
         body.innerHTML = equipos.map(eq => {
-            const sinPartido = !eq.tiene_partido;
+            const sinPartido = false;  // no se tacha ningún equipo: todos con su formulario y su audio
             const td  = sinPartido ? _TD_GRAY : _TD;
             const eqEnc = encodeURIComponent(eq.nombre);
             return `<tr data-equipo="${eqEnc}" data-finde="${findeIso}">
