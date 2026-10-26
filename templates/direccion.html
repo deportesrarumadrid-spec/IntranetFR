@@ -11928,15 +11928,17 @@ async function _asistMatrizUno(equipo, cont) {
             const g = false;  // no se tacha ningún equipo: todos con su formulario y su audio
             const td = g ? _TDG : _TD;
             const enc = encodeURIComponent(eq.nombre);
-            return `<tr data-equipo="${enc}" data-finde="${findeIso}">
+            return `<tr data-equipo="${enc}" data-finde="${findeIso}" data-fauto="${eq.formulario_auto ? 1 : 0}">
                 <td style="${td}font-weight:700;color:${g?'#94a3b8':'#1e293b'};">${eq.nombre}</td>
-                <td style="${td}text-align:center;">${g?'—':badge(eq.formulario,'auto')}</td>
+                <td style="${td}text-align:center;white-space:nowrap;">${g?'—':(window._isBadgeForm ? window._isBadgeForm(eq.formulario_manual, eq.formulario_auto) : badge(eq.formulario,'auto'))}</td>
                 <td style="${td}text-align:center;" class="ism-audio-cell">${g?'—':badge(eq.audio,'manual')}</td>
             </tr>`;
         }).join('');
 
         body._ismHandler && body.removeEventListener('click', body._ismHandler);
         body._ismHandler = async function(e) {
+            const fbtn = e.target.closest('.is-form-btn');
+            if (fbtn) { if (window._isClickForm) window._isClickForm(fbtn); return; }
             const btn = e.target.closest('.is-audio-btn');
             if (!btn) return;
             const tr  = btn.closest('tr[data-equipo]');
@@ -12146,6 +12148,38 @@ async function _asistMatrizUno(equipo, cont) {
                `<span class="is-audio-btn" data-v="NO" style="font-weight:800;font-size:9px;padding:2px 7px;border:1px solid;border-left:none;border-radius:0 3px 3px 0;cursor:pointer;${noSty}">NO</span>`;
     }
 
+    // Formulario de partido: SÍ/NO que se puede marcar a mano. Color fuerte = puesto a mano; suave = automático.
+    function _badgeForm(manual, auto) {
+        const v = manual || (auto ? 'SI' : 'NO');
+        const fuerte = !!manual;
+        const on = { SI: fuerte ? 'background:#16a34a;color:white;border-color:#16a34a;' : 'background:#dcfce7;color:#166534;border-color:#86efac;',
+                     NO: fuerte ? 'background:#ef4444;color:white;border-color:#ef4444;' : 'background:#fee2e2;color:#991b1b;border-color:#fca5a5;' };
+        const off = 'background:white;color:#64748b;border-color:#cbd5e1;';
+        const t = fuerte ? 'Marcado a mano' : 'Automático (según el formulario de partido)';
+        return `<span title="${t}" class="is-form-btn" data-v="SI" style="font-weight:800;font-size:9px;padding:2px 7px;border:1px solid;border-radius:3px 0 0 3px;cursor:pointer;${v === 'SI' ? on.SI : off}">SÍ</span>` +
+               `<span title="${t}" class="is-form-btn" data-v="NO" style="font-weight:800;font-size:9px;padding:2px 7px;border:1px solid;border-left:none;border-radius:0 3px 3px 0;cursor:pointer;${v === 'NO' ? on.NO : off}">NO</span>`;
+    }
+    window._isBadgeForm = _badgeForm;
+
+    // Clic en SÍ/NO del formulario (vale para la ventana y para el panel)
+    window._isClickForm = async function(btn) {
+        const tr = btn.closest('tr[data-equipo]');
+        if (!tr) return;
+        const equipo = decodeURIComponent(tr.dataset.equipo);
+        const valor = btn.dataset.v;
+        const cell = btn.closest('td');
+        btn.style.opacity = '0.5';
+        try {
+            const r = await fetch('/api/informes_semanales/formulario', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ finde: tr.dataset.finde, equipo: equipo.toUpperCase(), valor })
+            });
+            const d = await r.json();
+            if (d.status === 'ok' && cell) cell.innerHTML = _badgeForm(valor, tr.dataset.fauto === '1');
+        } catch (ex) {}
+        btn.style.opacity = '1';
+    };
+
     function _renderTabla(equipos, findeIso) {
         const body = document.getElementById('isTablaBody');
         if (!body) return;
@@ -12157,9 +12191,9 @@ async function _asistMatrizUno(equipo, cont) {
             const sinPartido = false;  // no se tacha ningún equipo: todos con su formulario y su audio
             const td  = sinPartido ? _TD_GRAY : _TD;
             const eqEnc = encodeURIComponent(eq.nombre);
-            return `<tr data-equipo="${eqEnc}" data-finde="${findeIso}">
+            return `<tr data-equipo="${eqEnc}" data-finde="${findeIso}" data-fauto="${eq.formulario_auto ? 1 : 0}">
                 <td style="${td}font-weight:700;color:${sinPartido?'#94a3b8':'#1e293b'};">${eq.nombre}</td>
-                <td style="${td}text-align:center;">${sinPartido ? '—' : _badge(eq.formulario, 'auto')}</td>
+                <td style="${td}text-align:center;white-space:nowrap;">${sinPartido ? '—' : _badgeForm(eq.formulario_manual, eq.formulario_auto)}</td>
                 <td style="${td}text-align:center;" class="is-audio-cell">${sinPartido ? '—' : _badge(eq.audio, 'manual')}</td>
             </tr>`;
         }).join('');
@@ -12167,6 +12201,8 @@ async function _asistMatrizUno(equipo, cont) {
         // Delegación de eventos: un solo listener en tbody para todos los botones de audio
         body._isHandler && body.removeEventListener('click', body._isHandler);
         body._isHandler = async function(e) {
+            const fbtn = e.target.closest('.is-form-btn');
+            if (fbtn) { window._isClickForm(fbtn); return; }
             const btn = e.target.closest('.is-audio-btn');
             if (!btn) return;
             const tr = btn.closest('tr[data-equipo]');

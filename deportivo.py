@@ -3198,12 +3198,15 @@ def api_informes_semanales_get():
         pass
 
     audio_data = {}
+    form_manual = {}  # SÍ/NO del formulario puesto a mano (columna D); manda sobre el automático
     try:
         ws_inf = _get_or_crear_sheet_informes_semanales()
         all_inf = ws_inf.get_all_values()
         for row in (all_inf[1:] if all_inf else []):
             if len(row) >= 3 and row[0].strip() == sat_str:
                 audio_data[row[1].strip().upper()] = row[2].strip().upper()
+            if len(row) >= 4 and row[0].strip() == sat_str and row[3].strip().upper() in ('SI', 'NO'):
+                form_manual[row[1].strip().upper()] = row[3].strip().upper()
     except Exception:
         pass
 
@@ -3216,10 +3219,14 @@ def api_informes_semanales_get():
             tiene_partido = any(eq_up == tg or tg.startswith(eq_up) or eq_up.startswith(tg) for tg in teams_with_game)
         else:
             tiene_partido = True
+        auto = _nt_dep(eq) in teams_formulario
+        manual = form_manual.get(eq_up)
         result.append({
             'nombre': eq,
             'tiene_partido': tiene_partido,
-            'formulario': _nt_dep(eq) in teams_formulario,
+            'formulario': (manual == 'SI') if manual else auto,
+            'formulario_auto': auto,
+            'formulario_manual': manual,
             'audio': audio_data.get(eq_up)
         })
 
@@ -3261,6 +3268,38 @@ def api_informes_semanales_audio_post():
         return jsonify({"status": "ok"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@deportivo_bp.route('/api/informes_semanales/formulario', methods=['POST'])
+def api_informes_semanales_formulario_post():
+    """Marca a mano el formulario de partido de un equipo en un finde (SI / NO; vacío = volver al automático)."""
+    if not session.get('usuario'):
+        return jsonify({"status": "error"}), 401
+    data = request.json or {}
+    finde_iso = (data.get('finde') or '').strip()
+    equipo = (data.get('equipo') or '').strip().upper()
+    valor = (data.get('valor') or '').strip().upper()
+    if not finde_iso or not equipo or valor not in ('SI', 'NO', ''):
+        return jsonify({"status": "error", "message": "Datos inválidos"}), 400
+    try:
+        sat_str = datetime.strptime(finde_iso, '%Y-%m-%d').date().strftime('%d/%m/%Y')
+    except Exception:
+        return jsonify({"status": "error", "message": "Fecha inválida"}), 400
+    try:
+        ws = _get_or_crear_sheet_informes_semanales()
+        if ws.col_count < 4:
+            ws.add_cols(4 - ws.col_count)
+        all_data = ws.get_all_values()
+        if all_data and (len(all_data[0]) < 4 or not all_data[0][3].strip()):
+            ws.update_cell(1, 4, 'FORMULARIO')
+        for i, row in enumerate(all_data[1:] if all_data else [], start=2):
+            if len(row) >= 2 and row[0].strip() == sat_str and row[1].strip().upper() == equipo:
+                ws.update_cell(i, 4, valor)
+                return jsonify({"status": "ok"})
+        ws.append_row([sat_str, equipo, '', valor])
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 @deportivo_bp.route('/api/material', methods=['GET', 'POST'])
 def api_material():
