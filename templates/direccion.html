@@ -8852,6 +8852,10 @@
     }
 
     // dow: 1=lunes … 4=jueves → [{nombre, tipo}] en el orden de Configuración General
+    // Equipos que no se siguen en Coordinación (ni entrenamientos ni asistencias, ni resúmenes ni push)
+    var _COORD_EXCLUIDOS = ['ALEVIN B F11'];
+    function _coordExcluido(nombre) { return _COORD_EXCLUIDOS.indexOf(_ceNorm(nombre)) !== -1; }
+
     function _ceEquiposDia(dow) {
         var key = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'][dow];
         var filtro = _ceNorm(window._equipoIndivActual || '');
@@ -8859,7 +8863,7 @@
             .filter(function(e) {
                 return (e.nombre || '').trim() &&
                     (e.dias || []).some(function(d) { return _normDia(d) === key; }) &&
-                    (!filtro || _ceNorm(e.nombre) === filtro);
+                    (!filtro || _ceNorm(e.nombre) === filtro) && !_coordExcluido(e.nombre);
             })
             .map(function(e) { return { nombre: e.nombre.trim(), tipo: e.tipo === 'F7' ? 'F7' : 'F11' }; });
     }
@@ -8920,7 +8924,7 @@
         var DOW = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
         var filtro = _ceNorm(window._equipoIndivActual || '');
         var equipos = ((_EQUIPOS_CFG && _EQUIPOS_CFG.equipos) || [])
-            .filter(function(e) { return (e.nombre || '').trim() && (e.dias || []).length && (!filtro || _ceNorm(e.nombre) === filtro); })
+            .filter(function(e) { return (e.nombre || '').trim() && (e.dias || []).length && (!filtro || _ceNorm(e.nombre) === filtro) && !_coordExcluido(e.nombre); })
             .map(function(e) { return { nombre: e.nombre.trim(), dias: (e.dias || []).map(_normDia) }; })
             .filter(function(e) { return fechas.some(function(d) { return e.dias.indexOf(DOW[d.getDay()]) !== -1; }); });
         var cab = '<div style="text-align:center;font-size:13px;font-weight:900;color:#1e293b;padding:10px;letter-spacing:.5px;">' + titulo + '</div>';
@@ -9077,7 +9081,7 @@
         var filtro = _ceNorm(window._equipoIndivActual || '');
         return ((_EQUIPOS_CFG && _EQUIPOS_CFG.equipos) || [])
             .filter(function(e) { return (e.nombre || '').trim() && (e.dias || []).length && (!filtro || _ceNorm(e.nombre) === filtro); })
-            .filter(function(e) { return _ceNorm(e.nombre).indexOf('AFICIONADO') !== 0; })  // los aficionados no pasan lista aquí
+            .filter(function(e) { return _ceNorm(e.nombre).indexOf('AFICIONADO') !== 0 && !_coordExcluido(e.nombre); })  // los aficionados no pasan lista aquí
             .map(function(e) {
                 return { nombre: e.nombre.trim(), dias: (e.dias || []).map(_normDia) };
             });
