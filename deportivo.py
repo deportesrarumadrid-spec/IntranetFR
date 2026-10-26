@@ -3210,6 +3210,17 @@ def api_informes_semanales_get():
     except Exception:
         pass
 
+    # Orden: agrupados por categoría + formato (en el orden en que aparece cada grupo en la configuración)
+    # y por letra dentro del grupo, para que p. ej. "ALEVIN C F7" vaya detrás de "ALEVIN B F7".
+    def _grupo_letra(n):
+        toks = _nt_dep(n).upper().split()
+        letra = next((t for t in toks if len(t) == 1 and t in 'ABCDEF'), '')
+        return ' '.join(t for t in toks if not (len(t) == 1 and t in 'ABCDEF')), letra
+    primero = {}
+    for i, n in enumerate(equipos):
+        primero.setdefault(_grupo_letra(n)[0], i)
+    equipos = sorted(equipos, key=lambda n: (primero[_grupo_letra(n)[0]], _grupo_letra(n)[1], equipos.index(n)))
+
     result = []
     for eq in equipos:
         eq_up = eq.upper()
