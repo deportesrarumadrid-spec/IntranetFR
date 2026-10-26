@@ -215,8 +215,10 @@ def enviar_push(usuario, mensaje):
         "app_id": app_id,
         "contents": {"es": mensaje, "en": mensaje},
         "headings": {"es": "Intranet Club", "en": "Intranet Club"},
-        "include_external_user_ids": [external_id],
-        "channel_for_external_user_ids": "push",
+        # Destinatario por su external_id (el que pone OneSignal.login() del SDK v16 en el móvil).
+        # El método antiguo "include_external_user_ids" no llegaba a los móviles apuntados con el SDK nuevo.
+        "include_aliases": {"external_id": [external_id]},
+        "target_channel": "push",
         "chrome_web_icon": "https://intranet.clubfuentelarreyna.com/static/escudoapp.png",
         "chrome_web_badge": "https://intranet.clubfuentelarreyna.com/static/badge-escudo.png",
     }
@@ -795,6 +797,23 @@ def api_partidos_mes():
     except Exception as e:
         print(f"Error en api_partidos_mes: {e}")
     return jsonify(dias)
+
+@app.route('/api/push_prueba')
+def api_push_prueba():
+    """Envía un push de prueba al usuario que ha iniciado sesión y dice a cuántos de sus móviles ha llegado."""
+    usuario = session.get('usuario')
+    if not usuario:
+        return jsonify({"status": "error", "message": "Inicia sesión en la intranet primero"}), 401
+    moviles = enviar_push(usuario, "🔔 Push de prueba de la Intranet del Club. Si lo ves, las notificaciones funcionan.")
+    if moviles is None:
+        msg = "Error al contactar con OneSignal (mira el registro del servidor)."
+    elif moviles == 0:
+        msg = ("No ha llegado a ningún móvil: este usuario no tiene las notificaciones activadas. "
+               "Entra en la intranet desde el móvil y acepta las notificaciones (en iPhone, desde la app instalada en la pantalla de inicio).")
+    else:
+        msg = f"Enviado: ha llegado a {moviles} móvil(es) de '{usuario}'."
+    return jsonify({"status": "ok", "usuario": usuario, "moviles": moviles, "mensaje": msg})
+
 
 @app.route('/OneSignalSDKWorker.js')
 def onesignal_worker():
