@@ -11934,6 +11934,7 @@ async function _asistMatrizUno(equipo, cont) {
             </tr>`;
         }).join('');
 
+        if (window._isTotales) window._isTotales(body);
         body._ismHandler && body.removeEventListener('click', body._ismHandler);
         body._ismHandler = async function(e) {
             const fbtn = e.target.closest('.is-form-btn');
@@ -11956,6 +11957,7 @@ async function _asistMatrizUno(equipo, cont) {
                     const cell = tr.querySelector('.ism-audio-cell');
                     const badge2 = window._isBadge || function(){return '';};
                     if (cell) cell.innerHTML = badge2(valor, 'manual');
+                    if (window._isTotales) window._isTotales(body);
                 }
             } catch(ex) {}
             btn.style.opacity = '1';
@@ -12160,6 +12162,26 @@ async function _asistMatrizUno(equipo, cont) {
     }
     window._isBadgeForm = _badgeForm;
 
+    // Fila de TOTAL al final de la tabla: "3 de 23 · 13%" para formulario y audio. Se recalcula tras cada clic.
+    window._isTotales = function(body) {
+        if (!body) return;
+        const vieja = body.querySelector('tr.is-total');
+        if (vieja) vieja.remove();
+        const filas = Array.from(body.querySelectorAll('tr[data-equipo]'));
+        if (!filas.length) return;
+        const activo = b => b && b.style.background && b.style.background !== 'white';
+        const form = filas.filter(tr => activo(tr.querySelector('.is-form-btn[data-v="SI"]'))).length;
+        const audio = filas.filter(tr => activo(tr.querySelector('.is-audio-btn[data-v="SI"]'))).length;
+        const n = filas.length;
+        const celda = (x) => {
+            const pct = Math.round(100 * x / n);
+            const col = pct >= 80 ? '#16a34a' : (pct >= 50 ? '#d97706' : '#dc2626');
+            return `<td style="padding:6px 8px;border:1px solid #cbd5e1;text-align:center;white-space:nowrap;font-size:10.5px;font-weight:800;color:#1e293b;">${x} de ${n}<br><span style="color:${col};font-size:12px;font-weight:900;">${pct}%</span></td>`;
+        };
+        body.insertAdjacentHTML('beforeend', `<tr class="is-total" style="background:#f1f5f9;">
+            <td style="padding:6px 10px;border:1px solid #cbd5e1;font-weight:900;color:#1e293b;font-size:11px;">TOTAL</td>${celda(form)}${celda(audio)}</tr>`);
+    };
+
     // Clic en SÍ/NO del formulario (vale para la ventana y para el panel)
     window._isClickForm = async function(btn) {
         const tr = btn.closest('tr[data-equipo]');
@@ -12174,7 +12196,7 @@ async function _asistMatrizUno(equipo, cont) {
                 body: JSON.stringify({ finde: tr.dataset.finde, equipo: equipo.toUpperCase(), valor })
             });
             const d = await r.json();
-            if (d.status === 'ok' && cell) cell.innerHTML = _badgeForm(valor, tr.dataset.fauto === '1');
+            if (d.status === 'ok' && cell) { cell.innerHTML = _badgeForm(valor, tr.dataset.fauto === '1'); window._isTotales(tr.closest('tbody')); }
         } catch (ex) {}
         btn.style.opacity = '1';
     };
@@ -12198,6 +12220,7 @@ async function _asistMatrizUno(equipo, cont) {
         }).join('');
 
         // Delegación de eventos: un solo listener en tbody para todos los botones de audio
+        if (window._isTotales) window._isTotales(body);
         body._isHandler && body.removeEventListener('click', body._isHandler);
         body._isHandler = async function(e) {
             const fbtn = e.target.closest('.is-form-btn');
@@ -12220,6 +12243,7 @@ async function _asistMatrizUno(equipo, cont) {
                 if (d.status === 'ok') {
                     const cell = tr.querySelector('.is-audio-cell');
                     if (cell) cell.innerHTML = _badge(valor, 'manual');
+                    window._isTotales(body);
                 }
             } catch(ex) { /* silencioso */ }
             btn.style.opacity = '1';
