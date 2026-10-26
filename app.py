@@ -202,7 +202,7 @@ def enviar_push(usuario, mensaje):
 
     if not app_id or not rest_api_key:
         print("ERROR: ONE_SIGNAL_APP_ID o ONE_SIGNAL_REST_API_KEY no configurados en las variables de entorno.")
-        return
+        return None
 
     url = "https://onesignal.com/api/v1/notifications"
     headers = {
@@ -232,10 +232,12 @@ def enviar_push(usuario, mensaje):
         print(f">>> RESULTADO PUSH ({usuario}): {recipients} dispositivos alcanzados. ID: {res_json.get('id')}", flush=True)
         if recipients == 0:
             print(f"⚠️ AVISO: El entrenador '{usuario}' (ID: {external_id}) aún no ha aceptado notificaciones en su móvil.", flush=True)
+        return recipients  # nº de móviles a los que ha llegado (0 = no tiene las notificaciones activadas)
     except requests.exceptions.RequestException as e:
         print(f"Error al enviar Push a {usuario}: {e}", flush=True)
         if hasattr(e, 'response') and e.response is not None:
             print(f"OneSignal API Response: {e.response.text}", flush=True)
+        return None
 
 def parse_dias_entreno(texto):
     """Convierte 'L,X,V' en lista de números [0, 2, 4]"""

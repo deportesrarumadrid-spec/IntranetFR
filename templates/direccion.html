@@ -9392,8 +9392,13 @@
             });
             var d = await r.json();
             if (d.status !== 'ok') throw new Error(d.message || 'Error enviando');
-            res.innerHTML = '<div style="color:#16a34a;font-weight:800;"><i class="fas fa-circle-check"></i> Push enviado a ' + d.enviados.length + ' entrenador(es)' +
-                (d.enviados.length ? ': ' + d.enviados.map(function(e) { return e.entrenador + ' (' + e.equipo + ')'; }).join(', ') : '') + '</div>' +
+            // OneSignal dice a cuántos móviles llegó cada push: 0 = ese entrenador no tiene las notificaciones activadas
+            var llegan = d.enviados.filter(function(e) { return e.moviles > 0; });
+            var noLlegan = d.enviados.filter(function(e) { return !(e.moviles > 0); });
+            res.innerHTML = (llegan.length ? '<div style="color:#16a34a;font-weight:800;"><i class="fas fa-circle-check"></i> Ha llegado a ' + llegan.length + ' entrenador(es): ' +
+                    llegan.map(function(e) { return e.entrenador + ' (' + e.equipo + ', ' + e.moviles + ' móvil' + (e.moviles > 1 ? 'es' : '') + ')'; }).join(', ') + '</div>' : '') +
+                (noLlegan.length ? '<div style="color:#dc2626;font-weight:800;margin-top:4px;"><i class="fas fa-triangle-exclamation"></i> NO ha llegado a ' + noLlegan.length + ' entrenador(es): no tienen activadas las notificaciones de la intranet en el móvil · ' +
+                    noLlegan.map(function(e) { return e.entrenador + ' (' + e.equipo + ')'; }).join(', ') + '</div>' : '') +
                 (d.sin_entrenador.length ? '<div style="color:#b45309;font-weight:800;margin-top:4px;"><i class="fas fa-triangle-exclamation"></i> Sin entrenador en PERFILES: ' + d.sin_entrenador.join(', ') + '</div>' : '');
         } catch (e) {
             res.innerHTML = '<div style="color:#dc2626;font-weight:800;">' + e.message + '</div>';

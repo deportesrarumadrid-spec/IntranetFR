@@ -2473,8 +2473,8 @@ def api_coord_push_entrenos():
                 nombre = str(c.get('USUARIO', '')).strip()
                 msg = (texto_tpl.replace('{nombre}', nombre).replace('{equipo}', equipo)
                        .replace('{dias}', dias_txt).replace('{n}', str(len(fechas))))
-                enviar_push(nombre.lower(), f"{msg}\n\n{link}")
-                enviados.append({"entrenador": nombre, "equipo": equipo})
+                moviles = enviar_push(nombre.lower(), f"{msg}\n\n{link}")
+                enviados.append({"entrenador": nombre, "equipo": equipo, "moviles": moviles})
         return jsonify({"status": "ok", "enviados": enviados, "sin_entrenador": sin_entrenador})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
