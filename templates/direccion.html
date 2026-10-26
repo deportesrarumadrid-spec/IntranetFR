@@ -11962,8 +11962,21 @@ async function _asistMatrizUno(equipo, cont) {
         body.addEventListener('click', body._ismHandler);
     }
 
+    // Sábado del fin de semana de referencia: de lunes a miércoles, el que acaba de pasar (informe de lo jugado);
+    // de jueves a domingo, el de esa semana.
+    function _sabadoReferencia(d) {
+        const s = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const dow = s.getDay();  // 0=dom … 6=sáb
+        if (dow === 0) s.setDate(s.getDate() - 1);
+        else if (dow <= 3) s.setDate(s.getDate() - (dow + 1));
+        else s.setDate(s.getDate() + (6 - dow));
+        return s;
+    }
+
     window.abrirModalInformesSemanales = function() {
-        _mFindeIso = (window._isGetFindeIso && window._isGetFindeIso()) || _toIso(new Date());
+        const otro = window._isGetFindeIso && window._isGetFindeIso();
+        // si viene de otro apartado se respeta, pero solo si es un sábado de verdad
+        _mFindeIso = (otro && new Date(otro + 'T00:00:00').getDay() === 6) ? otro : _toIso(_sabadoReferencia(new Date()));
         const modal = document.getElementById('modalInformesSemanales');
         if (modal) { modal.style.display = 'flex'; _cargar(); }
     };
