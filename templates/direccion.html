@@ -584,9 +584,6 @@
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
                 <button id="btnTareasCoordinacion" onclick="abrirTareasSemanal('coordinacion')" style="padding:0 16px;font-size:12px;height:36px;border-radius:9px;border:2px solid #0f766e;background:#f0fdf4;color:#0f766e;font-weight:900;cursor:pointer;letter-spacing:.3px;display:inline-flex;align-items:center;gap:6px;"><i class="fas fa-list-check"></i> TAREAS SEMANAL — COORDINACIÓN</button>
                 <button id="btnEjerciciosCoordinacion" onclick="abrirModalEjercicios()" style="padding:0 16px;font-size:12px;height:36px;border-radius:9px;border:2px solid #1e293b;background:#1e293b;color:white;font-weight:900;cursor:pointer;letter-spacing:.3px;display:inline-flex;align-items:center;gap:6px;"><i class="fas fa-dumbbell"></i> PROGRAMAR EJERCICIOS SEMANALES</button>
-                <button class="btn-modern-dark" style="background:#E31E24; margin:0;height:36px;padding-top:0;padding-bottom:0;display:inline-flex;align-items:center;gap:6px;" onclick="abrirModalInformesSemanales()">
-                    <i class="fas fa-newspaper"></i> INFORME FINDE WHATSAPP
-                </button>
                 <button class="btn-modern-dark" style="background:#0f766e; margin:0;height:36px;padding-top:0;padding-bottom:0;display:inline-flex;align-items:center;gap:6px;" onclick="abrirModalRevisionObjetivos()">
                     <i class="fas fa-check-double"></i> REVISIÓN OBJETIVOS
                 </button>
@@ -618,6 +615,7 @@
         <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px;">
             <button class="btn-fin coord-tab-btn" style="padding:0 14px;font-size:10px;height:34px;border-radius:8px;background:#f1f5f9;color:#475569;letter-spacing:.3px;" data-pane="entrenamientos" onclick="coordSubTab('entrenamientos')">ENTRENAMIENTOS</button>
             <button class="btn-fin coord-tab-btn" style="padding:0 14px;font-size:10px;height:34px;border-radius:8px;background:#f1f5f9;color:#475569;letter-spacing:.3px;" data-pane="asistencias" onclick="coordSubTab('asistencias')">ASISTENCIAS</button>
+            <button class="btn-fin" style="padding:0 14px;font-size:10px;height:34px;border-radius:8px;background:#f1f5f9;color:#475569;letter-spacing:.3px;display:inline-flex;align-items:center;gap:6px;" onclick="abrirModalInformesSemanales()"><i class="fas fa-newspaper" style="color:#E31E24;"></i> INFORME FINDE WHATSAPP</button>
             <button class="btn-fin coord-tab-btn" style="padding:0 14px;font-size:10px;height:34px;border-radius:8px;background:#f1f5f9;color:#475569;letter-spacing:.3px;" data-pane="formaciones" onclick="coordSubTab('formaciones')">FORMACIONES MICRO</button>
             <button class="btn-fin coord-tab-btn" style="padding:0 14px;font-size:10px;height:34px;border-radius:8px;background:#f1f5f9;color:#475569;letter-spacing:.3px;" data-pane="tecnificaciones" onclick="coordSubTab('tecnificaciones')">TECNIFICACIONES</button>
             <button class="btn-fin coord-tab-btn" style="padding:0 14px;font-size:10px;height:34px;border-radius:8px;background:#f1f5f9;color:#475569;letter-spacing:.3px;" data-pane="finde" onclick="coordSubTab('finde')">SEGUIMIENTO FINDE</button>
