@@ -145,6 +145,14 @@ def _check_formulario_partido(client, nombre_excel, equipo_up, hoy):
         friday, saturday, sunday = _weekend_days(hoy)
         weekend_set = {friday, saturday, sunday}
 
+        # Incluye el formulario de Google de los entrenadores, no solo el de la intranet
+        try:
+            from deportivo import formularios_partido_hechos, _nt_dep
+            eq_n = _nt_dep(equipo_up)
+            return any(f in weekend_set and eq == eq_n for f, eq in formularios_partido_hechos(client, nombre_excel))
+        except Exception as e:
+            print(f"[SCHED] formularios combinados {equipo_up}: {e}", flush=True)
+
         ws = client.open(nombre_excel).worksheet('FORMULARIO_PARTIDOS')
         all_data = ws.get_all_values()
         if not all_data or len(all_data) < 2:

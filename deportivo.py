@@ -2904,7 +2904,52 @@ def _nt_dep(s):
         s = s.replace(a, b)
     return s.strip().lower()
 
-_DIA_MAP_DEP = {'lunes':0,'martes':1,'miercoles':2,'jueves':3,'viernes':4,'sabado':5,'domingo':6}
+# Formulario de Google que rellenan los entrenadores ("ENCUESTA PARTIDO"); sus respuestas
+# están en otra hoja de cálculo compartida (solo lectura) con la cuenta del bot.
+ENCUESTA_PARTIDO_KEY = os.environ.get('ENCUESTA_PARTIDO_SHEET_KEY', '1U5tFIoRRwmEhsqCD2flw7mo2VMkBJCqmgcSDOBrlTMQ')
+
+def _eq_encuesta(nombre):
+    """Nombre de equipo del formulario de Google → nombre normalizado de la intranet ('ALE A F11' → 'alevin a f11')."""
+    n = _nt_dep(nombre or '')
+    n = re.sub(r'^ale\b', 'alevin', n)
+    if n.startswith('alevin fem'):
+        n = 'alevin femenino'
+    return re.sub(r'\s+', ' ', n)
+
+def formularios_partido_hechos(client, nombre_excel):
+    """[(fecha, equipo_normalizado)] de todos los formularios de partido: el de la intranet
+    (FORMULARIO_PARTIDOS de la temporada) y el formulario de Google de los entrenadores."""
+    from datetime import date as _date
+    out = []
+    def _fecha(txt):
+        p = (txt or '').strip().split()[0].split('/') if (txt or '').strip() else []
+        d, m, y = int(p[0]), int(p[1]), int(p[2])
+        return _date(y + 2000 if y < 100 else y, m, d)
+    try:
+        all_form = client.open(nombre_excel).worksheet('FORMULARIO_PARTIDOS').get_all_values()
+        if all_form and len(all_form) > 1:
+            hdrs = [h.strip().upper().replace(' ', '') for h in all_form[0]]
+            idx_eq = next((i for i, h in enumerate(hdrs) if 'EQUIPO' in h), 1)
+            idx_fe = next((i for i, h in enumerate(hdrs) if 'MARCA' in h or 'TEMPORAL' in h), 0)
+            for row in all_form[1:]:
+                try: out.append((_fecha(row[idx_fe]), _nt_dep(row[idx_eq])))
+                except Exception: pass
+    except Exception as e:
+        print(f"[FORMULARIOS] intranet: {e}", flush=True)
+    try:
+        enc = client.open_by_key(ENCUESTA_PARTIDO_KEY).sheet1.get_all_values()
+        if enc and len(enc) > 1:
+            hdrs = [h.strip().upper().replace(' ', '') for h in enc[0]]
+            idx_eq = next((i for i, h in enumerate(hdrs) if 'EQUIPO' in h), 1)
+            idx_fe = next((i for i, h in enumerate(hdrs) if 'MARCA' in h or 'TEMPORAL' in h), 0)
+            for row in enc[1:]:
+                try: out.append((_fecha(row[idx_fe]), _eq_encuesta(row[idx_eq])))
+                except Exception: pass
+    except Exception as e:
+        print(f"[FORMULARIOS] encuesta Google: {e}", flush=True)
+    return out
+
+_DIA_MAP_DEP ={'lunes':0,'martes':1,'miercoles':2,'jueves':3,'viernes':4,'sabado':5,'domingo':6}
 
 
 @deportivo_bp.route('/api/informe_mensual', methods=['GET'])
@@ -2957,22 +3002,11 @@ def api_informe_mensual():
 
     # FORMULARIO_PARTIDOS
     forms_eq = {}
-    try:
-        ws_form = client.open(NOMBRE_EXCEL).worksheet('FORMULARIO_PARTIDOS')
-        all_form = ws_form.get_all_values()
-        if all_form and len(all_form) > 1:
-            hdrs = [h.strip().upper().replace(' ', '') for h in all_form[0]]
-            idx_eq = next((i for i, h in enumerate(hdrs) if 'EQUIPO' in h), 1)
-            idx_fe = next((i for i, h in enumerate(hdrs) if 'MARCA' in h or 'TEMPORAL' in h), 0)
-            for row in all_form[1:]:
-                if len(row) <= max(idx_eq, idx_fe): continue
-                pf = row[idx_fe].strip().split()[0].split('/') if row[idx_fe].strip() else []
-                try:
-                    if len(pf) >= 3 and int(pf[1]) == mes_int and int(pf[2]) == anio:
-                        k = _nt_dep(row[idx_eq])
-                        forms_eq[k] = forms_eq.get(k, 0) + 1
-                except Exception: pass
-    except Exception: pass
+    _vistos = set()  # un formulario por equipo y finde (viernes→jueves), aunque lo envíen dos veces
+    for f, k in formularios_partido_hechos(client, NOMBRE_EXCEL):
+        if f.month == mes_int and f.year == anio and (k, f - timedelta(days=(f.weekday() - 4) % 7)) not in _vistos:
+            _vistos.add((k, f - timedelta(days=(f.weekday() - 4) % 7)))
+            forms_eq[k] = forms_eq.get(k, 0) + 1
 
     # INFORMES_SEMANALES (audios)
     audios_eq = {}
@@ -3172,30 +3206,9 @@ def api_informes_semanales_get():
     except Exception:
         pass
 
-    teams_formulario = set()
-    try:
-        client = current_app.gs_client
-        NOMBRE_EXCEL = current_app.gs_name
-        ws_form = client.open(NOMBRE_EXCEL).worksheet('FORMULARIO_PARTIDOS')
-        all_form = ws_form.get_all_values()
-        if all_form and len(all_form) > 1:
-            hdrs = [h.strip().upper().replace(' ', '') for h in all_form[0]]
-            idx_eq = next((i for i, h in enumerate(hdrs) if 'EQUIPO' in h), 1)
-            idx_fe = next((i for i, h in enumerate(hdrs) if 'MARCA' in h or 'TEMPORAL' in h), 0)
-            for row in all_form[1:]:
-                if len(row) <= max(idx_eq, idx_fe): continue
-                fecha_raw = row[idx_fe].strip()
-                if not fecha_raw: continue
-                pf = fecha_raw.split()[0].split('/')
-                try:
-                    fd, fm, fy = int(pf[0]), int(pf[1]), int(pf[2])
-                    if fy < 100: fy += 2000
-                    if _date(fy, fm, fd) in (sat, sun):
-                        teams_formulario.add(_nt_dep(row[idx_eq]))
-                except Exception:
-                    pass
-    except Exception:
-        pass
+    # Cuenta el formulario rellenado del viernes al jueves siguiente (muchos lo envían el lunes)
+    teams_formulario = {eq for f, eq in formularios_partido_hechos(current_app.gs_client, current_app.gs_name)
+                        if sat - timedelta(days=1) <= f <= sat + timedelta(days=5)}
 
     audio_data = {}
     form_manual = {}  # SÍ/NO del formulario puesto a mano (columna D); manda sobre el automático
