@@ -3218,7 +3218,7 @@ def api_informes_semanales_get():
         for row in (all_inf[1:] if all_inf else []):
             if len(row) >= 3 and row[0].strip() == sat_str:
                 audio_data[row[1].strip().upper()] = row[2].strip().upper()
-            if len(row) >= 4 and row[0].strip() == sat_str and row[3].strip().upper() in ('SI', 'NO'):
+            if len(row) >= 4 and row[0].strip() == sat_str and row[3].strip().upper() in ('SI', 'NO', '-'):
                 form_manual[row[1].strip().upper()] = row[3].strip().upper()
     except Exception:
         pass
@@ -3272,7 +3272,7 @@ def api_informes_semanales_audio_post():
     equipo = (data.get('equipo') or '').strip().upper()
     valor = (data.get('valor') or '').strip().upper()
 
-    if not finde_iso or not equipo or valor not in ('SI', 'NO'):
+    if not finde_iso or not equipo or valor not in ('SI', 'NO', ''):  # '' = desmarcado (gris)
         return jsonify({"status": "error", "message": "Datos inválidos"}), 400
 
     try:
@@ -3295,14 +3295,14 @@ def api_informes_semanales_audio_post():
 
 @deportivo_bp.route('/api/informes_semanales/formulario', methods=['POST'])
 def api_informes_semanales_formulario_post():
-    """Marca a mano el formulario de partido de un equipo en un finde (SI / NO; vacío = volver al automático)."""
+    """Marca a mano el formulario de partido de un equipo en un finde (SI / NO / '-' = desmarcado en gris; vacío = volver al automático)."""
     if not session.get('usuario'):
         return jsonify({"status": "error"}), 401
     data = request.json or {}
     finde_iso = (data.get('finde') or '').strip()
     equipo = (data.get('equipo') or '').strip().upper()
     valor = (data.get('valor') or '').strip().upper()
-    if not finde_iso or not equipo or valor not in ('SI', 'NO', ''):
+    if not finde_iso or not equipo or valor not in ('SI', 'NO', '-', ''):
         return jsonify({"status": "error", "message": "Datos inválidos"}), 400
     try:
         sat_str = datetime.strptime(finde_iso, '%Y-%m-%d').date().strftime('%d/%m/%Y')

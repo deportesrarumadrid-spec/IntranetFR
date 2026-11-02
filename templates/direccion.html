@@ -11950,7 +11950,8 @@ async function _asistMatrizUno(equipo, cont) {
             if (!tr) return;
             const equipo = decodeURIComponent(tr.dataset.equipo);
             const finde  = tr.dataset.finde;
-            const valor  = btn.dataset.v;
+            const yaMarcado = btn.style.background && btn.style.background !== 'white';
+            const valor  = yaMarcado ? '' : btn.dataset.v;  // pulsar el que ya está marcado lo deja en gris
             btn.style.opacity = '0.5';
             try {
                 const r = await fetch('/api/informes_semanales/audio', {
@@ -12156,7 +12157,7 @@ async function _asistMatrizUno(equipo, cont) {
 
     // Formulario de partido: SÍ/NO que se puede marcar a mano (mismos colores que el audio, sea manual o automático).
     function _badgeForm(manual, auto) {
-        const v = manual || (auto ? 'SI' : 'NO');
+        const v = manual === '-' ? '' : (manual || (auto ? 'SI' : 'NO'));
         const fuerte = !!manual;
         const on = { SI: 'background:#16a34a;color:white;border-color:#16a34a;',
                      NO: 'background:#ef4444;color:white;border-color:#ef4444;' };
@@ -12192,7 +12193,8 @@ async function _asistMatrizUno(equipo, cont) {
         const tr = btn.closest('tr[data-equipo]');
         if (!tr) return;
         const equipo = decodeURIComponent(tr.dataset.equipo);
-        const valor = btn.dataset.v;
+        const yaMarcado = btn.style.background && btn.style.background !== 'white';
+        const valor = yaMarcado ? '-' : btn.dataset.v;  // pulsar el que ya está marcado lo deja en gris
         const cell = btn.closest('td');
         btn.style.opacity = '0.5';
         try {
@@ -12236,7 +12238,8 @@ async function _asistMatrizUno(equipo, cont) {
             if (!tr) return;
             const equipo = decodeURIComponent(tr.dataset.equipo);
             const finde  = tr.dataset.finde;
-            const valor  = btn.dataset.v;
+            const yaMarcado = btn.style.background && btn.style.background !== 'white';
+            const valor  = yaMarcado ? '' : btn.dataset.v;  // pulsar el que ya está marcado lo deja en gris
             btn.style.opacity = '0.5';
             try {
                 const r = await fetch('/api/informes_semanales/audio', {
