@@ -2079,7 +2079,8 @@
         <div style="display:grid; grid-template-columns:minmax(280px,400px) 1fr; gap:18px; align-items:start;" class="wa-grid">
             <div class="card-coord" style="padding:16px;">
                 <div style="font-size:12px; font-weight:900; color:#1e293b; margin-bottom:10px;">DESTINATARIOS <span id="waCuenta" style="color:#16a34a;"></span></div>
-                <input id="waBuscar" oninput="waPintarLista()" placeholder="Buscar nombre, equipo o grupo..." style="width:100%; box-sizing:border-box; padding:7px 10px; border:1.5px solid #e2e8f0; border-radius:7px; font-size:12px; font-family:inherit; margin-bottom:8px;">
+                <div id="waTabs" style="display:flex; gap:4px; margin-bottom:8px;"></div>
+                <input id="waBuscar" oninput="waPintarLista()" placeholder="Buscar..." style="width:100%; box-sizing:border-box; padding:7px 10px; border:1.5px solid #e2e8f0; border-radius:7px; font-size:12px; font-family:inherit; margin-bottom:8px;">
                 <div style="display:flex; gap:6px; margin-bottom:8px;">
                     <button onclick="waMarcar(true)" style="flex:1; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; padding:5px; font-size:10px; font-weight:800; cursor:pointer; font-family:inherit;">MARCAR TODOS</button>
                     <button onclick="waMarcar(false)" style="flex:1; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; padding:5px; font-size:10px; font-weight:800; cursor:pointer; font-family:inherit;">QUITAR TODOS</button>
@@ -2147,6 +2148,9 @@
     const _waEsc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const _waNorm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
     const _waEsFR = g => _waNorm(g.nombre).includes('fr entrenadores');
+    let _waTab = 'fr';  // apartado visible: 'fr' | 'grupos' | 'ent'
+    const _WA_TABS = [['fr', '⭐ FR ENTRENADORES'], ['grupos', 'GRUPOS'], ['ent', 'ENTRENADORES']];
+    function waTab(t) { _waTab = t; document.getElementById('waBuscar').value = ''; waPintarLista(); document.getElementById('waLista').scrollTop = 0; }
     const _WA_DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 
     // Estado del WhatsApp del club (WAHA en el servidor): conectado / QR para vincular
@@ -2229,17 +2233,21 @@
         const q = _waNorm(document.getElementById('waBuscar').value);
         const ok = (...t) => !q || t.some(x => _waNorm(x).includes(q));
         const bloques = [];
-        const fr = _waGrupos.filter(_waEsFR).filter(x => ok(x.nombre));
-        if (fr.length) bloques.push({ seccion: 'FR ENTRENADORES', items: fr.map(x => ({ telefono: x.telefono, nombre: x.nombre, grupo: true })) });
-        const otros = _waGrupos.filter(x => !_waEsFR(x)).filter(x => ok(x.nombre));
-        if (otros.length) bloques.push({ seccion: 'GRUPOS', items: otros.map(x => ({ telefono: x.telefono, nombre: x.nombre, grupo: true })) });
-        let primero = true;
+        if (_waTab === 'fr') {
+            const fr = _waGrupos.filter(_waEsFR).filter(x => ok(x.nombre));
+            if (fr.length) bloques.push({ items: fr.map(x => ({ telefono: x.telefono, nombre: x.nombre, grupo: true })) });
+            return bloques;
+        }
+        if (_waTab === 'grupos') {
+            const otros = _waGrupos.filter(x => !_waEsFR(x)).filter(x => ok(x.nombre));
+            if (otros.length) bloques.push({ items: otros.map(x => ({ telefono: x.telefono, nombre: x.nombre, grupo: true })) });
+            return bloques;
+        }
         const conEquipo = (eq, idx) => {
             const items = _waPersonas.filter(p => (eq === null ? !p.equipos.length : p.equipos.includes(eq)) && ok(p.usuario, eq || 'sin equipo'))
                 .map(p => ({ telefono: p.telefono, nombre: p.usuario }));
             if (!items.length) return;
-            bloques.push({ seccion: primero ? 'ENTRENADORES' : null, equipo: eq || 'SIN EQUIPO', eqIdx: idx, items });
-            primero = false;
+            bloques.push({ equipo: eq || 'SIN EQUIPO', eqIdx: idx, items });
         };
         _waEquipos.forEach((eq, i) => conEquipo(eq, i));
         conEquipo(null, null);
@@ -2247,10 +2255,17 @@
     }
 
     function waPintarLista() {
+        const tels = { fr: _waGrupos.filter(_waEsFR).map(x => x.telefono), grupos: _waGrupos.filter(x => !_waEsFR(x)).map(x => x.telefono),
+                       ent: _waPersonas.map(p => p.telefono) };
+        document.getElementById('waTabs').innerHTML = _WA_TABS.map(([k, txt]) => {
+            const n = tels[k].filter(t => _waSel.has(t)).length, on = k === _waTab;
+            return `<button onclick="waTab('${k}')" style="flex:1; padding:7px 4px; border-radius:7px; font-size:10px; font-weight:900; cursor:pointer; font-family:inherit;
+                ${on ? 'background:#1e293b; color:white; border:1.5px solid #1e293b;' : 'background:white; color:#1e293b; border:1.5px solid #cbd5e1;'}">${txt}${n ? ` <span style="background:#16a34a; color:white; border-radius:9px; padding:0 6px;">${n}</span>` : ''}</button>`;
+        }).join('');
+        document.getElementById('waBuscar').placeholder = _waTab === 'ent' ? 'Buscar entrenador o equipo...' : 'Buscar grupo...';
         const bloques = _waVisibles();
         let h = '';
         bloques.forEach(b => {
-            if (b.seccion) h += `<div class="wa-sec">${b.seccion === 'FR ENTRENADORES' ? '<i class="fas fa-star" style="color:#fbbf24;"></i> ' : ''}${b.seccion}</div>`;
             if (b.equipo) {
                 const todos = b.items.every(x => _waSel.has(x.telefono));
                 h += `<label class="wa-eq">${b.eqIdx !== null ? `<input type="checkbox" data-eq="${b.eqIdx}" ${todos ? 'checked' : ''}>` : ''}${_waEsc(b.equipo)}</label>`;
@@ -2262,7 +2277,8 @@
                     <span style="font-weight:800; color:#1e293b; ${x.grupo ? '' : 'text-transform:uppercase;'}">${_waEsc(x.nombre)}</span></label>`;
             });
         });
-        document.getElementById('waLista').innerHTML = h || '<div style="padding:14px; color:#94a3b8; font-size:12px;">Nadie</div>';
+        const vacio = _waTab === 'ent' ? 'Nadie' : (_waGrupos.length ? 'Ningún grupo' : 'No hay grupos (¿está conectado el WhatsApp del club?)');
+        document.getElementById('waLista').innerHTML = h || `<div style="padding:14px; color:#94a3b8; font-size:12px;">${vacio}</div>`;
         document.getElementById('waCuenta').textContent = _waSel.size ? `(${_waSel.size} marcados)` : '';
     }
     function waMarcar(on) {
