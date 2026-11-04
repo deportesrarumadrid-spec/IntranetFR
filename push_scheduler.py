@@ -305,6 +305,12 @@ def _loop(flask_app):
                 procesar_pendientes()
             except Exception as e:
                 print(f"[SCHED] WhatsApp programados: {e}", flush=True)
+            # Aviso diario asistencias/entrenamientos por WhatsApp (21:00 por defecto)
+            try:
+                import aviso_diario
+                aviso_diario.tick(now)
+            except Exception as e:
+                print(f"[SCHED] Aviso diario: {e}", flush=True)
 
         except Exception as e:
             print(f"[SCHED LOOP] {e}", flush=True)

@@ -926,8 +926,36 @@ def upload_foto():
     except Exception as e:
         print(f"Error upload_foto: {e}")
         return jsonify({"status": "error"}), 500
+@app.route('/aviso')
+def aviso_enlace():
+    """Enlace del aviso diario de WhatsApp: /aviso?equipo=X&accion=asis|foto&fecha=YYYY-MM-DD.
+    Pone ese equipo como activo y abre la intranet móvil en ese día. Si no hay sesión, tras entrar vuelve aquí."""
+    if not session.get('usuario'):
+        session['_destino_tras_login'] = request.full_path
+        return redirect(url_for('index'))
+    equipo = (request.args.get('equipo') or '').strip()
+    accion = request.args.get('accion') if request.args.get('accion') in ('asis', 'foto') else 'asis'
+    fecha = (request.args.get('fecha') or '').strip()
+    if not re.match(r'^\d{4}-\d{2}-\d{2}$', fecha):
+        fecha = ''
+    permitidos = [e.upper() for e in session.get('equipos_permitidos', [])]
+    if equipo and (not permitidos or equipo.upper() in permitidos or session.get('usuario', '').lower() == 'admin'):
+        session['equipo_defecto'] = equipo
+    session['_version'] = 'MOVIL'
+    return redirect(url_for('movil', aviso=accion, fecha=fecha) if fecha else url_for('movil'))
+
 @app.route('/login', methods=['POST'])
 def login():
+    """Entrada normal; si se llegó desde un enlace de aviso (WhatsApp), al entrar se vuelve a ese enlace."""
+    resp = _login_impl()
+    destino = session.get('_destino_tras_login')
+    if destino and session.get('usuario') and getattr(resp, 'status_code', 200) in (301, 302, 303):
+        session.pop('_destino_tras_login', None)
+        if destino.startswith('/aviso'):
+            return redirect(destino)
+    return resp
+
+def _login_impl():
     usuario_ingresado = (request.form.get('usuario') or "").strip()
     password_ingresado = (request.form.get('password') or "").strip()
 
@@ -4173,6 +4201,7 @@ from analisis_postpartido import analisis_bp
 from veo import veo_bp
 from consultor import consultor_bp
 from whatsapp_envios import whatsapp_bp
+from aviso_diario import aviso_bp
 from loteria import loteria_bp
 app.register_blueprint(financiero_bp)
 app.register_blueprint(loteria_bp)
@@ -4195,6 +4224,7 @@ app.register_blueprint(analisis_bp)
 app.register_blueprint(veo_bp)
 app.register_blueprint(consultor_bp)
 app.register_blueprint(whatsapp_bp)
+app.register_blueprint(aviso_bp)
 
 # --- SEGUIMIENTO COORD ENTRENAMIENTOS ---
 _SEG_COORD_FILE = os.path.join('static', 'data', 'seguimiento_coord_comentarios.json')

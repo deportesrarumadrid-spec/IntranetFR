@@ -2404,6 +2404,22 @@ document.addEventListener('DOMContentLoaded', () => {
     cargarEstado();
     cargarObjetivos();
     _agruparBajasMovil();
+    // Enlaces del aviso diario de WhatsApp: /movil?aviso=asis|foto&fecha=YYYY-MM-DD → abrir ese día
+    const _qs = new URLSearchParams(location.search), _av = _qs.get('aviso'), _fe = _qs.get('fecha');
+    if (_fe && /^\d{4}-\d{2}-\d{2}$/.test(_fe)) {
+        if (_av === 'asis') {
+            irDia(_fe);
+        } else if (_av === 'foto') {
+            const d = new Date(_fe + 'T00:00:00'), dow = (d.getDay()+6)%7;
+            const lun = new Date(d); lun.setDate(d.getDate()-dow);
+            weekOffset = Math.round((lun - getLunes(0)) / (7*24*60*60*1000));
+            selectedDayIdx = dow; mesCompleto = false;
+            cambiarTab('ent');
+            renderSemana();
+            subirFoto(_fe);
+        }
+        history.replaceState(null, '', '/movil');
+    }
 });
 </script>
 <script src="/static/js/analisis_veo.js?v=3"></script>
