@@ -163,14 +163,21 @@ def enviar_whatsapp(numero, mensaje):
     """
     Integración real con Whapi.cloud.
     Requiere WHAPI_API_TOKEN en las variables de entorno.
+    Devuelve (ok, detalle): ok=True si Whapi lo acepta; detalle explica el fallo.
     """
     api_token = os.environ.get("WHAPI_API_TOKEN")
     if not api_token:
         print("ERROR: WHAPI_API_TOKEN no configurado en las variables de entorno.")
-        return
+        return False, "WhatsApp no configurado en el servidor"
 
     # Limpiamos el número para que solo tenga dígitos (Whapi prefiere formato sin +)
     numero_limpio = "".join(filter(str.isdigit, str(numero)))
+    if numero_limpio.startswith("00"):
+        numero_limpio = numero_limpio[2:]
+    if len(numero_limpio) == 9:  # móvil español sin prefijo
+        numero_limpio = "34" + numero_limpio
+    if len(numero_limpio) < 10:
+        return False, "Teléfono no válido"
     url = "https://gate.whapi.cloud/messages/text"
     payload = {
         "typing_time": 0,
@@ -180,16 +187,25 @@ def enviar_whatsapp(numero, mensaje):
     headers = {
         "accept": "application/json",
         "content-type": "application/json",
-        "authorization": f"Bearer {api_token}"
+        "authorization": f"Bearer {api_token}",
+        "user-agent": "IntranetClubFuentelarreyna/1.0"  # sin esto Cloudflare a veces bloquea (error 1010)
     }
     try:
-        response = requests.post(url, json=payload, headers=headers)
+        response = requests.post(url, json=payload, headers=headers, timeout=20)
         response.raise_for_status()  # Raise an exception for HTTP errors
         print(f"WHATSAPP ENVIADO a {numero}. Respuesta: {response.json()}")
+        return True, ""
     except requests.exceptions.RequestException as e:
         print(f"Error al enviar WhatsApp a {numero}: {e}")
+        detalle = str(e)
         if hasattr(e, 'response') and e.response is not None:
             print(f"Whapi API Response: {e.response.text}")
+            try:
+                err = e.response.json().get("error")
+                detalle = (err.get("message") if isinstance(err, dict) else err) or e.response.text
+            except Exception:
+                detalle = e.response.text
+        return False, str(detalle)[:200]
 
 def enviar_push(usuario, mensaje):
     """
@@ -4150,6 +4166,7 @@ from rrss import rrss_bp
 from analisis_postpartido import analisis_bp
 from veo import veo_bp
 from consultor import consultor_bp
+from whatsapp_envios import whatsapp_bp
 from loteria import loteria_bp
 app.register_blueprint(financiero_bp)
 app.register_blueprint(loteria_bp)
@@ -4171,6 +4188,7 @@ app.register_blueprint(rrss_bp)
 app.register_blueprint(analisis_bp)
 app.register_blueprint(veo_bp)
 app.register_blueprint(consultor_bp)
+app.register_blueprint(whatsapp_bp)
 
 # --- SEGUIMIENTO COORD ENTRENAMIENTOS ---
 _SEG_COORD_FILE = os.path.join('static', 'data', 'seguimiento_coord_comentarios.json')

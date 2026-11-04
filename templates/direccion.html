@@ -885,6 +885,7 @@
             <div class="tab-item" onclick="switchSubTab(event, 'subtab-informes'); setTimeout(rbCargar,50); setTimeout(isCargar,80); setTimeout(imCargar,110);" style="font-size: 11px;">INFORMES</div>
             <div class="tab-item" onclick="switchSubTab(event, 'subtab-loteria'); lotInit();" style="font-size: 11px;">LOTERÍA</div>
             <div class="tab-item" onclick="switchSubTab(event, 'subtab-material'); matCargar();" style="font-size: 11px;">MATERIAL</div>
+            <div class="tab-item" onclick="switchSubTab(event, 'subtab-whatsapp'); waCargar();" style="font-size: 11px;"><i class="fab fa-whatsapp" style="color:#16a34a;"></i> WHATSAPP</div>
         </div>
         
         <div id="subtab-gestion-estrategica" class="subtab-content active" style="display: grid; grid-template-columns: 1fr 350px; gap: 20px;">
@@ -2070,6 +2071,147 @@
             a.click();
         };
     })();
+    </script>
+
+    <!-- SUBTAB: WHATSAPP -->
+    <div id="subtab-whatsapp" class="subtab-content" style="display:none;">
+        <div style="display:grid; grid-template-columns:minmax(260px,380px) 1fr; gap:18px; align-items:start;" class="wa-grid">
+            <div class="card-coord" style="padding:16px;">
+                <div style="font-size:12px; font-weight:900; color:#1e293b; margin-bottom:10px;">DESTINATARIOS <span id="waCuenta" style="color:#16a34a;"></span></div>
+                <input id="waBuscar" oninput="waPintarLista()" placeholder="Buscar nombre o equipo..." style="width:100%; box-sizing:border-box; padding:7px 10px; border:1.5px solid #e2e8f0; border-radius:7px; font-size:12px; font-family:inherit; margin-bottom:8px;">
+                <div style="display:flex; gap:6px; margin-bottom:8px;">
+                    <button onclick="waMarcar(true)" style="flex:1; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; padding:5px; font-size:10px; font-weight:800; cursor:pointer; font-family:inherit;">MARCAR TODOS</button>
+                    <button onclick="waMarcar(false)" style="flex:1; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; padding:5px; font-size:10px; font-weight:800; cursor:pointer; font-family:inherit;">QUITAR TODOS</button>
+                </div>
+                <div id="waLista" style="max-height:420px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px;"></div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:18px;">
+                <div class="card-coord" style="padding:16px;">
+                    <div style="font-size:12px; font-weight:900; color:#1e293b; margin-bottom:10px;">MENSAJE</div>
+                    <textarea id="waTexto" rows="7" placeholder="Escribe aquí el WhatsApp..." style="width:100%; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-family:inherit; resize:vertical;"></textarea>
+                    <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin:12px 0;">
+                        <label style="font-size:12px; font-weight:700; cursor:pointer;"><input type="radio" name="waCuando" value="ahora" checked onchange="waModo()"> Enviar ahora</label>
+                        <label style="font-size:12px; font-weight:700; cursor:pointer;"><input type="radio" name="waCuando" value="prog" onchange="waModo()"> Programar día y hora</label>
+                        <span id="waProgCampos" style="display:none; gap:6px; align-items:center;">
+                            <input type="date" id="waFecha" style="padding:5px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:12px;">
+                            <input type="time" id="waHora" value="10:00" style="padding:5px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:12px;">
+                        </span>
+                    </div>
+                    <button id="waBtn" onclick="waEnviar()" style="background:#16a34a; color:white; border:none; border-radius:8px; padding:10px 22px; font-size:12px; font-weight:900; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> ENVIAR WHATSAPP</button>
+                    <div id="waResultado" style="margin-top:12px; font-size:12px;"></div>
+                    <div style="margin-top:10px; font-size:10.5px; color:#94a3b8;">Plan gratis de WhatsApp: máximo 5 personas distintas y 150 mensajes al día.</div>
+                </div>
+                <div class="card-coord" style="padding:16px;">
+                    <div style="font-size:12px; font-weight:900; color:#1e293b; margin-bottom:10px;">PROGRAMADOS</div>
+                    <div id="waProgramados" style="font-size:12px; color:#64748b;">—</div>
+                </div>
+            </div>
+        </div>
+        <style>@media (max-width: 800px) { .wa-grid { grid-template-columns: 1fr !important; } }</style>
+    </div>
+
+    <script>
+    // ===================== WHATSAPP =====================
+    let _waDest = [];
+    const _waSel = new Set();
+    const _waEsc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    async function waCargar() {
+        waCargarProgramados();
+        if (_waDest.length) return;
+        document.getElementById('waLista').innerHTML = '<div style="padding:14px; color:#94a3b8; font-size:12px;">Cargando...</div>';
+        try {
+            const d = await (await fetch('/api/whatsapp/destinatarios')).json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            _waDest = d.destinatarios;
+            waPintarLista();
+        } catch (e) {
+            document.getElementById('waLista').innerHTML = `<div style="padding:14px; color:#ef4444; font-size:12px;">${_waEsc(e.message || 'Error')}</div>`;
+        }
+    }
+
+    function _waVisible(x) {
+        const q = (document.getElementById('waBuscar').value || '').toLowerCase();
+        return !q || (x.usuario + ' ' + x.equipo).toLowerCase().includes(q);
+    }
+    function _waCuenta() { document.getElementById('waCuenta').textContent = _waSel.size ? `(${_waSel.size} marcados)` : ''; }
+
+    function waPintarLista() {
+        document.getElementById('waLista').innerHTML = _waDest.map((x, i) => !_waVisible(x) ? '' :
+            `<label style="display:flex; gap:8px; align-items:center; padding:6px 10px; border-bottom:1px solid #f1f5f9; cursor:pointer; font-size:12px;">
+                <input type="checkbox" ${_waSel.has(i) ? 'checked' : ''} onchange="waToggle(${i}, this.checked)">
+                <span style="font-weight:800; color:#1e293b; text-transform:uppercase;">${_waEsc(x.usuario)}</span>
+                <span style="margin-left:auto; font-size:10px; color:#64748b; font-weight:700;">${_waEsc(x.equipo)}</span></label>`
+        ).join('') || '<div style="padding:14px; color:#94a3b8; font-size:12px;">Nadie</div>';
+        _waCuenta();
+    }
+    function waToggle(i, on) { on ? _waSel.add(i) : _waSel.delete(i); _waCuenta(); }
+    function waMarcar(on) {
+        _waDest.forEach((x, i) => { if (_waVisible(x)) { on ? _waSel.add(i) : _waSel.delete(i); } });
+        waPintarLista();
+    }
+    function waModo() {
+        const prog = document.querySelector('input[name="waCuando"]:checked').value === 'prog';
+        document.getElementById('waProgCampos').style.display = prog ? 'inline-flex' : 'none';
+        document.getElementById('waBtn').innerHTML = prog ? '<i class="far fa-clock"></i> PROGRAMAR WHATSAPP' : '<i class="fab fa-whatsapp"></i> ENVIAR WHATSAPP';
+    }
+
+    async function waEnviar() {
+        const texto = document.getElementById('waTexto').value.trim();
+        const dest = [..._waSel].map(i => _waDest[i]);
+        const out = document.getElementById('waResultado');
+        const err = m => { out.innerHTML = `<span style="color:#ef4444; font-weight:700;">${m}</span>`; };
+        if (!dest.length) return err('Marca al menos un destinatario.');
+        if (!texto) return err('Escribe el mensaje.');
+        let cuando = '';
+        if (document.querySelector('input[name="waCuando"]:checked').value === 'prog') {
+            const f = document.getElementById('waFecha').value, h = document.getElementById('waHora').value;
+            if (!f || !h) return err('Elige el día y la hora.');
+            cuando = `${f}T${h}`;
+        }
+        const btn = document.getElementById('waBtn');
+        btn.disabled = true; btn.style.opacity = '0.6';
+        out.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> ' + (cuando ? 'Programando...' : 'Enviando...') + '</span>';
+        try {
+            const d = await (await fetch('/api/whatsapp/enviar', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ texto, cuando, destinatarios: dest.map(x => ({ usuario: x.usuario, telefono: x.telefono })) }) })).json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            if (cuando) {
+                const [y, m, dd] = cuando.slice(0, 10).split('-');
+                out.innerHTML = `<span style="color:#16a34a; font-weight:800;">✓ Programado para el ${dd}/${m}/${y} a las ${cuando.slice(11)} (${dest.length} destinatarios).</span>`;
+                waCargarProgramados();
+            } else {
+                const ok = d.resultados.filter(r => r.ok), mal = d.resultados.filter(r => !r.ok);
+                out.innerHTML = `<div style="color:#16a34a; font-weight:800;">✓ Enviado a ${ok.length} de ${d.resultados.length}</div>` +
+                    (mal.length ? `<div style="color:#ef4444; font-weight:700; margin-top:4px;">No ha llegado a: ${mal.map(r => _waEsc(r.usuario.toUpperCase()) + ' <span style="font-weight:500;">(' + _waEsc(r.detalle) + ')</span>').join(', ')}</div>` : '');
+            }
+        } catch (e) {
+            err(_waEsc(e.message || 'Error al enviar'));
+        }
+        btn.disabled = false; btn.style.opacity = '1';
+    }
+
+    async function waCargarProgramados() {
+        const box = document.getElementById('waProgramados');
+        try {
+            const d = await (await fetch('/api/whatsapp/programados')).json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            if (!d.programados.length) { box.innerHTML = 'No hay ningún WhatsApp programado.'; return; }
+            box.innerHTML = d.programados.map(p => {
+                const [y, m, dd] = p.cuando.slice(0, 10).split('-');
+                return `<div style="display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px solid #f1f5f9;">
+                    <div style="min-width:118px; font-weight:900; color:#1e293b;">${dd}/${m}/${y} ${p.cuando.slice(11)}</div>
+                    <div style="flex:1;"><div style="color:#1e293b; white-space:pre-wrap;">${_waEsc(p.texto)}</div>
+                        <div style="font-size:10.5px; color:#64748b; margin-top:3px;">Para: ${p.destinatarios.map(x => _waEsc(x.toUpperCase())).join(', ')}</div></div>
+                    <button onclick="waBorrarProg('${p.id}')" title="Cancelar" style="background:#fee2e2; color:#b91c1c; border:none; border-radius:6px; padding:4px 9px; cursor:pointer;"><i class="fas fa-trash"></i></button></div>`;
+            }).join('');
+        } catch (e) { box.innerHTML = '<span style="color:#ef4444;">Error cargando programados</span>'; }
+    }
+    async function waBorrarProg(id) {
+        if (!confirm('¿Cancelar este WhatsApp programado?')) return;
+        await fetch('/api/whatsapp/programados/' + encodeURIComponent(id), { method: 'DELETE' });
+        waCargarProgramados();
+    }
     </script>
 
     <!-- SUBTAB: MATERIAL -->

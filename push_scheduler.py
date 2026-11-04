@@ -299,6 +299,13 @@ def _loop(flask_app):
                     print(f"[SCHED] Lanzando: {s.get('nombre', s.get('id','?'))}", flush=True)
                     _run_schedule(s, flask_app)
 
+            # WhatsApp programados desde D. Deportiva → WHATSAPP
+            try:
+                from whatsapp_envios import procesar_pendientes
+                procesar_pendientes()
+            except Exception as e:
+                print(f"[SCHED] WhatsApp programados: {e}", flush=True)
+
         except Exception as e:
             print(f"[SCHED LOOP] {e}", flush=True)
 
