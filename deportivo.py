@@ -3234,6 +3234,12 @@ def api_informes_semanales_get():
         primero.setdefault(_grupo_letra(n)[0], i)
     equipos = sorted(equipos, key=lambda n: (primero[_grupo_letra(n)[0]], _grupo_letra(n)[1], equipos.index(n)))
 
+    try:  # MEJORES / PEORES respondidos por WhatsApp al aviso del formulario de partido
+        from formulario_finde import mejores_peores, _norm as _ff_norm
+        valoraciones = mejores_peores(sat)
+    except Exception:
+        valoraciones, _ff_norm = {}, (lambda x: x)
+
     result = []
     for eq in equipos:
         eq_up = eq.upper()
@@ -3251,7 +3257,9 @@ def api_informes_semanales_get():
             'formulario': (manual == 'SI') if manual else auto,
             'formulario_auto': auto,
             'formulario_manual': manual,
-            'audio': audio_data.get(eq_up)
+            'audio': audio_data.get(eq_up),
+            'mejores': (valoraciones.get(_ff_norm(eq)) or {}).get('mejores', []),
+            'peores': (valoraciones.get(_ff_norm(eq)) or {}).get('peores', []),
         })
 
     return jsonify({

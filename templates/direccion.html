@@ -1338,6 +1338,8 @@
                         <th style="padding:6px 12px;text-align:center;border:1px solid #cbd5e1;color:#475569;font-weight:800;font-size:9px;text-transform:uppercase;width:90px;line-height:1.3;">
                             Audio<br>Enviado
                         </th>
+                        <th style="padding:6px 12px;text-align:center;border:1px solid #cbd5e1;color:#16a34a;font-weight:800;font-size:9px;text-transform:uppercase;min-width:110px;">Mejores</th>
+                        <th style="padding:6px 12px;text-align:center;border:1px solid #cbd5e1;color:#dc2626;font-weight:800;font-size:9px;text-transform:uppercase;min-width:110px;">Peores</th>
                     </tr>
                 </thead>
                 <tbody id="isTablaBody">
@@ -2147,6 +2149,23 @@
                     </div>
                     <div id="avVistaBox" style="margin-top:10px; font-size:12px;"></div>
                 </div>
+                <div class="card-coord" style="padding:16px;">
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+                        <div style="font-size:12px; font-weight:900; color:#1e293b;">AVISO FORMULARIO DE PARTIDO (FINDE)</div>
+                        <label style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800; cursor:pointer;">
+                            <input type="checkbox" id="ffActivo" onchange="ffGuardar()"> <span id="ffActivoTxt">—</span></label>
+                    </div>
+                    <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
+                        A los entrenadores de los equipos con partido (sin Aficionados ni Debutantes): 2 h después del inicio del partido
+                        (17:00 si no se sabe la hora) y, si no lo ha rellenado, otro al día siguiente a las 17:00. Pueden responder
+                        <b>MEJORES: … / PEORES: …</b> y sale en el INFORME FINDE WHATSAPP.</div>
+                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                        <button onclick="ffVista()" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-eye"></i> VER EL FINDE</button>
+                        <select id="ffPruebaPersona" style="padding:6px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:11px; max-width:220px;"></select>
+                        <button onclick="ffPrueba()" style="background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> ENVIAR PRUEBA</button>
+                    </div>
+                    <div id="ffVistaBox" style="margin-top:10px; font-size:12px;"></div>
+                </div>
             </div>
         </div>
         <style>
@@ -2214,6 +2233,7 @@
         waCargarProgramados();
         waCargarPlantillas();
         avCargar();
+        ffCargar();
         if (_waPersonas.length || _waGrupos.length) return;
         const lista = document.getElementById('waLista');
         lista.innerHTML = '<div style="padding:14px; color:#94a3b8; font-size:12px;">Cargando...</div>';
@@ -2242,6 +2262,7 @@
             _waPersonas.forEach(p => { _waNombre[p.telefono] = p.usuario; });
             _waGrupos.forEach(x => { _waNombre[x.telefono] = x.nombre; });
             waPintarLista();
+            ffCargar();
         } catch (e) {
             lista.innerHTML = `<div style="padding:14px; color:#ef4444; font-size:12px;">${_waEsc(e.message || 'Error')}</div>`;
         }
@@ -2421,6 +2442,72 @@
             h += d.mensajes.map(m => `<details style="border:1px solid #e2e8f0; border-radius:7px; padding:6px 10px; margin-bottom:5px;">
                 <summary style="cursor:pointer; font-weight:800; text-transform:uppercase;">${_waEsc(m.usuario)}</summary>
                 <div style="white-space:pre-wrap; font-size:11.5px; color:#1e293b; margin-top:6px; word-break:break-word;">${_waEsc(m.texto)}</div></details>`).join('');
+            box.innerHTML = h;
+        } catch (e) { box.innerHTML = `<span style="color:#ef4444; font-weight:700;">${_waEsc(e.message || 'Error')}</span>`; }
+    }
+
+    // ---- Aviso formulario de partido (finde) ----
+    async function ffCargar() {
+        try {
+            const d = await (await fetch('/api/whatsapp/formulario_finde')).json();
+            if (d.status === 'ok') _ffPintar(d.activo);
+        } catch (e) {}
+        const sel = document.getElementById('ffPruebaPersona');
+        if (sel && !sel.options.length && _waPersonas.length) {
+            sel.innerHTML = _waPersonas.map((p, i) => `<option value="${i}" ${/pozon/i.test(p.usuario) ? 'selected' : ''}>${_waEsc(p.usuario.toUpperCase())}</option>`).join('');
+        }
+    }
+    function _ffPintar(activo) {
+        document.getElementById('ffActivo').checked = !!activo;
+        document.getElementById('ffActivoTxt').innerHTML = activo ? '<span style="color:#16a34a;">ACTIVADO</span>' : '<span style="color:#94a3b8;">DESACTIVADO</span>';
+    }
+    async function ffGuardar() {
+        const activo = document.getElementById('ffActivo').checked;
+        try {
+            const d = await (await fetch('/api/whatsapp/formulario_finde', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo }) })).json();
+            if (d.status === 'ok') _ffPintar(d.activo);
+        } catch (e) { alert('Error al guardar'); }
+    }
+    async function ffPrueba() {
+        const p = _waPersonas[+document.getElementById('ffPruebaPersona').value];
+        const box = document.getElementById('ffVistaBox');
+        if (!p) return;
+        if (!confirm(`¿Enviar ahora el mensaje de prueba a ${p.usuario.toUpperCase()}?`)) return;
+        box.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Enviando...</span>';
+        try {
+            const d = await (await fetch('/api/whatsapp/formulario_finde/prueba', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuario: p.usuario, telefono: p.telefono, equipo: (p.equipos || [])[0] || '' }) })).json();
+            box.innerHTML = d.status === 'ok'
+                ? `<span style="color:#16a34a; font-weight:800;">✓ Enviado a ${_waEsc(p.usuario.toUpperCase())}. Responde a ese WhatsApp con MEJORES: … / PEORES: … y pulsa VER EL FINDE para ver si se ha guardado.</span>`
+                : `<span style="color:#ef4444; font-weight:700;">${_waEsc(d.message || 'No se pudo enviar')}</span>`;
+        } catch (e) { box.innerHTML = '<span style="color:#ef4444; font-weight:700;">Error al enviar</span>'; }
+    }
+    async function ffVista() {
+        const box = document.getElementById('ffVistaBox');
+        box.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Calculando...</span>';
+        try {
+            const d = await (await fetch('/api/whatsapp/formulario_finde/vista')).json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            const fh = c => { const [y, m, dd] = c.slice(0, 10).split('-'); return `${['dom','lun','mar','mié','jue','vie','sáb'][new Date(c.slice(0,10)+'T00:00:00').getDay()]} ${dd}/${m} ${c.slice(11, 16)}`; };
+            const [y, m, dd] = d.sabado.split('-');
+            let h = (d.sin_entrenador || []).length ? `<div style="background:#fef3c7; color:#92400e; border-radius:6px; padding:6px 10px; margin-bottom:6px; font-size:11px; font-weight:700;">⚠️ Con partido pero sin entrenador con teléfono: ${d.sin_entrenador.map(_waEsc).join(', ')}</div>` : '';
+            h += `<div style="font-weight:900; color:#1e293b; margin:6px 0;">Finde ${dd}/${m}/${y}: ${d.filas.length} avisos previstos</div>`;
+            h += d.filas.length ? `<table style="border-collapse:collapse; width:100%; font-size:11px;"><tr style="background:#f1f5f9;">
+                <th style="text-align:left; padding:4px 6px;">ENTRENADOR</th><th style="text-align:left; padding:4px 6px;">EQUIPO</th><th style="padding:4px 6px;">PARTIDO</th>
+                <th style="padding:4px 6px;">ENVÍOS PREVISTOS</th><th style="padding:4px 6px;">FORMULARIO</th><th style="padding:4px 6px;">MEJORES / PEORES</th></tr>` +
+                d.filas.map(f => `<tr style="border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:4px 6px; font-weight:800; text-transform:uppercase;">${_waEsc(f.usuario)}</td>
+                    <td style="padding:4px 6px;">${_waEsc(f.equipo)}</td>
+                    <td style="padding:4px 6px; text-align:center;">${fh(f.fecha + 'T' + (f.hora || ''))}${f.hora ? '' : '<br><span style="color:#94a3b8;">sin hora</span>'}</td>
+                    <td style="padding:4px 6px; text-align:center;">${f.momentos.map(x => { const env = f.enviados.some(e => e.startsWith(x)); return `<span style="${env ? 'color:#16a34a; font-weight:800;' : 'color:#64748b;'}">${env ? '✓ ' : ''}${fh(x)}</span>`; }).join('<br>')}</td>
+                    <td style="padding:4px 6px; text-align:center; font-weight:800; color:${f.hecho ? '#16a34a' : '#ef4444'};">${f.hecho ? 'HECHO' : 'PENDIENTE'}</td>
+                    <td style="padding:4px 6px; text-align:center;">${f.mejores.length ? `<span style="color:#166534;">${f.mejores.map(_waEsc).join(', ')}</span><br><span style="color:#991b1b;">${f.peores.map(_waEsc).join(', ')}</span>` : '—'}</td></tr>`).join('') + '</table>' : '';
+            if ((d.pruebas || []).length) {
+                h += `<div style="font-weight:900; color:#1e293b; margin:10px 0 4px;">Pruebas enviadas</div>` + d.pruebas.map(p =>
+                    `<div style="font-size:11px; padding:3px 0;">${_waEsc(p.usuario.toUpperCase())} · ${_waEsc(p.equipo)} · ${p.mejores.length
+                        ? `<span style="color:#166534; font-weight:800;">Mejores: ${p.mejores.map(_waEsc).join(', ')}</span> · <span style="color:#991b1b; font-weight:800;">Peores: ${p.peores.map(_waEsc).join(', ')}</span>`
+                        : '<span style="color:#94a3b8;">sin respuesta todavía</span>'}</div>`).join('');
+            }
             box.innerHTML = h;
         } catch (e) { box.innerHTML = `<span style="color:#ef4444; font-weight:700;">${_waEsc(e.message || 'Error')}</span>`; }
     }
@@ -12338,6 +12425,7 @@ async function _asistMatrizUno(equipo, cont) {
                 <td style="${td}font-weight:700;color:${g?'#94a3b8':'#1e293b'};">${eq.nombre}</td>
                 <td style="${td}text-align:center;white-space:nowrap;">${g?'—':(window._isBadgeForm ? window._isBadgeForm(eq.formulario_manual, eq.formulario_auto) : badge(eq.formulario,'auto'))}</td>
                 <td style="${td}text-align:center;" class="ism-audio-cell">${g?'—':badge(eq.audio,'manual')}</td>
+                ${window._isMejPeo ? window._isMejPeo(eq, td) : ''}
             </tr>`;
         }).join('');
 
@@ -12570,6 +12658,14 @@ async function _asistMatrizUno(equipo, cont) {
     }
     window._isBadgeForm = _badgeForm;
 
+    // MEJORES / PEORES respondidos por el entrenador al WhatsApp del formulario de partido
+    function _isMejPeo(eq, td) {
+        const esc = x => String(x || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        const celda = (lista, col) => `<td style="${td}text-align:center;font-size:10.5px;font-weight:700;color:${col};">${(lista || []).length ? (lista || []).map(esc).join('<br>') : '<span style="color:#cbd5e1;">—</span>'}</td>`;
+        return celda(eq.mejores, '#166534') + celda(eq.peores, '#991b1b');
+    }
+    window._isMejPeo = _isMejPeo;
+
     // Fila de TOTAL al final de la tabla: "3 de 23 · 13%" para formulario y audio. Se recalcula tras cada clic.
     window._isTotales = function(body) {
         if (!body) return;
@@ -12587,7 +12683,7 @@ async function _asistMatrizUno(equipo, cont) {
             return `<td style="padding:6px 8px;border:1px solid #cbd5e1;text-align:center;white-space:nowrap;font-size:10.5px;font-weight:800;color:#1e293b;">${x} de ${n}<br><span style="color:${col};font-size:12px;font-weight:900;">${pct}%</span></td>`;
         };
         body.insertAdjacentHTML('beforeend', `<tr class="is-total" style="background:#f1f5f9;">
-            <td style="padding:6px 10px;border:1px solid #cbd5e1;font-weight:900;color:#1e293b;font-size:11px;">TOTAL</td>${celda(form)}${celda(audio)}</tr>`);
+            <td style="padding:6px 10px;border:1px solid #cbd5e1;font-weight:900;color:#1e293b;font-size:11px;">TOTAL</td>${celda(form)}${celda(audio)}<td style="border:1px solid #cbd5e1;"></td><td style="border:1px solid #cbd5e1;"></td></tr>`);
     };
 
     // Clic en SÍ/NO del formulario (vale para la ventana y para el panel)
@@ -12625,6 +12721,7 @@ async function _asistMatrizUno(equipo, cont) {
                 <td style="${td}font-weight:700;color:${sinPartido?'#94a3b8':'#1e293b'};">${eq.nombre}</td>
                 <td style="${td}text-align:center;white-space:nowrap;">${sinPartido ? '—' : _badgeForm(eq.formulario_manual, eq.formulario_auto)}</td>
                 <td style="${td}text-align:center;" class="is-audio-cell">${sinPartido ? '—' : _badge(eq.audio, 'manual')}</td>
+                ${_isMejPeo(eq, td)}
             </tr>`;
         }).join('');
 
@@ -12781,6 +12878,8 @@ async function _asistMatrizUno(equipo, cont) {
                         <th style="padding:6px 12px; text-align:center; border:1px solid #cbd5e1; color:#475569; font-weight:800; font-size:9px; text-transform:uppercase; width:90px; line-height:1.3;">
                             Audio<br>Enviado
                         </th>
+                        <th style="padding:6px 12px; text-align:center; border:1px solid #cbd5e1; color:#16a34a; font-weight:800; font-size:9px; text-transform:uppercase; min-width:110px;">Mejores</th>
+                        <th style="padding:6px 12px; text-align:center; border:1px solid #cbd5e1; color:#dc2626; font-weight:800; font-size:9px; text-transform:uppercase; min-width:110px;">Peores</th>
                     </tr>
                 </thead>
                 <tbody id="isModalTablaBody">

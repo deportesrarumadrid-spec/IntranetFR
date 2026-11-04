@@ -75,6 +75,51 @@ def enviar_por_waha(numero_limpio, mensaje):
         return False, f'No se pudo conectar con WhatsApp del servidor: {e}'[:200]
 
 
+def enviar_con_id(telefono, mensaje):
+    """Como enviar_whatsapp, pero devuelve también el id del mensaje (para reconocer respuestas que lo citan)."""
+    num = ''.join(c for c in str(telefono) if c.isdigit())
+    if num.startswith('00'):
+        num = num[2:]
+    if len(num) == 9:
+        num = '34' + num
+    if not os.environ.get('WAHA_URL'):
+        from app import enviar_whatsapp
+        ok, detalle = enviar_whatsapp(telefono, mensaje)
+        return ok, detalle, None
+    if len(num) < 10:
+        return False, 'Teléfono no válido', None
+    try:
+        r = _waha('POST', '/api/sendText', json={'session': WAHA_SESION, 'chatId': f'{num}@c.us', 'text': mensaje})
+        if r.status_code >= 300:
+            ok, detalle = enviar_por_waha(num, mensaje)  # reintento con el mensaje de error legible
+            return ok, detalle, None
+        j = r.json() if r.content else {}
+        mid = j.get('id') if isinstance(j, dict) else None
+        if isinstance(mid, dict):
+            mid = mid.get('_serialized') or mid.get('id')
+        if not mid and isinstance(j, dict):
+            mid = (j.get('key') or {}).get('id')
+        return True, '', (str(mid) if mid else None)
+    except Exception as e:
+        return False, f'No se pudo conectar con WhatsApp del servidor: {e}'[:200], None
+
+
+def _asegurar_webhook(info):
+    """Que WAHA avise a la intranet de los mensajes recibidos (respuestas MEJORES/PEORES)."""
+    try:
+        from formulario_finde import secreto_webhook, URL_BASE
+        url = f'{URL_BASE}/api/whatsapp/webhook?k={secreto_webhook()}'
+        hooks = ((info.get('config') or {}).get('webhooks') or [])
+        if any(h.get('url') == url for h in hooks if isinstance(h, dict)):
+            return
+        config = dict(info.get('config') or {})
+        config['webhooks'] = [{'url': url, 'events': ['message']}]
+        r = _waha('PUT', f'/api/sessions/{WAHA_SESION}', json={'name': WAHA_SESION, 'config': config})
+        print(f"[WHATSAPP] Webhook configurado: HTTP {r.status_code}", flush=True)
+    except Exception as e:
+        print(f"[WHATSAPP] No se pudo configurar el webhook: {e}", flush=True)
+
+
 @whatsapp_bp.route('/api/whatsapp/estado')
 def api_estado():
     """Estado del WhatsApp del club: 'whapi' (servicio externo), o el estado de la sesión WAHA."""
@@ -93,6 +138,8 @@ def api_estado():
             _waha('POST', f'/api/sessions/{WAHA_SESION}/start')
         elif estado == 'FAILED':  # p. ej. el QR caducó sin escanear: reiniciar para sacar uno nuevo
             _waha('POST', f'/api/sessions/{WAHA_SESION}/restart')
+        if estado == 'WORKING':
+            _asegurar_webhook(j)
         me = j.get('me') or {}
         numero = (me.get('id') or '').split('@')[0]
         return jsonify({'status': 'ok', 'modo': 'waha', 'estado': estado, 'numero': numero, 'nombre': me.get('pushName', '')})

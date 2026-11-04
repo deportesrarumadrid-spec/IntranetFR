@@ -311,6 +311,12 @@ def _loop(flask_app):
                 aviso_diario.tick(now)
             except Exception as e:
                 print(f"[SCHED] Aviso diario: {e}", flush=True)
+            # Aviso formulario de partido del finde por WhatsApp (tras el partido y recordatorio)
+            try:
+                import formulario_finde
+                formulario_finde.tick(now)
+            except Exception as e:
+                print(f"[SCHED] Formulario finde: {e}", flush=True)
 
         except Exception as e:
             print(f"[SCHED LOOP] {e}", flush=True)

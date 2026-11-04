@@ -4202,6 +4202,7 @@ from veo import veo_bp
 from consultor import consultor_bp
 from whatsapp_envios import whatsapp_bp
 from aviso_diario import aviso_bp
+from formulario_finde import finde_bp
 from loteria import loteria_bp
 app.register_blueprint(financiero_bp)
 app.register_blueprint(loteria_bp)
@@ -4225,6 +4226,7 @@ app.register_blueprint(veo_bp)
 app.register_blueprint(consultor_bp)
 app.register_blueprint(whatsapp_bp)
 app.register_blueprint(aviso_bp)
+app.register_blueprint(finde_bp)
 
 # --- SEGUIMIENTO COORD ENTRENAMIENTOS ---
 _SEG_COORD_FILE = os.path.join('static', 'data', 'seguimiento_coord_comentarios.json')
