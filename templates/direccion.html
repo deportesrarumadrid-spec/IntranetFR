@@ -2161,8 +2161,6 @@
                         <b>MEJORES: … / PEORES: …</b> y sale en el INFORME FINDE WHATSAPP.</div>
                     <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                         <button onclick="ffVista()" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-eye"></i> VER EL FINDE</button>
-                        <select id="ffPruebaPersona" style="padding:6px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:11px; max-width:220px;"></select>
-                        <button onclick="ffPrueba()" style="background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> ENVIAR PRUEBA</button>
                     </div>
                     <div id="ffVistaBox" style="margin-top:10px; font-size:12px;"></div>
                 </div>
@@ -2452,10 +2450,6 @@
             const d = await (await fetch('/api/whatsapp/formulario_finde')).json();
             if (d.status === 'ok') _ffPintar(d.activo);
         } catch (e) {}
-        const sel = document.getElementById('ffPruebaPersona');
-        if (sel && !sel.options.length && _waPersonas.length) {
-            sel.innerHTML = _waPersonas.map((p, i) => `<option value="${i}" ${/pozon/i.test(p.usuario) ? 'selected' : ''}>${_waEsc(p.usuario.toUpperCase())}</option>`).join('');
-        }
     }
     function _ffPintar(activo) {
         document.getElementById('ffActivo').checked = !!activo;
@@ -2467,20 +2461,6 @@
             const d = await (await fetch('/api/whatsapp/formulario_finde', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo }) })).json();
             if (d.status === 'ok') _ffPintar(d.activo);
         } catch (e) { alert('Error al guardar'); }
-    }
-    async function ffPrueba() {
-        const p = _waPersonas[+document.getElementById('ffPruebaPersona').value];
-        const box = document.getElementById('ffVistaBox');
-        if (!p) return;
-        if (!confirm(`¿Enviar ahora el mensaje de prueba a ${p.usuario.toUpperCase()}?`)) return;
-        box.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Enviando...</span>';
-        try {
-            const d = await (await fetch('/api/whatsapp/formulario_finde/prueba', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ usuario: p.usuario, telefono: p.telefono, equipo: (p.equipos || [])[0] || '' }) })).json();
-            box.innerHTML = d.status === 'ok'
-                ? `<span style="color:#16a34a; font-weight:800;">✓ Enviado a ${_waEsc(p.usuario.toUpperCase())}. Responde a ese WhatsApp con MEJORES: … / PEORES: … y pulsa VER EL FINDE para ver si se ha guardado.</span>`
-                : `<span style="color:#ef4444; font-weight:700;">${_waEsc(d.message || 'No se pudo enviar')}</span>`;
-        } catch (e) { box.innerHTML = '<span style="color:#ef4444; font-weight:700;">Error al enviar</span>'; }
     }
     async function ffVista() {
         const box = document.getElementById('ffVistaBox');
@@ -2502,12 +2482,6 @@
                     <td style="padding:4px 6px; text-align:center;">${f.momentos.map(x => { const env = f.enviados.some(e => e.startsWith(x)); return `<span style="${env ? 'color:#16a34a; font-weight:800;' : 'color:#64748b;'}">${env ? '✓ ' : ''}${fh(x)}</span>`; }).join('<br>')}</td>
                     <td style="padding:4px 6px; text-align:center; font-weight:800; color:${f.hecho ? '#16a34a' : '#ef4444'};">${f.hecho ? 'HECHO' : 'PENDIENTE'}</td>
                     <td style="padding:4px 6px; text-align:center;">${f.mejores.length ? `<span style="color:#166534;">${f.mejores.map(_waEsc).join(', ')}</span><br><span style="color:#991b1b;">${f.peores.map(_waEsc).join(', ')}</span>` : '—'}</td></tr>`).join('') + '</table>' : '';
-            if ((d.pruebas || []).length) {
-                h += `<div style="font-weight:900; color:#1e293b; margin:10px 0 4px;">Pruebas enviadas</div>` + d.pruebas.map(p =>
-                    `<div style="font-size:11px; padding:3px 0;">${_waEsc(p.usuario.toUpperCase())} · ${_waEsc(p.equipo)} · ${p.mejores.length
-                        ? `<span style="color:#166534; font-weight:800;">Mejores: ${p.mejores.map(_waEsc).join(', ')}</span> · <span style="color:#991b1b; font-weight:800;">Peores: ${p.peores.map(_waEsc).join(', ')}</span>`
-                        : '<span style="color:#94a3b8;">sin respuesta todavía</span>'}</div>`).join('');
-            }
             box.innerHTML = h;
         } catch (e) { box.innerHTML = `<span style="color:#ef4444; font-weight:700;">${_waEsc(e.message || 'Error')}</span>`; }
     }

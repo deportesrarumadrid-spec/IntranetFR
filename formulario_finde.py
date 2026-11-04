@@ -416,26 +416,6 @@ def api_vista():
         filas, sin_ent = plan(sat)
         for f in filas:
             f['hecho'] = _formulario_hecho(sat, f['equipo'])
-        pruebas = [dict(usuario=r['usuario'], equipo=r['equipo'], enviados=r.get('enviados', []),
-                        mejores=r.get('mejores', []), peores=r.get('peores', []))
-                   for r in _leer()['envios'].values() if r.get('prueba')][-5:]
-        return jsonify({'status': 'ok', 'sabado': sat.isoformat(), 'filas': filas, 'sin_entrenador': sin_ent, 'pruebas': pruebas})
+        return jsonify({'status': 'ok', 'sabado': sat.isoformat(), 'filas': filas, 'sin_entrenador': sin_ent})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)[:200]}), 500
-
-
-@finde_bp.route('/api/whatsapp/formulario_finde/prueba', methods=['POST'])
-def api_prueba():
-    """Envía ya el mensaje a una persona para revisarlo (sus respuestas se guardan como prueba)."""
-    if not _permitido():
-        return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
-    data = request.json or {}
-    tel = (data.get('telefono') or '').strip()
-    usuario = (data.get('usuario') or '').strip()
-    equipo = (data.get('equipo') or '').strip() or 'INFANTIL B'
-    if not tel:
-        return jsonify({'status': 'error', 'message': 'Falta el teléfono'}), 400
-    hoy = date.today()
-    sat = sabado_de(hoy) if hoy.weekday() in (5, 6, 0) else hoy + timedelta(days=(5 - hoy.weekday()) % 7)
-    ok, detalle = _enviar_y_registrar(usuario, tel, equipo, sat, datetime.now(), prueba=True)
-    return jsonify({'status': 'ok' if ok else 'error', 'message': detalle or ''})
