@@ -287,6 +287,32 @@ def _parsear(texto):
     return (m, p) if m and p else None
 
 
+def _telefono_de(payload, origen):
+    """Teléfono (solo cifras) de quien escribe. WhatsApp a veces manda un id interno '...@lid' en vez del
+    número: se busca el número real en los datos del mensaje o se le pregunta a WAHA."""
+    if origen and not origen.endswith('@lid'):
+        return ''.join(c for c in origen.split('@')[0] if c.isdigit())
+    propio = ''
+    try:
+        from whatsapp_envios import _waha, WAHA_SESION
+        lid = origen.split('@')[0]
+        r = _waha('GET', f'/api/{WAHA_SESION}/lids/{lid}', timeout=10)
+        if r.status_code < 300:
+            pn = str((r.json() or {}).get('pn') or '')
+            if pn:
+                return ''.join(c for c in pn.split('@')[0] if c.isdigit())
+        me = _waha('GET', f'/api/sessions/{WAHA_SESION}', timeout=10).json().get('me') or {}
+        propio = ''.join(c for c in str(me.get('id', '')).split('@')[0] if c.isdigit())
+    except Exception as e:
+        print(f"[FINDE] No se pudo resolver {origen}: {e}", flush=True)
+    # Último recurso: cualquier número '...@s.whatsapp.net' / '@c.us' dentro del mensaje que no sea el del club
+    destino = ''.join(c for c in str(payload.get('to') or '').split('@')[0] if c.isdigit())
+    for num in re.findall(r'(\d{9,15})@(?:s\.whatsapp\.net|c\.us)', json.dumps(payload)):
+        if num not in (propio, destino):
+            return num
+    return ''
+
+
 def procesar_mensaje(payload):
     """Mensaje recibido por WhatsApp. Devuelve el texto de respuesta automática o None."""
     from whatsapp_envios import enviar_por_waha
@@ -294,9 +320,10 @@ def procesar_mensaje(payload):
         return None
     cuerpo = (payload.get('body') or '').strip()
     origen = str(payload.get('from') or '')
-    tel = ''.join(c for c in origen.split('@')[0] if c.isdigit()) if not origen.endswith('@lid') else ''
+    tel = _telefono_de(payload, origen)
     rep = payload.get('replyTo') or {}
     rep_id = (rep.get('id') if isinstance(rep, dict) else str(rep)) or ''
+    print(f"[FINDE] Mensaje recibido de {origen} (tel {tel or '?'}), cita={'sí' if rep_id else 'no'}: {cuerpo[:60]!r}", flush=True)
     corto = lambda x: str(x).split('_')[-1]
 
     with _bloqueo():
@@ -328,8 +355,8 @@ def procesar_mensaje(payload):
             _escribir(d)
             respuesta = (f"✅ Recibido, gracias ({_bonito(r['equipo'])}).\n"
                          f"Mejores: {', '.join(res[0])} · Peores: {', '.join(res[1])}")
-    destino = origen if origen else r.get('telefono', '')
-    enviar_por_waha(destino if '@' in destino else ''.join(c for c in destino if c.isdigit()), respuesta)
+    destino = tel or origen or ''.join(c for c in r.get('telefono', '') if c.isdigit())
+    enviar_por_waha(destino, respuesta)
     return respuesta
 
 
