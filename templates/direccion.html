@@ -2076,31 +2076,53 @@
     <!-- SUBTAB: WHATSAPP -->
     <div id="subtab-whatsapp" class="subtab-content" style="display:none;">
         <div id="waEstadoBox" class="card-coord" style="padding:12px 16px; margin-bottom:18px; display:none;"></div>
-        <div style="display:grid; grid-template-columns:minmax(260px,380px) 1fr; gap:18px; align-items:start;" class="wa-grid">
+        <div style="display:grid; grid-template-columns:minmax(280px,400px) 1fr; gap:18px; align-items:start;" class="wa-grid">
             <div class="card-coord" style="padding:16px;">
                 <div style="font-size:12px; font-weight:900; color:#1e293b; margin-bottom:10px;">DESTINATARIOS <span id="waCuenta" style="color:#16a34a;"></span></div>
-                <input id="waBuscar" oninput="waPintarLista()" placeholder="Buscar nombre o equipo..." style="width:100%; box-sizing:border-box; padding:7px 10px; border:1.5px solid #e2e8f0; border-radius:7px; font-size:12px; font-family:inherit; margin-bottom:8px;">
+                <input id="waBuscar" oninput="waPintarLista()" placeholder="Buscar nombre, equipo o grupo..." style="width:100%; box-sizing:border-box; padding:7px 10px; border:1.5px solid #e2e8f0; border-radius:7px; font-size:12px; font-family:inherit; margin-bottom:8px;">
                 <div style="display:flex; gap:6px; margin-bottom:8px;">
                     <button onclick="waMarcar(true)" style="flex:1; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; padding:5px; font-size:10px; font-weight:800; cursor:pointer; font-family:inherit;">MARCAR TODOS</button>
                     <button onclick="waMarcar(false)" style="flex:1; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; padding:5px; font-size:10px; font-weight:800; cursor:pointer; font-family:inherit;">QUITAR TODOS</button>
                 </div>
-                <div id="waLista" style="max-height:420px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px;"></div>
+                <div id="waLista" style="max-height:560px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px;"></div>
             </div>
             <div style="display:flex; flex-direction:column; gap:18px;">
                 <div class="card-coord" style="padding:16px;">
                     <div style="font-size:12px; font-weight:900; color:#1e293b; margin-bottom:10px;">MENSAJE</div>
                     <textarea id="waTexto" rows="7" placeholder="Escribe aquí el WhatsApp..." style="width:100%; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-family:inherit; resize:vertical;"></textarea>
-                    <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin:12px 0;">
+                    <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin:12px 0 8px;">
                         <label style="font-size:12px; font-weight:700; cursor:pointer;"><input type="radio" name="waCuando" value="ahora" checked onchange="waModo()"> Enviar ahora</label>
                         <label style="font-size:12px; font-weight:700; cursor:pointer;"><input type="radio" name="waCuando" value="prog" onchange="waModo()"> Programar día y hora</label>
-                        <span id="waProgCampos" style="display:none; gap:6px; align-items:center;">
-                            <input type="date" id="waFecha" style="padding:5px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:12px;">
-                            <input type="time" id="waHora" value="10:00" style="padding:5px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:12px;">
-                        </span>
+                        <label style="font-size:12px; font-weight:700; cursor:pointer;"><input type="radio" name="waCuando" value="rep" onchange="waModo()"> Repetir</label>
                     </div>
-                    <button id="waBtn" onclick="waEnviar()" style="background:#16a34a; color:white; border:none; border-radius:8px; padding:10px 22px; font-size:12px; font-weight:900; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> ENVIAR WHATSAPP</button>
+                    <div id="waProgCampos" style="display:none; gap:6px; align-items:center; margin-bottom:10px;">
+                        <input type="date" id="waFecha" style="padding:5px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:12px;">
+                        <input type="time" id="waHora" value="10:00" style="padding:5px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:12px;">
+                    </div>
+                    <div id="waRepCampos" style="display:none; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:10px; font-size:12px; font-weight:700;">
+                        <select id="waRepTipo" onchange="waModo()" style="padding:5px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:12px;">
+                            <option value="dia">Cada día</option>
+                            <option value="semana">Cada semana</option>
+                            <option value="mes" selected>Cada mes</option>
+                        </select>
+                        <select id="waRepSemana" style="padding:5px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:12px;">
+                            <option value="0">el lunes</option><option value="1">el martes</option><option value="2">el miércoles</option>
+                            <option value="3">el jueves</option><option value="4">el viernes</option><option value="5">el sábado</option><option value="6">el domingo</option>
+                        </select>
+                        <span id="waRepMesBox">el día <input type="number" id="waRepMes" min="1" max="31" value="30" style="width:56px; padding:5px 6px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:12px;"></span>
+                        <span>a las <input type="time" id="waRepHora" value="10:00" style="padding:5px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:12px;"></span>
+                        <span id="waRepNota" style="font-size:10.5px; color:#94a3b8; font-weight:600;">Si el mes no tiene ese día, se envía el último día del mes.</span>
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button id="waBtn" onclick="waEnviar()" style="background:#16a34a; color:white; border:none; border-radius:8px; padding:10px 22px; font-size:12px; font-weight:900; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> ENVIAR WHATSAPP</button>
+                        <button onclick="waGuardarPlantilla()" style="background:white; color:#1e293b; border:1.5px solid #cbd5e1; border-radius:8px; padding:10px 16px; font-size:12px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-save"></i> GUARDAR COMO PLANTILLA</button>
+                    </div>
                     <div id="waResultado" style="margin-top:12px; font-size:12px;"></div>
                     <div id="waNota" style="margin-top:10px; font-size:10.5px; color:#94a3b8;">Plan gratis de WhatsApp: máximo 5 personas distintas y 150 mensajes al día.</div>
+                </div>
+                <div class="card-coord" style="padding:16px;">
+                    <div style="font-size:12px; font-weight:900; color:#1e293b; margin-bottom:10px;">PLANTILLAS</div>
+                    <div id="waPlantillas" style="font-size:12px; color:#64748b;">—</div>
                 </div>
                 <div class="card-coord" style="padding:16px;">
                     <div style="font-size:12px; font-weight:900; color:#1e293b; margin-bottom:10px;">PROGRAMADOS</div>
@@ -2108,14 +2130,24 @@
                 </div>
             </div>
         </div>
-        <style>@media (max-width: 800px) { .wa-grid { grid-template-columns: 1fr !important; } }</style>
+        <style>
+            @media (max-width: 800px) { .wa-grid { grid-template-columns: 1fr !important; } }
+            .wa-sec { position:sticky; top:0; z-index:1; padding:6px 10px; font-size:10.5px; font-weight:900; letter-spacing:.5px; color:white; background:#1e293b; }
+            .wa-eq { display:flex; gap:8px; align-items:center; padding:5px 10px; font-size:11px; font-weight:900; color:#E31E24; background:#f8fafc; border-bottom:1px solid #e2e8f0; cursor:pointer; }
+            .wa-it { display:flex; gap:8px; align-items:center; padding:5px 10px 5px 22px; border-bottom:1px solid #f1f5f9; cursor:pointer; font-size:12px; }
+        </style>
     </div>
 
     <script>
     // ===================== WHATSAPP =====================
-    let _waDest = [];
+    // Selección por "teléfono" (o id de grupo): un entrenador con varios equipos se marca en todos a la vez.
+    let _waPersonas = [], _waGrupos = [], _waEquipos = [];
     const _waSel = new Set();
+    const _waNombre = {};  // telefono → nombre a mostrar
     const _waEsc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const _waNorm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const _waEsFR = g => _waNorm(g.nombre).includes('fr entrenadores');
+    const _WA_DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 
     // Estado del WhatsApp del club (WAHA en el servidor): conectado / QR para vincular
     let _waEstadoTimer = null;
@@ -2158,70 +2190,133 @@
     async function waCargar() {
         waEstado();
         waCargarProgramados();
-        if (_waDest.length) return;
-        document.getElementById('waLista').innerHTML = '<div style="padding:14px; color:#94a3b8; font-size:12px;">Cargando...</div>';
+        waCargarPlantillas();
+        if (_waPersonas.length || _waGrupos.length) return;
+        const lista = document.getElementById('waLista');
+        lista.innerHTML = '<div style="padding:14px; color:#94a3b8; font-size:12px;">Cargando...</div>';
+        if (!lista._waHandler) {
+            lista._waHandler = e => {
+                const cb = e.target.closest('input[type="checkbox"]');
+                if (!cb) return;
+                if (cb.dataset.eq !== undefined) {
+                    const eq = _waEquipos[+cb.dataset.eq];
+                    _waPersonas.filter(p => p.equipos.includes(eq)).forEach(p => cb.checked ? _waSel.add(p.telefono) : _waSel.delete(p.telefono));
+                } else if (cb.dataset.tel) {
+                    cb.checked ? _waSel.add(cb.dataset.tel) : _waSel.delete(cb.dataset.tel);
+                }
+                waPintarLista();
+            };
+            lista.addEventListener('change', lista._waHandler);
+        }
         try {
             const [d, g] = await Promise.all([
                 fetch('/api/whatsapp/destinatarios').then(r => r.json()),
                 fetch('/api/whatsapp/grupos').then(r => r.json()).catch(() => ({ grupos: [] }))]);
             if (d.status !== 'ok') throw new Error(d.message);
-            // Grupos de WhatsApp primero (telefono = id del grupo), luego las personas
-            _waDest = (g.grupos || []).map(x => ({ usuario: x.nombre, telefono: x.id, equipo: 'GRUPO', grupo: true })).concat(d.destinatarios);
+            _waPersonas = d.destinatarios;
+            _waEquipos = d.equipos || [];
+            _waGrupos = (g.grupos || []).map(x => ({ nombre: x.nombre, telefono: x.id }));
+            _waPersonas.forEach(p => { _waNombre[p.telefono] = p.usuario; });
+            _waGrupos.forEach(x => { _waNombre[x.telefono] = x.nombre; });
             waPintarLista();
         } catch (e) {
-            document.getElementById('waLista').innerHTML = `<div style="padding:14px; color:#ef4444; font-size:12px;">${_waEsc(e.message || 'Error')}</div>`;
+            lista.innerHTML = `<div style="padding:14px; color:#ef4444; font-size:12px;">${_waEsc(e.message || 'Error')}</div>`;
         }
     }
 
-    function _waVisible(x) {
-        const q = (document.getElementById('waBuscar').value || '').toLowerCase();
-        return !q || (x.usuario + ' ' + x.equipo).toLowerCase().includes(q);
+    // Lo que se ve con el buscador actual: [{seccion, equipo?, items:[{telefono, nombre}]}]
+    function _waVisibles() {
+        const q = _waNorm(document.getElementById('waBuscar').value);
+        const ok = (...t) => !q || t.some(x => _waNorm(x).includes(q));
+        const bloques = [];
+        const fr = _waGrupos.filter(_waEsFR).filter(x => ok(x.nombre));
+        if (fr.length) bloques.push({ seccion: 'FR ENTRENADORES', items: fr.map(x => ({ telefono: x.telefono, nombre: x.nombre, grupo: true })) });
+        const otros = _waGrupos.filter(x => !_waEsFR(x)).filter(x => ok(x.nombre));
+        if (otros.length) bloques.push({ seccion: 'GRUPOS', items: otros.map(x => ({ telefono: x.telefono, nombre: x.nombre, grupo: true })) });
+        let primero = true;
+        const conEquipo = (eq, idx) => {
+            const items = _waPersonas.filter(p => (eq === null ? !p.equipos.length : p.equipos.includes(eq)) && ok(p.usuario, eq || 'sin equipo'))
+                .map(p => ({ telefono: p.telefono, nombre: p.usuario }));
+            if (!items.length) return;
+            bloques.push({ seccion: primero ? 'ENTRENADORES' : null, equipo: eq || 'SIN EQUIPO', eqIdx: idx, items });
+            primero = false;
+        };
+        _waEquipos.forEach((eq, i) => conEquipo(eq, i));
+        conEquipo(null, null);
+        return bloques;
     }
-    function _waCuenta() { document.getElementById('waCuenta').textContent = _waSel.size ? `(${_waSel.size} marcados)` : ''; }
 
     function waPintarLista() {
-        document.getElementById('waLista').innerHTML = _waDest.map((x, i) => !_waVisible(x) ? '' :
-            `<label style="display:flex; gap:8px; align-items:center; padding:6px 10px; border-bottom:1px solid #f1f5f9; cursor:pointer; font-size:12px;">
-                <input type="checkbox" ${_waSel.has(i) ? 'checked' : ''} onchange="waToggle(${i}, this.checked)">
-                ${x.grupo ? '<i class="fas fa-users" style="color:#16a34a;"></i>' : ''}<span style="font-weight:800; color:#1e293b; ${x.grupo ? '' : 'text-transform:uppercase;'}">${_waEsc(x.usuario)}</span>
-                <span style="margin-left:auto; font-size:10px; color:#64748b; font-weight:700;">${_waEsc(x.equipo)}</span></label>`
-        ).join('') || '<div style="padding:14px; color:#94a3b8; font-size:12px;">Nadie</div>';
-        _waCuenta();
+        const bloques = _waVisibles();
+        let h = '';
+        bloques.forEach(b => {
+            if (b.seccion) h += `<div class="wa-sec">${b.seccion === 'FR ENTRENADORES' ? '<i class="fas fa-star" style="color:#fbbf24;"></i> ' : ''}${b.seccion}</div>`;
+            if (b.equipo) {
+                const todos = b.items.every(x => _waSel.has(x.telefono));
+                h += `<label class="wa-eq">${b.eqIdx !== null ? `<input type="checkbox" data-eq="${b.eqIdx}" ${todos ? 'checked' : ''}>` : ''}${_waEsc(b.equipo)}</label>`;
+            }
+            b.items.forEach(x => {
+                h += `<label class="wa-it" style="${b.equipo ? '' : 'padding-left:10px;'}">
+                    <input type="checkbox" data-tel="${_waEsc(x.telefono)}" ${_waSel.has(x.telefono) ? 'checked' : ''}>
+                    ${x.grupo ? '<i class="fas fa-users" style="color:#16a34a;"></i>' : ''}
+                    <span style="font-weight:800; color:#1e293b; ${x.grupo ? '' : 'text-transform:uppercase;'}">${_waEsc(x.nombre)}</span></label>`;
+            });
+        });
+        document.getElementById('waLista').innerHTML = h || '<div style="padding:14px; color:#94a3b8; font-size:12px;">Nadie</div>';
+        document.getElementById('waCuenta').textContent = _waSel.size ? `(${_waSel.size} marcados)` : '';
     }
-    function waToggle(i, on) { on ? _waSel.add(i) : _waSel.delete(i); _waCuenta(); }
     function waMarcar(on) {
-        _waDest.forEach((x, i) => { if (_waVisible(x)) { on ? _waSel.add(i) : _waSel.delete(i); } });
+        _waVisibles().forEach(b => b.items.forEach(x => on ? _waSel.add(x.telefono) : _waSel.delete(x.telefono)));
         waPintarLista();
     }
+    function _waDestinatarios() { return [..._waSel].map(t => ({ usuario: _waNombre[t] || t, telefono: t })); }
+
     function waModo() {
-        const prog = document.querySelector('input[name="waCuando"]:checked').value === 'prog';
-        document.getElementById('waProgCampos').style.display = prog ? 'inline-flex' : 'none';
-        document.getElementById('waBtn').innerHTML = prog ? '<i class="far fa-clock"></i> PROGRAMAR WHATSAPP' : '<i class="fab fa-whatsapp"></i> ENVIAR WHATSAPP';
+        const modo = document.querySelector('input[name="waCuando"]:checked').value;
+        document.getElementById('waProgCampos').style.display = modo === 'prog' ? 'flex' : 'none';
+        document.getElementById('waRepCampos').style.display = modo === 'rep' ? 'flex' : 'none';
+        const tipo = document.getElementById('waRepTipo').value;
+        document.getElementById('waRepSemana').style.display = tipo === 'semana' ? '' : 'none';
+        document.getElementById('waRepMesBox').style.display = tipo === 'mes' ? '' : 'none';
+        document.getElementById('waRepNota').style.display = tipo === 'mes' ? '' : 'none';
+        document.getElementById('waBtn').innerHTML = modo === 'ahora' ? '<i class="fab fa-whatsapp"></i> ENVIAR WHATSAPP'
+            : (modo === 'prog' ? '<i class="far fa-clock"></i> PROGRAMAR WHATSAPP' : '<i class="fas fa-redo"></i> PROGRAMAR REPETICIÓN');
     }
+    function _waTextoRepetir(r) {
+        if (!r) return '';
+        if (r.tipo === 'dia') return `Cada día a las ${r.hora}`;
+        if (r.tipo === 'semana') return `Cada ${_WA_DIAS[r.dia_semana]} a las ${r.hora}`;
+        return `Cada mes el día ${r.dia_mes} a las ${r.hora}`;
+    }
+    const _waFechaTxt = c => { const [y, m, d] = c.slice(0, 10).split('-'); return `${d}/${m}/${y} ${c.slice(11)}`; };
 
     async function waEnviar() {
         const texto = document.getElementById('waTexto').value.trim();
-        const dest = [..._waSel].map(i => _waDest[i]);
+        const dest = _waDestinatarios();
         const out = document.getElementById('waResultado');
         const err = m => { out.innerHTML = `<span style="color:#ef4444; font-weight:700;">${m}</span>`; };
         if (!dest.length) return err('Marca al menos un destinatario.');
         if (!texto) return err('Escribe el mensaje.');
-        let cuando = '';
-        if (document.querySelector('input[name="waCuando"]:checked').value === 'prog') {
+        const modo = document.querySelector('input[name="waCuando"]:checked').value;
+        const body = { texto, destinatarios: dest };
+        if (modo === 'prog') {
             const f = document.getElementById('waFecha').value, h = document.getElementById('waHora').value;
             if (!f || !h) return err('Elige el día y la hora.');
-            cuando = `${f}T${h}`;
+            body.cuando = `${f}T${h}`;
+        } else if (modo === 'rep') {
+            const tipo = document.getElementById('waRepTipo').value, hora = document.getElementById('waRepHora').value;
+            if (!hora) return err('Elige la hora.');
+            body.repetir = { tipo, hora, dia_semana: +document.getElementById('waRepSemana').value, dia_mes: +document.getElementById('waRepMes').value };
+            if (tipo === 'mes' && !(body.repetir.dia_mes >= 1 && body.repetir.dia_mes <= 31)) return err('El día del mes tiene que ser del 1 al 31.');
         }
         const btn = document.getElementById('waBtn');
         btn.disabled = true; btn.style.opacity = '0.6';
-        out.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> ' + (cuando ? 'Programando...' : 'Enviando...') + '</span>';
+        out.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> ' + (modo === 'ahora' ? 'Enviando...' : 'Programando...') + '</span>';
         try {
-            const d = await (await fetch('/api/whatsapp/enviar', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ texto, cuando, destinatarios: dest.map(x => ({ usuario: x.usuario, telefono: x.telefono })) }) })).json();
+            const d = await (await fetch('/api/whatsapp/enviar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json();
             if (d.status !== 'ok') throw new Error(d.message);
-            if (cuando) {
-                const [y, m, dd] = cuando.slice(0, 10).split('-');
-                out.innerHTML = `<span style="color:#16a34a; font-weight:800;">✓ Programado para el ${dd}/${m}/${y} a las ${cuando.slice(11)} (${dest.length} destinatarios).</span>`;
+            if (d.programado) {
+                out.innerHTML = `<span style="color:#16a34a; font-weight:800;">✓ ${d.repetir ? _waTextoRepetir(d.repetir) + '. Primer envío: ' : 'Programado para el '}${_waFechaTxt(d.programado)} (${dest.length} destinatarios).</span>`;
                 waCargarProgramados();
             } else {
                 const ok = d.resultados.filter(r => r.ok), mal = d.resultados.filter(r => !r.ok);
@@ -2240,20 +2335,68 @@
             const d = await (await fetch('/api/whatsapp/programados')).json();
             if (d.status !== 'ok') throw new Error(d.message);
             if (!d.programados.length) { box.innerHTML = 'No hay ningún WhatsApp programado.'; return; }
-            box.innerHTML = d.programados.map(p => {
-                const [y, m, dd] = p.cuando.slice(0, 10).split('-');
-                return `<div style="display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px solid #f1f5f9;">
-                    <div style="min-width:118px; font-weight:900; color:#1e293b;">${dd}/${m}/${y} ${p.cuando.slice(11)}</div>
+            box.innerHTML = d.programados.map(p => `<div style="display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px solid #f1f5f9;">
+                    <div style="min-width:130px;">
+                        ${p.repetir ? `<div style="font-weight:900; color:#7c3aed; font-size:11px;"><i class="fas fa-redo"></i> ${_waTextoRepetir(p.repetir)}</div><div style="font-size:10.5px; color:#64748b;">Próximo: ${_waFechaTxt(p.cuando)}</div>`
+                                    : `<div style="font-weight:900; color:#1e293b;">${_waFechaTxt(p.cuando)}</div>`}
+                    </div>
                     <div style="flex:1;"><div style="color:#1e293b; white-space:pre-wrap;">${_waEsc(p.texto)}</div>
-                        <div style="font-size:10.5px; color:#64748b; margin-top:3px;">Para: ${p.destinatarios.map(x => _waEsc(x.toUpperCase())).join(', ')}</div></div>
-                    <button onclick="waBorrarProg('${p.id}')" title="Cancelar" style="background:#fee2e2; color:#b91c1c; border:none; border-radius:6px; padding:4px 9px; cursor:pointer;"><i class="fas fa-trash"></i></button></div>`;
-            }).join('');
+                        <div style="font-size:10.5px; color:#64748b; margin-top:3px;">Para: ${p.destinatarios.map(x => _waEsc(x)).join(', ')}</div></div>
+                    <button onclick="waBorrarProg('${_waEsc(p.id)}')" title="Cancelar" style="background:#fee2e2; color:#b91c1c; border:none; border-radius:6px; padding:4px 9px; cursor:pointer;"><i class="fas fa-trash"></i></button></div>`).join('');
         } catch (e) { box.innerHTML = '<span style="color:#ef4444;">Error cargando programados</span>'; }
     }
     async function waBorrarProg(id) {
         if (!confirm('¿Cancelar este WhatsApp programado?')) return;
         await fetch('/api/whatsapp/programados/' + encodeURIComponent(id), { method: 'DELETE' });
         waCargarProgramados();
+    }
+
+    // ---- Plantillas: mensaje + destinatarios guardados ----
+    let _waPlantillas = [];
+    async function waCargarPlantillas() {
+        const box = document.getElementById('waPlantillas');
+        try {
+            const d = await (await fetch('/api/whatsapp/plantillas')).json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            _waPlantillas = d.plantillas;
+            if (!_waPlantillas.length) { box.innerHTML = 'No hay plantillas. Escribe un mensaje, marca los destinatarios y pulsa <b>GUARDAR COMO PLANTILLA</b>.'; return; }
+            box.innerHTML = _waPlantillas.map((p, i) => `<div style="display:flex; gap:10px; align-items:center; padding:7px 0; border-bottom:1px solid #f1f5f9;">
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-weight:900; color:#1e293b;">${_waEsc(p.nombre)} <span style="font-weight:600; color:#94a3b8; font-size:10.5px;">· ${p.destinatarios.length} destinatarios</span></div>
+                        <div style="color:#64748b; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${_waEsc(p.texto)}</div></div>
+                    <button onclick="waUsarPlantilla(${i})" style="background:#16a34a; color:white; border:none; border-radius:6px; padding:5px 12px; font-size:10.5px; font-weight:800; cursor:pointer; font-family:inherit;">USAR</button>
+                    <button onclick="waBorrarPlantilla(${i})" title="Borrar plantilla" style="background:#fee2e2; color:#b91c1c; border:none; border-radius:6px; padding:5px 9px; cursor:pointer;"><i class="fas fa-trash"></i></button></div>`).join('');
+        } catch (e) { box.innerHTML = '<span style="color:#ef4444;">Error cargando plantillas</span>'; }
+    }
+    function waUsarPlantilla(i) {
+        const p = _waPlantillas[i];
+        if (!p) return;
+        document.getElementById('waTexto').value = p.texto;
+        _waSel.clear();
+        p.destinatarios.forEach(d => { _waSel.add(d.telefono); if (!_waNombre[d.telefono]) _waNombre[d.telefono] = d.usuario; });
+        waPintarLista();
+        document.getElementById('waResultado').innerHTML = `<span style="color:#64748b; font-weight:700;">Plantilla «${_waEsc(p.nombre)}» cargada: revisa el mensaje y elige enviar ahora, programar o repetir.</span>`;
+        document.getElementById('waTexto').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    async function waGuardarPlantilla() {
+        const texto = document.getElementById('waTexto').value.trim();
+        const out = document.getElementById('waResultado');
+        if (!texto) { out.innerHTML = '<span style="color:#ef4444; font-weight:700;">Escribe el mensaje de la plantilla.</span>'; return; }
+        const nombre = (prompt('Nombre de la plantilla (si ya existe una con ese nombre, se sustituye):') || '').trim();
+        if (!nombre) return;
+        try {
+            const d = await (await fetch('/api/whatsapp/plantillas', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre, texto, destinatarios: _waDestinatarios() }) })).json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            out.innerHTML = `<span style="color:#16a34a; font-weight:800;">✓ Plantilla «${_waEsc(nombre)}» ${d.actualizada ? 'actualizada' : 'guardada'}.</span>`;
+            waCargarPlantillas();
+        } catch (e) { out.innerHTML = `<span style="color:#ef4444; font-weight:700;">${_waEsc(e.message || 'Error')}</span>`; }
+    }
+    async function waBorrarPlantilla(i) {
+        const p = _waPlantillas[i];
+        if (!p || !confirm(`¿Borrar la plantilla «${p.nombre}»?`)) return;
+        await fetch('/api/whatsapp/plantillas/' + encodeURIComponent(p.id), { method: 'DELETE' });
+        waCargarPlantillas();
     }
     </script>
 
