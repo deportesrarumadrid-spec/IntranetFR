@@ -54,8 +54,10 @@ def _waha(metodo, ruta, **kw):
 
 
 def enviar_por_waha(numero_limpio, mensaje):
+    """numero_limpio: solo cifras (persona) o un id completo de chat, p. ej. '1203...@g.us' (grupo)."""
+    chat_id = numero_limpio if '@' in numero_limpio else f'{numero_limpio}@c.us'
     try:
-        r = _waha('POST', '/api/sendText', json={'session': WAHA_SESION, 'chatId': f'{numero_limpio}@c.us', 'text': mensaje})
+        r = _waha('POST', '/api/sendText', json={'session': WAHA_SESION, 'chatId': chat_id, 'text': mensaje})
         if r.status_code < 300:
             return True, ''
         try:
@@ -123,12 +125,43 @@ def api_desvincular():
         return jsonify({'status': 'error', 'message': str(e)[:150]}), 500
 
 
+@whatsapp_bp.route('/api/whatsapp/grupos')
+def api_grupos():
+    """Grupos de WhatsApp en los que está el número del club: [{nombre, id}]."""
+    if not _permitido():
+        return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
+    if not os.environ.get('WAHA_URL'):
+        return jsonify({'status': 'ok', 'grupos': []})
+    try:
+        r = _waha('GET', f'/api/{WAHA_SESION}/groups', timeout=40)
+        datos = r.json() if r.status_code < 300 else []
+        items = list(datos.values()) if isinstance(datos, dict) else (datos or [])
+        grupos = {}
+        for g in items:
+            if not isinstance(g, dict):
+                continue
+            gid = g.get('id') or g.get('JID') or g.get('jid') or ''
+            if isinstance(gid, dict):
+                gid = gid.get('_serialized') or ''
+            nombre = g.get('subject') or g.get('name') or g.get('Name') or g.get('Subject') or ''
+            if str(gid).endswith('@g.us') and nombre:
+                grupos[gid] = nombre
+        out = sorted(({'id': k, 'nombre': v} for k, v in grupos.items()), key=lambda x: x['nombre'].lower())
+        return jsonify({'status': 'ok', 'grupos': out})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)[:150], 'grupos': []})
+
+
 def _enviar_a_todos(destinatarios, texto):
     """Envía el texto a cada destinatario. Devuelve [{usuario, ok, detalle}]."""
     from app import enviar_whatsapp
     res = []
     for d in destinatarios:
-        ok, detalle = enviar_whatsapp(d.get('telefono', ''), texto)
+        tel = d.get('telefono', '')
+        if tel.endswith('@g.us'):  # grupo de WhatsApp
+            ok, detalle = enviar_por_waha(tel, texto) if os.environ.get('WAHA_URL') else (False, 'Los grupos solo funcionan con el WhatsApp del servidor')
+        else:
+            ok, detalle = enviar_whatsapp(tel, texto)
         res.append({'usuario': d.get('usuario', ''), 'ok': bool(ok), 'detalle': detalle or ''})
     return res
 

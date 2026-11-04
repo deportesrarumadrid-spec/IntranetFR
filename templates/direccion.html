@@ -2161,9 +2161,12 @@
         if (_waDest.length) return;
         document.getElementById('waLista').innerHTML = '<div style="padding:14px; color:#94a3b8; font-size:12px;">Cargando...</div>';
         try {
-            const d = await (await fetch('/api/whatsapp/destinatarios')).json();
+            const [d, g] = await Promise.all([
+                fetch('/api/whatsapp/destinatarios').then(r => r.json()),
+                fetch('/api/whatsapp/grupos').then(r => r.json()).catch(() => ({ grupos: [] }))]);
             if (d.status !== 'ok') throw new Error(d.message);
-            _waDest = d.destinatarios;
+            // Grupos de WhatsApp primero (telefono = id del grupo), luego las personas
+            _waDest = (g.grupos || []).map(x => ({ usuario: x.nombre, telefono: x.id, equipo: 'GRUPO', grupo: true })).concat(d.destinatarios);
             waPintarLista();
         } catch (e) {
             document.getElementById('waLista').innerHTML = `<div style="padding:14px; color:#ef4444; font-size:12px;">${_waEsc(e.message || 'Error')}</div>`;
@@ -2180,7 +2183,7 @@
         document.getElementById('waLista').innerHTML = _waDest.map((x, i) => !_waVisible(x) ? '' :
             `<label style="display:flex; gap:8px; align-items:center; padding:6px 10px; border-bottom:1px solid #f1f5f9; cursor:pointer; font-size:12px;">
                 <input type="checkbox" ${_waSel.has(i) ? 'checked' : ''} onchange="waToggle(${i}, this.checked)">
-                <span style="font-weight:800; color:#1e293b; text-transform:uppercase;">${_waEsc(x.usuario)}</span>
+                ${x.grupo ? '<i class="fas fa-users" style="color:#16a34a;"></i>' : ''}<span style="font-weight:800; color:#1e293b; ${x.grupo ? '' : 'text-transform:uppercase;'}">${_waEsc(x.usuario)}</span>
                 <span style="margin-left:auto; font-size:10px; color:#64748b; font-weight:700;">${_waEsc(x.equipo)}</span></label>`
         ).join('') || '<div style="padding:14px; color:#94a3b8; font-size:12px;">Nadie</div>';
         _waCuenta();
