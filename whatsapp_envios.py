@@ -49,7 +49,7 @@ WAHA_SESION = 'default'
 def _waha(metodo, ruta, **kw):
     import requests
     url = os.environ.get('WAHA_URL', '').rstrip('/') + ruta
-    headers = {'X-Api-Key': os.environ.get('WAHA_API_KEY', ''), 'Accept': 'application/json'}
+    headers = {'X-Api-Key': os.environ.get('WAHA_API_KEY', ''), 'Accept': kw.pop('accept', 'application/json')}
     return requests.request(metodo, url, headers=headers, timeout=kw.pop('timeout', 25), **kw)
 
 
@@ -98,11 +98,14 @@ def api_qr():
     if not _permitido():
         return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
     try:
-        r = _waha('GET', f'/api/{WAHA_SESION}/auth/qr', params={'format': 'image'})
+        r = _waha('GET', f'/api/{WAHA_SESION}/auth/qr', params={'format': 'image'}, accept='image/png')
         if r.status_code >= 300:
             return jsonify({'status': 'error', 'message': 'QR no disponible todavía'}), 404
-        return current_app.response_class(r.content, mimetype=r.headers.get('Content-Type', 'image/png'),
-                                          headers={'Cache-Control': 'no-store'})
+        png = r.content
+        if 'json' in r.headers.get('Content-Type', ''):  # algunas versiones devuelven {mimetype, data(base64)}
+            import base64
+            png = base64.b64decode(r.json().get('data', ''))
+        return current_app.response_class(png, mimetype='image/png', headers={'Cache-Control': 'no-store'})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)[:150]}), 500
 
