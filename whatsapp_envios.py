@@ -84,8 +84,10 @@ def api_estado():
             return jsonify({'status': 'ok', 'modo': 'waha', 'estado': 'STARTING'})
         j = r.json()
         estado = j.get('status', '')
-        if estado in ('STOPPED', 'FAILED'):  # arrancarla para que muestre el QR o reconecte
+        if estado == 'STOPPED':  # arrancarla para que muestre el QR o reconecte
             _waha('POST', f'/api/sessions/{WAHA_SESION}/start')
+        elif estado == 'FAILED':  # p. ej. el QR caducó sin escanear: reiniciar para sacar uno nuevo
+            _waha('POST', f'/api/sessions/{WAHA_SESION}/restart')
         me = j.get('me') or {}
         numero = (me.get('id') or '').split('@')[0]
         return jsonify({'status': 'ok', 'modo': 'waha', 'estado': estado, 'numero': numero, 'nombre': me.get('pushName', '')})
