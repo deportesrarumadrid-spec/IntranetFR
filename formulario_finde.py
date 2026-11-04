@@ -280,7 +280,8 @@ def _parsear(texto):
 
     def nombres(s):
         partes = re.split(r',|;|/|&|\n|\s+y\s+|\s+e\s+|\s+-\s+', s, flags=re.I)
-        return [p.strip(' :.-*_"\'') for p in partes if p.strip(' :.-*_"\'')]
+        limpios = [p.strip(' :.-*_"\'') for p in partes if p.strip(' :.-*_"\'')]
+        return [x if any(c.isupper() for c in x) else x.title() for x in limpios]  # 'juan' → 'Juan'
 
     m, p = nombres(seg_m), nombres(seg_p)
     return (m, p) if m and p else None
