@@ -24,7 +24,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(BASE_DIR, 'datos_privados', 'formulario_finde.json')
 LOCK_FILE = os.path.join(BASE_DIR, 'datos_privados', '.formulario_finde.lock')
 URL_BASE = 'https://intranet.clubfuentelarreyna.com'
-FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSezt79kgOZisk52yRn8PF_5eWBBXeNxbVfCuRifljxQo6hR5A/viewform'
+FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSezt79kgOZisk52yRn8PF_5eWBBXeNxbVfCuRifIjxQo6hR5A/viewform'
 HORA_RECORDATORIO = '17:00'
 HORAS_TRAS_INICIO = 2
 
