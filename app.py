@@ -161,16 +161,11 @@ def normalizar_crono_busqueda(val):
 
 def enviar_whatsapp(numero, mensaje):
     """
-    Integración real con Whapi.cloud.
-    Requiere WHAPI_API_TOKEN en las variables de entorno.
-    Devuelve (ok, detalle): ok=True si Whapi lo acepta; detalle explica el fallo.
+    Envía por WAHA (instalado en el propio servidor) si WAHA_URL está configurado;
+    si no, por Whapi.cloud (WHAPI_API_TOKEN).
+    Devuelve (ok, detalle): ok=True si se acepta el envío; detalle explica el fallo.
     """
-    api_token = os.environ.get("WHAPI_API_TOKEN")
-    if not api_token:
-        print("ERROR: WHAPI_API_TOKEN no configurado en las variables de entorno.")
-        return False, "WhatsApp no configurado en el servidor"
-
-    # Limpiamos el número para que solo tenga dígitos (Whapi prefiere formato sin +)
+    # Limpiamos el número para que solo tenga dígitos (formato sin +)
     numero_limpio = "".join(filter(str.isdigit, str(numero)))
     if numero_limpio.startswith("00"):
         numero_limpio = numero_limpio[2:]
@@ -178,6 +173,17 @@ def enviar_whatsapp(numero, mensaje):
         numero_limpio = "34" + numero_limpio
     if len(numero_limpio) < 10:
         return False, "Teléfono no válido"
+
+    if os.environ.get("WAHA_URL"):
+        from whatsapp_envios import enviar_por_waha
+        ok, detalle = enviar_por_waha(numero_limpio, mensaje)
+        print(f"WHATSAPP (WAHA) a {numero}: {'OK' if ok else detalle}")
+        return ok, detalle
+
+    api_token = os.environ.get("WHAPI_API_TOKEN")
+    if not api_token:
+        print("ERROR: WHAPI_API_TOKEN no configurado en las variables de entorno.")
+        return False, "WhatsApp no configurado en el servidor"
     url = "https://gate.whapi.cloud/messages/text"
     payload = {
         "typing_time": 0,

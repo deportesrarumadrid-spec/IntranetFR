@@ -41,6 +41,83 @@ def _guardar(lista):
     os.replace(tmp, PROG_FILE)
 
 
+# ---------- WAHA (WhatsApp propio en el servidor, sin límites) ----------
+# Docker en 127.0.0.1:3000 con WAHA_API_KEY; la versión gratuita solo admite la sesión "default".
+WAHA_SESION = 'default'
+
+
+def _waha(metodo, ruta, **kw):
+    import requests
+    url = os.environ.get('WAHA_URL', '').rstrip('/') + ruta
+    headers = {'X-Api-Key': os.environ.get('WAHA_API_KEY', ''), 'Accept': 'application/json'}
+    return requests.request(metodo, url, headers=headers, timeout=kw.pop('timeout', 25), **kw)
+
+
+def enviar_por_waha(numero_limpio, mensaje):
+    try:
+        r = _waha('POST', '/api/sendText', json={'session': WAHA_SESION, 'chatId': f'{numero_limpio}@c.us', 'text': mensaje})
+        if r.status_code < 300:
+            return True, ''
+        try:
+            j = r.json()
+            detalle = j.get('message') or j.get('error') or r.text
+        except Exception:
+            detalle = r.text
+        if r.status_code == 422 or 'status' in str(detalle).lower():
+            detalle = 'El WhatsApp del club no está vinculado (escanea el QR de arriba)'
+        return False, str(detalle)[:200]
+    except Exception as e:
+        return False, f'No se pudo conectar con WhatsApp del servidor: {e}'[:200]
+
+
+@whatsapp_bp.route('/api/whatsapp/estado')
+def api_estado():
+    """Estado del WhatsApp del club: 'whapi' (servicio externo), o el estado de la sesión WAHA."""
+    if not _permitido():
+        return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
+    if not os.environ.get('WAHA_URL'):
+        return jsonify({'status': 'ok', 'modo': 'whapi'})
+    try:
+        r = _waha('GET', f'/api/sessions/{WAHA_SESION}')
+        if r.status_code == 404:  # primera vez: crear y arrancar la sesión
+            _waha('POST', '/api/sessions', json={'name': WAHA_SESION, 'start': True})
+            return jsonify({'status': 'ok', 'modo': 'waha', 'estado': 'STARTING'})
+        j = r.json()
+        estado = j.get('status', '')
+        if estado in ('STOPPED', 'FAILED'):  # arrancarla para que muestre el QR o reconecte
+            _waha('POST', f'/api/sessions/{WAHA_SESION}/start')
+        me = j.get('me') or {}
+        numero = (me.get('id') or '').split('@')[0]
+        return jsonify({'status': 'ok', 'modo': 'waha', 'estado': estado, 'numero': numero, 'nombre': me.get('pushName', '')})
+    except Exception as e:
+        return jsonify({'status': 'ok', 'modo': 'waha', 'estado': 'SIN_CONEXION', 'detalle': str(e)[:150]})
+
+
+@whatsapp_bp.route('/api/whatsapp/qr')
+def api_qr():
+    if not _permitido():
+        return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
+    try:
+        r = _waha('GET', f'/api/{WAHA_SESION}/auth/qr', params={'format': 'image'})
+        if r.status_code >= 300:
+            return jsonify({'status': 'error', 'message': 'QR no disponible todavía'}), 404
+        return current_app.response_class(r.content, mimetype=r.headers.get('Content-Type', 'image/png'),
+                                          headers={'Cache-Control': 'no-store'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)[:150]}), 500
+
+
+@whatsapp_bp.route('/api/whatsapp/desvincular', methods=['POST'])
+def api_desvincular():
+    if not _permitido():
+        return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
+    try:
+        _waha('POST', f'/api/sessions/{WAHA_SESION}/logout')
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)[:150]}), 500
+
+
 def _enviar_a_todos(destinatarios, texto):
     """Envía el texto a cada destinatario. Devuelve [{usuario, ok, detalle}]."""
     from app import enviar_whatsapp

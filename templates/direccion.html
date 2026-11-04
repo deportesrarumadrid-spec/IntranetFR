@@ -2075,6 +2075,7 @@
 
     <!-- SUBTAB: WHATSAPP -->
     <div id="subtab-whatsapp" class="subtab-content" style="display:none;">
+        <div id="waEstadoBox" class="card-coord" style="padding:12px 16px; margin-bottom:18px; display:none;"></div>
         <div style="display:grid; grid-template-columns:minmax(260px,380px) 1fr; gap:18px; align-items:start;" class="wa-grid">
             <div class="card-coord" style="padding:16px;">
                 <div style="font-size:12px; font-weight:900; color:#1e293b; margin-bottom:10px;">DESTINATARIOS <span id="waCuenta" style="color:#16a34a;"></span></div>
@@ -2099,7 +2100,7 @@
                     </div>
                     <button id="waBtn" onclick="waEnviar()" style="background:#16a34a; color:white; border:none; border-radius:8px; padding:10px 22px; font-size:12px; font-weight:900; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> ENVIAR WHATSAPP</button>
                     <div id="waResultado" style="margin-top:12px; font-size:12px;"></div>
-                    <div style="margin-top:10px; font-size:10.5px; color:#94a3b8;">Plan gratis de WhatsApp: máximo 5 personas distintas y 150 mensajes al día.</div>
+                    <div id="waNota" style="margin-top:10px; font-size:10.5px; color:#94a3b8;">Plan gratis de WhatsApp: máximo 5 personas distintas y 150 mensajes al día.</div>
                 </div>
                 <div class="card-coord" style="padding:16px;">
                     <div style="font-size:12px; font-weight:900; color:#1e293b; margin-bottom:10px;">PROGRAMADOS</div>
@@ -2116,7 +2117,46 @@
     const _waSel = new Set();
     const _waEsc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+    // Estado del WhatsApp del club (WAHA en el servidor): conectado / QR para vincular
+    let _waEstadoTimer = null;
+    async function waEstado() {
+        const box = document.getElementById('waEstadoBox');
+        clearTimeout(_waEstadoTimer);
+        let d;
+        try { d = await (await fetch('/api/whatsapp/estado')).json(); } catch (e) { return; }
+        if (d.status !== 'ok' || d.modo !== 'waha') { box.style.display = 'none'; return; }
+        document.getElementById('waNota').style.display = 'none';
+        box.style.display = 'block';
+        const enPestana = document.getElementById('subtab-whatsapp').style.display !== 'none';
+        const repetir = ms => { if (enPestana) _waEstadoTimer = setTimeout(waEstado, ms); };
+        const btn = (txt, fn, col) => `<button onclick="${fn}" style="background:${col}; color:white; border:none; border-radius:7px; padding:6px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;">${txt}</button>`;
+        if (d.estado === 'WORKING') {
+            box.innerHTML = `<div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                <span style="font-size:12px; font-weight:900; color:#16a34a;"><i class="fab fa-whatsapp"></i> WHATSAPP CONECTADO</span>
+                <span style="font-size:12px; color:#1e293b; font-weight:700;">${d.numero ? '+' + _waEsc(d.numero) : ''} ${_waEsc(d.nombre || '')}</span>
+                <span style="margin-left:auto;">${btn('DESVINCULAR', 'waDesvincular()', '#94a3b8')}</span></div>`;
+        } else if (d.estado === 'SCAN_QR_CODE') {
+            box.innerHTML = `<div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap;">
+                <img src="/api/whatsapp/qr?t=${Date.now()}" alt="QR" style="width:220px; height:220px; border:1px solid #e2e8f0; border-radius:8px; background:white;">
+                <div style="font-size:12px; color:#1e293b; line-height:1.7;"><div style="font-weight:900; color:#d97706; margin-bottom:6px;">WHATSAPP SIN VINCULAR</div>
+                En el móvil del club abre <b>WhatsApp → Ajustes → Dispositivos vinculados → Vincular un dispositivo</b> y escanea este código.<br>
+                <span style="color:#64748b; font-size:11px;">El código cambia solo cada pocos segundos.</span></div></div>`;
+            repetir(15000);
+        } else if (d.estado === 'SIN_CONEXION') {
+            box.innerHTML = `<span style="font-size:12px; font-weight:800; color:#ef4444;">No se puede conectar con el WhatsApp del servidor.</span> <span style="font-size:11px; color:#64748b;">${_waEsc(d.detalle || '')}</span>`;
+        } else {
+            box.innerHTML = `<span style="font-size:12px; font-weight:800; color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Arrancando WhatsApp del club... (${_waEsc(d.estado || '')})</span>`;
+            repetir(4000);
+        }
+    }
+    async function waDesvincular() {
+        if (!confirm('¿Desvincular el WhatsApp del club? Habrá que volver a escanear el QR para enviar.')) return;
+        await fetch('/api/whatsapp/desvincular', { method: 'POST' });
+        setTimeout(waEstado, 2000);
+    }
+
     async function waCargar() {
+        waEstado();
         waCargarProgramados();
         if (_waDest.length) return;
         document.getElementById('waLista').innerHTML = '<div style="padding:14px; color:#94a3b8; font-size:12px;">Cargando...</div>';
