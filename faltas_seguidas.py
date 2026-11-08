@@ -59,6 +59,9 @@ def _leer():
     d.setdefault('activo', False)  # se activa desde la pantalla tras revisar la vista previa
     d.setdefault('casos', {})
     d.setdefault('esperando_jugador', {})  # tel → texto de una respuesta que aún no sé de qué jugador es
+    for c in d['casos'].values():  # las pruebas no se quedan abiertas más de 2 horas
+        if c.get('prueba') and c['estado'] == 'pendiente' and c.get('creado', '') < (datetime.now() - timedelta(hours=2)).strftime('%Y-%m-%dT%H:%M'):
+            c['estado'] = 'cancelado'
     return d
 
 
@@ -232,7 +235,7 @@ def tick(ahora):
         dias = _dias_entreno()
         hoy = ahora.date().isoformat()
         for clave, c in list(_leer()['casos'].items()):
-            if c['estado'] != 'pendiente' or ahora.weekday() not in dias.get(_norm(c['equipo']), set()):
+            if c['estado'] != 'pendiente' or c.get('prueba') or ahora.weekday() not in dias.get(_norm(c['equipo']), set()):
                 continue
             if any(e['en'][:10] == hoy for e in c['envios']):
                 continue  # hoy ya se le ha preguntado

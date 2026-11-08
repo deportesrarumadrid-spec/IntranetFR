@@ -2735,7 +2735,7 @@
         flGuardar({ reenviar: _flReenviar.filter((_, j) => j !== i) });
     }
     async function flPrueba() {
-        const p = _waPersonas.find(x => /pozon/i.test(x.usuario));
+        const p = _waPersonas.find(x => /^\s*ruben\s+pozon\s*$/i.test(x.usuario.normalize('NFD').replace(/[̀-ͯ]/g, '')));
         const box = document.getElementById('flVistaBox');
         if (!p) { box.innerHTML = '<span style="color:#ef4444; font-weight:700;">No encuentro a Rubén Pozón en los usuarios</span>'; return; }
         if (!confirm('¿Enviar a RUBÉN POZÓN una pregunta de prueba sobre un jugador del INFANTIL B?')) return;
