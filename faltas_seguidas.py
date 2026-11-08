@@ -279,6 +279,13 @@ def tick(ahora):
     d = _leer()
     if not d.get('activo'):
         return
+    # Si aún no se ha enviado el aviso de revisión, se envía solo a las 10:00 (de lunes a sábado)
+    if d.get('preguntar_desde') == 'tras_revision' and (ahora.hour, ahora.minute) == (10, 0) and ahora.weekday() != 6:
+        try:
+            enviar_aviso_revision()
+        except Exception as e:
+            print(f"[FALTAS] aviso de revisión: {e}", flush=True)
+        return
     if ahora.minute % 30 == 0:
         try:
             revisar_equipos()
