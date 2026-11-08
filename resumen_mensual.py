@@ -95,7 +95,7 @@ def _asistencia_jugadores(filas, equipo, anio, mes):
         si += est == 'SI'
         if est == 'NO':
             faltas[_nombre(r[2])] = faltas.get(_nombre(r[2]), 0) + 1
-    top = sorted(faltas.items(), key=lambda x: -x[1])[:3]
+    top = sorted(((n, c) for n, c in faltas.items() if c >= 2), key=lambda x: -x[1])[:3]
     return (round(100 * si / total) if total else None), top
 
 
@@ -134,6 +134,21 @@ def datos_equipo(equipo, anio, mes, filas_asis=None, informe=None, obj_todos=Non
         obj_todos = construir_obj_semanales()
     inf = informe.get(_norm(equipo), {})
     pct_asis, top_faltas = _asistencia_jugadores(filas_asis, equipo, anio, mes)
+    # Días de entrenamiento del mes según la configuración del equipo, y días en que se pasó lista
+    import calendar
+    from aviso_diario import _dias_entreno
+    dias_semana = _dias_entreno().get(_norm(equipo), set())
+    entrenos = {date(anio, mes, n) for n in range(1, calendar.monthrange(anio, mes)[1] + 1) if date(anio, mes, n).weekday() in dias_semana}
+    con_lista = set()
+    for r in filas_asis:
+        if len(r) > 1 and _norm(r[1]) == _norm(equipo):
+            try:
+                dd, mm, yy = [int(x) for x in r[0].strip().split()[0].split('/')]
+                con_lista.add(date(yy, mm, dd))
+            except Exception:
+                pass
+    asis_pasadas = {'hechas': len(con_lista & entrenos), 'total': len(entrenos)}
+    sesiones = {'subidos': min((inf.get('entrenamientos') or {}).get('subidos', 0), len(entrenos)), 'total': len(entrenos)}
     partidos = [p for p in _partidos_equipo(equipo, obj_todos) if 'DESCANSA' not in _norm(p.get('rival'))]
     del_mes = [p for p in partidos if p['_fecha'].year == anio and p['_fecha'].month == mes and p.get('estado')]
     pct = lambda ps: (round(100 * sum(1 for p in ps if p.get('cumplido') is True) /
@@ -145,7 +160,7 @@ def datos_equipo(equipo, anio, mes, filas_asis=None, informe=None, obj_todos=Non
             rivales.setdefault(p.get('rival'), []).append(_res(p))
     return {
         'equipo': equipo, 'anio': anio, 'mes': mes,
-        'asis_pasadas': inf.get('asistencias', {}), 'entrenos': inf.get('entrenamientos', {}),
+        'asis_pasadas': asis_pasadas, 'entrenos': sesiones,
         'pct_asistencia': pct_asis, 'top_faltas': top_faltas,
         'partidos_mes': del_mes, 'pct_mes': pct(del_mes), 'pct_temporada': pct(jugados_temp),
         'jornadas': jugados_temp, 'ida_vuelta': [(r, v[0], v[1] if len(v) > 1 else '') for r, v in rivales.items()],
@@ -181,6 +196,8 @@ def html_resumen(d):
         h.append(f'<p style="{_TXT}">Asistencia de los jugadores: <b style="color:{_color_pct(d["pct_asistencia"])};">{d["pct_asistencia"]}%</b></p>')
     if d['top_faltas']:
         h.append(f'<p style="{_TXT}">Más faltas: ' + ' · '.join(f'<b>{escape(n)}</b> ({c})' for n, c in d['top_faltas']) + '</p>')
+    elif d['pct_asistencia'] is not None:
+        h.append(f'<p style="{_TXT}">Más faltas: ningún jugador con más de 1 falta</p>')
     h.append(f'<p style="{_TIT}">ENTRENAMIENTOS</p>')
     h.append(f'<p style="{_TXT}">Sesiones subidas: <b>{en.get("subidos", 0)} de {en.get("total", 0)}</b></p>')
 
@@ -221,8 +238,10 @@ def texto_ia(d):
     from analisis_postpartido import _generar_ia
     resumen = {
         'equipo': d['equipo'], 'mes': f"{_MESES[d['mes'] - 1]} {d['anio']}",
-        'lista_pasada': d['asis_pasadas'], 'asistencia_jugadores_pct': d['pct_asistencia'],
-        'jugadores_con_mas_faltas': d['top_faltas'], 'sesiones_subidas': d['entrenos'],
+        'dias_de_entrenamiento_con_lista_de_asistencia_pasada': f"{d['asis_pasadas'].get('hechas', 0)} de {d['asis_pasadas'].get('total', 0)}",
+        'porcentaje_de_asistencia_de_los_jugadores': d['pct_asistencia'],
+        'jugadores_con_2_o_mas_faltas': d['top_faltas'],
+        'sesiones_de_entrenamiento_subidas_a_la_intranet': f"{d['entrenos'].get('subidos', 0)} de {d['entrenos'].get('total', 0)} días de entrenamiento",
         'objetivos_mes': [{'rival': p.get('rival'), 'resultado': _res(p), 'objetivo': p.get('objetivo'), 'cumplido': p.get('cumplido')}
                           for p in d['partidos_mes']],
         'pct_objetivos_mes': d['pct_mes'], 'pct_objetivos_temporada': d['pct_temporada'],
@@ -231,7 +250,8 @@ def texto_ia(d):
     prompt = ("Eres director deportivo de un club de fútbol con nivel de élite. Con estos datos del mes de un equipo, "
               "escribe para su entrenador, en español, 3 puntos: lo más positivo, lo que hay que mejorar y el foco para el "
               "mes que viene. Cada punto en una línea que empiece por '• ', con la idea clave en negrita de WhatsApp "
-              "(*así*), un guion y el dato que lo demuestra. Sin relleno, sin títulos, sin inventar nada.\n\n"
+              "(*así*), un guion y el dato que lo demuestra. Sin relleno, sin títulos. Habla SOLO de lo que aparece en "
+              "estos datos (asistencia, sesiones subidas, objetivos y resultados); no deduzcas ni inventes nada más.\n\n"
               + json.dumps(resumen, ensure_ascii=False, default=str))
     texto = _generar_ia(prompt).replace('**', '*')
     lineas = [l.strip() for l in texto.splitlines() if l.strip()]
