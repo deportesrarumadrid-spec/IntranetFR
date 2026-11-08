@@ -187,7 +187,7 @@ def calcular(vie=None):
     grupos = {g.get('nombre'): g for g in (load_cached_data() or {}).get('equipos', [])}
     horas_fed = _horas_federacion(vie)
 
-    previas, avisos, sin_goles, sin_goleador_rival = {}, [], [], []
+    previas, avisos, sin_goles, sin_goleador_rival, clasifs = {}, [], [], [], {}
     for p in construir_obj_semanales():
         try:
             dd, mm, yy = [int(x) for x in (p.get('fecha') or '').split('-')]
@@ -201,6 +201,7 @@ def calcular(vie=None):
             continue
         grupo = grupos.get(p.get('grupo')) or {}
         previas[eq] = texto_previa(p, eq, grupo, _hora_partido(p, horas_fed), calcular_clasificacion_en_jornada)
+        clasifs[eq] = {'grupo': p.get('grupo'), 'equipo': eq, 'rival': p.get('rival', ''), 'letra': p.get('letra', '')}
         if not grupo.get('goleadores'):
             sin_goles.append(eq)
         elif '⚽' not in previas[eq]:
@@ -217,7 +218,7 @@ def calcular(vie=None):
         if not telefono:
             avisos.append(f'{usuario} ({eq}): sin teléfono en su usuario')
             continue
-        mensajes.append({'usuario': usuario, 'telefono': telefono, 'equipo': eq,
+        mensajes.append({'usuario': usuario, 'telefono': telefono, 'equipo': eq, 'clasificacion': clasifs.get(eq),
                          'texto': f'Hola {nombre}, previa de la jornada:\n' + previas[eq]})
     sin = sorted(set(previas) - {m['equipo'] for m in mensajes})
     if sin:
@@ -247,15 +248,84 @@ def _horas_federacion(vie):
     return out
 
 
+def _nombres_grupo(cal, rival, letra):
+    """(rival, nuestro equipo) tal y como se llaman en el calendario del grupo (normalizados)."""
+    rival_n = _nombre_en_grupo(cal, rival)
+    nombres = [_norm(x.get(k)) for x in cal for k in ('local', 'visitante')]
+    nuestro_n = next((n for n in nombres if 'FUENTELARREYNA' in n and (not letra or n.endswith(' ' + _norm(letra)))), None) \
+        or next((n for n in nombres if 'FUENTELARREYNA' in n), '')
+    return rival_n, nuestro_n
+
+
+# ---------- imagen de la clasificación (como la de la Federación) ----------
+
+_RES_COL = {'G': '#16a34a', 'E': '#d97706', 'P': '#dc2626'}
+
+
+def html_clasificacion(grupo, eq, rival, letra):
+    """Resultados de la última jornada + clasificación del grupo. Nuestro equipo en verde y el próximo rival en amarillo."""
+    from html import escape
+    cal = grupo.get('calendario_grupo') or []
+    rival_n, nuestro_n = _nombres_grupo(cal, rival, letra)
+    fondo = lambda nombre: ('background-color:#dcfce7;' if _norm(nombre) == nuestro_n else
+                            'background-color:#fef9c3;' if _norm(nombre) == rival_n else '')
+    jugadas = [x for x in cal if re.search(r'\d+\s*-\s*\d+', x.get('resultado') or '')]
+    h = [f'<table style="width:100%;font-family:sans-serif;"><tr><td style="font-size:14px;font-weight:bold;color:#E31E24;">'
+         f'{escape(_bonito(eq))} — {escape(str(grupo.get("nombre", "")))}</td>'
+         f'<td style="text-align:right;font-size:9px;color:#64748b;">Temporada {_temporada()}</td></tr></table>']
+    if jugadas:
+        jn = max(_jornada_num(x.get('jornada')) for x in jugadas)
+        ult = [x for x in cal if _jornada_num(x.get('jornada')) == jn]
+        fecha = next((str(x.get('fecha')) for x in ult if x.get('fecha')), '')
+        h.append(f'<p style="font-family:sans-serif;font-size:10px;font-weight:bold;text-align:center;margin:8px 0 4px 0;">'
+                 f'Jornada {jn}{" (" + escape(fecha) + ")" if fecha else ""}</p>')
+        filas = ''.join(
+            f'<tr style="{fondo(x.get("local")) or fondo(x.get("visitante"))}">'
+            f'<td style="padding:3px 6px;font-size:8.5px;text-align:right;width:44%;">{escape(str(x.get("local", "")))}</td>'
+            f'<td style="padding:3px 6px;font-size:10px;font-weight:bold;text-align:center;width:12%;">{escape(str(x.get("resultado") or "-"))}</td>'
+            f'<td style="padding:3px 6px;font-size:8.5px;width:44%;">{escape(str(x.get("visitante", "")))}</td></tr>' for x in ult)
+        h.append(f'<table style="width:100%;border-collapse:collapse;font-family:sans-serif;">{filas}</table>')
+    th = 'padding:4px 5px;font-size:8.5px;font-weight:bold;color:#64748b;background-color:#f8fafc;border-bottom:2px solid #e2e8f0;'
+    td = 'padding:4px 5px;font-size:9px;border-bottom:1px solid #e2e8f0;'
+    filas = ''
+    for f in grupo.get('clasificacion') or []:
+        ult = ''.join(f'<b style="color:{_RES_COL.get(u, "#94a3b8")};">{escape(u)}</b> ' for u in (f.get('ultimos') or [])[:5])
+        filas += (f'<tr style="{fondo(f.get("equipo"))}"><td style="{td}color:#64748b;">{escape(str(f.get("pos", "")))}</td>'
+                  f'<td style="{td}font-weight:bold;">{escape(str(f.get("equipo", "")))}</td>'
+                  f'<td style="{td}text-align:center;font-weight:bold;color:#E31E24;">{escape(str(f.get("puntos", "")))}</td>'
+                  + ''.join(f'<td style="{td}text-align:center;">{escape(str(f.get(k, "")))}</td>'
+                            for k in ('jugados', 'ganados', 'empatados', 'perdidos', 'goles_favor', 'goles_contra'))
+                  + f'<td style="{td}text-align:center;">{ult}</td></tr>')
+    h.append(f'<table style="width:100%;border-collapse:collapse;font-family:sans-serif;margin-top:10px;"><tr>'
+             f'<th style="{th}width:20px;"></th><th style="{th}text-align:left;">EQUIPOS</th>'
+             + ''.join(f'<th style="{th}text-align:center;width:28px;">{x}</th>' for x in ('PTS', 'J', 'G', 'E', 'P', 'F', 'C'))
+             + f'<th style="{th}text-align:center;width:80px;">ULT.</th></tr>{filas}</table>')
+    return ''.join(h)
+
+
+def _temporada():
+    hoy = date.today()
+    ini = hoy.year if hoy.month >= 8 else hoy.year - 1
+    return f'{ini}-{ini + 1}'
+
+
+def imagen_clasificacion(info):
+    """PNG de la clasificación para una previa (info = {'grupo', 'equipo', 'rival', 'letra'}), o None."""
+    from competicion_scraper import load_cached_data
+    from objetivos_finde import html_a_png
+    grupo = next((g for g in (load_cached_data() or {}).get('equipos', []) if g.get('nombre') == info.get('grupo')), None)
+    if not grupo or not grupo.get('clasificacion'):
+        return None
+    return html_a_png(html_clasificacion(grupo, info['equipo'], info['rival'], info.get('letra')),
+                      filas=8 + len(grupo['clasificacion']) // 2, ancho=760)
+
+
 def texto_previa(p, eq, grupo, hora, clasif_en_jornada):
     """Cuerpo del mensaje (sin el saludo) para un partido."""
     cal = grupo.get('calendario_grupo') or []
     jn = _jornada_num(p.get('jornada'))
     rival = p.get('rival', '')
-    rival_n = _nombre_en_grupo(cal, rival)
-    nuestro_n = next((n for n in (_norm(x.get(k)) for x in cal for k in ('local', 'visitante'))
-                      if 'FUENTELARREYNA' in n and (not p.get('letra') or n.endswith(' ' + _norm(p.get('letra'))))), None) \
-        or next((n for n in (_norm(x.get(k)) for x in cal for k in ('local', 'visitante')) if 'FUENTELARREYNA' in n), '')
+    rival_n, nuestro_n = _nombres_grupo(cal, rival, p.get('letra'))
     d = p['_fecha']
     cab = f"*{_bonito(eq)}* · J.{jn} · {_DIAS[d.weekday()]} {d:%d/%m}{' ' + hora if hora else ''} · {'Casa' if p.get('es_local') else 'Fuera'}"
     t = [cab, f'🆚 *{rival}*']
@@ -309,8 +379,22 @@ def enviar_todas(vie=None, solo_telefono=None, destino=None):
     ok = 0
     mensajes = [m for m in datos['mensajes'] if not solo_telefono
                 or ''.join(c for c in m['telefono'] if c.isdigit()).endswith(''.join(c for c in solo_telefono if c.isdigit())[-9:])]
+    from objetivos_finde import enviar_imagen
+    imagenes = {}
     for m in mensajes:
-        bien, detalle = enviar_whatsapp(destino or m['telefono'], m['texto'])
+        tel = ''.join(c for c in (destino or m['telefono']) if c.isdigit())
+        tel = '34' + tel if len(tel) == 9 else tel
+        info = m.get('clasificacion') or {}
+        clave = (info.get('grupo'), info.get('equipo'))
+        if clave not in imagenes:
+            try:
+                imagenes[clave] = imagen_clasificacion(info) if info else None
+            except Exception as e:
+                print(f"[PREVIA] imagen clasificación {m['equipo']}: {e}", flush=True)
+                imagenes[clave] = None
+        if imagenes[clave]:
+            enviar_imagen(f'{tel}@c.us', imagenes[clave], '')
+        bien, detalle = enviar_whatsapp(tel, m['texto'])
         ok += bool(bien)
         if not bien:
             print(f"[PREVIA] No enviado a {m['usuario']}: {detalle}", flush=True)
@@ -371,3 +455,20 @@ def api_vista():
         return jsonify(dict(status='ok', **calcular()))
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Error en el servidor: {e}'[:250]})
+
+
+@previa_bp.route('/api/whatsapp/previa/clasificacion')
+def api_clasificacion():
+    """Imagen de la clasificación que irá con la previa de un equipo (no envía nada)."""
+    if not _permitido():
+        return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
+    from flask import Response
+    try:
+        equipo = _norm(request.args.get('equipo') or '')
+        m = next((m for m in calcular()['mensajes'] if _norm(m['equipo']) == equipo), None)
+        png = imagen_clasificacion(m['clasificacion']) if m and m.get('clasificacion') else None
+        if not png:
+            return jsonify({'status': 'error', 'message': 'Ese equipo no tiene previa este finde (o no hay clasificación)'}), 404
+        return Response(png, mimetype='image/png', headers={'Cache-Control': 'no-store'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Error en el servidor: {e}'[:250]}), 500

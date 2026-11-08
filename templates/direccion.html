@@ -2195,6 +2195,8 @@
                         Los datos de la Federación se actualizan solos el lunes a las 21:30. <span id="prvUltimo"></span></div>
                     <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                         <button onclick="prvVista()" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-eye"></i> VER QUÉ SE ENVIARÍA</button>
+                        <input id="prvEquipo" value="INFANTIL B" style="padding:6px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:11px; width:120px; text-transform:uppercase;">
+                        <button onclick="window.open('/api/whatsapp/previa/clasificacion?equipo=' + encodeURIComponent(document.getElementById('prvEquipo').value.trim().toUpperCase()) + '&t=' + Date.now(), '_blank')" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-image"></i> VER CLASIFICACIÓN</button>
                     </div>
                     <div id="prvVistaBox" style="margin-top:10px; font-size:12px;"></div>
                 </div>
