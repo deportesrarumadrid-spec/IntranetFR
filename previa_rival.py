@@ -333,7 +333,8 @@ def tick(ahora):
         guardar_cfg(cfg)
         try:
             import competicion_scraper as cs
-            usuario, password = cs.cargar_credenciales_rffm()
+            from sincronizar_rffm import credenciales
+            usuario, password = credenciales()
             ok, msg = cs.sync_rffm(usuario, password)
             print(f"[PREVIA] Actualización de la Federación: {'OK' if ok else msg}", flush=True)
         except Exception as e:
