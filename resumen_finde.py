@@ -75,8 +75,18 @@ _TD = 'padding:7px 8px;font-size:10.5px;border-bottom:1px solid #e2e8f0;vertical
 _COL = {'G': '#16a34a', 'E': '#d97706', 'P': '#dc2626'}
 
 
+def _nuestro_primero(p):
+    """Resultado con nuestros goles primero ('9 - 0' jugando fuera → '0-9')."""
+    import re
+    m = re.search(r'(\d+)\s*-\s*(\d+)', str(p.get('resultado') or ''))
+    if not m:
+        return str(p.get('resultado') or '')
+    a, b = m.group(1), m.group(2)
+    return f'{a}-{b}' if p.get('es_local') else f'{b}-{a}'
+
+
 def html_cumplimiento(partidos, vie):
-    from objetivos_finde import _jornada, texto_finde
+    from objetivos_finde import texto_finde
     v, r, pct = _stats_cumplimiento(partidos)
     filas = []
     for p in partidos:
@@ -84,23 +94,21 @@ def html_cumplimiento(partidos, vie):
         if p.get('formato'):
             equipo += f' <span style="color:#94a3b8;font-size:8px;">({escape(p["formato"])})</span>'
         est = p.get('estado') or ''
-        res = (f'<b style="color:{_COL.get(est, "#64748b")};">{escape(est)} {escape(str(p.get("resultado") or ""))}</b>'
+        res = (f'<b style="color:{_COL.get(est, "#64748b")};">{escape(est)} {escape(_nuestro_primero(p))}</b>'
                if est else '<span style="color:#94a3b8;">Sin jugar</span>')
-        cum = ('<b style="color:#16a34a;">SÍ</b>' if p.get('cumplido') is True else
-               '<b style="color:#dc2626;">NO</b>' if p.get('cumplido') is False else '<span style="color:#cbd5e1;">–</span>')
+        cum = ('<b style="color:#16a34a;font-size:14px;">&#10004;</b>' if p.get('cumplido') is True else
+               '<b style="color:#dc2626;font-size:14px;">&#10008;</b>' if p.get('cumplido') is False else '<span style="color:#cbd5e1;">–</span>')
         obj = f'<b>{escape(p["objetivo"])}</b>' if p.get('objetivo') else '<span style="color:#94a3b8;">–</span>'
         filas.append(f'<tr><td style="{_TD}font-weight:bold;">{equipo}</td>'
-                     f'<td style="{_TD}color:#64748b;font-weight:bold;">{escape(_jornada(p))}</td>'
-                     f'<td style="{_TD}color:#64748b;">{"Casa" if p.get("es_local") else "Fuera"}</td>'
                      f'<td style="{_TD}">{escape(str(p.get("rival", "")))}</td>'
-                     f'<td style="{_TD}">{res}</td><td style="{_TD}">{cum}</td><td style="{_TD}">{obj}</td></tr>')
+                     f'<td style="{_TD}">{res}</td><td style="{_TD}text-align:center;">{cum}</td><td style="{_TD}">{obj}</td></tr>')
     titulo = texto_finde(vie).replace('OBJETIVOS', 'RESULTADOS')
     return (f'<p style="font-family:sans-serif;font-size:15px;font-weight:bold;color:#1e293b;margin:0 0 4px 0;">{escape(titulo)} — CUMPLIMIENTO</p>'
             f'<p style="font-family:sans-serif;font-size:11px;font-weight:bold;color:#1e293b;margin:0 0 8px 0;">{pct}% cumplidos · '
             f'<span style="color:#16a34a;">{v} cumplidos</span> · <span style="color:#dc2626;">{r} no cumplidos</span></p>'
             f'<table style="width:100%;border-collapse:collapse;font-family:sans-serif;">'
-            f'<tr><th style="{_TH}width:130px;">EQUIPO</th><th style="{_TH}width:85px;">JORN.</th><th style="{_TH}width:45px;">CAMPO</th>'
-            f'<th style="{_TH}">RIVAL</th><th style="{_TH}width:90px;">RESULTADO</th><th style="{_TH}width:70px;">CUMPLIDO</th>'
+            f'<tr><th style="{_TH}width:150px;">EQUIPO</th>'
+            f'<th style="{_TH}">RIVAL</th><th style="{_TH}width:90px;">RESULTADO</th><th style="{_TH}width:75px;text-align:center;">CUMPLIDO</th>'
             f'<th style="{_TH}width:110px;">OBJETIVO</th></tr>' + ''.join(filas) + '</table>')
 
 
