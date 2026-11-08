@@ -101,47 +101,59 @@ def _fmt(v, unidad=''):
     return f'{v}{unidad}'
 
 
-def _puntos_ia(r, equipo):
-    """4-5 puntos clave del partido escritos por la IA a partir de los datos de Veo."""
+_PROMPT_ANALISIS = """Eres analista de fútbol de élite (nivel primer equipo profesional, Licencia UEFA Pro).
+Redacta el análisis del partido de {equipo} ({marcador} contra {rival}) para su entrenador. Escribe en español,
+tuteándole, con tono profesional, directo y claro. Interpreta los datos: no los enumeres. Cada afirmación tiene que
+apoyarse en los datos que te doy (cita alguna cifra, minuto, zona o dorsal), sin inventar nada. Todo con nivel de élite,
+sea cual sea la categoría. Responde SOLO con este formato, sin nada antes ni después (los títulos tal cual, con
+asteriscos, que es negrita en WhatsApp; nada de #):
+
+🧭 *Lectura del partido*
+(un párrafo de 5 a 7 frases: el guion del partido; cómo atacamos y cómo defendimos; quién dominó y en qué fases y
+partes; dónde se ganó o se perdió el partido; y la clave del resultado)
+
+✅ *Lo que funcionó*
+• (2 o 3 puntos)
+
+⚠️ *A mejorar*
+• (2 o 3 puntos: el problema, el dato que lo demuestra y qué corregir)
+
+⏱️ *Momentos clave*
+• (2 a 4 momentos con su minuto y parte)
+
+⭐ *Destacados*
+• (2 o 3 dorsales y por qué)
+
+🎯 *Foco para la semana*
+• (1 o 2 objetivos concretos de entrenamiento: qué trabajar y para qué)
+
+Máximo 2.000 caracteres en total.
+
+DATOS DEL PARTIDO (Veo: Informe del Partido + Analytics):
+{datos}"""
+
+
+def _analisis_ia(r, equipo, rival, marcador):
+    """Análisis de élite redactado por la IA a partir de los datos de Veo (formato fijo por apartados)."""
     import veo
     from analisis_postpartido import _generar_ia
-    prompt = (f"Eres analista de fútbol de cantera. Con estos datos objetivos de Veo del partido de {equipo}, escribe "
-              "entre 4 y 5 puntos clave para el entrenador, en español, cada uno en una línea que empiece por '• ' y de "
-              "como mucho 25 palabras. Di qué funcionó, qué hay que mejorar y en qué momentos o zonas se sufrió o se "
-              "dominó. Usa solo los datos que te doy (puedes citar dorsales y cifras), sin inventar nada y sin títulos.\n\n"
-              + veo.texto_para_ia(r))
-    texto = _generar_ia(prompt)
-    lineas = [l.strip() for l in texto.splitlines() if l.strip()]
-    return '\n'.join(l if l.startswith('•') else '• ' + l.lstrip('-* ') for l in lineas[:6])
+    texto = _generar_ia(_PROMPT_ANALISIS.format(equipo=_bonito(equipo), rival=rival, marcador=marcador,
+                                                datos=veo.texto_para_ia(r)))
+    texto = texto.strip().strip('`').strip()
+    return '\n'.join(l.rstrip() for l in texto.splitlines()).replace('**', '*')
 
 
-def texto_informe(r, equipo, nombre_ent='', con_ia=True):
-    """Mensaje de WhatsApp con el informe del partido de Veo."""
-    gf, gc = r['marcador'][0], r['marcador'][1]
-    try:
-        f = date.fromisoformat(r.get('fecha') or '')
-        fecha = f'{_DIAS[f.weekday()]} {f:%d/%m}'
-    except Exception:
-        fecha = r.get('fecha') or ''
-    rival = str(r.get('titulo', '')).split(' - ', 1)[1].strip() if ' - ' in str(r.get('titulo', '')) else r.get('rival', 'Rival')
-    t = [f"Hola {nombre_ent}, informe del partido (Veo):" if nombre_ent else 'Informe del partido (Veo):',
-         f"*{_bonito(equipo)} {gf if gf is not None else '-'}-{gc if gc is not None else '-'} {rival}* · {fecha}"]
-
-    goles = sorted(r.get('goleadores') or [], key=lambda g: (g.get('parte') or 0, g.get('minuto') or 0))
-    if goles:
-        t.append('⚽ ' + ' · '.join(f"{'FR' if g['equipo'] == 'nuestro' else 'Rival'} {g['parte']}ª {g['minuto']}'"
-                                    + (f" (dorsal {g['dorsal']})" if g.get('dorsal') else '') for g in goles))
-
+def _datos_basicos(r):
+    """Respaldo si la IA falla: los datos clave y los destacados por jugador."""
+    t = []
     filas = {f['clave']: f for s in r.get('secciones', []) for f in s['filas']}
-    datos = []
     for k in _CLAVE:
         fila = filas.get(k)
         if fila and (fila['nuestro'] is not None or fila['rival'] is not None):
             u = '%' if '(%)' in fila['etiqueta'] else ''
-            datos.append(f"• {fila['etiqueta'].replace(' (%)', '')}: {_fmt(fila['nuestro'], u)} - {_fmt(fila['rival'], u)}")
-    if datos:
-        t += ['', '📊 *Datos clave* (FR - Rival)'] + datos
-
+            t.append(f"• {fila['etiqueta'].replace(' (%)', '')}: {_fmt(fila['nuestro'], u)} - {_fmt(fila['rival'], u)}")
+    if t:
+        t = ['📊 *Datos clave* (FR - Rival)'] + t
     jug = [j for j in r.get('jugadores') or [] if (j.get('seconds_played_total') or 0) > 0]
     dest = []
     for clave, texto, unidad in _DESTACADOS:
@@ -151,14 +163,28 @@ def texto_informe(r, equipo, nombre_ent='', con_ia=True):
             dest.append(f"• {texto}: dorsal {mejor['dorsal']} ({_fmt(mejor[clave], unidad)})")
     if dest:
         t += ['', '🏃 *Destacados*'] + dest
+    return '\n'.join(t)
 
+
+def texto_informe(r, equipo, nombre_ent='', con_ia=True):
+    """Mensaje de WhatsApp: análisis de élite del partido (IA) con los datos de Veo como apoyo."""
+    gf, gc = r['marcador'][0], r['marcador'][1]
+    marcador = f"{gf if gf is not None else '-'}-{gc if gc is not None else '-'}"
+    try:
+        f = date.fromisoformat(r.get('fecha') or '')
+        fecha = f'{_DIAS[f.weekday()]} {f:%d/%m}'
+    except Exception:
+        fecha = r.get('fecha') or ''
+    rival = str(r.get('titulo', '')).split(' - ', 1)[1].strip() if ' - ' in str(r.get('titulo', '')) else r.get('rival', 'Rival')
+    t = [f"Hola {nombre_ent}, análisis del partido (Veo):" if nombre_ent else 'Análisis del partido (Veo):',
+         f"*{_bonito(equipo)} {marcador} {rival}* · {fecha}", '']
+    cuerpo = ''
     if con_ia:
         try:
-            puntos = _puntos_ia(r, equipo)
-            if puntos:
-                t += ['', '🧠 *Puntos clave*', puntos]
+            cuerpo = _analisis_ia(r, equipo, rival, marcador)
         except Exception as e:
             print(f"[INFORME VEO] IA: {e}", flush=True)
+    t.append(cuerpo or _datos_basicos(r))
     if r.get('url'):
         t += ['', f"🎥 {r['url']}"]
     return '\n'.join(t) + '\n\nDirección Deportiva'
@@ -214,7 +240,7 @@ def procesar_finde(vie, solo_a=None, solo_equipo=None):
         base = texto_informe(r, eq, '', con_ia=True)  # la IA se llama una vez por vídeo
         ok = 0
         for usuario, tel in destinos:
-            texto = base.replace('Informe del partido (Veo):', f"Hola {usuario.split()[0].capitalize()}, informe del partido (Veo):", 1)
+            texto = base.replace('Análisis del partido (Veo):', f"Hola {usuario.split()[0].capitalize()}, análisis del partido (Veo):", 1)
             bien, _ = enviar_whatsapp(tel, texto)
             ok += bool(bien)
         if not solo_a:
