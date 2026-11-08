@@ -2916,37 +2916,71 @@ def _eq_encuesta(nombre):
         n = 'alevin femenino'
     return re.sub(r'\s+', ' ', n)
 
-def formularios_partido_hechos(client, nombre_excel):
-    """[(fecha, equipo_normalizado)] de todos los formularios de partido: el de la intranet
-    (FORMULARIO_PARTIDOS de la temporada) y el formulario de Google de los entrenadores."""
+def formularios_partido_detalle(client, nombre_excel):
+    """[(fecha, equipo_normalizado, mejores, peores)] de todos los formularios de partido: el de la intranet
+    (FORMULARIO_PARTIDOS de la temporada) y el formulario de Google de los entrenadores.
+    Ojo: la hoja de la intranet puede no tener fila de títulos (la primera fila ya es un formulario)."""
     from datetime import date as _date
     out = []
     def _fecha(txt):
         p = (txt or '').strip().split()[0].split('/') if (txt or '').strip() else []
         d, m, y = int(p[0]), int(p[1]), int(p[2])
         return _date(y + 2000 if y < 100 else y, m, d)
+
+    def _leer(filas, norm_equipo):
+        if not filas:
+            return
+        try:
+            _fecha(filas[0][0]); con_titulos = False  # la primera fila ya es un formulario
+        except Exception:
+            con_titulos = True
+        hdrs = [h.strip().upper().replace(' ', '') for h in filas[0]] if con_titulos else []
+        idx = lambda pred, defecto: next((i for i, h in enumerate(hdrs) if pred(h)), defecto)
+        i_eq = idx(lambda h: 'EQUIPO' in h, 1)
+        i_fe = idx(lambda h: 'MARCA' in h or 'TEMPORAL' in h, 0)
+        i_me = idx(lambda h: 'MEJOR' in h, 11)
+        i_pe = idx(lambda h: 'FLOJO' in h or 'PEOR' in h, 12)
+        for row in (filas[1:] if con_titulos else filas):
+            g = lambda i: row[i].strip() if i < len(row) else ''
+            try:
+                out.append((_fecha(g(i_fe)), norm_equipo(g(i_eq)), g(i_me), g(i_pe)))
+            except Exception:
+                pass
     try:
-        all_form = client.open(nombre_excel).worksheet('FORMULARIO_PARTIDOS').get_all_values()
-        if all_form and len(all_form) > 1:
-            hdrs = [h.strip().upper().replace(' ', '') for h in all_form[0]]
-            idx_eq = next((i for i, h in enumerate(hdrs) if 'EQUIPO' in h), 1)
-            idx_fe = next((i for i, h in enumerate(hdrs) if 'MARCA' in h or 'TEMPORAL' in h), 0)
-            for row in all_form[1:]:
-                try: out.append((_fecha(row[idx_fe]), _nt_dep(row[idx_eq])))
-                except Exception: pass
+        _leer(client.open(nombre_excel).worksheet('FORMULARIO_PARTIDOS').get_all_values(), _nt_dep)
     except Exception as e:
         print(f"[FORMULARIOS] intranet: {e}", flush=True)
     try:
-        enc = client.open_by_key(ENCUESTA_PARTIDO_KEY).sheet1.get_all_values()
-        if enc and len(enc) > 1:
-            hdrs = [h.strip().upper().replace(' ', '') for h in enc[0]]
-            idx_eq = next((i for i, h in enumerate(hdrs) if 'EQUIPO' in h), 1)
-            idx_fe = next((i for i, h in enumerate(hdrs) if 'MARCA' in h or 'TEMPORAL' in h), 0)
-            for row in enc[1:]:
-                try: out.append((_fecha(row[idx_fe]), _eq_encuesta(row[idx_eq])))
-                except Exception: pass
+        _leer(client.open_by_key(ENCUESTA_PARTIDO_KEY).sheet1.get_all_values(), _eq_encuesta)
     except Exception as e:
         print(f"[FORMULARIOS] encuesta Google: {e}", flush=True)
+    return out
+
+
+def formularios_partido_hechos(client, nombre_excel):
+    """[(fecha, equipo_normalizado)] de todos los formularios de partido (intranet + Google)."""
+    return [(f, eq) for f, eq, _, _ in formularios_partido_detalle(client, nombre_excel)]
+
+
+def marcar_audio_finde(sat_str, equipo_up, valor='SI'):
+    """Pone AUDIO ENVIADO (columna C de INFORMES_SEMANALES) de un equipo en un finde ('dd/mm/aaaa')."""
+    ws = _get_or_crear_sheet_informes_semanales()
+    for i, row in enumerate(ws.get_all_values(), start=1):
+        if len(row) >= 2 and row[0].strip() == sat_str and row[1].strip().upper() == equipo_up:
+            ws.update_cell(i, 3, valor)
+            return
+    ws.append_row([sat_str, equipo_up, valor])
+
+
+def audios_finde(sat_str):
+    """{EQUIPO_MAYUS: 'SI'/'NO'} de AUDIO ENVIADO de un finde."""
+    out = {}
+    try:
+        for row in _get_or_crear_sheet_informes_semanales().get_all_values():
+            if len(row) >= 3 and row[0].strip() == sat_str:
+                out[row[1].strip().upper()] = row[2].strip().upper()
+    except Exception as e:
+        print(f"[FORMULARIOS] audios: {e}", flush=True)
     return out
 
 _DIA_MAP_DEP ={'lunes':0,'martes':1,'miercoles':2,'jueves':3,'viernes':4,'sabado':5,'domingo':6}
@@ -3215,7 +3249,7 @@ def api_informes_semanales_get():
     try:
         ws_inf = _get_or_crear_sheet_informes_semanales()
         all_inf = ws_inf.get_all_values()
-        for row in (all_inf[1:] if all_inf else []):
+        for row in (all_inf or []):  # sin fila de títulos: la primera ya es un dato
             if len(row) >= 3 and row[0].strip() == sat_str:
                 audio_data[row[1].strip().upper()] = row[2].strip().upper()
             if len(row) >= 4 and row[0].strip() == sat_str and row[3].strip().upper() in ('SI', 'NO', '-'):
@@ -3234,11 +3268,15 @@ def api_informes_semanales_get():
         primero.setdefault(_grupo_letra(n)[0], i)
     equipos = sorted(equipos, key=lambda n: (primero[_grupo_letra(n)[0]], _grupo_letra(n)[1], equipos.index(n)))
 
-    try:  # MEJORES / PEORES respondidos por WhatsApp al aviso del formulario de partido
-        from formulario_finde import mejores_peores, _norm as _ff_norm
-        valoraciones = mejores_peores(sat)
-    except Exception:
-        valoraciones, _ff_norm = {}, (lambda x: x)
+    # MEJORES / PEORES: lo que el entrenador puso en el formulario de partido de ese finde (viernes a jueves)
+    valoraciones = {}
+    try:
+        for f, eq_n, mej, peo in formularios_partido_detalle(current_app.gs_client, current_app.gs_name):
+            if sat - timedelta(days=1) <= f <= sat + timedelta(days=5) and (mej or peo):
+                valoraciones[eq_n] = {'mejores': [mej] if mej else [], 'peores': [peo] if peo else []}
+    except Exception as e:
+        print(f"[INFORME FINDE] mejores/peores: {e}", flush=True)
+    _ff_norm = _nt_dep
 
     result = []
     for eq in equipos:
@@ -3292,7 +3330,7 @@ def api_informes_semanales_audio_post():
     try:
         ws = _get_or_crear_sheet_informes_semanales()
         all_data = ws.get_all_values()
-        for i, row in enumerate(all_data[1:] if all_data else [], start=2):
+        for i, row in enumerate(all_data or [], start=1):  # sin fila de títulos
             if len(row) >= 2 and row[0].strip() == sat_str and row[1].strip().upper() == equipo:
                 ws.update_cell(i, 3, valor)
                 return jsonify({"status": "ok"})
@@ -3321,9 +3359,7 @@ def api_informes_semanales_formulario_post():
         if ws.col_count < 4:
             ws.add_cols(4 - ws.col_count)
         all_data = ws.get_all_values()
-        if all_data and (len(all_data[0]) < 4 or not all_data[0][3].strip()):
-            ws.update_cell(1, 4, 'FORMULARIO')
-        for i, row in enumerate(all_data[1:] if all_data else [], start=2):
+        for i, row in enumerate(all_data or [], start=1):  # sin fila de títulos
             if len(row) >= 2 and row[0].strip() == sat_str and row[1].strip().upper() == equipo:
                 ws.update_cell(i, 4, valor)
                 return jsonify({"status": "ok"})

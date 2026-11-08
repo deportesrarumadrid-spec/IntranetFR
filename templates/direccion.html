@@ -2162,6 +2162,10 @@
                     <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                         <button onclick="ffVista()" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-eye"></i> VER EL FINDE</button>
                     </div>
+                    <div style="margin-top:12px; padding-top:10px; border-top:1px solid #f1f5f9;">
+                        <div style="font-size:11px; font-weight:900; color:#1e293b; margin-bottom:6px;"><i class="fas fa-microphone"></i> REENVIAR LOS AUDIOS A:</div>
+                        <div id="ffReenviar" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; font-size:11px;"></div>
+                    </div>
                     <div id="ffVistaBox" style="margin-top:10px; font-size:12px;"></div>
                 </div>
                 <div class="card-coord" style="padding:16px;">
@@ -2462,11 +2466,41 @@
     }
 
     // ---- Aviso formulario de partido (finde) ----
+    let _ffReenviar = [];
     async function ffCargar() {
         try {
             const d = await (await fetch('/api/whatsapp/formulario_finde')).json();
-            if (d.status === 'ok') _ffPintar(d.activo);
+            if (d.status === 'ok') { _ffPintar(d.activo); _ffReenviar = d.reenviar || []; _ffPintarReenviar(); }
         } catch (e) {}
+    }
+    // Personas a las que se reenvían los audios de los entrenadores
+    function _ffPintarReenviar() {
+        const box = document.getElementById('ffReenviar');
+        if (!box) return;
+        const tels = new Set(_ffReenviar.map(x => x.telefono));
+        box.innerHTML = (_ffReenviar.length ? _ffReenviar.map((x, i) => `<span style="background:#dcfce7; color:#166534; border-radius:12px; padding:3px 6px 3px 10px; font-weight:800;">
+                ${_waEsc(x.usuario.toUpperCase())} <button onclick="ffQuitarReenvio(${i})" title="Quitar" style="background:none; border:none; color:#991b1b; cursor:pointer; font-weight:900;">✕</button></span>`).join('')
+                : '<span style="color:#ef4444; font-weight:700;">Nadie: los audios no se reenvían.</span>')
+            + (_waPersonas.length ? `<select id="ffReenviarSel" style="padding:4px 6px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:11px; max-width:190px;">
+                <option value="">+ Añadir persona…</option>${_waPersonas.map((p, i) => tels.has(p.telefono) ? '' : `<option value="${i}">${_waEsc(p.usuario.toUpperCase())}</option>`).join('')}</select>
+                <button onclick="ffAnadirReenvio()" style="background:#1e293b; color:white; border:none; border-radius:6px; padding:5px 10px; font-size:10.5px; font-weight:800; cursor:pointer; font-family:inherit;">AÑADIR</button>` : '');
+    }
+    async function _ffGuardarReenviar(lista) {
+        try {
+            const d = await (await fetch('/api/whatsapp/formulario_finde', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reenviar: lista }) })).json();
+            if (d.status === 'ok') { _ffReenviar = d.reenviar || []; _ffPintarReenviar(); } else alert(d.message || 'Error al guardar');
+        } catch (e) { alert('Error al guardar'); }
+    }
+    function ffAnadirReenvio() {
+        const v = document.getElementById('ffReenviarSel').value;
+        const p = _waPersonas[+v];
+        if (v === '' || !p) return;
+        _ffGuardarReenviar(_ffReenviar.concat([{ usuario: p.usuario, telefono: p.telefono }]));
+    }
+    function ffQuitarReenvio(i) {
+        const x = _ffReenviar[i];
+        if (!x || !confirm(`¿Dejar de reenviar los audios a ${x.usuario.toUpperCase()}?`)) return;
+        _ffGuardarReenviar(_ffReenviar.filter((_, j) => j !== i));
     }
     function _ffPintar(activo) {
         document.getElementById('ffActivo').checked = !!activo;
@@ -2494,14 +2528,14 @@
                 : '<i class="far fa-clock"></i> Los horarios de la Federación se descargan el viernes a las 8:00 (hasta entonces, horas aproximadas).'}</div>`;
             h += d.filas.length ? `<table style="border-collapse:collapse; width:100%; font-size:11px;"><tr style="background:#f1f5f9;">
                 <th style="text-align:left; padding:4px 6px;">ENTRENADOR</th><th style="text-align:left; padding:4px 6px;">EQUIPO</th><th style="padding:4px 6px;">PARTIDO</th>
-                <th style="padding:4px 6px;">ENVÍOS PREVISTOS</th><th style="padding:4px 6px;">FORMULARIO</th><th style="padding:4px 6px;">MEJORES / PEORES</th></tr>` +
+                <th style="padding:4px 6px;">ENVÍOS PREVISTOS</th><th style="padding:4px 6px;">FORMULARIO</th><th style="padding:4px 6px;">AUDIO</th></tr>` +
                 d.filas.map(f => `<tr style="border-bottom:1px solid #f1f5f9;">
                     <td style="padding:4px 6px; font-weight:800; text-transform:uppercase;">${_waEsc(f.usuario)}</td>
                     <td style="padding:4px 6px;">${_waEsc(f.equipo)}</td>
                     <td style="padding:4px 6px; text-align:center;">${fh(f.fecha + 'T' + (f.hora || ''))}${f.hora ? '' : '<br><span style="color:#94a3b8;">sin hora</span>'}</td>
                     <td style="padding:4px 6px; text-align:center;">${f.momentos.map(x => { const env = f.enviados.some(e => e.startsWith(x)); return `<span style="${env ? 'color:#16a34a; font-weight:800;' : 'color:#64748b;'}">${env ? '✓ ' : ''}${fh(x)}</span>`; }).join('<br>')}</td>
                     <td style="padding:4px 6px; text-align:center; font-weight:800; color:${f.hecho ? '#16a34a' : '#ef4444'};">${f.hecho ? 'HECHO' : 'PENDIENTE'}</td>
-                    <td style="padding:4px 6px; text-align:center;">${f.mejores.length ? `<span style="color:#166534;">${f.mejores.map(_waEsc).join(', ')}</span><br><span style="color:#991b1b;">${f.peores.map(_waEsc).join(', ')}</span>` : '—'}</td></tr>`).join('') + '</table>' : '';
+                    <td style="padding:4px 6px; text-align:center; font-weight:800; color:${f.audio ? '#16a34a' : '#ef4444'};">${f.audio ? 'ENVIADO' : 'PENDIENTE'}</td></tr>`).join('') + '</table>' : '';
             box.innerHTML = h;
         } catch (e) { box.innerHTML = `<span style="color:#ef4444; font-weight:700;">${_waEsc(e.message || 'Error')}</span>`; }
     }
@@ -12688,7 +12722,7 @@ async function _asistMatrizUno(equipo, cont) {
     }
     window._isBadgeForm = _badgeForm;
 
-    // MEJORES / PEORES respondidos por el entrenador al WhatsApp del formulario de partido
+    // MEJORES / PEORES: lo que el entrenador puso en el formulario de partido
     function _isMejPeo(eq, td) {
         const esc = x => String(x || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
         const celda = (lista, col) => `<td style="${td}text-align:center;font-size:10.5px;font-weight:700;color:${col};">${(lista || []).length ? (lista || []).map(esc).join('<br>') : '<span style="color:#cbd5e1;">—</span>'}</td>`;

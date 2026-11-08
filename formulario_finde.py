@@ -5,8 +5,10 @@ por partido: 2 horas después del inicio (o a las 17:00 si no se sabe la hora) y
 otro al día siguiente a las 17:00 (domingo si jugó el sábado, lunes si jugó el domingo). Deja de enviarse
 en cuanto el formulario está hecho (formulario de Google o de la intranet).
 
-El entrenador puede responder al mensaje con "MEJORES: ... / PEORES: ...": WAHA avisa a /api/whatsapp/webhook,
-se guarda y se le confirma. Se ve en el INFORME FINDE WHATSAPP (columnas MEJORES y PEORES).
+El mensaje pide solo lo que le falta: formulario y/o audio. Si ya ha hecho las dos cosas no se le envía.
+Audio: el entrenador manda un audio a ese chat (WAHA avisa a /api/whatsapp/webhook). Si lleva varios equipos
+se le pregunta de cuál es (y se entiende su respuesta escrita). Se marca AUDIO ENVIADO en el INFORME FINDE,
+se reenvía a las personas configuradas con el texto "Audio EQUIPO - Nombre" y al entrenador se le responde 👌.
 Estado en datos_privados/formulario_finde.json.
 """
 import os
@@ -268,22 +270,24 @@ def _formulario_hecho(sat, equipo, cache={}):
     return any(eq == n and sat - timedelta(days=1) <= f <= sat + timedelta(days=5) for f, eq in cache['filas'])
 
 
-def texto_mensaje(usuario, equipo, sat):
-    # Formato fijado por Dirección Deportiva (negrita de WhatsApp con *...*)
+def texto_mensaje(usuario, equipo, falta_formulario=True, falta_audio=True):
+    # Formato fijado por Dirección Deportiva (negrita de WhatsApp con *...*); solo sale lo que le falta
     nombre = (usuario or '').split()[0].capitalize() if usuario else ''
-    return (f'Hola {nombre}, queda pendiente el formulario de partido de:\n'
-            f'*{_bonito(equipo)}*\n'
-            f'📝 {FORM_URL}\n\n'
-            f'Dirección Deportiva')
+    t = f'Hola {nombre}, queda pendiente\n*{_bonito(equipo)}*\n'
+    if falta_formulario:
+        t += f'→formulario de partido de:\n📝 {FORM_URL}\n'
+    if falta_audio:
+        t += '→envío audio a este chat\n'
+    return t + '\nDirección Deportiva'
 
 
 def _clave(sat, equipo, telefono):
     return f"{sat.isoformat()}|{_norm(equipo)}|{''.join(c for c in telefono if c.isdigit())}"
 
 
-def _enviar_y_registrar(usuario, telefono, equipo, sat, momento, prueba=False):
+def _enviar_y_registrar(usuario, telefono, equipo, sat, momento, prueba=False, falta_formulario=True, falta_audio=True):
     from whatsapp_envios import enviar_con_id
-    ok, detalle, msg_id = enviar_con_id(telefono, texto_mensaje(usuario, equipo, sat))
+    ok, detalle, msg_id = enviar_con_id(telefono, texto_mensaje(usuario, equipo, falta_formulario, falta_audio))
     with _bloqueo():
         d = _leer()
         k = _clave(sat, equipo, telefono) + ('|prueba' if prueba else '')
@@ -307,7 +311,7 @@ def plan(sat):
                     'fecha': partidos[equipo]['fecha'].isoformat(), 'hora': partidos[equipo]['hora'],
                     'origen': partidos[equipo].get('origen', ''),
                     'momentos': [m.strftime('%Y-%m-%dT%H:%M') for m in _momentos(partidos[equipo])],
-                    'enviados': reg.get('enviados', []), 'mejores': reg.get('mejores', []), 'peores': reg.get('peores', [])})
+                    'enviados': reg.get('enviados', [])})
     sin_entrenador = sorted(set(partidos) - {e for _, t, e in _entrenadores(partidos) if t})
     return out, sin_entrenador
 
@@ -332,6 +336,10 @@ def tick(ahora):
     partidos = partidos_finde(sat)
     if not partidos:
         return
+    from app import app as _app
+    from deportivo import audios_finde
+    with _app.app_context():
+        audios = audios_finde(sat.strftime('%d/%m/%Y'))
     for usuario, telefono, equipo in _entrenadores(partidos):
         if not telefono:
             continue
@@ -341,39 +349,122 @@ def tick(ahora):
             ms = m.strftime('%Y-%m-%dT%H:%M')
             if m > ahora or ms in hechos or ahora - m > timedelta(hours=3):
                 continue  # aún no toca, ya enviado, o demasiado tarde (servidor parado)
-            if _formulario_hecho(sat, equipo):
-                break
-            ok, detalle = _enviar_y_registrar(usuario, telefono, equipo, sat, m)
+            falta_form = not _formulario_hecho(sat, equipo)
+            falta_audio = audios.get(equipo.upper()) != 'SI'
+            if not falta_form and not falta_audio:
+                break  # ya ha hecho las dos cosas
+            ok, detalle = _enviar_y_registrar(usuario, telefono, equipo, sat, m,
+                                              falta_formulario=falta_form, falta_audio=falta_audio)
             print(f"[FINDE] {usuario} · {equipo} · {ms}: {'OK' if ok else detalle}", flush=True)
             break
 
 
-# ---------- respuestas "MEJORES / PEORES" ----------
+# ---------- audios del entrenador ----------
 
-def _parsear(texto):
-    """'MEJORES: Juan, Pedro / PEORES: Luis y Mario' → (['Juan','Pedro'], ['Luis','Mario']) o None."""
-    t = texto or ''
-    low = ''.join((unicodedata.normalize('NFD', c)[0] if c.strip() else c).lower() for c in t)  # misma longitud
-    im, ip = low.find('mejor'), low.find('peor')
-    if im < 0 or ip < 0:
+def semana_sabado(d):
+    """Sábado del finde al que se apunta un audio: la semana va de viernes a jueves."""
+    return d - timedelta(days=(d.weekday() - 4) % 7) + timedelta(days=1)
+
+
+def _entrenador_por_tel(tel):
+    """(usuario, [equipos sin Aficionados/Debutantes]) del usuario de la intranet con ese teléfono, o None."""
+    from app import client, NOMBRE_EXCEL
+    if not tel:
         return None
+    p = client.open(NOMBRE_EXCEL).worksheet('PERFILES').get_all_values()
+    h = [x.strip().upper() for x in (p[0] if p else [])]
+    i_u, i_t, i_e = h.index('USUARIO'), h.index('TELEFONO'), h.index('EQUIPO')
+    for r in p[1:]:
+        g = lambda i: r[i].strip() if i < len(r) else ''
+        t = ''.join(c for c in g(i_t) if c.isdigit())
+        if t and len(t) >= 9 and tel.endswith(t[-9:]):
+            eqs = [e.strip().upper() for e in g(i_e).split(',')
+                   if e.strip() and not _norm(e).startswith(('AFICIONADO', 'DEBUTANTE'))]
+            return (g(i_u), eqs) if eqs else None
+    return None
 
-    def trozo(i, fin):
-        j = i
-        while j < len(t) and low[j].isalpha():
-            j += 1  # saltar la palabra (mejores / peores)
-        return t[j:fin]
 
-    seg_m = trozo(im, ip if ip > im else len(t))
-    seg_p = trozo(ip, im if im > ip else len(t))
+def _es_audio(payload):
+    media = payload.get('media') or {}
+    if str(media.get('mimetype') or '').startswith('audio'):
+        return True
+    if str(payload.get('type') or '').lower() in ('ptt', 'audio', 'voice'):
+        return True
+    return bool(payload.get('hasMedia')) and 'audioMessage' in json.dumps(payload.get('_data') or {})[:4000]
 
-    def nombres(s):
-        partes = re.split(r',|;|/|&|\n|\s+y\s+|\s+e\s+|\s+-\s+', s, flags=re.I)
-        limpios = [p.strip(' :.-*_"\'') for p in partes if p.strip(' :.-*_"\'')]
-        return [x if any(c.isupper() for c in x) else x.title() for x in limpios]  # 'juan' → 'Juan'
 
-    m, p = nombres(seg_m), nombres(seg_p)
-    return (m, p) if m and p else None
+_PALABRAS_TODOS = ('los dos', 'las dos', 'ambos', 'todos', 'los 2', 'los tres', 'de los dos', 'para los dos')
+
+
+def equipos_de_respuesta(texto, equipos):
+    """Qué equipo(s) dice el entrenador ("el F11", "alevín a", "los dos"...). Lista vacía si no se entiende."""
+    t = ' '.join(re.sub(r'[^a-z0-9 ]', ' ', _norm(texto).lower()).split())
+    if not t:
+        return []
+    if any(f' {p} ' in f' {t} ' for p in _PALABRAS_TODOS):
+        return list(equipos)
+    palabras = t.split()
+    tokens = {e: _norm(e).lower().split() for e in equipos}
+    contexto = {'el', 'la', 'del', 'de', 'equipo', 'f7', 'f11'} | {w for ts in tokens.values() for w in ts if len(w) > 1}
+    elegidos = []
+    for e, ts in tokens.items():
+        otros = {w for o, ws in tokens.items() if o != e for w in ws}
+        propios = [w for w in ts if w not in otros] or ts
+        for w in propios:
+            if len(w) > 1 and w in palabras:
+                elegidos.append(e); break
+            if len(w) == 1 and (palabras == [w] or any(palabras[i] == w and i > 0 and palabras[i - 1] in contexto
+                                                       for i in range(len(palabras)))):
+                elegidos.append(e); break
+    return elegidos
+
+
+def _destinatarios_audio(d):
+    """Personas a las que se reenvían los audios (por defecto, Rubén Pozón)."""
+    if 'reenviar' not in d:
+        try:
+            from app import client, NOMBRE_EXCEL
+            p = client.open(NOMBRE_EXCEL).worksheet('PERFILES').get_all_values()
+            h = [x.strip().upper() for x in p[0]]
+            i_u, i_t = h.index('USUARIO'), h.index('TELEFONO')
+            d['reenviar'] = [{'usuario': r[i_u].strip(), 'telefono': r[i_t].strip()} for r in p[1:]
+                             if len(r) > max(i_u, i_t) and 'POZON' in _norm(r[i_u]) and r[i_t].strip()][:1]
+        except Exception:
+            d['reenviar'] = []
+    return d['reenviar']
+
+
+def _registrar_audio(equipos, msg_ids, usuario, tel_entrenador):
+    """Marca AUDIO ENVIADO, reenvía el/los audio(s) con su etiqueta y responde 👌 al entrenador."""
+    from deportivo import marcar_audio_finde
+    from whatsapp_envios import enviar_por_waha, _waha, WAHA_SESION
+    sat = semana_sabado(date.today())
+    for eq in equipos:
+        marcar_audio_finde(sat.strftime('%d/%m/%Y'), eq.upper(), 'SI')
+    nombre = (usuario or '').split()[0].capitalize() if usuario else ''
+    etiqueta = f"Audio {' y '.join(_bonito(e) for e in equipos)} - {nombre}"
+    with _bloqueo():
+        d = _leer()
+        destinatarios = _destinatarios_audio(d)
+        _escribir(d)
+    for dest in destinatarios:
+        num = ''.join(c for c in dest.get('telefono', '') if c.isdigit())
+        num = '34' + num if len(num) == 9 else num
+        if len(num) < 10:
+            continue
+        enviar_por_waha(num, etiqueta)
+        for mid in msg_ids:
+            r = _waha('POST', '/api/forwardMessage', json={'session': WAHA_SESION, 'chatId': f'{num}@c.us', 'messageId': mid})
+            if r.status_code >= 300:
+                print(f"[FINDE] No se pudo reenviar el audio a {dest.get('usuario')}: HTTP {r.status_code} {r.text[:200]}", flush=True)
+    enviar_por_waha(tel_entrenador, '👌')
+    print(f"[FINDE] {etiqueta}: registrado y reenviado a {len(destinatarios)}", flush=True)
+
+
+def _pregunta_equipo(equipos, repetir=False):
+    lista = ', '.join(_bonito(e) for e in equipos)
+    todos = 'los dos' if len(equipos) == 2 else 'todos'
+    return (('No te he entendido 🙏 ' if repetir else '') + f'¿De qué equipo es este audio? {lista} o {todos}')
 
 
 def _telefono_de(payload, origen):
@@ -403,50 +494,54 @@ def _telefono_de(payload, origen):
 
 
 def procesar_mensaje(payload):
-    """Mensaje recibido por WhatsApp. Devuelve el texto de respuesta automática o None."""
+    """Mensaje recibido por WhatsApp: audios de entrenadores (y su respuesta de a qué equipo pertenecen)."""
     from whatsapp_envios import enviar_por_waha
     if payload.get('fromMe'):
         return None
     cuerpo = (payload.get('body') or '').strip()
     origen = str(payload.get('from') or '')
+    if origen.endswith('@g.us'):
+        return None  # mensajes de grupos: no
     tel = _telefono_de(payload, origen)
-    rep = payload.get('replyTo') or {}
-    rep_id = (rep.get('id') if isinstance(rep, dict) else str(rep)) or ''
-    print(f"[FINDE] Mensaje recibido de {origen} (tel {tel or '?'}), cita={'sí' if rep_id else 'no'}: {cuerpo[:60]!r}", flush=True)
-    corto = lambda x: str(x).split('_')[-1]
+    audio = _es_audio(payload)
+    print(f"[FINDE] Mensaje recibido de {origen} (tel {tel or '?'}){' AUDIO' if audio else ''}: {cuerpo[:60]!r}", flush=True)
+    ent = _entrenador_por_tel(tel)
+    if not ent:
+        return None  # solo entrenadores
+    usuario, equipos = ent
+    msg_id = payload.get('id')
+    if isinstance(msg_id, dict):
+        msg_id = msg_id.get('_serialized')
 
+    if audio:
+        if len(equipos) == 1:
+            _registrar_audio(equipos, [msg_id], usuario, tel)
+            return '👌'
+        with _bloqueo():
+            d = _leer()
+            pend = d.setdefault('audios_pendientes', {}).setdefault(tel, {'msg_ids': [], 'equipos': equipos})
+            ya_preguntado = bool(pend['msg_ids'])
+            pend['msg_ids'].append(msg_id)
+            pend['equipos'] = equipos
+            _escribir(d)
+        if not ya_preguntado:
+            enviar_por_waha(tel, _pregunta_equipo(equipos))
+        return 'pregunta'
+
+    pend = _leer().get('audios_pendientes', {}).get(tel)
+    if not pend or not cuerpo:
+        return None
+    elegidos = equipos_de_respuesta(cuerpo, pend['equipos'])
+    if not elegidos:
+        enviar_por_waha(tel, _pregunta_equipo(pend['equipos'], repetir=True))
+        return 'repetir'
     with _bloqueo():
         d = _leer()
-        candidatos = []
-        for k, r in d['envios'].items():
-            ids = [corto(i) for i in r.get('msg_ids', [])]
-            if rep_id and corto(rep_id) in ids:
-                candidatos = [(k, r)]
-                break
-            tr = ''.join(c for c in r.get('telefono', '') if c.isdigit())
-            if tel and tr and (tel.endswith(tr[-9:])):
-                candidatos.append((k, r))
-        if not candidatos:
-            return None
-        # Si no ha citado el mensaje: el envío más reciente a ese teléfono
-        k, r = max(candidatos, key=lambda kr: max(kr[1].get('enviados') or [''])) if len(candidatos) > 1 else candidatos[0]
-        res = _parsear(cuerpo)
-        if not res:
-            if rep_id or re.search(r'mejor|peor', cuerpo, re.I):
-                respuesta = ('No he podido leer la valoración 🙏 Escríbela así, respondiendo al mensaje:\n'
-                             'MEJORES: nombre, nombre / PEORES: nombre, nombre')
-            else:
-                return None
-        else:
-            r['mejores'], r['peores'] = res
-            r['respuesta'] = cuerpo[:500]
-            r['respuesta_en'] = datetime.now().strftime('%Y-%m-%dT%H:%M')
-            _escribir(d)
-            respuesta = (f"✅ Recibido, gracias ({_bonito(r['equipo'])}).\n"
-                         f"Mejores: {', '.join(res[0])} · Peores: {', '.join(res[1])}")
-    destino = tel or origen or ''.join(c for c in r.get('telefono', '') if c.isdigit())
-    enviar_por_waha(destino, respuesta)
-    return respuesta
+        pend = d.get('audios_pendientes', {}).pop(tel, None)
+        _escribir(d)
+    if pend:
+        _registrar_audio(elegidos, pend['msg_ids'], usuario, tel)
+    return '👌'
 
 
 def secreto_webhook():
@@ -466,15 +561,6 @@ def api_webhook():
     return jsonify({'status': 'ok'})
 
 
-def mejores_peores(sat):
-    """{EQUIPO_NORMALIZADO: {'mejores': [...], 'peores': [...]}} del finde (sin pruebas), para el informe."""
-    out = {}
-    for r in _leer()['envios'].values():
-        if r.get('sabado') == sat.isoformat() and not r.get('prueba') and r.get('mejores'):
-            out[_norm(r['equipo'])] = {'mejores': r['mejores'], 'peores': r.get('peores', [])}
-    return out
-
-
 # ---------- pantalla (pestaña WHATSAPP) ----------
 
 def _permitido():
@@ -486,12 +572,18 @@ def _permitido():
 def api_cfg():
     if not _permitido():
         return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
-    if request.method == 'POST':
-        with _bloqueo():
-            d = _leer()
-            d['activo'] = bool((request.json or {}).get('activo'))
-            _escribir(d)
-    return jsonify({'status': 'ok', 'activo': _leer()['activo']})
+    with _bloqueo():
+        d = _leer()
+        if request.method == 'POST':
+            data = request.json or {}
+            if 'activo' in data:
+                d['activo'] = bool(data['activo'])
+            if 'reenviar' in data:
+                d['reenviar'] = [{'usuario': (x.get('usuario') or '').strip(), 'telefono': (x.get('telefono') or '').strip()}
+                                 for x in (data.get('reenviar') or []) if (x.get('telefono') or '').strip()]
+        reenviar = _destinatarios_audio(d)
+        _escribir(d)
+    return jsonify({'status': 'ok', 'activo': d['activo'], 'reenviar': reenviar})
 
 
 @finde_bp.route('/api/whatsapp/formulario_finde/vista')
@@ -504,8 +596,11 @@ def api_vista():
         sat = sabado_de(hoy) if hoy.weekday() in (4, 5, 6, 0) else hoy + timedelta(days=(5 - hoy.weekday()) % 7)
         filas, sin_ent = plan(sat)
         fed = leer_federacion(sat)
+        from deportivo import audios_finde
+        audios = audios_finde(sat.strftime('%d/%m/%Y'))
         for f in filas:
             f['hecho'] = _formulario_hecho(sat, f['equipo'])
+            f['audio'] = audios.get(f['equipo'].upper()) == 'SI'
         return jsonify({'status': 'ok', 'sabado': sat.isoformat(), 'filas': filas, 'sin_entrenador': sin_ent,
                         'federacion': (fed or {}).get('descargado', '')})
     except Exception as e:
