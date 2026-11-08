@@ -2227,6 +2227,7 @@
                     <div style="font-size:11px; font-weight:900; color:#1e293b; margin-bottom:6px;"><i class="fas fa-share"></i> REENVIAR LAS RESPUESTAS A:</div>
                     <div id="flReenviar" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; font-size:11px; margin-bottom:10px;"></div>
                     <button onclick="flVista()" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-eye"></i> VER QUÉ SE PREGUNTARÍA</button>
+                    <button onclick="flPrueba()" style="background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> PRUEBA CON INFANTIL B (A RUBÉN POZÓN)</button>
                     <div id="flVistaBox" style="margin-top:10px; font-size:12px;"></div>
                     <div id="flCasos" style="margin-top:10px; font-size:11.5px;"></div>
                 </div>
@@ -2732,6 +2733,21 @@
         const x = _flReenviar[i];
         if (!x || !confirm(`¿Dejar de reenviar las respuestas a ${x.usuario.toUpperCase()}?`)) return;
         flGuardar({ reenviar: _flReenviar.filter((_, j) => j !== i) });
+    }
+    async function flPrueba() {
+        const p = _waPersonas.find(x => /pozon/i.test(x.usuario));
+        const box = document.getElementById('flVistaBox');
+        if (!p) { box.innerHTML = '<span style="color:#ef4444; font-weight:700;">No encuentro a Rubén Pozón en los usuarios</span>'; return; }
+        if (!confirm('¿Enviar a RUBÉN POZÓN una pregunta de prueba sobre un jugador del INFANTIL B?')) return;
+        box.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Enviando...</span>';
+        try {
+            const d = await (await fetch('/api/whatsapp/faltas/prueba', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ equipo: 'INFANTIL B', telefono: p.telefono, usuario: p.usuario }) })).json();
+            box.innerHTML = d.status === 'ok'
+                ? `<span style="color:#16a34a; font-weight:800;">✓ ${_waEsc(d.message)}. Respóndele por WhatsApp: la respuesta te llegará solo a ti.</span>`
+                : `<span style="color:#ef4444; font-weight:700;">${_waEsc(d.message || 'No se pudo enviar')}</span>`;
+            flCargar();
+        } catch (e) { box.innerHTML = '<span style="color:#ef4444; font-weight:700;">Error al enviar</span>'; }
     }
     async function flVista() {
         const box = document.getElementById('flVistaBox');

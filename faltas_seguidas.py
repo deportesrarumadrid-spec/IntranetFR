@@ -154,7 +154,8 @@ def _gestionar_racha(equipo, jug, nombre, racha):
     """Crea la pregunta si toca: primera vez 2 NO seguidos; tras respuesta, cada 2 NO más en la misma racha."""
     with _lock:
         d = _leer()
-        casos = [c for c in d['casos'].values() if c['equipo'] == equipo and c['jugador_n'] == jug and c['fechas'][0] in racha]
+        casos = [c for c in d['casos'].values() if c['equipo'] == equipo and c['jugador_n'] == jug
+                 and c['fechas'][0] in racha and not c.get('prueba')]
         pendiente = next((c for c in casos if c['estado'] == 'pendiente'), None)
         if pendiente:
             nuevas = [f for f in racha if f not in pendiente['fechas']]
@@ -190,7 +191,8 @@ def _preguntar(clave, recordatorio=False):
     if not caso or caso['estado'] != 'pendiente':
         return
     enviados = 0
-    for usuario, tel, _ in _entrenadores([caso['equipo']]):
+    destinos = [(caso['prueba_usuario'], caso['prueba_tel'], '')] if caso.get('prueba') else _entrenadores([caso['equipo']])
+    for usuario, tel, _ in destinos:
         if not tel:
             continue
         ok, detalle, mid = enviar_con_id(tel, _texto_pregunta(caso, usuario.split()[0].capitalize(), recordatorio))
@@ -318,9 +320,9 @@ def _responder(clave, respuesta, usuario, tel):
             return
         c.update(estado='respondido', respuesta=respuesta[:1000], respondido_por=usuario,
                  respondido_en=datetime.now().strftime('%Y-%m-%dT%H:%M'))
-        destinatarios = _destinatarios(d)
+        destinatarios = [{'usuario': usuario, 'telefono': tel}] if c.get('prueba') else _destinatarios(d)
         _escribir(d)
-    for f in c['fechas']:
+    for f in ([] if c.get('prueba') else c['fechas']):
         try:
             guardar_motivo_dia('asistencia', c['equipo'], c['jugador'], f, respuesta[:500], usuario)
         except Exception as e:
@@ -375,7 +377,7 @@ def api_vista():
         d = _leer()
         filas = client.open(NOMBRE_EXCEL).worksheet('ASISTENCIAS').get_all_values()
         eqs = sorted({r[1].strip().upper() for r in filas if len(r) > 1 and r[1].strip() and not _norm(r[1]).startswith('AFICIONADO')})
-        con_casos = {(c['equipo'], c['jugador_n']) for c in d['casos'].values()}
+        con_casos = {(c['equipo'], c['jugador_n']) for c in d['casos'].values() if not c.get('prueba')}
         out = []
         for eq in eqs:
             ents = [u for u, t, _ in _entrenadores([eq]) if t]
@@ -383,5 +385,39 @@ def api_vista():
                 if len(racha) >= 2 and (eq, jug) not in con_casos:
                     out.append({'equipo': eq, 'jugador': _nombre(nombre), 'fechas': racha, 'entrenadores': ents})
         return jsonify({'status': 'ok', 'preguntas': out})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Error en el servidor: {e}'[:250]})
+
+
+@faltas_bp.route('/api/whatsapp/faltas/prueba', methods=['POST'])
+def api_prueba():
+    """Prueba con un equipo: pregunta por un jugador real (sus 2 últimos entrenamientos) solo a quien prueba.
+    La respuesta se reenvía solo a esa persona y no se apunta en ausencias."""
+    if not _permitido():
+        return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
+    data = request.json or {}
+    equipo = (data.get('equipo') or 'INFANTIL B').strip().upper()
+    tel, usuario = (data.get('telefono') or '').strip(), (data.get('usuario') or '').strip()
+    if not tel:
+        return jsonify({'status': 'error', 'message': 'Falta el teléfono'}), 400
+    try:
+        from app import client, NOMBRE_EXCEL
+        filas = [r for r in client.open(NOMBRE_EXCEL).worksheet('ASISTENCIAS').get_all_values()
+                 if len(r) > 4 and _norm(r[1]) == _norm(equipo)]
+        fechas = sorted({_fecha(r[0]) for r in filas if re.match(r'^\d{1,2}/\d{1,2}/\d{4}', r[0].strip())})[-2:]
+        if len(fechas) < 2:
+            return jsonify({'status': 'error', 'message': f'{equipo} no tiene 2 entrenamientos con asistencia'})
+        en_ambos = [r[2].strip() for r in filas if _fecha(r[0]) == fechas[-1] and r[2].strip()]
+        jugador = next((j for j in en_ambos if any(_norm(r[2]) == _norm(j) and r[4].strip().upper() == 'NO' for r in filas)), en_ambos[0])
+        clave = f"PRUEBA|{equipo}|{_norm(jugador)}|{datetime.now():%Y%m%d%H%M%S}"
+        with _lock:
+            d = _leer()
+            d['casos'][clave] = {'equipo': equipo, 'jugador': jugador, 'jugador_n': _norm(jugador),
+                                 'fechas': [f'{f:%d/%m/%Y}' for f in fechas], 'seguimiento': False, 'estado': 'pendiente',
+                                 'creado': datetime.now().strftime('%Y-%m-%dT%H:%M'), 'envios': [], 'msg_ids': [],
+                                 'prueba': True, 'prueba_tel': tel, 'prueba_usuario': usuario or 'Prueba'}
+            _escribir(d)
+        _preguntar(clave)
+        return jsonify({'status': 'ok', 'message': f'Pregunta de prueba enviada sobre {_nombre(jugador)} ({equipo})'})
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Error en el servidor: {e}'[:250]})
