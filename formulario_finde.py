@@ -374,14 +374,16 @@ def _entrenador_por_tel(tel):
     p = client.open(NOMBRE_EXCEL).worksheet('PERFILES').get_all_values()
     h = [x.strip().upper() for x in (p[0] if p else [])]
     i_u, i_t, i_e = h.index('USUARIO'), h.index('TELEFONO'), h.index('EQUIPO')
+    usuario, equipos = '', []
     for r in p[1:]:
         g = lambda i: r[i].strip() if i < len(r) else ''
         t = ''.join(c for c in g(i_t) if c.isdigit())
-        if t and len(t) >= 9 and tel.endswith(t[-9:]):
-            eqs = [e.strip().upper() for e in g(i_e).split(',')
-                   if e.strip() and not _norm(e).startswith(('AFICIONADO', 'DEBUTANTE'))]
-            return (g(i_u), eqs) if eqs else None
-    return None
+        if not g(i_u) or not t or len(t) < 9 or not tel.endswith(t[-9:]):
+            continue  # filas sin nombre (restos de pruebas) no cuentan
+        usuario = usuario or g(i_u)
+        equipos += [e.strip().upper() for e in g(i_e).split(',') if e.strip()
+                    and not _norm(e).startswith(('AFICIONADO', 'DEBUTANTE')) and e.strip().upper() not in equipos]
+    return (usuario, equipos) if usuario and equipos else None
 
 
 def _es_audio(payload):
