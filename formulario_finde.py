@@ -184,17 +184,11 @@ def _formulario_hecho(sat, equipo, cache={}):
 
 
 def texto_mensaje(usuario, equipo, sat):
-    sun = sat + timedelta(days=1)
+    # Formato fijado por Dirección Deportiva (negrita de WhatsApp con *...*)
     nombre = (usuario or '').split()[0].capitalize() if usuario else ''
-    return (f'🔴⚪ CLUB FUENTELARREYNA · Dirección Deportiva\n'
-            f'Informe de partido · Fin de semana {sat:%d}-{sun:%d/%m}\n\n'
-            f'Hola {nombre},\n'
-            f'queda pendiente el formulario de partido de:\n'
-            f'▪️ {_bonito(equipo)}\n\n'
-            f'📝 Rellénalo aquí: {FORM_URL}\n\n'
-            f'⚡ Valoración rápida: responde a este mensaje con:\n'
-            f'MEJORES: nombre, nombre / PEORES: nombre, nombre\n\n'
-            f'Gracias. Los detalles marcan la diferencia. 💪\n'
+    return (f'Hola {nombre}, queda pendiente el formulario de partido de:\n'
+            f'*{_bonito(equipo)}*\n'
+            f'📝 {FORM_URL}\n\n'
             f'Dirección Deportiva')
 
 
