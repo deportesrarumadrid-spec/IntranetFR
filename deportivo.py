@@ -2938,7 +2938,8 @@ def formularios_partido_detalle(client, nombre_excel):
         idx = lambda pred, defecto: next((i for i, h in enumerate(hdrs) if pred(h)), defecto)
         i_eq = idx(lambda h: 'EQUIPO' in h, 1)
         i_fe = idx(lambda h: 'MARCA' in h or 'TEMPORAL' in h, 0)
-        i_me = idx(lambda h: 'MEJOR' in h, 11)
+        # "2 Mejores jugadores nuestros" (ojo: no "Que mejorar físicamente", que también lleva "MEJOR")
+        i_me = idx(lambda h: 'MEJOR' in h and 'MEJORAR' not in h, 11)
         i_pe = idx(lambda h: 'FLOJO' in h or 'PEOR' in h, 12)
         for row in (filas[1:] if con_titulos else filas):
             g = lambda i: row[i].strip() if i < len(row) else ''
