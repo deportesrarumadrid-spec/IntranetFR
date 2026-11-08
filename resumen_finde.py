@@ -26,7 +26,7 @@ def cargar_cfg():
             cfg = json.load(f)
     except Exception:
         cfg = {}
-    cfg.setdefault('activo', False)  # se activa tras la prueba
+    cfg.setdefault('activo', True)
     return cfg
 
 
@@ -223,18 +223,3 @@ def api_imagen(n):
         return Response(datos[0] if n == 1 else datos[1], mimetype='image/png', headers={'Cache-Control': 'no-store'})
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Error en el servidor: {e}'[:250]}), 500
-
-
-@resumen_bp.route('/api/whatsapp/resumen/prueba', methods=['POST'])
-def api_prueba():
-    if not _permitido():
-        return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
-    num = ''.join(c for c in str((request.json or {}).get('telefono') or '') if c.isdigit())
-    num = '34' + num if len(num) == 9 else num
-    if len(num) < 10:
-        return jsonify({'status': 'error', 'message': 'Teléfono no válido'}), 400
-    try:
-        ok, detalle = enviar(viernes_pasado(date.today()), f'{num}@c.us')
-        return jsonify({'status': 'ok' if ok else 'error', 'message': detalle or 'Enviado'})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': f'Error en el servidor: {e}'[:250]})

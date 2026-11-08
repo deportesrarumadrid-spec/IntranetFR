@@ -2211,8 +2211,6 @@
                     <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                         <button onclick="window.open('/api/whatsapp/resumen/imagen/1?t=' + Date.now(), '_blank')" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-image"></i> VER IMAGEN OBJETIVOS</button>
                         <button onclick="window.open('/api/whatsapp/resumen/imagen/2?t=' + Date.now(), '_blank')" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-image"></i> VER IMAGEN FORMULARIOS/AUDIOS</button>
-                        <select id="resPruebaPersona" style="padding:6px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:11px; max-width:200px;"></select>
-                        <button onclick="resPrueba()" style="background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> ENVIAR PRUEBA</button>
                     </div>
                     <div id="resResultado" style="margin-top:10px; font-size:12px;"></div>
                 </div>
@@ -2658,10 +2656,6 @@
                 document.getElementById('resUltimo').textContent = d.ultimo ? `Último envío: ${d.ultimo.split('-').reverse().join('/')}.` : '';
             }
         } catch (e) {}
-        const sel = document.getElementById('resPruebaPersona');
-        if (sel && !sel.options.length && _waPersonas.length) {
-            sel.innerHTML = _waPersonas.map((p, i) => `<option value="${i}" ${/pozon/i.test(p.usuario) ? 'selected' : ''}>${_waEsc(p.usuario.toUpperCase())}</option>`).join('');
-        }
     }
     function _resPintar(activo) {
         document.getElementById('resActivo').checked = !!activo;
@@ -2674,19 +2668,6 @@
             if (d.status === 'ok') _resPintar(d.activo);
         } catch (e) { alert('Error al guardar'); }
     }
-    async function resPrueba() {
-        const p = _waPersonas[+document.getElementById('resPruebaPersona').value];
-        const out = document.getElementById('resResultado');
-        if (!p || !confirm(`¿Enviar ahora la prueba del resumen a ${p.usuario.toUpperCase()}?`)) return;
-        out.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Generando las imágenes y enviando...</span>';
-        try {
-            const d = await (await fetch('/api/whatsapp/resumen/prueba', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telefono: p.telefono }) })).json();
-            out.innerHTML = d.status === 'ok'
-                ? `<span style="color:#16a34a; font-weight:800;">✓ Enviado a ${_waEsc(p.usuario.toUpperCase())}.</span>`
-                : `<span style="color:#ef4444; font-weight:700;">${_waEsc(d.message || 'No se pudo enviar')}</span>`;
-        } catch (e) { out.innerHTML = '<span style="color:#ef4444; font-weight:700;">Error al enviar</span>'; }
-    }
-
     // ---- Plantillas: mensaje + destinatarios guardados ----
     let _waPlantillas = [];
     async function waCargarPlantillas() {
