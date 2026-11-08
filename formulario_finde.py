@@ -433,6 +433,21 @@ def _destinatarios_audio(d):
                              if len(r) > max(i_u, i_t) and 'POZON' in _norm(r[i_u]) and r[i_t].strip()][:1]
         except Exception:
             d['reenviar'] = []
+    if not d.get('alta_figueredo'):  # alta única de Gonzalo Figueredo (luego se gestiona desde la pantalla)
+        try:
+            from app import client, NOMBRE_EXCEL
+            p = client.open(NOMBRE_EXCEL).worksheet('PERFILES').get_all_values()
+            h = [x.strip().upper() for x in p[0]]
+            i_u, i_t = h.index('USUARIO'), h.index('TELEFONO')
+            ya = {''.join(c for c in x.get('telefono', '') if c.isdigit()) for x in d['reenviar']}
+            for r in p[1:]:
+                if len(r) > max(i_u, i_t) and 'FIGUEREDO' in _norm(r[i_u]) and r[i_t].strip() \
+                        and ''.join(c for c in r[i_t] if c.isdigit()) not in ya:
+                    d['reenviar'].append({'usuario': r[i_u].strip(), 'telefono': r[i_t].strip()})
+                    break
+            d['alta_figueredo'] = True
+        except Exception as e:
+            print(f"[FINDE] Alta de Gonzalo Figueredo: {e}", flush=True)
     return d['reenviar']
 
 
