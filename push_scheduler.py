@@ -347,6 +347,12 @@ def _loop(flask_app):
                 informe_veo.tick(now)
             except Exception as e:
                 print(f"[SCHED] Informe Veo: {e}", flush=True)
+            # Resumen mensual a cada entrenador (día 1 a las 10:00)
+            try:
+                import resumen_mensual
+                resumen_mensual.tick(now)
+            except Exception as e:
+                print(f"[SCHED] Resumen mensual: {e}", flush=True)
 
         except Exception as e:
             print(f"[SCHED LOOP] {e}", flush=True)

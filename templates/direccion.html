@@ -2245,6 +2245,23 @@
                     </div>
                     <div id="ivBox" style="margin-top:10px; font-size:12px;"></div>
                 </div>
+                <div class="card-coord" style="padding:16px;">
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+                        <div style="font-size:12px; font-weight:900; color:#1e293b;">RESUMEN MENSUAL (DÍA 1, 10:00)</div>
+                        <label style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800; cursor:pointer;">
+                            <input type="checkbox" id="rmActivo" onchange="rmGuardar()"> <span id="rmActivoTxt">—</span></label>
+                    </div>
+                    <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
+                        A cada entrenador, una imagen por equipo (sin Aficionados ni Debutantes) con el mes que acaba de terminar
+                        (<span id="rmMes">—</span>): asistencias, entrenamientos subidos, objetivos del mes y progresión de la temporada
+                        (jornadas e ida/vuelta), y debajo los puntos de la IA.</div>
+                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                        <input id="rmEquipo" value="INFANTIL B" style="padding:6px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:11px; width:120px; text-transform:uppercase;">
+                        <button onclick="window.open('/api/whatsapp/mensual/imagen?equipo=' + encodeURIComponent(document.getElementById('rmEquipo').value.trim().toUpperCase()) + '&t=' + Date.now(), '_blank')" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-image"></i> VER IMAGEN</button>
+                        <button onclick="rmPrueba()" style="background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> ENVIAR PRUEBA A RUBÉN POZÓN</button>
+                    </div>
+                    <div id="rmBox" style="margin-top:10px; font-size:12px;"></div>
+                </div>
             </div>
         </div>
         <style>
@@ -2318,6 +2335,7 @@
         resCargar();
         flCargar();
         ivCargar();
+        rmCargar();
         if (_waPersonas.length || _waGrupos.length) return;
         const lista = document.getElementById('waLista');
         lista.innerHTML = '<div style="padding:14px; color:#94a3b8; font-size:12px;">Cargando...</div>';
@@ -2789,6 +2807,34 @@
                     ${v.equipo ? `<b style="color:#166534;">${_waEsc(v.equipo)}</b>` : '<b style="color:#ef4444;">título sin equipo</b>'}${v.enviado ? ' · <span style="color:#16a34a;">enviado</span>' : ''}</div>`).join('');
         } catch (e) { box.innerHTML = `<span style="color:#ef4444; font-weight:700;">${_waEsc(e.message || 'Error')}</span>`; }
     }
+    // ---- Resumen mensual (día 1, 10:00) ----
+    async function rmCargar() {
+        try {
+            const d = await (await fetch('/api/whatsapp/mensual')).json();
+            if (d.status !== 'ok') return;
+            document.getElementById('rmActivo').checked = !!d.activo;
+            document.getElementById('rmActivoTxt').innerHTML = d.activo ? '<span style="color:#16a34a;">ACTIVADO</span>' : '<span style="color:#94a3b8;">DESACTIVADO</span>';
+            document.getElementById('rmMes').textContent = d.mes;
+        } catch (e) {}
+    }
+    async function rmGuardar() {
+        try {
+            await fetch('/api/whatsapp/mensual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo: document.getElementById('rmActivo').checked }) });
+            rmCargar();
+        } catch (e) { alert('Error al guardar'); }
+    }
+    async function rmPrueba() {
+        const box = document.getElementById('rmBox');
+        const equipo = document.getElementById('rmEquipo').value.trim().toUpperCase();
+        if (!confirm(`¿Enviar a RUBÉN POZÓN el resumen mensual del ${equipo}?`)) return;
+        box.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Preparando la imagen y los puntos de la IA...</span>';
+        try {
+            const d = await (await fetch('/api/whatsapp/mensual/prueba', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ equipo }) })).json();
+            box.innerHTML = d.status === 'ok' ? `<span style="color:#16a34a; font-weight:800;">✓ ${_waEsc(d.message)}</span>`
+                                              : `<span style="color:#ef4444; font-weight:700;">${_waEsc(d.message || 'No se pudo enviar')}</span>`;
+        } catch (e) { box.innerHTML = '<span style="color:#ef4444; font-weight:700;">Error al enviar</span>'; }
+    }
+
     // ---- Plantillas: mensaje + destinatarios guardados ----
     let _waPlantillas = [];
     async function waCargarPlantillas() {

@@ -4213,6 +4213,7 @@ from previa_rival import previa_bp
 from resumen_finde import resumen_bp
 from faltas_seguidas import faltas_bp
 from informe_veo import informe_veo_bp
+from resumen_mensual import mensual_bp
 from loteria import loteria_bp
 app.register_blueprint(financiero_bp)
 app.register_blueprint(loteria_bp)
@@ -4242,6 +4243,7 @@ app.register_blueprint(previa_bp)
 app.register_blueprint(resumen_bp)
 app.register_blueprint(faltas_bp)
 app.register_blueprint(informe_veo_bp)
+app.register_blueprint(mensual_bp)
 
 # --- SEGUIMIENTO COORD ENTRENAMIENTOS ---
 _SEG_COORD_FILE = os.path.join('static', 'data', 'seguimiento_coord_comentarios.json')
