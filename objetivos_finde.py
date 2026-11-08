@@ -249,10 +249,13 @@ def api_imagen():
     """Vista previa de la imagen que se enviará (finde de referencia)."""
     if not _permitido():
         return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
-    partidos = partidos_finde(viernes_de(date.today()))
-    if not partidos:
-        return jsonify({'status': 'error', 'message': 'Ese fin de semana no hay partidos'}), 404
-    return Response(imagen_png(partidos), mimetype='image/png', headers={'Cache-Control': 'no-store'})
+    try:
+        partidos = partidos_finde(viernes_de(date.today()))
+        if not partidos:
+            return jsonify({'status': 'error', 'message': 'Ese fin de semana no hay partidos'}), 404
+        return Response(imagen_png(partidos), mimetype='image/png', headers={'Cache-Control': 'no-store'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Error en el servidor: {e}'[:250]}), 500
 
 
 @objetivos_bp.route('/api/whatsapp/objetivos/enviar', methods=['POST'])
@@ -260,7 +263,13 @@ def api_enviar():
     """destino='prueba' (a un teléfono, para revisarlo) o 'grupo' (FR Entrenadores, ahora mismo)."""
     if not _permitido():
         return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
-    data = request.json or {}
+    try:
+        return _api_enviar(request.json or {})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Error en el servidor: {e}'[:250]})
+
+
+def _api_enviar(data):
     vie = viernes_de(date.today())
     if data.get('destino') == 'prueba':
         num = ''.join(c for c in str(data.get('telefono') or '') if c.isdigit())
