@@ -188,7 +188,7 @@ def html_resumen(d):
     eq, mes_txt = _bonito(d['equipo']), f"{_MESES[d['mes'] - 1]} {d['anio']}"
     ap, en = d['asis_pasadas'] or {}, d['entrenos'] or {}
     h = [f'<p style="font-family:sans-serif;font-size:17px;font-weight:bold;color:#1e293b;margin:0;">RESUMEN MENSUAL · {escape(eq)}</p>',
-         f'<p style="font-family:sans-serif;font-size:11px;font-weight:bold;color:#64748b;margin:2px 0 0 0;">{mes_txt}</p>']
+         f'<p style="font-family:sans-serif;font-size:22px;font-weight:bold;color:#E31E24;margin:4px 0 0 0;">{mes_txt}</p>']
     h.append(f'<p style="{_TIT}">ASISTENCIAS</p>')
     if ap.get('total'):
         h.append(f'<p style="{_TXT}">Lista pasada: <b>{ap.get("hechas", 0)} de {ap["total"]}</b> días de entrenamiento</p>')
