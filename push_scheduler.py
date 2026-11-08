@@ -317,6 +317,12 @@ def _loop(flask_app):
                 formulario_finde.tick(now)
             except Exception as e:
                 print(f"[SCHED] Formulario finde: {e}", flush=True)
+            # Objetivos del finde al grupo FR Entrenadores (viernes 17:00)
+            try:
+                import objetivos_finde
+                objetivos_finde.tick(now)
+            except Exception as e:
+                print(f"[SCHED] Objetivos finde: {e}", flush=True)
 
         except Exception as e:
             print(f"[SCHED LOOP] {e}", flush=True)

@@ -2164,6 +2164,23 @@
                     </div>
                     <div id="ffVistaBox" style="margin-top:10px; font-size:12px;"></div>
                 </div>
+                <div class="card-coord" style="padding:16px;">
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+                        <div style="font-size:12px; font-weight:900; color:#1e293b;">OBJETIVOS DEL FINDE (VIERNES 17:00)</div>
+                        <label style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800; cursor:pointer;">
+                            <input type="checkbox" id="objActivo" onchange="objGuardar()"> <span id="objActivoTxt">—</span></label>
+                    </div>
+                    <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
+                        Al grupo <b>FR Entrenadores</b>: la imagen de PLANIFICACIÓN — OBJETIVOS (OBJ FINES DE SEMANA) con el texto
+                        <b id="objTexto">—</b> debajo. Si ese finde no juega nadie, no se envía. <span id="objUltimo"></span></div>
+                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                        <button onclick="objVerImagen()" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-image"></i> VER IMAGEN</button>
+                        <select id="objPruebaPersona" style="padding:6px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:11px; max-width:200px;"></select>
+                        <button onclick="objEnviar('prueba')" style="background:white; color:#16a34a; border:1.5px solid #16a34a; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> ENVIAR PRUEBA</button>
+                        <button onclick="objEnviar('grupo')" style="background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fas fa-users"></i> ENVIAR AHORA AL GRUPO</button>
+                    </div>
+                    <div id="objResultado" style="margin-top:10px; font-size:12px;"></div>
+                </div>
             </div>
         </div>
         <style>
@@ -2232,6 +2249,7 @@
         waCargarPlantillas();
         avCargar();
         ffCargar();
+        objCargar();
         if (_waPersonas.length || _waGrupos.length) return;
         const lista = document.getElementById('waLista');
         lista.innerHTML = '<div style="padding:14px; color:#94a3b8; font-size:12px;">Cargando...</div>';
@@ -2261,6 +2279,7 @@
             _waGrupos.forEach(x => { _waNombre[x.telefono] = x.nombre; });
             waPintarLista();
             ffCargar();
+            objCargar();
         } catch (e) {
             lista.innerHTML = `<div style="padding:14px; color:#ef4444; font-size:12px;">${_waEsc(e.message || 'Error')}</div>`;
         }
@@ -2484,6 +2503,51 @@
                     <td style="padding:4px 6px; text-align:center;">${f.mejores.length ? `<span style="color:#166534;">${f.mejores.map(_waEsc).join(', ')}</span><br><span style="color:#991b1b;">${f.peores.map(_waEsc).join(', ')}</span>` : '—'}</td></tr>`).join('') + '</table>' : '';
             box.innerHTML = h;
         } catch (e) { box.innerHTML = `<span style="color:#ef4444; font-weight:700;">${_waEsc(e.message || 'Error')}</span>`; }
+    }
+
+    // ---- Objetivos del finde al grupo FR Entrenadores ----
+    async function objCargar() {
+        try {
+            const d = await (await fetch('/api/whatsapp/objetivos')).json();
+            if (d.status === 'ok') {
+                _objPintar(d.activo);
+                document.getElementById('objTexto').textContent = d.texto;
+                document.getElementById('objUltimo').textContent = d.ultimo ? `Último envío: ${d.ultimo.split('-').reverse().join('/')}.` : '';
+            }
+        } catch (e) {}
+        const sel = document.getElementById('objPruebaPersona');
+        if (sel && !sel.options.length && _waPersonas.length) {
+            sel.innerHTML = _waPersonas.map((p, i) => `<option value="${i}" ${/pozon/i.test(p.usuario) ? 'selected' : ''}>${_waEsc(p.usuario.toUpperCase())}</option>`).join('');
+        }
+    }
+    function _objPintar(activo) {
+        document.getElementById('objActivo').checked = !!activo;
+        document.getElementById('objActivoTxt').innerHTML = activo ? '<span style="color:#16a34a;">ACTIVADO</span>' : '<span style="color:#94a3b8;">DESACTIVADO</span>';
+    }
+    async function objGuardar() {
+        const activo = document.getElementById('objActivo').checked;
+        try {
+            const d = await (await fetch('/api/whatsapp/objetivos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo }) })).json();
+            if (d.status === 'ok') _objPintar(d.activo);
+        } catch (e) { alert('Error al guardar'); }
+    }
+    function objVerImagen() { window.open('/api/whatsapp/objetivos/imagen?t=' + Date.now(), '_blank'); }
+    async function objEnviar(destino) {
+        const out = document.getElementById('objResultado');
+        const body = { destino };
+        if (destino === 'prueba') {
+            const p = _waPersonas[+document.getElementById('objPruebaPersona').value];
+            if (!p) return;
+            if (!confirm(`¿Enviar ahora la prueba de los objetivos a ${p.usuario.toUpperCase()}?`)) return;
+            body.telefono = p.telefono;
+        } else if (!confirm('¿Enviar AHORA los objetivos al grupo FR Entrenadores?')) return;
+        out.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Generando la imagen y enviando...</span>';
+        try {
+            const d = await (await fetch('/api/whatsapp/objetivos/enviar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json();
+            out.innerHTML = d.status === 'ok'
+                ? `<span style="color:#16a34a; font-weight:800;">✓ Enviado ${destino === 'prueba' ? 'como prueba' : 'al grupo FR Entrenadores'}.</span>`
+                : `<span style="color:#ef4444; font-weight:700;">${_waEsc(d.message || 'No se pudo enviar')}</span>`;
+        } catch (e) { out.innerHTML = '<span style="color:#ef4444; font-weight:700;">Error al enviar</span>'; }
     }
 
     // ---- Plantillas: mensaje + destinatarios guardados ----
