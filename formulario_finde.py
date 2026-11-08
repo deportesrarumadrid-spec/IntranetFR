@@ -76,16 +76,84 @@ def _bonito(eq):
 
 
 def sabado_de(d):
-    """Sábado del fin de semana al que pertenece d (sáb, dom y lunes → ese finde)."""
+    """Sábado del fin de semana al que pertenece d (viernes → el día siguiente; sáb, dom y lunes → ese finde)."""
+    if d.weekday() == 4:
+        return d + timedelta(days=1)
     return d - timedelta(days=(d.weekday() - 5) % 7)
+
+
+# ---------- horarios de la Federación (definitivos el viernes a primera hora) ----------
+
+FED_DIR = os.path.join(BASE_DIR, 'datos_privados', 'partidos_federacion')
+HORA_DESCARGA = 8  # el viernes a partir de las 8:00 se descargan los horarios de vie, sáb y dom
+_ultimo_intento = {}
+
+
+def _fichero_fed(sat):
+    return os.path.join(FED_DIR, f'{sat.isoformat()}.json')
+
+
+def leer_federacion(sat):
+    try:
+        with open(_fichero_fed(sat), 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def descargar_federacion(sat):
+    """Descarga de la RFFM (Campos y Horas) los partidos del club de viernes a domingo y los guarda."""
+    import competicion_scraper as cs
+    from horarios import _rffm_session
+    vie, dom = sat - timedelta(days=1), sat + timedelta(days=1)
+    cod, _, _ = cs._temporada_actual()
+    matches = cs.fetch_temporada_matches(_rffm_session(), cod_temporada=cod,
+                                         fecha_desde=vie.strftime('%d-%m-%Y'), fecha_hasta=dom.strftime('%d-%m-%Y'))
+    partidos = []
+    for m in matches:
+        for nuestro, rival in ((m['nombre_casa'], m['nombre_fuera']), (m['nombre_fuera'], m['nombre_casa'])):
+            if 'FUENTELARREYNA' in nuestro.upper():
+                partidos.append({'fecha': m.get('fecha', ''), 'hora': m.get('hora', ''), 'competicion': m.get('competicion', ''),
+                                 'deporte': m.get('deporte', ''), 'nuestro': nuestro, 'rival': rival})
+    datos = {'descargado': datetime.now().strftime('%Y-%m-%dT%H:%M'), 'partidos': partidos}
+    os.makedirs(FED_DIR, exist_ok=True)
+    tmp = _fichero_fed(sat) + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as f:
+        json.dump(datos, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, _fichero_fed(sat))
+    print(f"[FINDE] Horarios de la Federación descargados: {len(partidos)} partidos ({vie:%d/%m}-{dom:%d/%m})", flush=True)
+    return datos
+
+
+def _claves_federacion(p):
+    """Nombres posibles del equipo para un partido de la Federación (p. ej. {'ALEVIN A', 'ALEVIN A F7'}) y su formato."""
+    from competicion_scraper import detect_categoria_y_letra
+    comp = (p.get('competicion') or '').upper()
+    cat, _ = detect_categoria_y_letra(comp.replace('COPA', ''))
+    if not cat or cat == 'OTROS':
+        return set(), ''
+    m = re.search(r'"([^"]+)"', p.get('nuestro') or '')
+    if m:
+        letra = m.group(1).strip().upper()
+    else:
+        ult = (p.get('nuestro') or '').strip().upper().split()
+        letra = ult[-1] if ult and len(ult[-1]) <= 2 and ult[-1].isalpha() else 'A'
+    dep = (p.get('deporte') or '').upper().replace(' ', '').replace('Ú', 'U')
+    fmt = 'F7' if (cat.endswith('F7') or 'FUTBOL-7' in dep or 'F7' in dep or 'F-7' in comp) else 'F11'
+    base = cat.replace(' F7', '').strip()
+    if 'FEMENIN' in comp:  # solo el equipo femenino (no confundir con 'ALEVIN A F7')
+        return {_norm(f'{base} FEMENINO'), _norm(f'{base} FEMENINO {letra}')}, fmt
+    return {_norm(f'{base} {letra}'), _norm(f'{base} {letra} {fmt}')}, fmt
 
 
 # ---------- partidos del finde ----------
 
 def partidos_finde(sat):
-    """{EQUIPO (nombre de la configuración): {'fecha': date, 'hora': 'HH:MM' o ''}} con partido sáb/dom."""
+    """{EQUIPO (nombre de la configuración): {'fecha': date, 'hora': 'HH:MM' o '', 'origen': ...}} con partido
+    viernes, sábado o domingo. La hora sale de la Federación (descargada el viernes); si no está, de las
+    convocatorias o del calendario (sin hora: se envía a las 17:00)."""
     from deportivo import _get_equipos_config_path
-    sun = sat + timedelta(days=1)
+    dias = {sat - timedelta(days=1), sat, sat + timedelta(days=1)}
     try:
         with open(_get_equipos_config_path(), encoding='utf-8') as f:
             equipos = [e['nombre'] for e in json.load(f).get('equipos', []) if e.get('nombre')]
@@ -94,10 +162,22 @@ def partidos_finde(sat):
     equipos = [e for e in equipos if not _norm(e).startswith(('AFICIONADO', 'DEBUTANTE'))]
 
     def _fecha(txt):
-        p = [int(x) for x in (txt or '').split('-')]
+        p = [int(x) for x in (txt or '').replace('/', '-').split('-')]
         return date(p[2], p[1], p[0])
 
-    entradas = []  # (claves de nombre, fecha, hora)
+    def _hora(txt):
+        h = (txt or '').strip()[:5]
+        return h if re.match(r'^\d{1,2}:\d{2}$', h) and h not in ('00:00', '0:00') else ''
+
+    fed, otras = [], []  # (claves de nombre, fecha, hora, formato)
+    for p in (leer_federacion(sat) or {}).get('partidos', []):
+        try:
+            f = _fecha(p.get('fecha'))
+        except Exception:
+            continue
+        claves, fmt = _claves_federacion(p)
+        if f in dias and claves:
+            fed.append((claves, f, _hora(p.get('hora')), fmt))
     try:
         from competicion_scraper import load_convocatorias_report
         for e in (load_convocatorias_report() or {}).get('entries', []):
@@ -105,9 +185,9 @@ def partidos_finde(sat):
                 f = _fecha(e.get('fecha'))
             except Exception:
                 continue
-            if f in (sat, sun):
+            if f in dias:
                 base = _norm(f"{e.get('categoria', '')} {e.get('letra', '')}")
-                entradas.append(({base}, f, (e.get('hora') or '').strip()[:5], ''))
+                otras.append(({base}, f, _hora(e.get('hora')), ''))
     except Exception as ex:
         print(f"[FINDE] convocatorias: {ex}", flush=True)
     try:
@@ -117,29 +197,34 @@ def partidos_finde(sat):
                 f = _fecha(p.get('fecha'))
             except Exception:
                 continue
-            if f in (sat, sun):
+            if f in dias:
                 base = _norm(f"{p.get('categoria', '')} {p.get('letra', '')}")
                 fmt = _norm(p.get('formato', ''))
-                entradas.append(({base, _norm(f"{base} {fmt}")}, f, '', fmt))
+                otras.append(({base, _norm(f"{base} {fmt}")}, f, '', fmt))
     except Exception as ex:
         print(f"[FINDE] calendario: {ex}", flush=True)
 
     def _fmt(n):
         return 'F11' if 'F11' in n.split() else ('F7' if 'F7' in n.split() else '')
 
+    def _buscar(n, entradas):
+        exactas = [x for x in entradas if n in x[0]]
+        # parecidas (p. ej. 'INFANTIL B' ↔ 'INFANTIL B F11'), pero nunca F7 con F11
+        return exactas or [x for x in entradas if any(n.startswith(k) or k.startswith(n) for k in x[0] if k)
+                           and not (x[3] and _fmt(n) and x[3] != _fmt(n))]
+
     out = {}
     for eq in equipos:
         n = _norm(eq)
-        exactas = [x for x in entradas if n in x[0]]
-        # parecidas (p. ej. 'INFANTIL B' ↔ 'INFANTIL B F11'), pero nunca F7 con F11
-        parecidas = exactas or [x for x in entradas if any(n.startswith(k) or k.startswith(n) for k in x[0] if k)
-                                and not (x[3] and _fmt(n) and x[3] != _fmt(n))]
-        if not parecidas:
-            continue
-        fecha = min(x[1] for x in parecidas)
-        hora = next((x[2] for x in parecidas if x[1] == fecha and re.match(r'^\d{1,2}:\d{2}$', x[2] or '')), '')
-        out[eq] = {'fecha': fecha, 'hora': hora}
+        for origen, entradas in (('federacion', fed), ('calendario', otras)):
+            parecidas = _buscar(n, entradas)
+            if parecidas:
+                fecha = min(x[1] for x in parecidas)
+                hora = next((x[2] for x in parecidas if x[1] == fecha and x[2]), '')
+                out[eq] = {'fecha': fecha, 'hora': hora, 'origen': origen}
+                break
     return out
+
 
 
 def _momentos(partido):
@@ -220,6 +305,7 @@ def plan(sat):
         reg = d['envios'].get(_clave(sat, equipo, telefono), {})
         out.append({'usuario': usuario, 'telefono': telefono, 'equipo': equipo,
                     'fecha': partidos[equipo]['fecha'].isoformat(), 'hora': partidos[equipo]['hora'],
+                    'origen': partidos[equipo].get('origen', ''),
                     'momentos': [m.strftime('%Y-%m-%dT%H:%M') for m in _momentos(partidos[equipo])],
                     'enviados': reg.get('enviados', []), 'mejores': reg.get('mejores', []), 'peores': reg.get('peores', [])})
     sin_entrenador = sorted(set(partidos) - {e for _, t, e in _entrenadores(partidos) if t})
@@ -227,13 +313,22 @@ def plan(sat):
 
 
 def tick(ahora):
-    """Lo llama push_scheduler cada minuto; trabaja cada 5 min los sábados, domingos y lunes."""
-    if ahora.weekday() not in (5, 6, 0) or ahora.minute % 5:
+    """Lo llama push_scheduler cada minuto; trabaja cada 5 min de viernes a lunes."""
+    if ahora.weekday() not in (4, 5, 6, 0) or ahora.minute % 5:
         return
     d = _leer()
     if not d.get('activo'):
         return
     sat = sabado_de(ahora.date())
+    if ahora.weekday() == 4 and ahora.hour < HORA_DESCARGA:
+        return
+    # Horarios definitivos: una sola descarga (si falla, se reintenta cada 30 min)
+    if leer_federacion(sat) is None and (ahora - _ultimo_intento.get(sat, datetime.min)) > timedelta(minutes=30):
+        _ultimo_intento[sat] = ahora
+        try:
+            descargar_federacion(sat)
+        except Exception as e:
+            print(f"[FINDE] No se pudieron descargar los horarios de la Federación: {e}", flush=True)
     partidos = partidos_finde(sat)
     if not partidos:
         return
@@ -406,10 +501,12 @@ def api_vista():
         return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
     try:
         hoy = date.today()
-        sat = sabado_de(hoy) if hoy.weekday() in (5, 6, 0) else hoy + timedelta(days=(5 - hoy.weekday()) % 7)
+        sat = sabado_de(hoy) if hoy.weekday() in (4, 5, 6, 0) else hoy + timedelta(days=(5 - hoy.weekday()) % 7)
         filas, sin_ent = plan(sat)
+        fed = leer_federacion(sat)
         for f in filas:
             f['hecho'] = _formulario_hecho(sat, f['equipo'])
-        return jsonify({'status': 'ok', 'sabado': sat.isoformat(), 'filas': filas, 'sin_entrenador': sin_ent})
+        return jsonify({'status': 'ok', 'sabado': sat.isoformat(), 'filas': filas, 'sin_entrenador': sin_ent,
+                        'federacion': (fed or {}).get('descargado', '')})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)[:200]}), 500

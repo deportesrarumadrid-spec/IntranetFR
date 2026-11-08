@@ -2489,6 +2489,9 @@
             const [y, m, dd] = d.sabado.split('-');
             let h = (d.sin_entrenador || []).length ? `<div style="background:#fef3c7; color:#92400e; border-radius:6px; padding:6px 10px; margin-bottom:6px; font-size:11px; font-weight:700;">⚠️ Con partido pero sin entrenador con teléfono: ${d.sin_entrenador.map(_waEsc).join(', ')}</div>` : '';
             h += `<div style="font-weight:900; color:#1e293b; margin:6px 0;">Finde ${dd}/${m}/${y}: ${d.filas.length} avisos previstos</div>`;
+            h += `<div style="font-size:11px; color:#64748b; margin-bottom:6px;">${d.federacion
+                ? `<i class="fas fa-check" style="color:#16a34a;"></i> Horarios de la Federación descargados el ${fh(d.federacion)}.`
+                : '<i class="far fa-clock"></i> Los horarios de la Federación se descargan el viernes a las 8:00 (hasta entonces, horas aproximadas).'}</div>`;
             h += d.filas.length ? `<table style="border-collapse:collapse; width:100%; font-size:11px;"><tr style="background:#f1f5f9;">
                 <th style="text-align:left; padding:4px 6px;">ENTRENADOR</th><th style="text-align:left; padding:4px 6px;">EQUIPO</th><th style="padding:4px 6px;">PARTIDO</th>
                 <th style="padding:4px 6px;">ENVÍOS PREVISTOS</th><th style="padding:4px 6px;">FORMULARIO</th><th style="padding:4px 6px;">MEJORES / PEORES</th></tr>` +
