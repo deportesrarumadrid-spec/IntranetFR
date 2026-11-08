@@ -260,7 +260,7 @@ def api_imagen():
 
 @objetivos_bp.route('/api/whatsapp/objetivos/enviar', methods=['POST'])
 def api_enviar():
-    """destino='prueba' (a un teléfono, para revisarlo) o 'grupo' (FR Entrenadores, ahora mismo)."""
+    """Envía ahora mismo los objetivos al grupo FR Entrenadores."""
     if not _permitido():
         return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
     try:
@@ -270,14 +270,5 @@ def api_enviar():
 
 
 def _api_enviar(data):
-    vie = viernes_de(date.today())
-    if data.get('destino') == 'prueba':
-        num = ''.join(c for c in str(data.get('telefono') or '') if c.isdigit())
-        if len(num) == 9:
-            num = '34' + num
-        if len(num) < 10:
-            return jsonify({'status': 'error', 'message': 'Teléfono no válido'}), 400
-        ok, detalle = enviar(vie, f'{num}@c.us')
-    else:
-        ok, detalle = enviar(vie)
+    ok, detalle = enviar(viernes_de(date.today()))
     return jsonify({'status': 'ok' if ok else 'error', 'message': detalle})

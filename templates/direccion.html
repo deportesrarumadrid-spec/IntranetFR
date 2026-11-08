@@ -2175,8 +2175,6 @@
                         <b id="objTexto">—</b> debajo. Si ese finde no juega nadie, no se envía. <span id="objUltimo"></span></div>
                     <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                         <button onclick="objVerImagen()" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-image"></i> VER IMAGEN</button>
-                        <select id="objPruebaPersona" style="padding:6px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:11px; max-width:200px;"></select>
-                        <button onclick="objEnviar('prueba')" style="background:white; color:#16a34a; border:1.5px solid #16a34a; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> ENVIAR PRUEBA</button>
                         <button onclick="objEnviar('grupo')" style="background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fas fa-users"></i> ENVIAR AHORA AL GRUPO</button>
                     </div>
                     <div id="objResultado" style="margin-top:10px; font-size:12px;"></div>
@@ -2515,10 +2513,6 @@
                 document.getElementById('objUltimo').textContent = d.ultimo ? `Último envío: ${d.ultimo.split('-').reverse().join('/')}.` : '';
             }
         } catch (e) {}
-        const sel = document.getElementById('objPruebaPersona');
-        if (sel && !sel.options.length && _waPersonas.length) {
-            sel.innerHTML = _waPersonas.map((p, i) => `<option value="${i}" ${/pozon/i.test(p.usuario) ? 'selected' : ''}>${_waEsc(p.usuario.toUpperCase())}</option>`).join('');
-        }
     }
     function _objPintar(activo) {
         document.getElementById('objActivo').checked = !!activo;
@@ -2535,17 +2529,12 @@
     async function objEnviar(destino) {
         const out = document.getElementById('objResultado');
         const body = { destino };
-        if (destino === 'prueba') {
-            const p = _waPersonas[+document.getElementById('objPruebaPersona').value];
-            if (!p) return;
-            if (!confirm(`¿Enviar ahora la prueba de los objetivos a ${p.usuario.toUpperCase()}?`)) return;
-            body.telefono = p.telefono;
-        } else if (!confirm('¿Enviar AHORA los objetivos al grupo FR Entrenadores?')) return;
+        if (!confirm('¿Enviar AHORA los objetivos al grupo FR Entrenadores?')) return;
         out.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Generando la imagen y enviando...</span>';
         try {
             const d = await (await fetch('/api/whatsapp/objetivos/enviar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json();
             out.innerHTML = d.status === 'ok'
-                ? `<span style="color:#16a34a; font-weight:800;">✓ Enviado ${destino === 'prueba' ? 'como prueba' : 'al grupo FR Entrenadores'}.</span>`
+                ? '<span style="color:#16a34a; font-weight:800;">✓ Enviado al grupo FR Entrenadores.</span>'
                 : `<span style="color:#ef4444; font-weight:700;">${_waEsc(d.message || 'No se pudo enviar')}</span>`;
         } catch (e) { out.innerHTML = '<span style="color:#ef4444; font-weight:700;">Error al enviar</span>'; }
     }
