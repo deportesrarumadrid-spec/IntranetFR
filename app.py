@@ -1671,6 +1671,11 @@ def guardar_asistencia_masiva():
         equipos_mod = {c['equipo'].strip().lower() for c in cambios}
         for eq in equipos_mod:
             _asis_cache.pop(eq, None)
+        try:  # ¿algún jugador con 2 NO seguidos? → preguntar al entrenador por WhatsApp (en segundo plano)
+            import faltas_seguidas
+            faltas_seguidas.revisar_en_segundo_plano({c['equipo'].strip() for c in cambios if 'NO' in str(c.get('estado', '')).upper()})
+        except Exception as e:
+            print(f"[FALTAS] {e}")
         return jsonify({"status": "success"}), 200
     except Exception as e:
         print(f"Error crítico al guardar: {e}")
@@ -4206,6 +4211,7 @@ from formulario_finde import finde_bp
 from objetivos_finde import objetivos_bp
 from previa_rival import previa_bp
 from resumen_finde import resumen_bp
+from faltas_seguidas import faltas_bp
 from loteria import loteria_bp
 app.register_blueprint(financiero_bp)
 app.register_blueprint(loteria_bp)
@@ -4233,6 +4239,7 @@ app.register_blueprint(finde_bp)
 app.register_blueprint(objetivos_bp)
 app.register_blueprint(previa_bp)
 app.register_blueprint(resumen_bp)
+app.register_blueprint(faltas_bp)
 
 # --- SEGUIMIENTO COORD ENTRENAMIENTOS ---
 _SEG_COORD_FILE = os.path.join('static', 'data', 'seguimiento_coord_comentarios.json')

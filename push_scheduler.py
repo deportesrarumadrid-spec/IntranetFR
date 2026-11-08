@@ -335,6 +335,12 @@ def _loop(flask_app):
                 resumen_finde.tick(now)
             except Exception as e:
                 print(f"[SCHED] Resumen finde: {e}", flush=True)
+            # Faltas seguidas: revisión cada 30 min y recordatorios a las 21:00
+            try:
+                import faltas_seguidas
+                faltas_seguidas.tick(now)
+            except Exception as e:
+                print(f"[SCHED] Faltas seguidas: {e}", flush=True)
 
         except Exception as e:
             print(f"[SCHED LOOP] {e}", flush=True)

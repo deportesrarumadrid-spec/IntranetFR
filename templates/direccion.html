@@ -2214,6 +2214,22 @@
                     </div>
                     <div id="resResultado" style="margin-top:10px; font-size:12px;"></div>
                 </div>
+                <div class="card-coord" style="padding:16px;">
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+                        <div style="font-size:12px; font-weight:900; color:#1e293b;">FALTAS SEGUIDAS (2 NO SEGUIDOS)</div>
+                        <label style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800; cursor:pointer;">
+                            <input type="checkbox" id="flActivo" onchange="flGuardar({ activo: this.checked })"> <span id="flActivoTxt">—</span></label>
+                    </div>
+                    <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
+                        Cuando un jugador tiene <b>NO</b> en 2 entrenamientos seguidos (desde el <span id="flDesde">01/11</span>), se pregunta el motivo a los entrenadores
+                        de su equipo (sin Aficionados). Si no contesta, se le recuerda el siguiente día de entrenamiento. La respuesta se reenvía,
+                        se apunta en AUSENCIAS SIN JUSTIFICAR y al entrenador se le contesta 👌.</div>
+                    <div style="font-size:11px; font-weight:900; color:#1e293b; margin-bottom:6px;"><i class="fas fa-share"></i> REENVIAR LAS RESPUESTAS A:</div>
+                    <div id="flReenviar" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; font-size:11px; margin-bottom:10px;"></div>
+                    <button onclick="flVista()" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-eye"></i> VER QUÉ SE PREGUNTARÍA</button>
+                    <div id="flVistaBox" style="margin-top:10px; font-size:12px;"></div>
+                    <div id="flCasos" style="margin-top:10px; font-size:11.5px;"></div>
+                </div>
             </div>
         </div>
         <style>
@@ -2285,6 +2301,7 @@
         objCargar();
         prvCargar();
         resCargar();
+        flCargar();
         if (_waPersonas.length || _waGrupos.length) return;
         const lista = document.getElementById('waLista');
         lista.innerHTML = '<div style="padding:14px; color:#94a3b8; font-size:12px;">Cargando...</div>';
@@ -2317,6 +2334,7 @@
             objCargar();
             prvCargar();
             resCargar();
+            flCargar();
         } catch (e) {
             lista.innerHTML = `<div style="padding:14px; color:#ef4444; font-size:12px;">${_waEsc(e.message || 'Error')}</div>`;
         }
@@ -2668,6 +2686,65 @@
             if (d.status === 'ok') _resPintar(d.activo);
         } catch (e) { alert('Error al guardar'); }
     }
+    // ---- Faltas seguidas ----
+    let _flReenviar = [];
+    async function flCargar(datos) {
+        try {
+            const d = datos || await (await fetch('/api/whatsapp/faltas')).json();
+            if (d.status !== 'ok') return;
+            document.getElementById('flActivo').checked = !!d.activo;
+            document.getElementById('flActivoTxt').innerHTML = d.activo ? '<span style="color:#16a34a;">ACTIVADO</span>' : '<span style="color:#94a3b8;">DESACTIVADO</span>';
+            document.getElementById('flDesde').textContent = d.desde;
+            _flReenviar = d.reenviar || [];
+            _flPintarReenviar();
+            const casos = d.casos || [];
+            document.getElementById('flCasos').innerHTML = casos.length ? `<div style="font-weight:900; color:#1e293b; margin-bottom:4px;">Preguntas enviadas</div>` + casos.map(c =>
+                `<div style="padding:5px 0; border-bottom:1px solid #f1f5f9;">
+                    <b>${_waEsc(c.jugador)}</b> · ${_waEsc(c.equipo)} · ${c.fechas.map(x => x.slice(0, 5)).join(', ')}
+                    ${c.estado === 'respondido'
+                        ? `<div style="color:#166534;">✓ ${_waEsc((c.por || '').toUpperCase())}: "${_waEsc(c.respuesta)}"</div>`
+                        : `<div style="color:#d97706; font-weight:700;">Pendiente de respuesta (${c.preguntas} envíos)</div>`}</div>`).join('') : '';
+        } catch (e) {}
+    }
+    function _flPintarReenviar() {
+        const box = document.getElementById('flReenviar');
+        if (!box) return;
+        const tels = new Set(_flReenviar.map(x => x.telefono));
+        box.innerHTML = (_flReenviar.length ? _flReenviar.map((x, i) => `<span style="background:#dcfce7; color:#166534; border-radius:12px; padding:3px 6px 3px 10px; font-weight:800;">
+                ${_waEsc(x.usuario.toUpperCase())} <button onclick="flQuitar(${i})" title="Quitar" style="background:none; border:none; color:#991b1b; cursor:pointer; font-weight:900;">✕</button></span>`).join('')
+                : '<span style="color:#ef4444; font-weight:700;">Nadie: las respuestas no se reenvían.</span>')
+            + (_waPersonas.length ? `<select id="flReenviarSel" style="padding:4px 6px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:11px; max-width:190px;">
+                <option value="">+ Añadir persona…</option>${_waPersonas.map((p, i) => tels.has(p.telefono) ? '' : `<option value="${i}">${_waEsc(p.usuario.toUpperCase())}</option>`).join('')}</select>
+                <button onclick="flAnadir()" style="background:#1e293b; color:white; border:none; border-radius:6px; padding:5px 10px; font-size:10.5px; font-weight:800; cursor:pointer; font-family:inherit;">AÑADIR</button>` : '');
+    }
+    async function flGuardar(body) {
+        try {
+            const d = await (await fetch('/api/whatsapp/faltas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json();
+            if (d.status === 'ok') flCargar(d); else alert(d.message || 'Error al guardar');
+        } catch (e) { alert('Error al guardar'); }
+    }
+    function flAnadir() {
+        const v = document.getElementById('flReenviarSel').value, p = _waPersonas[+v];
+        if (v === '' || !p) return;
+        flGuardar({ reenviar: _flReenviar.concat([{ usuario: p.usuario, telefono: p.telefono }]) });
+    }
+    function flQuitar(i) {
+        const x = _flReenviar[i];
+        if (!x || !confirm(`¿Dejar de reenviar las respuestas a ${x.usuario.toUpperCase()}?`)) return;
+        flGuardar({ reenviar: _flReenviar.filter((_, j) => j !== i) });
+    }
+    async function flVista() {
+        const box = document.getElementById('flVistaBox');
+        box.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Revisando asistencias...</span>';
+        try {
+            const d = await (await fetch('/api/whatsapp/faltas/vista')).json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            box.innerHTML = `<div style="font-weight:900; color:#1e293b; margin-bottom:4px;">${d.preguntas.length ? `Se preguntaría por ${d.preguntas.length} jugadores:` : 'Ahora mismo no se preguntaría por nadie.'}</div>` +
+                d.preguntas.map(x => `<div style="padding:3px 0; border-bottom:1px solid #f1f5f9;"><b>${_waEsc(x.jugador)}</b> · ${_waEsc(x.equipo)} · ${x.fechas.map(f => f.slice(0, 5)).join(', ')}
+                    → ${x.entrenadores.length ? x.entrenadores.map(_waEsc).join(', ') : '<span style="color:#ef4444; font-weight:700;">sin entrenador con teléfono</span>'}</div>`).join('');
+        } catch (e) { box.innerHTML = `<span style="color:#ef4444; font-weight:700;">${_waEsc(e.message || 'Error')}</span>`; }
+    }
+
     // ---- Plantillas: mensaje + destinatarios guardados ----
     let _waPlantillas = [];
     async function waCargarPlantillas() {

@@ -386,6 +386,22 @@ def _entrenador_por_tel(tel):
     return (usuario, equipos) if usuario and equipos else None
 
 
+def _usuario_por_tel(tel):
+    """Nombre del usuario de la intranet con ese teléfono (cualquier equipo), o ''."""
+    from app import client, NOMBRE_EXCEL
+    if not tel:
+        return ''
+    p = client.open(NOMBRE_EXCEL).worksheet('PERFILES').get_all_values()
+    h = [x.strip().upper() for x in (p[0] if p else [])]
+    i_u, i_t = h.index('USUARIO'), h.index('TELEFONO')
+    for r in p[1:]:
+        t = ''.join(c for c in (r[i_t] if i_t < len(r) else '') if c.isdigit())
+        if r[i_u].strip() if i_u < len(r) else '':
+            if t and len(t) >= 9 and tel.endswith(t[-9:]):
+                return r[i_u].strip()
+    return ''
+
+
 def _es_audio(payload):
     media = payload.get('media') or {}
     if str(media.get('mimetype') or '').startswith('audio'):
@@ -511,7 +527,8 @@ def _telefono_de(payload, origen):
 
 
 def procesar_mensaje(payload):
-    """Mensaje recibido por WhatsApp: audios de entrenadores (y su respuesta de a qué equipo pertenecen)."""
+    """Mensaje recibido por WhatsApp: audios de entrenadores (y su respuesta de a qué equipo pertenecen)
+    y respuestas a las preguntas de faltas seguidas (faltas_seguidas.py)."""
     from whatsapp_envios import enviar_por_waha
     if payload.get('fromMe'):
         return None
@@ -522,8 +539,15 @@ def procesar_mensaje(payload):
     tel = _telefono_de(payload, origen)
     audio = _es_audio(payload)
     print(f"[FINDE] Mensaje recibido de {origen} (tel {tel or '?'}){' AUDIO' if audio else ''}: {cuerpo[:60]!r}", flush=True)
+    rep = payload.get('replyTo') or {}
+    rep_id = (rep.get('id') if isinstance(rep, dict) else str(rep)) or ''
     ent = _entrenador_por_tel(tel)
     if not ent:
+        # Entrenadores solo de Debutantes: no mandan audio, pero sí responden a las faltas
+        usuario_f = _usuario_por_tel(tel)
+        if usuario_f and not audio:
+            import faltas_seguidas
+            faltas_seguidas.procesar_texto(tel, cuerpo, rep_id, usuario_f)
         return None  # solo entrenadores
     usuario, equipos = ent
     msg_id = payload.get('id')
@@ -546,10 +570,15 @@ def procesar_mensaje(payload):
         return 'pregunta'
 
     pend = _leer().get('audios_pendientes', {}).get(tel)
+    # Equipos actuales del entrenador (por si han cambiado desde que se le preguntó); con uno solo, no hay duda
+    elegidos = (list(equipos) if len(equipos) == 1 else equipos_de_respuesta(cuerpo, equipos)) if pend else []
+    if not (pend and elegidos):
+        # ¿Es la respuesta a una pregunta de faltas seguidas?
+        import faltas_seguidas
+        if faltas_seguidas.procesar_texto(tel, cuerpo, rep_id, usuario):
+            return 'falta'
     if not pend or not cuerpo:
         return None
-    # Equipos actuales del entrenador (por si han cambiado desde que se le preguntó); con uno solo, no hay duda
-    elegidos = list(equipos) if len(equipos) == 1 else equipos_de_respuesta(cuerpo, equipos)
     if not elegidos:
         enviar_por_waha(tel, _pregunta_equipo(equipos, repetir=True))
         return 'repetir'
