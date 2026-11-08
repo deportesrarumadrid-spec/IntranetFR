@@ -38,7 +38,7 @@ def _leer():
             d = json.load(f)
     except Exception:
         d = {}
-    d.setdefault('activo', False)  # se activa tras la prueba
+    d.setdefault('activo', True)
     return d
 
 
@@ -341,20 +341,3 @@ def api_imagen():
                         mimetype='image/png', headers={'Cache-Control': 'no-store'})
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Error en el servidor: {e}'[:250]}), 500
-
-
-@mensual_bp.route('/api/whatsapp/mensual/prueba', methods=['POST'])
-def api_prueba():
-    """Envía a Rubén Pozón el resumen del mes anterior de un equipo."""
-    if not _permitido():
-        return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
-    from informe_veo import _telefono_ruben
-    equipo = ((request.json or {}).get('equipo') or 'INFANTIL B').strip()
-    tel = _telefono_ruben()
-    if not tel:
-        return jsonify({'status': 'error', 'message': 'RUBEN POZON no tiene teléfono en su usuario'})
-    try:
-        res = enviar_mes(*mes_anterior(date.today()), solo_equipo=equipo, solo_a=('RUBEN POZON', tel))
-        return jsonify({'status': 'ok' if res else 'error', 'message': ' · '.join(res) or f'No encuentro el equipo {equipo}'})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': f'Error en el servidor: {e}'[:250]})
