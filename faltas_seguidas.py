@@ -181,7 +181,8 @@ def _gestionar_racha(equipo, jug, nombre, racha):
 def _texto_pregunta(caso, nombre_ent, recordatorio=False):
     n = len(caso['fechas'])
     cuantos = 'los 2 últimos entrenamientos' if n == 2 else f'los {n} últimos entrenamientos'
-    return ((f'⏰ Recordatorio. ' if recordatorio else '') +
+    return (('🧪 PRUEBA (jugador elegido al azar, no es real). ' if caso.get('simulado') else '') +
+            (f'⏰ Recordatorio. ' if recordatorio else '') +
             f"Hola {nombre_ent}, *{_nombre(caso['jugador'])}* ({_bonito(caso['equipo'])}) no ha venido a {cuantos} "
             f"({_dias_txt(caso['fechas'])}).\n¿Sabes el motivo? Responde a este mensaje.\n\nDirección Deportiva")
 
@@ -405,22 +406,28 @@ def api_prueba():
         return jsonify({'status': 'error', 'message': 'Falta el teléfono'}), 400
     try:
         from app import client, NOMBRE_EXCEL
-        filas = [r for r in client.open(NOMBRE_EXCEL).worksheet('ASISTENCIAS').get_all_values()
-                 if len(r) > 4 and _norm(r[1]) == _norm(equipo)]
-        fechas = sorted({_fecha(r[0]) for r in filas if re.match(r'^\d{1,2}/\d{1,2}/\d{4}', r[0].strip())})[-2:]
-        if len(fechas) < 2:
-            return jsonify({'status': 'error', 'message': f'{equipo} no tiene 2 entrenamientos con asistencia'})
-        en_ambos = [r[2].strip() for r in filas if _fecha(r[0]) == fechas[-1] and r[2].strip()]
-        jugador = next((j for j in en_ambos if any(_norm(r[2]) == _norm(j) and r[4].strip().upper() == 'NO' for r in filas)), en_ambos[0])
+        todas = client.open(NOMBRE_EXCEL).worksheet('ASISTENCIAS').get_all_values()
+        # Lo mismo que se haría de verdad: un jugador con 2 NO seguidos; si no hay, uno cualquiera (marcado como prueba)
+        reales = [(n, r) for n, r in _rachas(todas, _norm(equipo)).values() if len(r) >= 2]
+        if reales:
+            jugador, fechas_txt = reales[0][0], reales[0][1]
+        else:
+            filas = [r for r in todas if len(r) > 4 and _norm(r[1]) == _norm(equipo)]
+            fechas = sorted({_fecha(r[0]) for r in filas if re.match(r'^\d{1,2}/\d{1,2}/\d{4}', r[0].strip())})[-2:]
+            if len(fechas) < 2:
+                return jsonify({'status': 'error', 'message': f'{equipo} no tiene 2 entrenamientos con asistencia'})
+            jugador = next(r[2].strip() for r in filas if _fecha(r[0]) == fechas[-1] and r[2].strip())
+            fechas_txt = [f'{f:%d/%m/%Y}' for f in fechas]
         clave = f"PRUEBA|{equipo}|{_norm(jugador)}|{datetime.now():%Y%m%d%H%M%S}"
         with _lock:
             d = _leer()
             d['casos'][clave] = {'equipo': equipo, 'jugador': jugador, 'jugador_n': _norm(jugador),
-                                 'fechas': [f'{f:%d/%m/%Y}' for f in fechas], 'seguimiento': False, 'estado': 'pendiente',
+                                 'fechas': fechas_txt, 'seguimiento': False, 'estado': 'pendiente', 'simulado': not reales,
                                  'creado': datetime.now().strftime('%Y-%m-%dT%H:%M'), 'envios': [], 'msg_ids': [],
                                  'prueba': True, 'prueba_tel': tel, 'prueba_usuario': usuario or 'Prueba'}
             _escribir(d)
         _preguntar(clave)
-        return jsonify({'status': 'ok', 'message': f'Pregunta de prueba enviada sobre {_nombre(jugador)} ({equipo})'})
+        return jsonify({'status': 'ok', 'message': f'Pregunta de prueba enviada sobre {_nombre(jugador)} ({equipo})'
+                        + ('' if reales else ' — nadie tiene 2 faltas seguidas, jugador elegido solo para probar')})
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Error en el servidor: {e}'[:250]})
