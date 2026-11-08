@@ -46,7 +46,7 @@ def _leer():
             d = json.load(f)
     except Exception:
         d = {}
-    d.setdefault('activo', False)  # se activa tras la prueba
+    d.setdefault('activo', True)
     d.setdefault('enviados', {})   # veo_id → {equipo, en}
     d.setdefault('avisados', {})   # veo_id de títulos que no encajan (ya avisado)
     return d
@@ -303,22 +303,3 @@ def api_videos():
             for g, eq in videos_finde(vie)]})
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Error con Veo: {e}'[:250]})
-
-
-@informe_veo_bp.route('/api/whatsapp/informe_veo/prueba', methods=['POST'])
-def api_prueba():
-    """Envía a una persona el informe de un equipo del último finde (prueba: no cuenta como enviado)."""
-    if not _permitido():
-        return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
-    data = request.json or {}
-    equipo = (data.get('equipo') or 'INFANTIL A').strip()
-    tel, usuario = _telefono_ruben(), 'RUBEN POZON'  # las pruebas van siempre a Rubén Pozón
-    if not tel:
-        return jsonify({'status': 'error', 'message': 'RUBEN POZON no tiene teléfono en su usuario'})
-    try:
-        res = procesar_finde(finde_de_referencia(date.today()), solo_a=(usuario or 'Prueba', tel), solo_equipo=equipo)
-        if not res:
-            return jsonify({'status': 'error', 'message': f'No hay vídeo de {equipo} en el último fin de semana'})
-        return jsonify({'status': 'ok', 'message': ' · '.join(f"{x['titulo']}: {x['estado']}" for x in res)})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': f'Error: {e}'[:250]})

@@ -2242,8 +2242,6 @@
                         el martes, se envía en cuanto lo esté (hasta el viernes). Si un título no encaja, se avisa a Rubén Pozón.</div>
                     <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                         <button onclick="ivVideos()" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fas fa-video"></i> VER VÍDEOS DEL FINDE</button>
-                        <input id="ivEquipo" value="INFANTIL A" style="padding:6px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:11px; width:120px; text-transform:uppercase;">
-                        <button onclick="ivPrueba()" style="background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> ENVIAR PRUEBA A RUBÉN POZÓN</button>
                     </div>
                     <div id="ivBox" style="margin-top:10px; font-size:12px;"></div>
                 </div>
@@ -2791,19 +2789,6 @@
                     ${v.equipo ? `<b style="color:#166534;">${_waEsc(v.equipo)}</b>` : '<b style="color:#ef4444;">título sin equipo</b>'}${v.enviado ? ' · <span style="color:#16a34a;">enviado</span>' : ''}</div>`).join('');
         } catch (e) { box.innerHTML = `<span style="color:#ef4444; font-weight:700;">${_waEsc(e.message || 'Error')}</span>`; }
     }
-    async function ivPrueba() {
-        const box = document.getElementById('ivBox');
-        const equipo = document.getElementById('ivEquipo').value.trim().toUpperCase();
-        if (!confirm(`¿Enviar a RUBÉN POZÓN el informe de Veo del ${equipo}?`)) return;
-        box.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Sacando datos de Veo y preparando los puntos de la IA (puede tardar 1 minuto)...</span>';
-        try {
-            const d = await (await fetch('/api/whatsapp/informe_veo/prueba', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ equipo }) })).json();
-            box.innerHTML = d.status === 'ok' ? `<span style="color:#16a34a; font-weight:800;">✓ ${_waEsc(d.message)}</span>`
-                                              : `<span style="color:#ef4444; font-weight:700;">${_waEsc(d.message || 'No se pudo enviar')}</span>`;
-        } catch (e) { box.innerHTML = '<span style="color:#ef4444; font-weight:700;">Error (puede que haya tardado demasiado; mira si te ha llegado)</span>'; }
-    }
-
     // ---- Plantillas: mensaje + destinatarios guardados ----
     let _waPlantillas = [];
     async function waCargarPlantillas() {
