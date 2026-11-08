@@ -329,6 +329,12 @@ def _loop(flask_app):
                 previa_rival.tick(now)
             except Exception as e:
                 print(f"[SCHED] Previa rival: {e}", flush=True)
+            # Resumen del finde al grupo FR Entrenadores (lunes 20:00; Federación actualizada a las 11:00)
+            try:
+                import resumen_finde
+                resumen_finde.tick(now)
+            except Exception as e:
+                print(f"[SCHED] Resumen finde: {e}", flush=True)
 
         except Exception as e:
             print(f"[SCHED LOOP] {e}", flush=True)

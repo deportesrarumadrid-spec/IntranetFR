@@ -2198,6 +2198,24 @@
                     </div>
                     <div id="prvVistaBox" style="margin-top:10px; font-size:12px;"></div>
                 </div>
+                <div class="card-coord" style="padding:16px;">
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+                        <div style="font-size:12px; font-weight:900; color:#1e293b;">RESUMEN DEL FINDE (LUNES 20:00)</div>
+                        <label style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800; cursor:pointer;">
+                            <input type="checkbox" id="resActivo" onchange="resGuardar()"> <span id="resActivoTxt">—</span></label>
+                    </div>
+                    <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
+                        Al grupo <b>FR Entrenadores</b>: imagen de RESULTADOS — CUMPLIMIENTO de los objetivos (con el texto de totales debajo)
+                        e imagen de formularios y audios del INFORME FINDE. Los datos de la Federación se actualizan solos el lunes a las 11:00.
+                        <span id="resUltimo"></span></div>
+                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                        <button onclick="window.open('/api/whatsapp/resumen/imagen/1?t=' + Date.now(), '_blank')" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-image"></i> VER IMAGEN OBJETIVOS</button>
+                        <button onclick="window.open('/api/whatsapp/resumen/imagen/2?t=' + Date.now(), '_blank')" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-image"></i> VER IMAGEN FORMULARIOS/AUDIOS</button>
+                        <select id="resPruebaPersona" style="padding:6px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:11px; max-width:200px;"></select>
+                        <button onclick="resPrueba()" style="background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> ENVIAR PRUEBA</button>
+                    </div>
+                    <div id="resResultado" style="margin-top:10px; font-size:12px;"></div>
+                </div>
             </div>
         </div>
         <style>
@@ -2268,6 +2286,7 @@
         ffCargar();
         objCargar();
         prvCargar();
+        resCargar();
         if (_waPersonas.length || _waGrupos.length) return;
         const lista = document.getElementById('waLista');
         lista.innerHTML = '<div style="padding:14px; color:#94a3b8; font-size:12px;">Cargando...</div>';
@@ -2299,6 +2318,7 @@
             ffCargar();
             objCargar();
             prvCargar();
+            resCargar();
         } catch (e) {
             lista.innerHTML = `<div style="padding:14px; color:#ef4444; font-size:12px;">${_waEsc(e.message || 'Error')}</div>`;
         }
@@ -2629,6 +2649,44 @@
             box.innerHTML = h;
         } catch (e) { box.innerHTML = `<span style="color:#ef4444; font-weight:700;">${_waEsc(e.message || 'Error')}</span>`; }
     }
+    // ---- Resumen del finde (lunes 20:00) ----
+    async function resCargar() {
+        try {
+            const d = await (await fetch('/api/whatsapp/resumen')).json();
+            if (d.status === 'ok') {
+                _resPintar(d.activo);
+                document.getElementById('resUltimo').textContent = d.ultimo ? `Último envío: ${d.ultimo.split('-').reverse().join('/')}.` : '';
+            }
+        } catch (e) {}
+        const sel = document.getElementById('resPruebaPersona');
+        if (sel && !sel.options.length && _waPersonas.length) {
+            sel.innerHTML = _waPersonas.map((p, i) => `<option value="${i}" ${/pozon/i.test(p.usuario) ? 'selected' : ''}>${_waEsc(p.usuario.toUpperCase())}</option>`).join('');
+        }
+    }
+    function _resPintar(activo) {
+        document.getElementById('resActivo').checked = !!activo;
+        document.getElementById('resActivoTxt').innerHTML = activo ? '<span style="color:#16a34a;">ACTIVADO</span>' : '<span style="color:#94a3b8;">DESACTIVADO</span>';
+    }
+    async function resGuardar() {
+        const activo = document.getElementById('resActivo').checked;
+        try {
+            const d = await (await fetch('/api/whatsapp/resumen', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo }) })).json();
+            if (d.status === 'ok') _resPintar(d.activo);
+        } catch (e) { alert('Error al guardar'); }
+    }
+    async function resPrueba() {
+        const p = _waPersonas[+document.getElementById('resPruebaPersona').value];
+        const out = document.getElementById('resResultado');
+        if (!p || !confirm(`¿Enviar ahora la prueba del resumen a ${p.usuario.toUpperCase()}?`)) return;
+        out.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Generando las imágenes y enviando...</span>';
+        try {
+            const d = await (await fetch('/api/whatsapp/resumen/prueba', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telefono: p.telefono }) })).json();
+            out.innerHTML = d.status === 'ok'
+                ? `<span style="color:#16a34a; font-weight:800;">✓ Enviado a ${_waEsc(p.usuario.toUpperCase())}.</span>`
+                : `<span style="color:#ef4444; font-weight:700;">${_waEsc(d.message || 'No se pudo enviar')}</span>`;
+        } catch (e) { out.innerHTML = '<span style="color:#ef4444; font-weight:700;">Error al enviar</span>'; }
+    }
+
     // ---- Plantillas: mensaje + destinatarios guardados ----
     let _waPlantillas = [];
     async function waCargarPlantillas() {

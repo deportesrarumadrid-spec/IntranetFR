@@ -128,11 +128,15 @@ def html_tabla(partidos):
 
 
 def imagen_png(partidos, ancho=1000):
-    """Dibuja la tabla y devuelve el PNG (bytes), recortado a la altura del contenido."""
+    """Dibuja la tabla de objetivos y devuelve el PNG (bytes)."""
+    return html_a_png(html_tabla(partidos), filas=len(partidos), ancho=ancho)
+
+
+def html_a_png(html, filas=20, ancho=1000):
+    """Dibuja un HTML sencillo (tablas) con PyMuPDF y devuelve el PNG, recortado a la altura del contenido."""
     import fitz
-    html = html_tabla(partidos)
     margen = 14
-    alto_max = 60 + 95 * max(1, len(partidos))
+    alto_max = 120 + 95 * max(1, filas)
 
     def _maquetar(alto):
         story = fitz.Story(html=html)
