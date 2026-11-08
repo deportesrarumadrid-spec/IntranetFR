@@ -2195,8 +2195,6 @@
                         Los datos de la Federación se actualizan solos el lunes a las 21:30. <span id="prvUltimo"></span></div>
                     <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                         <button onclick="prvVista()" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-eye"></i> VER QUÉ SE ENVIARÍA</button>
-                        <select id="prvPruebaPersona" style="padding:6px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:11px; max-width:200px;"></select>
-                        <button onclick="prvPrueba()" style="background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> ENVIAR PRUEBA</button>
                     </div>
                     <div id="prvVistaBox" style="margin-top:10px; font-size:12px;"></div>
                 </div>
@@ -2604,10 +2602,6 @@
                 document.getElementById('prvUltimo').textContent = d.ultimo ? `Último envío: ${d.ultimo.split('-').reverse().join('/')}.` : '';
             }
         } catch (e) {}
-        const sel = document.getElementById('prvPruebaPersona');
-        if (sel && !sel.options.length && _waPersonas.length) {
-            sel.innerHTML = _waPersonas.map((p, i) => `<option value="${i}" ${/pozon/i.test(p.usuario) ? 'selected' : ''}>${_waEsc(p.usuario.toUpperCase())}</option>`).join('');
-        }
     }
     function _prvPintar(activo) {
         document.getElementById('prvActivo').checked = !!activo;
@@ -2635,19 +2629,6 @@
             box.innerHTML = h;
         } catch (e) { box.innerHTML = `<span style="color:#ef4444; font-weight:700;">${_waEsc(e.message || 'Error')}</span>`; }
     }
-    async function prvPrueba() {
-        const p = _waPersonas[+document.getElementById('prvPruebaPersona').value];
-        const box = document.getElementById('prvVistaBox');
-        if (!p || !confirm(`¿Enviar ahora la prueba de la previa a ${p.usuario.toUpperCase()}?`)) return;
-        box.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Preparando y enviando...</span>';
-        try {
-            const d = await (await fetch('/api/whatsapp/previa/prueba', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telefono: p.telefono }) })).json();
-            box.innerHTML = d.status === 'ok'
-                ? `<span style="color:#16a34a; font-weight:800;">✓ ${_waEsc(d.message || 'Enviada')}</span>`
-                : `<span style="color:#ef4444; font-weight:700;">${_waEsc(d.message || 'No se pudo enviar')}</span>`;
-        } catch (e) { box.innerHTML = '<span style="color:#ef4444; font-weight:700;">Error al enviar</span>'; }
-    }
-
     // ---- Plantillas: mensaje + destinatarios guardados ----
     let _waPlantillas = [];
     async function waCargarPlantillas() {

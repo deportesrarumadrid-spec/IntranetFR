@@ -27,7 +27,7 @@ def cargar_cfg():
             cfg = json.load(f)
     except Exception:
         cfg = {}
-    cfg.setdefault('activo', False)  # se activa desde la pantalla tras la prueba
+    cfg.setdefault('activo', True)
     return cfg
 
 
@@ -369,27 +369,5 @@ def api_vista():
         return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
     try:
         return jsonify(dict(status='ok', **calcular()))
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': f'Error en el servidor: {e}'[:250]})
-
-
-@previa_bp.route('/api/whatsapp/previa/prueba', methods=['POST'])
-def api_prueba():
-    """Envía a una persona (prueba) las previas de sus equipos; si no tiene ninguna, la primera que haya."""
-    if not _permitido():
-        return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
-    tel = ((request.json or {}).get('telefono') or '').strip()
-    if not tel:
-        return jsonify({'status': 'error', 'message': 'Falta el teléfono'}), 400
-    try:
-        ok, total = enviar_todas(solo_telefono=tel, destino=tel)
-        if not total:
-            datos = calcular()
-            if not datos['mensajes']:
-                return jsonify({'status': 'error', 'message': 'No hay previas que enviar (¿ningún partido el finde?)'})
-            from app import enviar_whatsapp
-            ok, _ = enviar_whatsapp(tel, datos['mensajes'][0]['texto'])
-            return jsonify({'status': 'ok' if ok else 'error', 'message': f"Enviada la previa de {datos['mensajes'][0]['equipo']} (tu equipo no tiene)"})
-        return jsonify({'status': 'ok' if ok else 'error', 'message': f'Enviadas {ok} de {total}'})
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Error en el servidor: {e}'[:250]})
