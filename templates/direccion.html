@@ -2229,6 +2229,8 @@
                     <div style="font-size:11px; font-weight:900; color:#1e293b; margin-bottom:6px;"><i class="fas fa-share"></i> REENVIAR LAS RESPUESTAS A:</div>
                     <div id="flReenviar" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; font-size:11px; margin-bottom:10px;"></div>
                     <button onclick="flVista()" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-eye"></i> VER QUÉ SE PREGUNTARÍA</button>
+                    <button onclick="flRevision()" style="background:#d97706; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit; margin-left:4px;"><i class="fas fa-clipboard-check"></i> ENVIAR AVISO DE REVISIÓN DE ASISTENCIAS</button>
+                    <div id="flEstado" style="margin-top:8px; font-size:11px; font-weight:700;"></div>
                     <div id="flVistaBox" style="margin-top:10px; font-size:12px;"></div>
                     <div id="flCasos" style="margin-top:10px; font-size:11.5px;"></div>
                 </div>
@@ -2730,6 +2732,12 @@
             document.getElementById('flActivo').checked = !!d.activo;
             document.getElementById('flActivoTxt').innerHTML = d.activo ? '<span style="color:#16a34a;">ACTIVADO</span>' : '<span style="color:#94a3b8;">DESACTIVADO</span>';
             document.getElementById('flDesde').textContent = d.desde;
+            const fe = x => x ? x.slice(8, 10) + '/' + x.slice(5, 7) + ' ' + x.slice(11, 16) : '';
+            document.getElementById('flEstado').innerHTML = d.preguntar_desde === 'tras_revision'
+                ? '<span style="color:#d97706;">⏸ Aún no se pregunta nada: primero envía el aviso de revisión (después se esperan 48 h).</span>'
+                : (d.preguntar_desde && d.preguntar_desde > new Date().toISOString().slice(0, 16)
+                    ? `<span style="color:#d97706;">⏳ Aviso de revisión enviado el ${fe(d.revision_enviada)}. Se empezará a preguntar el ${fe(d.preguntar_desde)}.</span>`
+                    : '<span style="color:#16a34a;">✓ Preguntando en cuanto se guardan 2 faltas seguidas.</span>');
             _flReenviar = d.reenviar || [];
             _flPintarReenviar();
             const casos = d.casos || [];
@@ -2767,6 +2775,17 @@
         const x = _flReenviar[i];
         if (!x || !confirm(`¿Dejar de reenviar las respuestas a ${x.usuario.toUpperCase()}?`)) return;
         flGuardar({ reenviar: _flReenviar.filter((_, j) => j !== i) });
+    }
+    async function flRevision() {
+        if (!confirm('¿Enviar ahora a los entrenadores el aviso para que revisen las asistencias de este mes? (Las preguntas de faltas empezarán 48 h después)')) return;
+        const box = document.getElementById('flVistaBox');
+        box.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Enviando avisos...</span>';
+        try {
+            const d = await (await fetch('/api/whatsapp/faltas/revision', { method: 'POST' })).json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            box.innerHTML = `<div style="font-weight:900; color:#16a34a;">✓ Aviso enviado a ${d.enviados.length}:</div>` + d.enviados.map(x => `<div>• ${_waEsc(x)}</div>`).join('');
+            flCargar();
+        } catch (e) { box.innerHTML = `<span style="color:#ef4444; font-weight:700;">${_waEsc(e.message || 'Error')}</span>`; }
     }
     async function flVista() {
         const box = document.getElementById('flVistaBox');

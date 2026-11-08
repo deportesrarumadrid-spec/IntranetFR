@@ -59,6 +59,10 @@ def _leer():
     d.setdefault('activo', False)  # se activa desde la pantalla tras revisar la vista previa
     d.setdefault('casos', {})
     d.setdefault('esperando_jugador', {})  # tel → texto de una respuesta que aún no sé de qué jugador es
+    if not d.get('activado_con_revision'):
+        d['activo'] = True
+        d['activado_con_revision'] = True
+        d['preguntar_desde'] = 'tras_revision'  # no se pregunta nada hasta enviar el aviso de revisión (+48 h)
     for c in d['casos'].values():  # las pruebas no se quedan abiertas más de 2 horas
         if c.get('prueba') and c['estado'] == 'pendiente' and c.get('creado', '') < (datetime.now() - timedelta(hours=2)).strftime('%Y-%m-%dT%H:%M'):
             c['estado'] = 'cancelado'
@@ -137,11 +141,60 @@ def _rachas(filas, equipo_n):
     return out
 
 
+def _ya_se_puede_preguntar(d):
+    """Tras el aviso de revisión se esperan 48 h antes de empezar a preguntar."""
+    desde = d.get('preguntar_desde') or ''
+    if desde == 'tras_revision':
+        return False
+    return not desde or datetime.now().strftime('%Y-%m-%dT%H:%M') >= desde
+
+
+def _rachas_actuales():
+    """{equipo: [(nombre, fechas)]} de los jugadores con 2+ NO seguidos ahora mismo (sin Aficionados)."""
+    from app import client, NOMBRE_EXCEL
+    filas = client.open(NOMBRE_EXCEL).worksheet('ASISTENCIAS').get_all_values()
+    eqs = sorted({r[1].strip().upper() for r in filas if len(r) > 1 and r[1].strip() and not _norm(r[1]).startswith('AFICIONADO')})
+    out = {}
+    for eq in eqs:
+        lista = [(n, r) for n, r in _rachas(filas, _norm(eq)).values() if len(r) >= 2]
+        if lista:
+            out[eq] = lista
+    return out
+
+
+def enviar_aviso_revision():
+    """WhatsApp a los entrenadores de los equipos con faltas seguidas para que revisen y corrijan las asistencias
+    del mes. Las preguntas de faltas empiezan 48 h después."""
+    from formulario_finde import _entrenadores
+    from app import enviar_whatsapp
+    mes = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre',
+           'noviembre', 'diciembre'][date.today().month - 1]
+    enviados = []
+    for eq, jugadores in _rachas_actuales().items():
+        lineas = '\n'.join(f"• {_nombre(n)}: {', '.join(f[:5] for f in fechas)}" for n, fechas in jugadores)
+        for usuario, tel, _ in _entrenadores([eq]):
+            if not tel:
+                continue
+            texto = (f"Hola {usuario.split()[0].capitalize()}, revisa y actualiza las asistencias de {mes} del *{_bonito(eq)}*.\n"
+                     f"Estos jugadores aparecen con NO en varios entrenamientos seguidos:\n{lineas}\n\n"
+                     f"Si alguno sí vino o avisó, corrígelo en la intranet. En 2 días te preguntaremos el motivo de las faltas que sigan.\n"
+                     f"https://intranet.clubfuentelarreyna.com/movil\n\nDirección Deportiva")
+            bien, _ = enviar_whatsapp(tel, texto)
+            enviados.append(f"{usuario} ({eq}){'' if bien else ' — ERROR'}")
+    with _lock:
+        d = _leer()
+        d['preguntar_desde'] = (datetime.now() + timedelta(hours=48)).strftime('%Y-%m-%dT%H:%M')
+        d['revision_enviada'] = datetime.now().strftime('%Y-%m-%dT%H:%M')
+        _escribir(d)
+    print(f"[FALTAS] Aviso de revisión enviado a {len(enviados)}", flush=True)
+    return enviados
+
+
 def revisar_equipos(equipos=None):
     """Busca rachas de 2+ NO seguidos y pregunta a los entrenadores. equipos=None → todos."""
     from app import client, NOMBRE_EXCEL
     d = _leer()
-    if not d.get('activo'):
+    if not d.get('activo') or not _ya_se_puede_preguntar(d):
         return
     filas = client.open(NOMBRE_EXCEL).worksheet('ASISTENCIAS').get_all_values()
     nombres_eq = sorted({r[1].strip().upper() for r in filas if len(r) > 1 and r[1].strip()})
@@ -365,6 +418,7 @@ def api_faltas():
         _escribir(d)
     casos = sorted(d['casos'].values(), key=lambda c: c.get('creado', ''), reverse=True)[:60]
     return jsonify({'status': 'ok', 'activo': d['activo'], 'reenviar': reenviar, 'desde': DESDE.strftime('%d/%m/%Y'),
+                    'preguntar_desde': d.get('preguntar_desde', ''), 'revision_enviada': d.get('revision_enviada', ''),
                     'casos': [{'equipo': c['equipo'], 'jugador': _nombre(c['jugador']), 'fechas': c['fechas'],
                                'estado': c['estado'], 'respuesta': c.get('respuesta', ''), 'por': c.get('respondido_por', ''),
                                'preguntas': len(c.get('envios', []))} for c in casos]})
@@ -389,5 +443,17 @@ def api_vista():
                 if len(racha) >= 2 and (eq, jug) not in con_casos:
                     out.append({'equipo': eq, 'jugador': _nombre(nombre), 'fechas': racha, 'entrenadores': ents})
         return jsonify({'status': 'ok', 'preguntas': out})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Error en el servidor: {e}'[:250]})
+
+
+@faltas_bp.route('/api/whatsapp/faltas/revision', methods=['POST'])
+def api_revision():
+    """Envía el aviso de revisión de asistencias y empieza a preguntar 48 h después."""
+    if not _permitido():
+        return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
+    try:
+        enviados = enviar_aviso_revision()
+        return jsonify({'status': 'ok', 'enviados': enviados})
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Error en el servidor: {e}'[:250]})
