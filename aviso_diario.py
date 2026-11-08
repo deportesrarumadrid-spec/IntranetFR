@@ -126,23 +126,21 @@ def calcular(dia=None):
             if not sin_asis and not sin_foto:
                 continue
             orden = lambda ds: sorted(ds, key=lambda d: (d != dia, -d.toordinal()))  # hoy primero, luego del más reciente
-            b = [f'▪️ {_bonito(eq)}']
+            # Formato fijado por Dirección Deportiva (negritas de WhatsApp con *...*)
+            b = [f'*{_bonito(eq)}*']
             if sin_asis:
-                b.append('• Asistencia: ' + ' · '.join(fdia(d) for d in orden(sin_asis)))
-                b.append(f'  ➜ Registrar asistencia: {enlace(eq, "asis", min(sin_asis))}')
+                b.append('    • *Asistencia*: ' + ' · '.join(fdia(d) for d in orden(sin_asis)))
+                b.append(f'  ➜ Enlace: {enlace(eq, "asis", min(sin_asis))}')
             if sin_foto:
-                b.append('• Foto del entrenamiento: ' + ' · '.join(fdia(d) for d in orden(sin_foto)))
-                b.append(f'  ➜ Subir foto: {enlace(eq, "foto", min(sin_foto))}')
+                b.append('• *Foto del entrenamiento*: ' + ' · '.join(fdia(d) for d in orden(sin_foto)))
+                b.append(f'  ➜ Enlace: {enlace(eq, "foto", min(sin_foto))}')
             bloques.append('\n'.join(b))
         if not bloques:
             continue
         nombre = ent['usuario'].split()[0].capitalize()
-        texto = (f'🔴⚪ CLUB FUENTELARREYNA · Dirección Deportiva\n'
-                 f'Control diario · {_DIAS[dow].capitalize()} {dia:%d/%m}\n\n'
-                 f'Hola {nombre},\n'
-                 f'para mantener al día el seguimiento del equipo, quedan pendientes estos registros:\n\n'
+        texto = (f'Hola {nombre}, quedan pendientes estos registros:\n'
                  + '\n\n'.join(bloques) +
-                 '\n\nGracias por tu compromiso. Los detalles marcan la diferencia. 💪\nDirección Deportiva')
+                 '\n\nDirección Deportiva')
         if not ent['telefono']:
             avisos.append(f"{ent['usuario']}: tiene pendientes pero no tiene teléfono en su usuario.")
             continue
