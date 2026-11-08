@@ -282,10 +282,10 @@ def api_prueba():
     if not _permitido():
         return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
     data = request.json or {}
-    tel, usuario = (data.get('telefono') or '').strip(), (data.get('usuario') or '').strip()
     equipo = (data.get('equipo') or 'INFANTIL A').strip()
+    tel, usuario = _telefono_ruben(), 'RUBEN POZON'  # las pruebas van siempre a Rubén Pozón
     if not tel:
-        return jsonify({'status': 'error', 'message': 'Falta el teléfono'}), 400
+        return jsonify({'status': 'error', 'message': 'RUBEN POZON no tiene teléfono en su usuario'})
     try:
         res = procesar_finde(finde_de_referencia(date.today()), solo_a=(usuario or 'Prueba', tel), solo_equipo=equipo)
         if not res:

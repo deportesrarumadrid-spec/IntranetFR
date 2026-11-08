@@ -2792,15 +2792,13 @@
         } catch (e) { box.innerHTML = `<span style="color:#ef4444; font-weight:700;">${_waEsc(e.message || 'Error')}</span>`; }
     }
     async function ivPrueba() {
-        const p = _waPersonas.find(x => /^\s*ruben\s+pozon\s*$/i.test(x.usuario.normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
         const box = document.getElementById('ivBox');
         const equipo = document.getElementById('ivEquipo').value.trim().toUpperCase();
-        if (!p) { box.innerHTML = '<span style="color:#ef4444; font-weight:700;">No encuentro a Rubén Pozón en los usuarios</span>'; return; }
         if (!confirm(`¿Enviar a RUBÉN POZÓN el informe de Veo del ${equipo}?`)) return;
         box.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Sacando datos de Veo y preparando los puntos de la IA (puede tardar 1 minuto)...</span>';
         try {
             const d = await (await fetch('/api/whatsapp/informe_veo/prueba', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ equipo, telefono: p.telefono, usuario: p.usuario }) })).json();
+                body: JSON.stringify({ equipo }) })).json();
             box.innerHTML = d.status === 'ok' ? `<span style="color:#16a34a; font-weight:800;">✓ ${_waEsc(d.message)}</span>`
                                               : `<span style="color:#ef4444; font-weight:700;">${_waEsc(d.message || 'No se pudo enviar')}</span>`;
         } catch (e) { box.innerHTML = '<span style="color:#ef4444; font-weight:700;">Error (puede que haya tardado demasiado; mira si te ha llegado)</span>'; }
