@@ -187,7 +187,7 @@ def calcular(vie=None):
     grupos = {g.get('nombre'): g for g in (load_cached_data() or {}).get('equipos', [])}
     horas_fed = _horas_federacion(vie)
 
-    previas, avisos = {}, []
+    previas, avisos, sin_goles, sin_goleador_rival = {}, [], [], []
     for p in construir_obj_semanales():
         try:
             dd, mm, yy = [int(x) for x in (p.get('fecha') or '').split('-')]
@@ -199,7 +199,17 @@ def calcular(vie=None):
         eq = _equipo_config(p, equipos)
         if not eq or eq in previas:
             continue
-        previas[eq] = texto_previa(p, eq, grupos.get(p.get('grupo')) or {}, _hora_partido(p, horas_fed), calcular_clasificacion_en_jornada)
+        grupo = grupos.get(p.get('grupo')) or {}
+        previas[eq] = texto_previa(p, eq, grupo, _hora_partido(p, horas_fed), calcular_clasificacion_en_jornada)
+        if not grupo.get('goleadores'):
+            sin_goles.append(eq)
+        elif '⚽' not in previas[eq]:
+            sin_goleador_rival.append(f"{eq} ({p.get('rival')})")
+    if sin_goles:
+        avisos.append('Sin goleadores descargados de la Federación (sincroniza RFFM; en categorías pequeñas puede que no haya): '
+                      + ', '.join(sin_goles))
+    if sin_goleador_rival:
+        avisos.append('El rival no tiene ningún goleador en la lista de la Federación: ' + ', '.join(sin_goleador_rival))
 
     mensajes = []
     for usuario, telefono, eq in _entrenadores(previas):
