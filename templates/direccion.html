@@ -2230,6 +2230,23 @@
                     <div id="flVistaBox" style="margin-top:10px; font-size:12px;"></div>
                     <div id="flCasos" style="margin-top:10px; font-size:11.5px;"></div>
                 </div>
+                <div class="card-coord" style="padding:16px;">
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+                        <div style="font-size:12px; font-weight:900; color:#1e293b;">INFORME DEL PARTIDO DE VEO (MARTES 20:00)</div>
+                        <label style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800; cursor:pointer;">
+                            <input type="checkbox" id="ivActivo" onchange="ivGuardar()"> <span id="ivActivoTxt">—</span></label>
+                    </div>
+                    <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
+                        A los entrenadores de cada equipo, el informe de su vídeo de Veo del último finde (Informe del Partido + Analytics)
+                        con los puntos clave de la IA. El equipo se saca del título del vídeo ("INFANTIL A - RIVAL"). Si no está procesado
+                        el martes, se envía en cuanto lo esté (hasta el viernes). Si un título no encaja, se avisa a Rubén Pozón.</div>
+                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                        <button onclick="ivVideos()" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fas fa-video"></i> VER VÍDEOS DEL FINDE</button>
+                        <input id="ivEquipo" value="INFANTIL A" style="padding:6px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:11px; width:120px; text-transform:uppercase;">
+                        <button onclick="ivPrueba()" style="background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> ENVIAR PRUEBA A RUBÉN POZÓN</button>
+                    </div>
+                    <div id="ivBox" style="margin-top:10px; font-size:12px;"></div>
+                </div>
             </div>
         </div>
         <style>
@@ -2302,6 +2319,7 @@
         prvCargar();
         resCargar();
         flCargar();
+        ivCargar();
         if (_waPersonas.length || _waGrupos.length) return;
         const lista = document.getElementById('waLista');
         lista.innerHTML = '<div style="padding:14px; color:#94a3b8; font-size:12px;">Cargando...</div>';
@@ -2743,6 +2761,49 @@
                 d.preguntas.map(x => `<div style="padding:3px 0; border-bottom:1px solid #f1f5f9;"><b>${_waEsc(x.jugador)}</b> · ${_waEsc(x.equipo)} · ${x.fechas.map(f => f.slice(0, 5)).join(', ')}
                     → ${x.entrenadores.length ? x.entrenadores.map(_waEsc).join(', ') : '<span style="color:#ef4444; font-weight:700;">sin entrenador con teléfono</span>'}</div>`).join('');
         } catch (e) { box.innerHTML = `<span style="color:#ef4444; font-weight:700;">${_waEsc(e.message || 'Error')}</span>`; }
+    }
+
+    // ---- Informe del partido de Veo (martes 20:00) ----
+    async function ivCargar() {
+        try {
+            const d = await (await fetch('/api/whatsapp/informe_veo')).json();
+            if (d.status !== 'ok') return;
+            document.getElementById('ivActivo').checked = !!d.activo;
+            document.getElementById('ivActivoTxt').innerHTML = d.activo ? '<span style="color:#16a34a;">ACTIVADO</span>' : '<span style="color:#94a3b8;">DESACTIVADO</span>';
+        } catch (e) {}
+    }
+    async function ivGuardar() {
+        const activo = document.getElementById('ivActivo').checked;
+        try {
+            await fetch('/api/whatsapp/informe_veo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo }) });
+            ivCargar();
+        } catch (e) { alert('Error al guardar'); }
+    }
+    async function ivVideos() {
+        const box = document.getElementById('ivBox');
+        box.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Consultando Veo...</span>';
+        try {
+            const d = await (await fetch('/api/whatsapp/informe_veo/videos')).json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            const [y, m, dd] = d.viernes.split('-');
+            box.innerHTML = `<div style="font-weight:900; color:#1e293b; margin-bottom:4px;">Vídeos del finde del ${dd}/${m}/${y}: ${d.videos.length}</div>` +
+                d.videos.map(v => `<div style="padding:3px 0; border-bottom:1px solid #f1f5f9;">${v.fecha.split('-').reverse().join('/')} · <a href="${_waEsc(v.url)}" target="_blank">${_waEsc(v.titulo)}</a> →
+                    ${v.equipo ? `<b style="color:#166534;">${_waEsc(v.equipo)}</b>` : '<b style="color:#ef4444;">título sin equipo</b>'}${v.enviado ? ' · <span style="color:#16a34a;">enviado</span>' : ''}</div>`).join('');
+        } catch (e) { box.innerHTML = `<span style="color:#ef4444; font-weight:700;">${_waEsc(e.message || 'Error')}</span>`; }
+    }
+    async function ivPrueba() {
+        const p = _waPersonas.find(x => /^\s*ruben\s+pozon\s*$/i.test(x.usuario.normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
+        const box = document.getElementById('ivBox');
+        const equipo = document.getElementById('ivEquipo').value.trim().toUpperCase();
+        if (!p) { box.innerHTML = '<span style="color:#ef4444; font-weight:700;">No encuentro a Rubén Pozón en los usuarios</span>'; return; }
+        if (!confirm(`¿Enviar a RUBÉN POZÓN el informe de Veo del ${equipo}?`)) return;
+        box.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Sacando datos de Veo y preparando los puntos de la IA (puede tardar 1 minuto)...</span>';
+        try {
+            const d = await (await fetch('/api/whatsapp/informe_veo/prueba', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ equipo, telefono: p.telefono, usuario: p.usuario }) })).json();
+            box.innerHTML = d.status === 'ok' ? `<span style="color:#16a34a; font-weight:800;">✓ ${_waEsc(d.message)}</span>`
+                                              : `<span style="color:#ef4444; font-weight:700;">${_waEsc(d.message || 'No se pudo enviar')}</span>`;
+        } catch (e) { box.innerHTML = '<span style="color:#ef4444; font-weight:700;">Error (puede que haya tardado demasiado; mira si te ha llegado)</span>'; }
     }
 
     // ---- Plantillas: mensaje + destinatarios guardados ----

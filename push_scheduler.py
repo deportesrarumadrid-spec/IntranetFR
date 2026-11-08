@@ -341,6 +341,12 @@ def _loop(flask_app):
                 faltas_seguidas.tick(now)
             except Exception as e:
                 print(f"[SCHED] Faltas seguidas: {e}", flush=True)
+            # Informe del partido de Veo a los entrenadores (martes 20:00 y cada hora hasta el viernes)
+            try:
+                import informe_veo
+                informe_veo.tick(now)
+            except Exception as e:
+                print(f"[SCHED] Informe Veo: {e}", flush=True)
 
         except Exception as e:
             print(f"[SCHED LOOP] {e}", flush=True)
