@@ -533,9 +533,10 @@ def procesar_mensaje(payload):
     pend = _leer().get('audios_pendientes', {}).get(tel)
     if not pend or not cuerpo:
         return None
-    elegidos = equipos_de_respuesta(cuerpo, pend['equipos'])
+    # Equipos actuales del entrenador (por si han cambiado desde que se le preguntó); con uno solo, no hay duda
+    elegidos = list(equipos) if len(equipos) == 1 else equipos_de_respuesta(cuerpo, equipos)
     if not elegidos:
-        enviar_por_waha(tel, _pregunta_equipo(pend['equipos'], repetir=True))
+        enviar_por_waha(tel, _pregunta_equipo(equipos, repetir=True))
         return 'repetir'
     with _bloqueo():
         d = _leer()
