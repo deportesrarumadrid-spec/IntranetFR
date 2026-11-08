@@ -323,6 +323,12 @@ def _loop(flask_app):
                 objetivos_finde.tick(now)
             except Exception as e:
                 print(f"[SCHED] Objetivos finde: {e}", flush=True)
+            # Previa del rival a cada entrenador (lunes 22:00; datos de la Federación actualizados a las 21:30)
+            try:
+                import previa_rival
+                previa_rival.tick(now)
+            except Exception as e:
+                print(f"[SCHED] Previa rival: {e}", flush=True)
 
         except Exception as e:
             print(f"[SCHED LOOP] {e}", flush=True)

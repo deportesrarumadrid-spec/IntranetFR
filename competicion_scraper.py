@@ -932,8 +932,41 @@ def sync_rffm(username, password):
                 calendario_completo = generate_calendario_demo(comp_name, clasif_data)
                 calendario_completo = enrich_calendar_with_shields(calendario_completo, clasif_data)
 
+            # 7. Goleadores del grupo (enlace "Goleadores" de la página de la jornada)
+            goleadores = []
+            try:
+                a_gol = next((a for a in soup_jornada.find_all('a', href=True)
+                              if a.get_text(strip=True).lower() == 'goleadores'), None)
+                if a_gol:
+                    res_gol = session.get(urljoin(link_jornada, a_gol['href']))
+                    res_gol.encoding = 'iso-8859-1'
+                    for t in BeautifulSoup(res_gol.text, 'html.parser').find_all('table'):
+                        cab = [c.get_text(strip=True).upper() for c in t.find_all('th')]
+                        if not any('JUGADOR' in c for c in cab) or not any('GOLES' in c for c in cab):
+                            continue
+                        i_ju = next(i for i, c in enumerate(cab) if 'JUGADOR' in c)
+                        i_eq = next((i for i, c in enumerate(cab) if 'EQUIPO' in c), 1)
+                        i_pj = next((i for i, c in enumerate(cab) if 'JUGADOS' in c), None)
+                        i_go = next(i for i, c in enumerate(cab) if c == 'GOLES' or c.startswith('GOLES') and 'PARTIDO' not in c)
+                        for tr in t.find_all('tr'):
+                            celdas = [c.get_text(' ', strip=True) for c in tr.find_all('td')]
+                            if len(celdas) <= max(i_ju, i_eq, i_go):
+                                continue
+                            m_go = re.match(r'(\d+)', celdas[i_go])
+                            if not m_go:
+                                continue
+                            goleadores.append({
+                                "jugador": celdas[i_ju], "equipo": celdas[i_eq],
+                                "partidos": celdas[i_pj] if i_pj is not None and i_pj < len(celdas) else '',
+                                "goles": int(m_go.group(1)), "goles_txt": celdas[i_go],
+                            })
+                        break
+            except Exception as e_gol:
+                print(f"Aviso: no se pudieron leer los goleadores de {comp_name}: {e_gol}")
+
             equipos_data.append({
                 "nombre": comp_name,
+                "goleadores": goleadores,
                 "categoria": cat,
                 "letra": letra,
                 "puntos": puntos,

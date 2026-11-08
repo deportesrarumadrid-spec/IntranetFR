@@ -4204,6 +4204,7 @@ from whatsapp_envios import whatsapp_bp
 from aviso_diario import aviso_bp
 from formulario_finde import finde_bp
 from objetivos_finde import objetivos_bp
+from previa_rival import previa_bp
 from loteria import loteria_bp
 app.register_blueprint(financiero_bp)
 app.register_blueprint(loteria_bp)
@@ -4229,6 +4230,7 @@ app.register_blueprint(whatsapp_bp)
 app.register_blueprint(aviso_bp)
 app.register_blueprint(finde_bp)
 app.register_blueprint(objetivos_bp)
+app.register_blueprint(previa_bp)
 
 # --- SEGUIMIENTO COORD ENTRENAMIENTOS ---
 _SEG_COORD_FILE = os.path.join('static', 'data', 'seguimiento_coord_comentarios.json')
