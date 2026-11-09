@@ -992,6 +992,10 @@ async function generarCalendario() {
         j._esBajaActual = j._esBajaEnMes && ((j.TEMPORADA_BAJA || '') === _temporadaActiStr);
         // Baja de temporadas anteriores: se agrupa colapsado (comportamiento existente)
         j._esBajaAnterior = j._esBajaEnMes && !j._esBajaActual;
+        // Meses anteriores a la baja: sale normal, con "(BAJA NOV)" al lado del nombre
+        const _ultimoDia = diasValidos.length ? diasValidos[diasValidos.length - 1].fechaFull : null;
+        j._bajaFutura = (!j._esBajaEnMes && fBaja && _ultimoDia && _ultimoDia < fBaja && !(fAlta && fAlta > fBaja))
+            ? ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'][fBaja.getMonth()] : '';
     });
 
     // ORDENAR: Activos → Baja temporada actual → Baja temporadas anteriores
@@ -1029,7 +1033,7 @@ async function generarCalendario() {
                 <div style="display: flex; align-items: center; width: 100%;">
                     <span style="min-width:20px; text-align:center; font-size:11px; font-weight:700; color:#94a3b8; flex-shrink:0; margin-right:4px;">${_numJugador + 1}</span>
                     <span data-nombre-original="${nombreEscapado}" style="flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: ${(esBajaActual || esBajaAnterior) ? '11px' : '15px'}; padding-right: 5px; ${esBajaActual ? 'color:#888; text-decoration:line-through;' : esBajaAnterior ? 'color: #dc3545;' : 'color: #333;'}">
-                        ${j.NOMBRE}${esBajaActual ? ' <span style="font-size:9px;font-weight:500;">(BAJA TEMP. ACTUAL)</span>' : esBajaAnterior ? ' <span style="font-size:9px;font-weight:500;opacity:0.75;">(BAJA)</span>' : ''}
+                        ${j.NOMBRE}${esBajaActual ? ' <span style="font-size:9px;font-weight:500;">(BAJA TEMP. ACTUAL)</span>' : esBajaAnterior ? ' <span style="font-size:9px;font-weight:500;opacity:0.75;">(BAJA)</span>' : j._bajaFutura ? ` <span style="font-size:10px;font-weight:800;color:#E31E24;">(BAJA ${j._bajaFutura})</span>` : ''}
                     </span>
                     <div style="display: flex; flex-direction: column; align-items: flex-end; margin-right: 12px; line-height: 1.1; min-width: 65px; flex-shrink: 0; ${(esBajaActual || esBajaAnterior) ? 'display:none;' : ''}">
                         <div style="display: flex; align-items: baseline; gap: 3px;">

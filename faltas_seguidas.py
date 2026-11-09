@@ -106,9 +106,54 @@ def _dias_txt(fechas):
     return ' y '.join([', '.join(partes[:-1]), partes[-1]]) if len(partes) > 1 else partes[0]
 
 
+# ---------- bajas (hoja JUGADORES: BAJA_DESDE / ALTA_DESDE) ----------
+
+def _fecha_iso(txt):
+    txt = str(txt or '').strip()
+    try:
+        if '/' in txt:
+            dd, mm, yy = [int(x) for x in txt.split()[0].split('/')]
+            return date(yy, mm, dd)
+        if txt:
+            return date.fromisoformat(txt[:10])
+    except Exception:
+        pass
+    return None
+
+
+def bajas():
+    """{nombre_norm: (fecha_baja, fecha_alta o None)} de los jugadores con baja (por nombre completo y sin teléfono)."""
+    from app import client, NOMBRE_EXCEL
+    filas = client.open(NOMBRE_EXCEL).worksheet('JUGADORES').get_all_values()
+    if not filas:
+        return {}
+    cab = [h.strip().upper() for h in filas[0]]
+    if 'BAJA_DESDE' not in cab:
+        return {}
+    i_nom = cab.index('NOMBRE') if 'NOMBRE' in cab else 0
+    i_baja, i_alta = cab.index('BAJA_DESDE'), (cab.index('ALTA_DESDE') if 'ALTA_DESDE' in cab else -1)
+    out = {}
+    for r in filas[1:]:
+        baja = _fecha_iso(r[i_baja]) if len(r) > i_baja else None
+        if not baja or len(r) <= i_nom or not r[i_nom].strip():
+            continue
+        alta = _fecha_iso(r[i_alta]) if 0 <= i_alta < len(r) else None
+        out[_norm(r[i_nom])] = out[_norm(_limpio(r[i_nom]))] = (baja, alta)
+    return out
+
+
+def de_baja(lista_bajas, nombre, dia):
+    """True si el jugador está de baja ese día (dada la baja y sin alta posterior que ya haya llegado)."""
+    b = lista_bajas.get(_norm(nombre)) or lista_bajas.get(_norm(_limpio(nombre)))
+    if not b:
+        return False
+    baja, alta = b
+    return baja <= dia and not (alta and alta > baja and alta <= dia)
+
+
 # ---------- detección ----------
 
-def _rachas(filas, equipo_n):
+def _rachas(filas, equipo_n, lista_bajas=None):
     """{jugador_norm: (nombre, [fechas 'dd/mm/aaaa' de la racha actual de NO consecutivos])} de un equipo.
     Las sesiones del equipo son los días en que tiene alguna asistencia guardada (desde DESDE)."""
     sesiones, estado = set(), {}
@@ -123,6 +168,8 @@ def _rachas(filas, equipo_n):
             continue
         sesiones.add(f)
         jug = _norm(r[2])
+        if jug and lista_bajas and de_baja(lista_bajas, r[2], date.today()):
+            continue
         if jug:
             est = r[4].strip().upper()
             prev = estado.get((jug, f))
@@ -154,9 +201,10 @@ def _rachas_actuales():
     from app import client, NOMBRE_EXCEL
     filas = client.open(NOMBRE_EXCEL).worksheet('ASISTENCIAS').get_all_values()
     eqs = sorted({r[1].strip().upper() for r in filas if len(r) > 1 and r[1].strip() and not _norm(r[1]).startswith('AFICIONADO')})
+    lb = bajas()
     out = {}
     for eq in eqs:
-        lista = [(n, r) for n, r in _rachas(filas, _norm(eq)).values() if len(r) >= 2]
+        lista = [(n, r) for n, r in _rachas(filas, _norm(eq), lb).values() if len(r) >= 2]
         if lista:
             out[eq] = lista
     return out
@@ -200,10 +248,26 @@ def revisar_equipos(equipos=None):
     nombres_eq = sorted({r[1].strip().upper() for r in filas if len(r) > 1 and r[1].strip()})
     objetivo = [e for e in nombres_eq if not _norm(e).startswith('AFICIONADO')
                 and (equipos is None or _norm(e) in {_norm(x) for x in equipos})]
+    lb = bajas()
+    _cancelar_bajas(lb)
     for eq in objetivo:
-        for jug, (nombre, racha) in _rachas(filas, _norm(eq)).items():
+        for jug, (nombre, racha) in _rachas(filas, _norm(eq), lb).items():
             if len(racha) >= 2:
                 _gestionar_racha(eq, jug, nombre, racha)
+
+
+def _cancelar_bajas(lista_bajas):
+    """Las preguntas pendientes de jugadores dados de baja se cancelan (no se recuerdan más)."""
+    with _lock:
+        d = _leer()
+        cambia = False
+        for c in d['casos'].values():
+            if c['estado'] == 'pendiente' and not c.get('prueba') and de_baja(lista_bajas, c['jugador'], date.today()):
+                c['estado'] = 'cancelado_baja'
+                cambia = True
+                print(f"[FALTAS] Cancelada la pregunta de {c['jugador']} ({c['equipo']}): dado de baja", flush=True)
+        if cambia:
+            _escribir(d)
 
 
 def _gestionar_racha(equipo, jug, nombre, racha):
@@ -443,10 +507,11 @@ def api_vista():
         filas = client.open(NOMBRE_EXCEL).worksheet('ASISTENCIAS').get_all_values()
         eqs = sorted({r[1].strip().upper() for r in filas if len(r) > 1 and r[1].strip() and not _norm(r[1]).startswith('AFICIONADO')})
         con_casos = {(c['equipo'], c['jugador_n']) for c in d['casos'].values() if not c.get('prueba')}
+        lb = bajas()
         out = []
         for eq in eqs:
             ents = [u for u, t, _ in _entrenadores([eq]) if t]
-            for jug, (nombre, racha) in _rachas(filas, _norm(eq)).items():
+            for jug, (nombre, racha) in _rachas(filas, _norm(eq), lb).items():
                 if len(racha) >= 2 and (eq, jug) not in con_casos:
                     out.append({'equipo': eq, 'jugador': _nombre(nombre), 'fechas': racha, 'entrenadores': ents})
         return jsonify({'status': 'ok', 'preguntas': out})

@@ -2770,6 +2770,8 @@
                     <b>${_waEsc(c.jugador)}</b> · ${_waEsc(c.equipo)} · ${c.fechas.map(x => x.slice(0, 5)).join(', ')}
                     ${c.estado === 'respondido'
                         ? `<div style="color:#166534;">✓ ${_waEsc((c.por || '').toUpperCase())}: "${_waEsc(c.respuesta)}"</div>`
+                        : c.estado === 'cancelado_baja'
+                        ? `<div style="color:#64748b; font-weight:700;">Cancelada: jugador dado de baja</div>`
                         : `<div style="color:#d97706; font-weight:700;">Pendiente de respuesta (${c.preguntas} envíos)</div>`}</div>`).join('') : '';
         } catch (e) {}
     }

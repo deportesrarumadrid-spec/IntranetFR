@@ -75,8 +75,12 @@ def _informe_mensual(anio, mes):
 
 
 def _asistencia_jugadores(filas, equipo, anio, mes):
-    """(% de asistencia de los jugadores del mes, [(nombre, nº de NO)] de los que más faltaron)."""
-    from faltas_seguidas import _nombre
+    """(% de asistencia de los jugadores del mes, [(nombre, nº de NO)] de los que más faltaron).
+    Los jugadores dados de baja en el mes (o antes, sin alta posterior) no cuentan."""
+    import calendar
+    from faltas_seguidas import _nombre, bajas, de_baja
+    lb = bajas()
+    fin_mes = date(anio, mes, calendar.monthrange(anio, mes)[1])
     si = total = 0
     faltas = {}
     for r in filas:
@@ -89,7 +93,7 @@ def _asistencia_jugadores(filas, equipo, anio, mes):
         except Exception:
             continue
         est = r[4].strip().upper()
-        if est not in ('SI', 'NO', 'AV', 'EXC'):
+        if est not in ('SI', 'NO', 'AV', 'EXC') or de_baja(lb, r[2], fin_mes):
             continue
         total += 1
         si += est == 'SI'
