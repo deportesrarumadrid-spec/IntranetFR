@@ -353,6 +353,12 @@ def _loop(flask_app):
                 resumen_mensual.tick(now)
             except Exception as e:
                 print(f"[SCHED] Resumen mensual: {e}", flush=True)
+            # Agenda del finde a las historias de Instagram (miércoles 17:00) + WhatsApp a Rubén
+            try:
+                import instagram_historias
+                instagram_historias.tick(now)
+            except Exception as e:
+                print(f"[SCHED] Instagram: {e}", flush=True)
 
         except Exception as e:
             print(f"[SCHED LOOP] {e}", flush=True)

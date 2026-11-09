@@ -2276,6 +2276,17 @@
                         <button onclick="agPrueba()" style="background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> ENVIAR A RUBÉN POZÓN</button>
                     </div>
                     <div id="agBox" style="margin-top:10px; font-size:12px;"></div>
+                    <div style="border-top:1px solid #e2e8f0; margin-top:12px; padding-top:12px;">
+                        <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:8px;">
+                            <b>Instagram:</b> cada <b>miércoles a las 17:00</b> se suben a las historias (primero Fútbol 11 y luego Fútbol 7)
+                            y te llega un WhatsApp con las imágenes y si se han subido.</div>
+                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                            <label style="font-size:11px; font-weight:800; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                                <input type="checkbox" id="igActivo" onchange="igGuardar()"> ACTIVO</label>
+                            <button onclick="igSubir()" style="background:#c13584; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-instagram"></i> SUBIR AHORA A INSTAGRAM</button>
+                        </div>
+                        <div id="igEstado" style="margin-top:8px; font-size:11px; font-weight:700;"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2351,6 +2362,7 @@
         flCargar();
         ivCargar();
         rmCargar();
+        igCargar();
         if (_waPersonas.length || _waGrupos.length) return;
         const lista = document.getElementById('waLista');
         lista.innerHTML = '<div style="padding:14px; color:#94a3b8; font-size:12px;">Cargando...</div>';
@@ -2856,6 +2868,30 @@
         } catch (e) { alert('Error al guardar'); }
     }
     // ---- Agenda del finde ----
+    async function igCargar(post) {
+        const box = document.getElementById('igEstado');
+        try {
+            const d = await (await fetch('/api/whatsapp/instagram', post ? { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ activo: document.getElementById('igActivo').checked }) } : {})).json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            document.getElementById('igActivo').checked = d.activo;
+            const u = d.ultima || {};
+            box.innerHTML = (d.conectado ? `<span style="color:#16a34a;">✓ Conectado a ${_waEsc(d.cuenta)}</span>`
+                                         : `<span style="color:#ef4444;">✗ Instagram sin conectar: ${_waEsc(d.cuenta)}</span>`)
+                + (u.fecha ? `<div style="color:#64748b; font-weight:600; margin-top:4px;">Última: ${u.fecha.slice(8, 10)}/${u.fecha.slice(5, 7)} ${u.fecha.slice(11, 16)} — ${_waEsc(u.texto || '')}</div>` : '');
+        } catch (e) { box.innerHTML = `<span style="color:#ef4444;">${_waEsc(e.message || 'Error')}</span>`; }
+    }
+    function igGuardar() { igCargar(true); }
+    async function igSubir() {
+        if (!confirm('¿Subir YA a las historias de Instagram la agenda del próximo finde? (Será público)')) return;
+        const box = document.getElementById('agBox');
+        box.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Comprobando Instagram...</span>';
+        try {
+            const d = await (await fetch('/api/whatsapp/instagram/subir', { method: 'POST' })).json();
+            box.innerHTML = d.status === 'ok' ? `<span style="color:#16a34a; font-weight:800;">✓ ${_waEsc(d.message)}</span>`
+                                              : `<span style="color:#ef4444; font-weight:700;">${_waEsc(d.message || 'No se pudo subir')}</span>`;
+        } catch (e) { box.innerHTML = '<span style="color:#ef4444; font-weight:700;">Error al subir</span>'; }
+    }
     async function agPrueba() {
         const box = document.getElementById('agBox');
         if (!confirm('¿Enviar a RUBÉN POZÓN las dos imágenes de la agenda del próximo finde?')) return;
