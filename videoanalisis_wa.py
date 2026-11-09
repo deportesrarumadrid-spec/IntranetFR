@@ -298,7 +298,8 @@ def _abiertos(d, tel, usuario, solo_pendientes=True):
     equipos_ent = None
     for clave, f in d['findes'].items():
         if f.get('prueba'):
-            if _tel9(tel) != _tel9(_tel_ruben()):
+            # Las pruebas caducan a las 2 horas (para no confundir mensajes posteriores de Rubén)
+            if datetime.now() - datetime.fromisoformat(f['creado']) > timedelta(hours=2) or _tel9(tel) != _tel9(_tel_ruben()):
                 continue
         elif date.fromisoformat(f['creado'][:10]) < hoy - timedelta(days=7):
             continue
