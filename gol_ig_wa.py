@@ -152,44 +152,98 @@ def _clave_gemini():
     return cfg.get('gemini_api_key') or cfg.get('GEMINI_API_KEY') or os.environ.get('GEMINI_API_KEY')
 
 
-def _modelo_imagen(clave):
+def _modelos_gemini(clave):
+    """Modelos de imagen de Gemini a probar: los que funcionaron en probar_ia_imagen.py, o todos los de imagen."""
+    try:
+        with open(os.path.join(DIR, 'modelos_imagen.json'), encoding='utf-8') as f:
+            buenos = json.load(f).get('gemini') or []
+        if buenos:
+            return buenos
+    except Exception:
+        pass
     import requests
     r = requests.get('https://generativelanguage.googleapis.com/v1beta/models', params={'key': clave, 'pageSize': 300}, timeout=30)
-    nombres = [m['name'] for m in r.json().get('models', [])
-               if 'image' in m['name'] and 'generateContent' in (m.get('supportedGenerationMethods') or [])]
-    for preferido in ('models/gemini-2.5-flash-image', 'models/gemini-2.5-flash-image-preview'):
-        if preferido in nombres:
-            return preferido
-    if not nombres:
-        raise RuntimeError('La clave de Gemini no tiene ningún modelo de imágenes disponible')
-    return sorted(nombres)[-1]
+    return sorted([m['name'] for m in r.json().get('models', [])
+                   if 'image' in m['name'] and 'generateContent' in (m.get('supportedGenerationMethods') or [])])
 
 
-def generar_celebracion_ia(foto_jpg, prompt=None):
-    """PNG (RGB, fondo verde) del jugador celebrando, generado por Gemini a partir de su foto."""
+def _gemini(foto_jpg, prompt):
     import requests
     clave = _clave_gemini()
     if not clave:
-        raise RuntimeError('No hay clave de Gemini configurada')
-    modelo = _modelo_imagen(clave)
-    cuerpo = {'contents': [{'parts': [{'text': prompt or PROMPT_CELEBRACION},
-                                      {'inline_data': {'mime_type': 'image/jpeg', 'data': base64.b64encode(foto_jpg).decode()}}]}],
-              'generationConfig': {'responseModalities': ['IMAGE', 'TEXT'], 'imageConfig': {'aspectRatio': '9:16'}}}
-    r = requests.post(f'https://generativelanguage.googleapis.com/v1beta/{modelo}:generateContent', params={'key': clave},
-                      json=cuerpo, timeout=240)
-    if r.status_code == 400 and 'imageConfig' in r.text:  # modelos sin esa opción
-        cuerpo['generationConfig'].pop('imageConfig')
-        r = requests.post(f'https://generativelanguage.googleapis.com/v1beta/{modelo}:generateContent', params={'key': clave},
-                          json=cuerpo, timeout=240)
-    j = r.json()
-    if r.status_code != 200:
-        raise RuntimeError(((j.get('error') or {}).get('message') or r.text)[:200])
-    for c in j.get('candidates', []):
-        for p in (c.get('content') or {}).get('parts', []):
-            d = p.get('inline_data') or p.get('inlineData')
-            if d:
-                return base64.b64decode(d['data'])
-    raise RuntimeError('La IA no ha devuelto ninguna imagen (puede que la haya rechazado). Prueba con otra foto.')
+        raise RuntimeError('no hay clave de Gemini')
+    errores = []
+    for modelo in _modelos_gemini(clave):
+        cuerpo = {'contents': [{'parts': [{'text': prompt},
+                                          {'inline_data': {'mime_type': 'image/jpeg', 'data': base64.b64encode(foto_jpg).decode()}}]}],
+                  'generationConfig': {'responseModalities': ['TEXT', 'IMAGE'], 'imageConfig': {'aspectRatio': '9:16'}}}
+        url = f'https://generativelanguage.googleapis.com/v1beta/{modelo}:generateContent'
+        r = requests.post(url, params={'key': clave}, json=cuerpo, timeout=240)
+        if r.status_code == 400 and 'imageConfig' in r.text:  # modelos sin esa opción
+            cuerpo['generationConfig'].pop('imageConfig')
+            r = requests.post(url, params={'key': clave}, json=cuerpo, timeout=240)
+        try:
+            j = r.json()
+        except Exception:
+            j = {}
+        if r.status_code == 200:
+            for c in j.get('candidates', []):
+                for p in (c.get('content') or {}).get('parts', []):
+                    d = p.get('inline_data') or p.get('inlineData')
+                    if d:
+                        return base64.b64decode(d['data'])
+            errores.append(f'{modelo}: sin imagen')
+        else:
+            errores.append(f"{modelo}: {((j.get('error') or {}).get('message') or r.text)[:60]}")
+    raise RuntimeError('Gemini: ' + ' | '.join(errores)[:300])
+
+
+def _url_publica_jpg(jpg):
+    """La foto en una URL pública con nombre aleatorio (static/publico, se borra a los 2 días), para Pollinations."""
+    import secrets
+    from instagram_historias import PUBLICO_DIR, URL_BASE
+    os.makedirs(PUBLICO_DIR, exist_ok=True)
+    nombre = secrets.token_urlsafe(24) + '.jpg'
+    with open(os.path.join(PUBLICO_DIR, nombre), 'wb') as f:
+        f.write(jpg)
+    return f'{URL_BASE}/static/publico/{nombre}', os.path.join(PUBLICO_DIR, nombre)
+
+
+def _pollinations(foto_jpg, prompt):
+    import requests
+    from urllib.parse import quote
+    clave = os.environ.get('POLLINATIONS_KEY', '').strip()
+    if not clave:
+        raise RuntimeError('Pollinations sin clave')
+    url_foto, ruta = _url_publica_jpg(foto_jpg)
+    errores = []
+    try:
+        for modelo in ('kontext', 'klein'):
+            r = requests.get(f'https://gen.pollinations.ai/image/{quote(prompt)}',
+                             params={'model': modelo, 'image': url_foto, 'width': 720, 'height': 1280, 'nologo': 'true'},
+                             headers={'Authorization': f'Bearer {clave}'}, timeout=240)
+            if r.status_code == 200 and r.headers.get('content-type', '').startswith('image/'):
+                return r.content
+            errores.append(f'{modelo}: HTTP {r.status_code} {r.text[:80]}')
+    finally:
+        try:
+            os.remove(ruta)
+        except OSError:
+            pass
+    raise RuntimeError('Pollinations: ' + ' | '.join(errores)[:300])
+
+
+def generar_celebracion_ia(foto_jpg, prompt=None):
+    """Imagen (fondo verde) del jugador celebrando: primero Gemini (modelos gratis), si no, Pollinations."""
+    prompt = prompt or PROMPT_CELEBRACION
+    errores = []
+    for motor in (_gemini, _pollinations):
+        try:
+            return motor(foto_jpg, prompt)
+        except Exception as e:
+            errores.append(str(e))
+            print(f'[GOL] {motor.__name__}: {str(e)[:200]}', flush=True)
+    raise RuntimeError(' / '.join(errores)[:300])
 
 
 def quitar_verde(png):
