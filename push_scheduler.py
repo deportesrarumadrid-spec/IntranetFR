@@ -371,6 +371,12 @@ def _loop(flask_app):
                 gps_aviso_wa.tick(now)
             except Exception as e:
                 print(f"[SCHED] Aviso GPS: {e}", flush=True)
+            # Alineación del Aficionado A en la historia de Instagram (en cuanto la publica la Federación)
+            try:
+                import alineacion_ig_wa
+                alineacion_ig_wa.tick(now)
+            except Exception as e:
+                print(f"[SCHED] Alineación: {e}", flush=True)
 
         except Exception as e:
             print(f"[SCHED LOOP] {e}", flush=True)

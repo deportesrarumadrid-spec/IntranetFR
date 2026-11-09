@@ -2328,6 +2328,21 @@
                     <div id="gpsBox" style="margin-top:10px; font-size:12px;"></div>
                     <div id="gpsProximos" style="margin-top:8px; font-size:11px;"></div>
                 </div>
+                <div class="card-coord" style="padding:16px;">
+                    <div style="font-size:12px; font-weight:900; color:#1e293b; margin-bottom:8px;">ALINEACIÓN AFICIONADO A (HISTORIA DE INSTAGRAM)</div>
+                    <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
+                        Desde 30 min antes de cada partido del Aficionado A (Preferente) se mira la Federación cada 2 min. En cuanto sale
+                        "Descargar alineaciones", se monta la imagen (rival, titulares y suplentes) y se sube a la historia; te llega por WhatsApp.
+                        Si a los 10 min del inicio no ha salido, no se sube nada y te avisa.</div>
+                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                        <label style="font-size:11px; font-weight:800; display:flex; align-items:center; gap:6px; cursor:pointer; margin-right:6px;">
+                            <input type="checkbox" id="alActivo" onchange="alCargar({ activo: this.checked })"> ACTIVO</label>
+                        <button onclick="window.open('/api/whatsapp/alineacion/imagen?t=' + Date.now(), '_blank')" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-image"></i> VER ÚLTIMA ALINEACIÓN</button>
+                        <button onclick="alPrueba()" style="background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> PROBAR (SOLO A RUBÉN POZÓN)</button>
+                    </div>
+                    <div id="alBox" style="margin-top:10px; font-size:12px;"></div>
+                    <div id="alPartidos" style="margin-top:8px; font-size:11px;"></div>
+                </div>
             </div>
         </div>
         <style>
@@ -2406,6 +2421,7 @@
         impCargar();
         vaCargar();
         gpsCargar();
+        alCargar();
         if (_waPersonas.length || _waGrupos.length) return;
         const lista = document.getElementById('waLista');
         lista.innerHTML = '<div style="padding:14px; color:#94a3b8; font-size:12px;">Cargando...</div>';
@@ -2913,6 +2929,27 @@
         } catch (e) { alert('Error al guardar'); }
     }
     // ---- Agenda del finde ----
+    async function alCargar(post) {
+        try {
+            const d = await (await fetch('/api/whatsapp/alineacion', post ? { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(post) } : {})).json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            document.getElementById('alActivo').checked = d.activo;
+            const est = { pendiente: '⏳ pendiente', subiendo: '⏳ subiendo', subida: '✅ subida', error: '⚠️ error', sin_alineacion: '⚠️ no salió la alineación' };
+            document.getElementById('alPartidos').innerHTML = (d.partidos || []).map(p =>
+                `<div style="padding:3px 0; border-bottom:1px solid #f1f5f9;"><b>${p.fecha.slice(0, 5).replace('-', '/')} ${p.hora}</b> · vs ${_waEsc(p.rival)} · ${est[p.estado] || _waEsc(p.estado || '')}</div>`).join('');
+        } catch (e) { document.getElementById('alBox').innerHTML = `<span style="color:#ef4444;">${_waEsc(e.message || 'Error')}</span>`; }
+    }
+    async function alPrueba() {
+        if (!confirm('¿Enviar a RUBÉN POZÓN la imagen con la alineación del último partido del Aficionado A? (No se sube a Instagram)')) return;
+        const box = document.getElementById('alBox');
+        box.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Consultando la Federación...</span>';
+        try {
+            const d = await (await fetch('/api/whatsapp/alineacion/prueba', { method: 'POST' })).json();
+            box.innerHTML = d.status === 'ok' ? `<span style="color:#16a34a; font-weight:800;">✓ ${_waEsc(d.message)}</span>`
+                                              : `<span style="color:#ef4444; font-weight:700;">${_waEsc(d.message || 'Error')}</span>`;
+        } catch (e) { box.innerHTML = '<span style="color:#ef4444; font-weight:700;">Error al enviar</span>'; }
+    }
     async function gpsCargar(post) {
         try {
             const d = await (await fetch('/api/whatsapp/gps', post ? { method: 'POST', headers: { 'Content-Type': 'application/json' },
