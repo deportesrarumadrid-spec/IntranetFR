@@ -69,7 +69,10 @@ def cuenta():
     if not _token():
         return False, 'Falta conectar Instagram (no hay clave en el servidor)'
     try:
-        r = requests.get(f'{_api()}/me', params={'fields': 'user_id,username', 'access_token': _token()}, timeout=20)
+        # Con clave de Facebook (EAA...) "me" es el usuario del sistema: se pregunta directamente por la cuenta de Instagram
+        uid = (os.environ.get('INSTAGRAM_USER_ID') or '').strip() if _token().startswith('EAA') else ''
+        r = requests.get(f'{_api()}/{uid or "me"}', params={'fields': 'username' if uid else 'user_id,username',
+                                                             'access_token': _token()}, timeout=20)
         if r.status_code != 200:
             return False, _error(r)
         return True, '@' + r.json().get('username', '')
