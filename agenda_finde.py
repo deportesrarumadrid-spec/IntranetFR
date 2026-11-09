@@ -101,6 +101,16 @@ def titulo_fechas(vie, lista_partidos):
     return f"{'-'.join(f'{f.day:02d}' for f in fechas)} {'/'.join(meses)}"
 
 
+def _fecha_corta(p):
+    """'14/11/2026' + '16:00' → 'SAB 14/11 16:00'."""
+    try:
+        d, m, y = [int(x) for x in p['fecha'].split('/')]
+        dia = ['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM'][date(y, m, d).weekday()]
+        return f"{dia} {d:02d}/{m:02d} {p.get('hora', '')}".strip()
+    except Exception:
+        return f"{p['fecha']} {p.get('hora', '')}".strip()
+
+
 def _fuente(ruta, tam):
     from PIL import ImageFont
     return ImageFont.truetype(ruta, tam)
@@ -132,13 +142,14 @@ def imagen(formato, lista, titulo):
         tam_eq = int(min(64, alto * 0.42))
         tam_fecha = int(min(26, alto * 0.17))
         f_fecha = _fuente(FUENTE_FECHA, tam_fecha)
+        # Todos los partidos con el mismo tamaño: el del texto más largo (el que más hay que reducir)
+        f_eq = min((_encajar(d, p['texto'], FUENTE_TITULO, tam_eq, _ANCHO_COL) for p in lista), key=lambda f: f.size)
         for i, p in enumerate(lista):
             col, fila = (0, i) if i < n_izq else (1, i - n_izq)
             x = _COL_X[col]
             y = _Y_INI + alto * fila + alto * 0.26
-            f_eq = _encajar(d, p['texto'], FUENTE_TITULO, tam_eq, _ANCHO_COL)
             d.text((x, y), p['texto'], font=f_eq, fill='white', anchor='mm')
-            d.text((x, y + f_eq.size * 0.5 + tam_fecha * 0.85), f"{p['fecha']} {p['hora']}".strip(), font=f_fecha, fill='white', anchor='mm')
+            d.text((x, y + f_eq.size * 0.5 + tam_fecha * 0.85), _fecha_corta(p), font=f_fecha, fill='white', anchor='mm')
     buf = io.BytesIO()
     img.save(buf, format='PNG', optimize=True)
     return buf.getvalue()
