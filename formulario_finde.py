@@ -535,7 +535,10 @@ def procesar_mensaje(payload):
     cuerpo = (payload.get('body') or '').strip()
     origen = str(payload.get('from') or '')
     if origen.endswith('@g.us'):
-        return None  # mensajes de grupos: no
+        # Grupos: solo el videoanálisis de FR Entrenadores (mensaje de Joaquín y respuestas con día y hora)
+        import videoanalisis
+        videoanalisis.procesar_grupo(payload, origen)
+        return None
     tel = _telefono_de(payload, origen)
     audio = _es_audio(payload)
     print(f"[FINDE] Mensaje recibido de {origen} (tel {tel or '?'}){' AUDIO' if audio else ''}: {cuerpo[:60]!r}", flush=True)
@@ -546,6 +549,9 @@ def procesar_mensaje(payload):
         # Entrenadores solo de Debutantes: no mandan audio, pero sí responden a las faltas
         usuario_f = _usuario_por_tel(tel)
         if usuario_f and not audio:
+            import videoanalisis
+            if videoanalisis.procesar_texto(tel, cuerpo, rep_id, usuario_f):
+                return 'video'
             import faltas_seguidas
             faltas_seguidas.procesar_texto(tel, cuerpo, rep_id, usuario_f)
         return None  # solo entrenadores
@@ -573,6 +579,10 @@ def procesar_mensaje(payload):
     # Equipos actuales del entrenador (por si han cambiado desde que se le preguntó); con uno solo, no hay duda
     elegidos = (list(equipos) if len(equipos) == 1 else equipos_de_respuesta(cuerpo, equipos)) if pend else []
     if not (pend and elegidos):
+        # ¿Es el día y hora del videoanálisis?
+        import videoanalisis
+        if videoanalisis.procesar_texto(tel, cuerpo, rep_id, usuario):
+            return 'video'
         # ¿Es la respuesta a una pregunta de faltas seguidas?
         import faltas_seguidas
         if faltas_seguidas.procesar_texto(tel, cuerpo, rep_id, usuario):

@@ -2300,6 +2300,21 @@
                     </div>
                     <div id="impEstado" style="margin-top:8px; font-size:11px; font-weight:700;"></div>
                 </div>
+                <div class="card-coord" style="padding:16px;">
+                    <div style="font-size:12px; font-weight:900; color:#1e293b; margin-bottom:8px;">VIDEOANÁLISIS (DÍA Y HORA)</div>
+                    <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
+                        Cuando Joaquín Fenellos escribe en FR Entrenadores "Videoanálisis subido al drive…" con los equipos y ✅, se pregunta por
+                        privado a los entrenadores de esos equipos qué día y a qué hora lo harán. Con cada respuesta (por privado o en el grupo)
+                        se publica en el grupo el mensaje actualizado. Recordatorio a las 12:00 los dos días siguientes.</div>
+                    <label style="font-size:11px; font-weight:800; display:flex; align-items:center; gap:6px; cursor:pointer; margin-bottom:10px;">
+                        <input type="checkbox" id="vaActivo" onchange="vaCargar({ activo: this.checked })"> ACTIVO (en el grupo de verdad)</label>
+                    <div style="font-size:10px; font-weight:800; color:#94a3b8; margin-bottom:4px;">PRUEBA: PEGA UN MENSAJE COMO EL DE JOAQUÍN (TODO TE LLEGA SOLO A TI)</div>
+                    <textarea id="vaTexto" style="width:100%; height:80px; padding:8px; border-radius:7px; border:1px solid #e2e8f0; font-family:inherit; font-size:12px; box-sizing:border-box;">Videoanalisis subido al drive. Finde del 31 octubre y 1 noviembre
+・Juvenil "C": ✅
+・Infantil "C": ✅</textarea>
+                    <button onclick="vaPrueba()" style="margin-top:6px; background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> PROBAR (SOLO A RUBÉN POZÓN)</button>
+                    <div id="vaBox" style="margin-top:10px; font-size:12px;"></div>
+                </div>
             </div>
         </div>
         <style>
@@ -2376,6 +2391,7 @@
         rmCargar();
         igCargar();
         impCargar();
+        vaCargar();
         if (_waPersonas.length || _waGrupos.length) return;
         const lista = document.getElementById('waLista');
         lista.innerHTML = '<div style="padding:14px; color:#94a3b8; font-size:12px;">Cargando...</div>';
@@ -2883,6 +2899,32 @@
         } catch (e) { alert('Error al guardar'); }
     }
     // ---- Agenda del finde ----
+    async function vaCargar(post) {
+        const box = document.getElementById('vaBox');
+        try {
+            const d = await (await fetch('/api/whatsapp/videoanalisis', post ? { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(post) } : {})).json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            document.getElementById('vaActivo').checked = d.activo;
+            box.innerHTML = (d.findes || []).map(f => `<div style="margin-top:8px;"><b>${f.prueba ? '🧪 PRUEBA' : 'Finde ' + f.sabado.slice(8, 10) + '/' + f.sabado.slice(5, 7)}</b>`
+                + f.equipos.map(e => `<div style="padding:3px 0; border-bottom:1px solid #f1f5f9;">${_waEsc(e.equipo)} ${e.tick ? '✅' : '⏳'} → `
+                    + (e.cuando ? `<b style="color:#16a34a;">${_waEsc(e.cuando)}</b> <span style="color:#94a3b8;">(${_waEsc(e.por || '')})</span>`
+                                : (e.tick ? `<span style="color:#d97706;">pendiente (${e.preguntas} envíos)</span>` : '<span style="color:#94a3b8;">sin subir</span>'))
+                    + '</div>').join('') + '</div>').join('');
+        } catch (e) { box.innerHTML = `<span style="color:#ef4444;">${_waEsc(e.message || 'Error')}</span>`; }
+    }
+    async function vaPrueba() {
+        const texto = document.getElementById('vaTexto').value;
+        if (!confirm('¿Hacer la prueba? Las preguntas y el mensaje que se publicaría te llegan solo a ti.')) return;
+        const box = document.getElementById('vaBox');
+        box.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Enviando...</span>';
+        try {
+            const d = await (await fetch('/api/whatsapp/videoanalisis/prueba', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ texto }) })).json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            vaCargar();
+        } catch (e) { box.innerHTML = `<span style="color:#ef4444; font-weight:700;">${_waEsc(e.message || 'Error')}</span>`; }
+    }
     let _impComando = '';
     async function impCargar(post) {
         const box = document.getElementById('impEstado');

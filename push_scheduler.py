@@ -359,6 +359,12 @@ def _loop(flask_app):
                 instagram_historias.tick(now)
             except Exception as e:
                 print(f"[SCHED] Instagram: {e}", flush=True)
+            # Videoanálisis: recordatorio a las 12:00 a quien no ha dicho día y hora
+            try:
+                import videoanalisis
+                videoanalisis.tick(now)
+            except Exception as e:
+                print(f"[SCHED] Videoanálisis: {e}", flush=True)
 
         except Exception as e:
             print(f"[SCHED LOOP] {e}", flush=True)
