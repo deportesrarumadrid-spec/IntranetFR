@@ -2343,6 +2343,16 @@
                     <div id="alBox" style="margin-top:10px; font-size:12px;"></div>
                     <div id="alPartidos" style="margin-top:8px; font-size:11px;"></div>
                 </div>
+                <div class="card-coord" style="padding:16px;">
+                    <div style="font-size:12px; font-weight:900; color:#1e293b; margin-bottom:8px;">GOL AFICIONADO A · FOTOS Y CELEBRACIONES</div>
+                    <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
+                        Sube una foto de cuerpo entero de cada jugador con la equipación. La IA genera a ese jugador celebrando un gol (tarda
+                        20-60 s); revísala con <b>VER EDIT</b> y <b>APRUEBA</b> la buena o genera otra. En el partido se usará la aprobada.</div>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+                        <button onclick="window.open('/api/gol/vista?tipo=rival&t=' + Date.now(), '_blank')" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:6px 12px; font-size:10px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-image"></i> VER EDIT GOL DEL RIVAL</button>
+                    </div>
+                    <div id="golLista" style="font-size:12px;"></div>
+                </div>
             </div>
         </div>
         <style>
@@ -2422,6 +2432,7 @@
         vaCargar();
         gpsCargar();
         alCargar();
+        golCargar();
         if (_waPersonas.length || _waGrupos.length) return;
         const lista = document.getElementById('waLista');
         lista.innerHTML = '<div style="padding:14px; color:#94a3b8; font-size:12px;">Cargando...</div>';
@@ -2929,6 +2940,50 @@
         } catch (e) { alert('Error al guardar'); }
     }
     // ---- Agenda del finde ----
+    let _golTimer = null;
+    async function golCargar() {
+        const box = document.getElementById('golLista');
+        try {
+            const d = await (await fetch('/api/gol/jugadores')).json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            const btn = 'border:none; border-radius:6px; padding:5px 9px; font-size:10px; font-weight:800; cursor:pointer; font-family:inherit; color:white;';
+            const t = Date.now();
+            box.innerHTML = (d.jugadores || []).map(j => `
+                <div style="display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid #f1f5f9; flex-wrap:wrap;">
+                    <div style="width:170px; font-weight:800; font-size:11px;">${_waEsc(j.nombre)}</div>
+                    ${j.foto ? `<img src="/api/gol/img/foto/${j.slug}?t=${t}" style="height:54px; border-radius:4px;">` : '<span style="color:#94a3b8; font-size:10px; width:40px;">sin foto</span>'}
+                    <label style="${btn} background:#475569;"><i class="fas fa-upload"></i> FOTO
+                        <input type="file" accept="image/*" style="display:none;" onchange="golSubir('${j.slug}', this)"></label>
+                    ${j.candidato ? `<img src="/api/gol/img/candidato/${j.slug}?t=${t}" style="height:54px; background:#e2e8f0; border-radius:4px;">` : ''}
+                    ${j.aprobada && !j.candidato ? `<img src="/api/gol/img/aprobada/${j.slug}?t=${t}" style="height:54px; background:#e2e8f0; border-radius:4px;">` : ''}
+                    ${j.foto ? `<button onclick="golGenerar('${j.slug}')" style="${btn} background:#7c3aed;" ${j.generando ? 'disabled' : ''}>${j.generando ? '<i class="fas fa-spinner fa-spin"></i> GENERANDO' : (j.candidato || j.aprobada ? '<i class="fas fa-redo"></i> GENERAR OTRA' : '<i class="fas fa-magic"></i> GENERAR CELEBRACIÓN')}</button>` : ''}
+                    ${j.candidato ? `<button onclick="window.open('/api/gol/vista?slug=${j.slug}&tipo=candidato&t=' + Date.now(), '_blank')" style="${btn} background:#1e293b;"><i class="far fa-image"></i> VER EDIT</button>
+                                     <button onclick="golAprobar('${j.slug}')" style="${btn} background:#16a34a;"><i class="fas fa-check"></i> APROBAR</button>` : ''}
+                    ${j.aprobada ? `<span style="color:#16a34a; font-weight:800; font-size:10px;">✓ APROBADA</span>
+                                    <button onclick="window.open('/api/gol/vista?slug=${j.slug}&tipo=aprobada&t=' + Date.now(), '_blank')" style="${btn} background:#334155;">VER</button>` : ''}
+                    ${j.error ? `<span style="color:#ef4444; font-size:10px;">${_waEsc(j.error)}</span>` : ''}
+                </div>`).join('') || '<span style="color:#94a3b8;">No hay jugadores en el AFICIONADO A</span>';
+            clearTimeout(_golTimer);
+            if ((d.jugadores || []).some(j => j.generando)) _golTimer = setTimeout(golCargar, 5000);
+        } catch (e) { box.innerHTML = `<span style="color:#ef4444;">${_waEsc(e.message || 'Error')}</span>`; }
+    }
+    async function golSubir(slug, input) {
+        if (!input.files.length) return;
+        const fd = new FormData(); fd.append('slug', slug); fd.append('foto', input.files[0]);
+        const d = await (await fetch('/api/gol/foto', { method: 'POST', body: fd })).json();
+        if (d.status !== 'ok') alert(d.message || 'Error');
+        golCargar();
+    }
+    async function golGenerar(slug) {
+        const d = await (await fetch('/api/gol/generar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug }) })).json();
+        if (d.status !== 'ok') alert(d.message || 'Error');
+        golCargar();
+    }
+    async function golAprobar(slug) {
+        const d = await (await fetch('/api/gol/aprobar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug }) })).json();
+        if (d.status !== 'ok') alert(d.message || 'Error');
+        golCargar();
+    }
     async function alCargar(post) {
         try {
             const d = await (await fetch('/api/whatsapp/alineacion', post ? { method: 'POST', headers: { 'Content-Type': 'application/json' },
