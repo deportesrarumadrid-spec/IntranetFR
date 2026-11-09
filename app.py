@@ -4217,7 +4217,7 @@ from resumen_mensual import mensual_bp
 from agenda_finde import agenda_bp
 from instagram_historias import instagram_bp
 from impresion_clasif import impresion_bp
-from videoanalisis import video_bp
+from videoanalisis_wa import video_bp
 from loteria import loteria_bp
 app.register_blueprint(financiero_bp)
 app.register_blueprint(loteria_bp)
