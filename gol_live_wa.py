@@ -40,6 +40,7 @@ def _norm(s):
 
 
 _hilos = threading.Lock()
+_recortando = False
 
 
 @contextmanager
@@ -163,18 +164,65 @@ def foto_bytes(f):
         return fh.read()
 
 
-def recorte(datos):
-    """Jugador recortado (RGBA): si la imagen ya trae transparencia se usa tal cual; si no, se quita el fondo verde."""
+def _fondo_verde(im):
+    """True si el borde de la imagen es verde croma."""
+    rgb = im.convert('RGB').resize((60, 100))
+    borde = [rgb.getpixel((x, y)) for x in range(60) for y in (0, 1, 98, 99)] + \
+            [rgb.getpixel((x, y)) for y in range(100) for x in (0, 1, 58, 59)]
+    return sum(1 for r, g, b in borde if g > 120 and g > r + 50 and g > b + 50) > len(borde) * 0.6
+
+
+def recorte(datos, cache=None):
+    """Jugador recortado (RGBA). Transparente → tal cual; fondo verde → se quita el verde; cualquier otro fondo →
+    se quita con rembg (en un proceso aparte). cache: ruta donde guardar/leer el resultado."""
+    import subprocess
+    import sys
+    import tempfile
     from PIL import Image, ImageOps
     from gol_ig_wa import quitar_verde
+    if cache and os.path.exists(cache):
+        return Image.open(cache).convert('RGBA')
     im = ImageOps.exif_transpose(Image.open(io.BytesIO(datos)))
     if im.mode in ('RGBA', 'LA', 'P') and im.convert('RGBA').getextrema()[3][0] < 200:
         im = im.convert('RGBA')
-        return im.crop(im.split()[3].point(lambda v: 255 if v > 128 else 0).getbbox() or (0, 0, im.width, im.height))
-    im.thumbnail((2000, 2000))
-    buf = io.BytesIO()
-    im.convert('RGB').save(buf, 'PNG')
-    return quitar_verde(buf.getvalue())
+        out = im.crop(im.split()[3].point(lambda v: 255 if v > 128 else 0).getbbox() or (0, 0, im.width, im.height))
+    elif _fondo_verde(im):
+        im.thumbnail((2000, 2000))
+        buf = io.BytesIO()
+        im.convert('RGB').save(buf, 'PNG')
+        out = quitar_verde(buf.getvalue())
+    else:
+        with tempfile.TemporaryDirectory() as tmp:
+            ent, sal = os.path.join(tmp, 'in.png'), os.path.join(tmp, 'out.png')
+            im.convert('RGB').save(ent)
+            r = subprocess.run([sys.executable, os.path.join(BASE_DIR, 'recortar_fondo.py'), ent, sal],
+                               capture_output=True, text=True, timeout=600)
+            if r.returncode != 0 or not os.path.exists(sal):
+                raise RuntimeError('no se ha podido quitar el fondo: ' + (r.stderr or '')[-200:])
+            out = Image.open(sal).convert('RGBA')
+            out.load()
+    if cache:
+        os.makedirs(os.path.dirname(cache), exist_ok=True)
+        out.save(cache)
+    return out
+
+
+def _ruta_recorte(f):
+    return os.path.join(FOTOS_CACHE, f"{f['id']}_{re.sub(r'[^0-9]', '', f.get('mod', ''))}_recorte.png")
+
+
+def preparar_recortes():
+    """Quita el fondo a las fotos nuevas de la carpeta (una por llamada) para que en el partido vaya al instante."""
+    for f in fotos():
+        ruta = _ruta_recorte(f)
+        if not os.path.exists(ruta) and not os.path.exists(ruta + '.error'):
+            try:
+                recorte(foto_bytes(f), ruta)
+                print(f"[GOL] Fondo quitado: {f['nombre']}", flush=True)
+            except Exception as e:
+                print(f"[GOL] Fondo de {f['nombre']}: {e}", flush=True)
+                open(ruta + '.error', 'w').write(str(e)[:300])  # no se reintenta hasta que cambie la foto
+            return
 
 
 def buscar_jugador(consulta, lista):
@@ -443,7 +491,8 @@ def _preparar(gid):
     try:
         jugador = None
         if g['tipo'] == 'nuestro' and g.get('foto_id') not in (None, 'ninguna'):
-            jugador = recorte(foto_bytes({'id': g['foto_id'], 'mod': g.get('foto_mod', '')}))
+            f = {'id': g['foto_id'], 'mod': g.get('foto_mod', '')}
+            jugador = recorte(foto_bytes(f), _ruta_recorte(f))
         goleador = gi.nombre_corto(g.get('jugador_nombre') or '') if g['tipo'] == 'nuestro' else ''
         png = gi.imagen_gol(g['resultado'], 'CLUB FUENTELARREYNA A', rival, fecha, goleador, f"MIN {g['minuto']}'", jugador)
         with open(ruta, 'wb') as f:
@@ -535,7 +584,20 @@ def _subir(gid, eleccion, tel, otros, usuario):
 
 
 def tick(ahora):
-    """Recordatorios a los 5 y 10 min si nadie contesta; a los 30 min se deja sin subir."""
+    """Recordatorios a los 5 y 10 min si nadie contesta; a los 30 min se deja sin subir.
+    Cada 10 min, en segundo plano, se quita el fondo a las fotos nuevas de la carpeta."""
+    global _recortando
+    if ahora.minute % 10 == 3 and not _recortando:
+        def _job():
+            global _recortando
+            try:
+                preparar_recortes()
+            except Exception as e:
+                print(f'[GOL] recortes: {e}', flush=True)
+            finally:
+                _recortando = False
+        _recortando = True
+        threading.Thread(target=_job, daemon=True).start()
     with _bloqueo():
         d = _leer()
         pendientes = [g for g in d['goles'] if g['estado'] in ('esperando_eleccion', 'esperando_confirmar') and g.get('enviado_en')]
