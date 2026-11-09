@@ -365,6 +365,12 @@ def _loop(flask_app):
                 videoanalisis.tick(now)
             except Exception as e:
                 print(f"[SCHED] Videoanálisis: {e}", flush=True)
+            # Aviso de GPS a los entrenadores y al grupo Dirección (días con GPS, 17:00)
+            try:
+                import gps_aviso_wa
+                gps_aviso_wa.tick(now)
+            except Exception as e:
+                print(f"[SCHED] Aviso GPS: {e}", flush=True)
 
         except Exception as e:
             print(f"[SCHED LOOP] {e}", flush=True)
