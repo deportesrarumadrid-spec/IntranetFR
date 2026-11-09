@@ -377,6 +377,12 @@ def _loop(flask_app):
                 alineacion_ig_wa.tick(now)
             except Exception as e:
                 print(f"[SCHED] Alineación: {e}", flush=True)
+            # Goles en directo: recordatorios si nadie elige la opción
+            try:
+                import gol_live_wa
+                gol_live_wa.tick(now)
+            except Exception as e:
+                print(f"[SCHED] Goles: {e}", flush=True)
 
         except Exception as e:
             print(f"[SCHED LOOP] {e}", flush=True)

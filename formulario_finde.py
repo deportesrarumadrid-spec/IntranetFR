@@ -544,6 +544,11 @@ def procesar_mensaje(payload):
     print(f"[FINDE] Mensaje recibido de {origen} (tel {tel or '?'}){' AUDIO' if audio else ''}: {cuerpo[:60]!r}", flush=True)
     rep = payload.get('replyTo') or {}
     rep_id = (rep.get('id') if isinstance(rep, dict) else str(rep)) or ''
+    # Goles del Aficionado A en directo (solo Rubén Pozón y Joaquín Escriche)
+    if not audio and cuerpo:
+        import gol_live_wa
+        if gol_live_wa.procesar(tel, cuerpo, _usuario_por_tel(tel)):
+            return 'gol'
     ent = _entrenador_por_tel(tel)
     if not ent:
         # Entrenadores solo de Debutantes: no mandan audio, pero sí responden a las faltas

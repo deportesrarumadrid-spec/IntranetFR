@@ -4221,6 +4221,7 @@ from videoanalisis_wa import video_bp
 from gps_aviso_wa import gps_aviso_bp
 from alineacion_ig_wa import alineacion_bp
 from gol_ig_wa import gol_bp
+from gol_live_wa import gol_live_bp
 from loteria import loteria_bp
 app.register_blueprint(financiero_bp)
 app.register_blueprint(loteria_bp)
@@ -4258,6 +4259,7 @@ app.register_blueprint(video_bp)
 app.register_blueprint(gps_aviso_bp)
 app.register_blueprint(alineacion_bp)
 app.register_blueprint(gol_bp)
+app.register_blueprint(gol_live_bp)
 
 # --- SEGUIMIENTO COORD ENTRENAMIENTOS ---
 _SEG_COORD_FILE = os.path.join('static', 'data', 'seguimiento_coord_comentarios.json')

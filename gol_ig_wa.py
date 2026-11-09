@@ -165,14 +165,14 @@ def _modelo_imagen(clave):
     return sorted(nombres)[-1]
 
 
-def generar_celebracion_ia(foto_jpg):
+def generar_celebracion_ia(foto_jpg, prompt=None):
     """PNG (RGB, fondo verde) del jugador celebrando, generado por Gemini a partir de su foto."""
     import requests
     clave = _clave_gemini()
     if not clave:
         raise RuntimeError('No hay clave de Gemini configurada')
     modelo = _modelo_imagen(clave)
-    cuerpo = {'contents': [{'parts': [{'text': PROMPT_CELEBRACION},
+    cuerpo = {'contents': [{'parts': [{'text': prompt or PROMPT_CELEBRACION},
                                       {'inline_data': {'mime_type': 'image/jpeg', 'data': base64.b64encode(foto_jpg).decode()}}]}],
               'generationConfig': {'responseModalities': ['IMAGE', 'TEXT'], 'imageConfig': {'aspectRatio': '9:16'}}}
     r = requests.post(f'https://generativelanguage.googleapis.com/v1beta/{modelo}:generateContent', params={'key': clave},
