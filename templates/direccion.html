@@ -2348,8 +2348,9 @@
                     <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
                         Durante el partido (del inicio a +2 h), Rubén Pozón o Joaquín Escriche escriben al WhatsApp del club
                         <b>"aficionado a gol de juan"</b> (o con resultado: "aficionado a 1-0 gol de juan"; rival: "aficionado a gol del rival 1-1").
-                        La IA genera 3 celebraciones con la foto del jugador, os llegan las 3 historias y la primera respuesta (1, 2 o 3) se sube.
-                        Las fotos van en la carpeta de Drive con el nombre del jugador ("Jaime Gimenez.jpg").</div>
+                        Se monta la historia con la celebración del jugador, os llega a los dos y el primer <b>OK</b> la sube.
+                        Las celebraciones van en la carpeta de Drive con el nombre del jugador ("Jaime Gimenez.png"), con <b>fondo verde liso</b>.
+                        Si no hay celebración de ese jugador, se monta solo con el resultado.</div>
                     <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
                         <a id="golCarpeta" href="#" target="_blank" style="background:#1a73e8; color:white; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; text-decoration:none;"><i class="fab fa-google-drive"></i> ABRIR CARPETA DE FOTOS</a>
                         <input id="golPruebaTxt" value="aficionado a 1-0 gol de " style="padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:11px; font-family:inherit; min-width:240px;">
@@ -2960,7 +2961,7 @@
             document.getElementById('golGoles').innerHTML = (d.goles || []).length ? '<b>Últimos goles:</b>' + d.goles.map(g =>
                 `<div style="padding:3px 0; border-bottom:1px solid #f1f5f9;">${g.prueba ? '🧪 ' : ''}${(g.creado || '').slice(8, 10)}/${(g.creado || '').slice(5, 7)} ${(g.creado || '').slice(11, 16)} · `
                 + `${g.tipo === 'rival' ? 'gol del rival' : 'gol de ' + _waEsc((g.jugador_nombre || '?'))} ${_waEsc(g.resultado || '')} · min ${g.minuto || '?'} · `
-                + `${est[g.estado] || _waEsc(g.estado || '')}${g.eleccion ? ' (opción ' + g.eleccion + ', ' + _waEsc(g.elegido_por || '') + ')' : ''}</div>`).join('') : '';
+                + `${est[g.estado] || _waEsc(g.estado || '')}${g.elegido_por ? ' (' + _waEsc(g.elegido_por) + ')' : ''}</div>`).join('') : '';
         } catch (e) { document.getElementById('golBox').innerHTML = `<span style="color:#ef4444;">${_waEsc(e.message || 'Error')}</span>`; }
     }
     async function golPrueba() {

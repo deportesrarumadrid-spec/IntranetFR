@@ -2,11 +2,12 @@
 
 Rubén Pozón o Joaquín Escriche escriben al WhatsApp del club "aficionado a gol de juan" (o "senior a 1-0 gol de juan",
 "aficionado a gol del rival 1-1"). Solo cuenta durante el partido del Aficionado A (desde el inicio hasta 2 h después).
-- Gol nuestro: se busca la foto del jugador en la carpeta de Drive (si hay varias, se pregunta el apellido), la IA
-  genera 3 celebraciones, se montan 3 historias y se mandan a los dos; la primera respuesta "1/2/3" se sube.
-- Gol del rival: historia sin jugador; se manda para confirmar (SÍ/NO) y se sube con el primer SÍ.
+- Gol nuestro: se coge la celebración del jugador de la carpeta de Drive (la sube Rubén con fondo verde, que aquí se
+  quita; si encajan varias se pregunta el apellido), se monta la historia y se manda a los dos; el primer OK la sube.
+  Si no hay celebración de ese jugador, se avisa y se monta solo con el resultado.
+- Gol del rival: historia sin jugador; igual, se sube con el primer OK.
 - Sin resultado en el mensaje se pregunta. Otro gol en menos de 8 min → se pregunta si es OTRO o el MISMO.
-- Recordatorio a los 5 y 10 min si nadie elige; a los 30 min se deja sin subir.
+- Recordatorio a los 5 y 10 min si nadie contesta; a los 30 min se deja sin subir.
 - Bloqueo de fichero: dos mensajes a la vez (dos workers) nunca crean dos goles ni suben dos veces.
 Estado en datos_privados/gol/goles.json.
 """
@@ -31,11 +32,6 @@ CORREO_CARPETA = 'infoclubfuentelarreyna@gmail.com'
 NOMBRE_CARPETA = 'FOTOS GOL AFICIONADO A'
 VENTANA_DUPLICADO_MIN = 8
 DURACION_PARTIDO_H = 2
-POSES = [
-    'running towards the camera with both arms spread wide and his mouth open, shouting with joy',
-    'sliding on his knees with both fists raised and head tilted back, screaming with joy',
-    'jumping in the air with one fist punched up high and the other hand pointing to the club badge on his shirt',
-]
 
 
 def _norm(s):
@@ -43,19 +39,24 @@ def _norm(s):
     return n(s)
 
 
+_hilos = threading.Lock()
+
+
 @contextmanager
 def _bloqueo():
+    """Bloqueo entre hilos (mismo proceso) y entre workers de gunicorn (fichero)."""
     os.makedirs(DIR, exist_ok=True)
-    f = open(LOCK_FILE, 'w')
-    try:
+    with _hilos:
+        f = open(LOCK_FILE, 'w')
         try:
-            import fcntl
-            fcntl.flock(f, fcntl.LOCK_EX)
-        except ImportError:  # Windows (pruebas locales)
-            pass
-        yield
-    finally:
-        f.close()
+            try:
+                import fcntl
+                fcntl.flock(f, fcntl.LOCK_EX)
+            except ImportError:  # Windows (pruebas locales)
+                pass
+            yield
+        finally:
+            f.close()
 
 
 def _leer():
@@ -149,19 +150,31 @@ def fotos():
     return sorted(out, key=lambda x: _norm(x['nombre']))
 
 
-def foto_jpg(f):
-    """Bytes JPG de la foto (girada según el móvil, máx. 2000 px). Se guarda en caché hasta que cambie en Drive."""
-    from PIL import Image, ImageOps
+def foto_bytes(f):
+    """Bytes de la imagen de la celebración (caché local hasta que cambie en Drive)."""
     os.makedirs(FOTOS_CACHE, exist_ok=True)
-    ruta = os.path.join(FOTOS_CACHE, f"{f['id']}_{re.sub(r'[^0-9]', '', f.get('mod', ''))}.jpg")
+    ruta = os.path.join(FOTOS_CACHE, f"{f['id']}_{re.sub(r'[^0-9]', '', f.get('mod', ''))}.img")
     if not os.path.exists(ruta):
         r = _drive().get(f"https://www.googleapis.com/drive/v3/files/{f['id']}", params={'alt': 'media'})
         r.raise_for_status()
-        im = ImageOps.exif_transpose(Image.open(io.BytesIO(r.content))).convert('RGB')
-        im.thumbnail((2000, 2000))
-        im.save(ruta, quality=92)
+        with open(ruta, 'wb') as fh:
+            fh.write(r.content)
     with open(ruta, 'rb') as fh:
         return fh.read()
+
+
+def recorte(datos):
+    """Jugador recortado (RGBA): si la imagen ya trae transparencia se usa tal cual; si no, se quita el fondo verde."""
+    from PIL import Image, ImageOps
+    from gol_ig_wa import quitar_verde
+    im = ImageOps.exif_transpose(Image.open(io.BytesIO(datos)))
+    if im.mode in ('RGBA', 'LA', 'P') and im.convert('RGBA').getextrema()[3][0] < 200:
+        im = im.convert('RGBA')
+        return im.crop(im.split()[3].point(lambda v: 255 if v > 128 else 0).getbbox() or (0, 0, im.width, im.height))
+    im.thumbnail((2000, 2000))
+    buf = io.BytesIO()
+    im.convert('RGB').save(buf, 'PNG')
+    return quitar_verde(buf.getvalue())
 
 
 def buscar_jugador(consulta, lista):
@@ -260,8 +273,8 @@ def procesar(tel, cuerpo, usuario):
     if esp and not nuevo:
         return _respuesta(tel, cuerpo, usuario, esp)
     if not nuevo:
-        # "2" / "sí" cuando ya lo ha decidido el otro (o ha caducado): se le dice, sin hacer nada
-        if re.match(r'^\s*(?:LA\s+|OPCION\s+)?([1-9]|SI|NO|NINGUNA)\b', _norm(cuerpo)):
+        # "OK" / "no" cuando ya lo ha decidido el otro (o ha caducado): se le dice, sin hacer nada
+        if re.match(r'^\s*(OK|SI|NO|VALE)\b', _norm(cuerpo)):
             with _bloqueo():
                 d = _leer()
             recien = [g for g in d['goles'] if g.get('enviado_en') and g['estado'] in ('subiendo', 'subido', 'cancelado', 'caducado')
@@ -269,7 +282,7 @@ def procesar(tel, cuerpo, usuario):
             if recien:
                 g = recien[-1]
                 if g['estado'] == 'caducado':
-                    _texto(tel, f"⌛ El gol {g['resultado']} ya caducó (30 min sin elegir): no se ha subido.")
+                    _texto(tel, f"⌛ El gol {g['resultado']} ya caducó (30 min sin contestar): no se ha subido.")
                 else:
                     quien = (g.get('elegido_por') or '').split()[0].capitalize() or 'otro'
                     _texto(tel, f'👌 Ya lo ha decidido {quien}: no hago nada más.')
@@ -326,18 +339,20 @@ def _seguir(gid, tel):
             _texto(tel, f'⚠️ No puedo leer la carpeta de fotos de Drive: {str(e)[:120]}')
             return True
         cand = buscar_jugador(g.get('consulta', ''), lista)
-        if len(cand) != 1:
+        if len(cand) > 1:
             _esperar(gid, tel, 'apellido')
-            if not cand:
-                _texto(tel, f"No encuentro la foto de *{(g.get('consulta') or '?').title()}* en la carpeta. ¿Nombre y apellido del goleador?")
-            else:
-                _texto(tel, '¿Cuál? ' + ' / '.join(f['nombre'].title() for f in cand[:6]) + '. Dime el apellido.')
+            _texto(tel, '¿Cuál? ' + ' / '.join(f['nombre'].title() for f in cand[:6]) + '. Dime el apellido.')
             return True
         with _bloqueo():
             d = _leer()
             x = _gol(d, gid)
-            x.update({'foto_id': cand[0]['id'], 'foto_mod': cand[0]['mod'], 'jugador_nombre': cand[0]['nombre']})
+            if cand:
+                x.update({'foto_id': cand[0]['id'], 'foto_mod': cand[0]['mod'], 'jugador_nombre': cand[0]['nombre']})
+            else:  # sin celebración de ese jugador: solo el resultado
+                x.update({'foto_id': 'ninguna', 'jugador_nombre': ' '.join((g.get('consulta') or '').split()).upper()})
             _escribir(d)
+        if not cand:
+            _texto(tel, f"⚠️ No hay celebración de *{(g.get('consulta') or '?').title()}* en la carpeta: se monta solo con el resultado.")
     with _bloqueo():
         d = _leer()
         x = _gol(d, gid)
@@ -349,7 +364,7 @@ def _seguir(gid, tel):
                 d['esperando'].pop(t)
         _escribir(d)
     threading.Thread(target=_preparar, args=(gid,), daemon=True).start()
-    _texto(tel, '⏳ Preparando las opciones (30-60 s)…' if g['tipo'] == 'nuestro' else '⏳ Preparando la imagen…')
+    _texto(tel, '⏳ Preparando la imagen…')
     return True
 
 
@@ -415,48 +430,24 @@ def _respuesta(tel, cuerpo, usuario, esp):
 
 
 def _preparar(gid):
-    """Genera las 3 opciones (gol nuestro) o la imagen (gol del rival) y las manda."""
+    """Monta la historia del gol (con la celebración del jugador si la hay) y la manda para OK/NO."""
     import gol_ig_wa as gi
     from objetivos_finde import enviar_imagen
-    from PIL import Image
     with _bloqueo():
         d = _leer()
         g = dict(_gol(d, gid))
-    nuestro_nombre = 'CLUB FUENTELARREYNA A'
     rival = ' '.join(g['rival_nombre'].replace('"', ' ').replace("'", ' ').split()).upper()
     fecha = gi.fecha_txt(datetime.strptime(g['fecha'], '%d-%m-%Y').date())
     os.makedirs(os.path.join(DIR, 'opciones'), exist_ok=True)
-    rutas = []
+    ruta = os.path.join(DIR, 'opciones', f'{gid}.png')
     try:
-        if g['tipo'] == 'rival':
-            png = gi.imagen_gol(g['resultado'], nuestro_nombre, rival, fecha, '', f"MIN {g['minuto']}'")
-            ruta = os.path.join(DIR, 'opciones', f'{gid}_1.png')
-            open(ruta, 'wb').write(png)
-            rutas = [ruta]
-        else:
-            foto = foto_jpg({'id': g['foto_id'], 'mod': g.get('foto_mod', '')})
-            resultados = [None] * len(POSES)
-
-            def una(i):
-                try:
-                    prompt = gi.PROMPT_CELEBRACION.replace(
-                        'running towards the camera with both arms spread wide and his mouth open, shouting with joy', POSES[i])
-                    rec = gi.quitar_verde(gi.generar_celebracion_ia(foto, prompt))
-                    png = gi.imagen_gol(g['resultado'], nuestro_nombre, rival, fecha, gi.nombre_corto(g['jugador_nombre']),
-                                        f"MIN {g['minuto']}'", rec)
-                    ruta = os.path.join(DIR, 'opciones', f'{gid}_{i + 1}.png')
-                    open(ruta, 'wb').write(png)
-                    resultados[i] = ruta
-                except Exception as e:
-                    print(f'[GOL] opción {i + 1}: {e}', flush=True)
-            hilos = [threading.Thread(target=una, args=(i,)) for i in range(len(POSES))]
-            for h in hilos:
-                h.start()
-            for h in hilos:
-                h.join(timeout=300)
-            rutas = [r for r in resultados if r]
-        if not rutas:
-            raise RuntimeError('la IA no ha podido generar ninguna imagen')
+        jugador = None
+        if g['tipo'] == 'nuestro' and g.get('foto_id') not in (None, 'ninguna'):
+            jugador = recorte(foto_bytes({'id': g['foto_id'], 'mod': g.get('foto_mod', '')}))
+        goleador = gi.nombre_corto(g.get('jugador_nombre') or '') if g['tipo'] == 'nuestro' else ''
+        png = gi.imagen_gol(g['resultado'], 'CLUB FUENTELARREYNA A', rival, fecha, goleador, f"MIN {g['minuto']}'", jugador)
+        with open(ruta, 'wb') as f:
+            f.write(png)
     except Exception as e:
         with _bloqueo():
             d = _leer()
@@ -465,25 +456,19 @@ def _preparar(gid):
         _texto(g['pedido_tel'], f'⚠️ No se ha podido preparar la imagen del gol: {str(e)[:150]}')
         return
     destinos = _destinos(g)
-    que = 'confirmar' if g['tipo'] == 'rival' else 'eleccion'
     with _bloqueo():
         d = _leer()
         x = _gol(d, gid)
-        x.update({'estado': 'esperando_' + que, 'opciones': rutas, 'enviado_en': datetime.now().isoformat(timespec='seconds'),
+        x.update({'estado': 'esperando_confirmar', 'opciones': [ruta], 'enviado_en': datetime.now().isoformat(timespec='seconds'),
                   'recordatorios': 0})
         for _, tel in destinos:
-            d['esperando'][_tel9(tel)] = {'gol': gid, 'que': que}
+            d['esperando'][_tel9(tel)] = {'gol': gid, 'que': 'confirmar'}
         _escribir(d)
     pre = '🧪 PRUEBA · ' if g.get('prueba') else ''
+    que = 'Gol del rival' if g['tipo'] == 'rival' else f"Gol de {(g.get('jugador_nombre') or '?').title()}"
     for _, tel in destinos:
-        if que == 'confirmar':
-            enviar_imagen(f'{_wa(tel)}@c.us', open(rutas[0], 'rb').read(),
-                          f"{pre}Gol del rival ({g['resultado']}). ¿La subo a Instagram? Responde *SÍ* o *NO*.")
-        else:
-            for i, r in enumerate(rutas):
-                enviar_imagen(f'{_wa(tel)}@c.us', open(r, 'rb').read(), f'{pre}Opción {i + 1}')
-            _texto(tel, f"{pre}⚽ Gol de {g['jugador_nombre'].title()} ({g['resultado']}). "
-                        f"¿Cuál subo? Responde con el número ({'/'.join(str(i + 1) for i in range(len(rutas)))}) o *NINGUNA*.")
+        enviar_imagen(f'{_wa(tel)}@c.us', png, f"{pre}{que} ({g['resultado']}, min {g['minuto']}). "
+                                                 f"¿La subo a Instagram? Responde *OK* o *NO*.")
 
 
 def _elegir(tel, cuerpo, usuario, gid, que):
@@ -497,23 +482,13 @@ def _elegir(tel, cuerpo, usuario, gid, que):
             quien = (g.get('elegido_por') or '').split()[0].capitalize() if g.get('elegido_por') else 'otro'
             _texto(tel, f'👌 Ya lo ha decidido {quien}: no hago nada más.')
             return True
-        if que == 'confirmar':
-            if t.startswith(('NO', 'NINGUNA')):
-                eleccion = 0
-            elif t.startswith(('SI', 'VALE', 'OK', 'SUBE')):
-                eleccion = 1
-            else:
-                _texto(tel, 'Responde *SÍ* para subirla o *NO*.')
-                return True
+        if t.startswith(('NO', 'NINGUNA')):
+            eleccion = 0
+        elif t.startswith(('OK', 'SI', 'VALE', 'SUBE', 'DALE')):
+            eleccion = 1
         else:
-            m = re.match(r'^\s*(?:LA\s+|OPCION\s+)?([1-9])\b', t)
-            if t.startswith(('NINGUNA', 'NO')):
-                eleccion = 0
-            elif m and 1 <= int(m.group(1)) <= len(g['opciones']):
-                eleccion = int(m.group(1))
-            else:
-                _texto(tel, f"Responde con el número de la opción (1-{len(g['opciones'])}) o *NINGUNA*.")
-                return True
+            _texto(tel, 'Responde *OK* para subirla o *NO*.')
+            return True
         # La primera respuesta manda: se marca dentro del bloqueo, así nunca se sube dos veces
         g.update({'estado': 'subiendo' if eleccion else 'cancelado', 'elegido_por': usuario, 'eleccion': eleccion})
         for t9 in list(d['esperando']):
@@ -550,17 +525,17 @@ def _subir(gid, eleccion, tel, otros, usuario):
         _gol(d, gid).update({'estado': 'subido' if ok else 'error', 'subido_en': datetime.now().isoformat(timespec='seconds')})
         _escribir(d)
     if g.get('prueba'):
-        txt = f'🧪 PRUEBA: se subiría la opción {eleccion} (no se ha subido nada a Instagram).'
+        txt = '🧪 PRUEBA: aquí se subiría a Instagram (no se ha subido nada).'
     else:
-        txt = (f"✅ Gol {g['resultado']} subido a la historia de Instagram (opción {eleccion})." if ok else
+        txt = (f"✅ Gol {g['resultado']} subido a la historia de Instagram." if ok else
                f'⚠️ No se ha podido subir a Instagram: {det}')
     _texto(tel, txt)
     for o in otros:
-        _texto(o, f"{txt} Lo eligió {usuario.split()[0].capitalize()}.")
+        _texto(o, f"{txt} Le dio OK {usuario.split()[0].capitalize()}.")
 
 
 def tick(ahora):
-    """Recordatorios a los 5 y 10 min si nadie elige; a los 30 min se deja sin subir."""
+    """Recordatorios a los 5 y 10 min si nadie contesta; a los 30 min se deja sin subir."""
     with _bloqueo():
         d = _leer()
         pendientes = [g for g in d['goles'] if g['estado'] in ('esperando_eleccion', 'esperando_confirmar') and g.get('enviado_en')]
@@ -577,7 +552,7 @@ def tick(ahora):
                             d['esperando'].pop(t9)
                 _escribir(d)
             for _, tel in _destinos(g):
-                _texto(tel, f"⌛ Nadie ha elegido en 30 min: el gol {g['resultado']} no se sube.")
+                _texto(tel, f"⌛ Nadie ha contestado en 30 min: el gol {g['resultado']} no se sube.")
             continue
         toca = 2 if pasado >= 10 else 1 if pasado >= 5 else 0
         if toca > g.get('recordatorios', 0):
@@ -585,9 +560,8 @@ def tick(ahora):
                 d = _leer()
                 _gol(d, g['id'])['recordatorios'] = toca
                 _escribir(d)
-            que = 'SÍ o NO' if g['tipo'] == 'rival' else 'el número de la opción'
             for _, tel in _destinos(g):
-                _texto(tel, f"⏰ Recordatorio: gol {g['resultado']} pendiente. Responde {que}.")
+                _texto(tel, f"⏰ Recordatorio: gol {g['resultado']} pendiente. Responde OK para subirlo o NO.")
 
 
 # ---------- pantalla (pestaña WHATSAPP) ----------

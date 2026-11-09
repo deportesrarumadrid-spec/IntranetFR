@@ -1,20 +1,11 @@
-"""Gol del Aficionado A en las historias de Instagram.
+"""Diseño de la historia del gol del Aficionado A (lo usa gol_live_wa.py).
 
-Parte 1 (esta): fotos de los jugadores y su celebración generada con IA, que se revisa y se aprueba en la intranet.
-- Se sube una foto de cada jugador (de cuerpo entero, con la equipación).
-- Gemini genera a ese mismo jugador celebrando un gol sobre fondo verde liso, y se le quita el verde.
-- Se aprueba (o se genera otra). En el partido se usa la aprobada, sin esperar a la IA.
-- La imagen del gol: fondo rojo con franjas y la grada con bufandas, nombres de los equipos en vertical, el jugador
-  celebrando por encima del "GOL" (ancho y en perspectiva, como un MATCH DAY), el resultado grande debajo y abajo
-  fecha · goleador · minuto. Gol del rival: lo mismo sin jugador ni "GOL", solo el resultado.
-Ficheros en datos_privados/gol/ (fotos, candidatos, aprobadas) y estado en datos_privados/gol/estado.json.
+Fondo rojo con franjas y la grada con bufandas, nombres de los equipos en vertical, el jugador celebrando (recortado,
+sin fondo) por encima del "GOL" (ancho y en perspectiva, como un MATCH DAY), el resultado grande debajo y abajo
+fecha · goleador · minuto, en una tarjeta con bordes redondeados sobre blanco. Sin jugador: solo el resultado.
 """
 import io
 import os
-import re
-import json
-import base64
-import threading
 import unicodedata
 from datetime import datetime
 from flask import Blueprint, request, jsonify, Response
@@ -22,228 +13,16 @@ from flask import Blueprint, request, jsonify, Response
 gol_bp = Blueprint('gol_ig_wa', __name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DIR = os.path.join(BASE_DIR, 'datos_privados', 'gol')
-ESTADO = os.path.join(DIR, 'estado.json')
-EQUIPO = 'AFICIONADO A'
 W, H = 1080, 1920
 F_BOLD = os.path.join(BASE_DIR, 'static', 'fonts', 'Montserrat-ExtraBold.ttf')
 F_MED = os.path.join(BASE_DIR, 'static', 'fonts', 'Montserrat-Medium.ttf')
 GRADA = os.path.join(BASE_DIR, 'static', 'img', 'gol', 'grada.jpg')
 _MESES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE']
-_lock = threading.Lock()
-
-PROMPT_CELEBRACION = (
-    "Use the person in this photo. Create a photorealistic, full-body image of the SAME person: keep exactly the same "
-    "face, facial features, hairstyle, skin tone and build, so that he is clearly recognisable. He wears exactly the "
-    "same red football kit as in the photo (same shirt with its badges and logos, same shorts, same socks and the same "
-    "boots). He is celebrating a goal with passion: running towards the camera with both arms spread wide and his "
-    "mouth open, shouting with joy. The whole body must be visible from the top of the head to the boots, nothing "
-    "cut off, centred, with some empty space around. Background: a completely flat, uniform pure chroma-key green "
-    "(#00FF00) with no shadows, no floor and no objects. Bright, even studio lighting. No text, no ball, no other people.")
 
 
 def _norm(s):
     s = unicodedata.normalize('NFD', str(s or '')).encode('ascii', 'ignore').decode()
     return ' '.join(s.upper().split())
-
-
-def _slug(nombre):
-    return re.sub(r'[^a-z0-9]+', '_', _norm(nombre).lower()).strip('_')[:60]
-
-
-def _ruta(tipo, slug):
-    ext = 'jpg' if tipo == 'foto' else 'png'
-    return os.path.join(DIR, tipo, f'{slug}.{ext}')
-
-
-def _leer():
-    try:
-        with open(ESTADO, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception:
-        return {}
-
-
-def _escribir(d):
-    os.makedirs(DIR, exist_ok=True)
-    tmp = ESTADO + '.tmp'
-    with open(tmp, 'w', encoding='utf-8') as f:
-        json.dump(d, f, ensure_ascii=False, indent=1)
-    os.replace(tmp, ESTADO)
-
-
-def _marcar(slug, **kw):
-    with _lock:
-        d = _leer()
-        d.setdefault(slug, {}).update(kw)
-        _escribir(d)
-
-
-PLANTILLA = os.path.join(DIR, 'plantilla.json')
-
-
-def jugadores():
-    """Plantilla del Aficionado A: los que han salido en las actas de la Federación esta temporada (nombre del acta,
-    'APELLIDOS, NOMBRE') más los añadidos a mano. El Aficionado A no está en la hoja JUGADORES de la intranet."""
-    try:
-        with open(PLANTILLA, 'r', encoding='utf-8') as f:
-            d = json.load(f)
-    except Exception:
-        d = {}
-    return sorted(set(d.get('acta', [])) | set(d.get('manual', [])), key=_norm)
-
-
-def _guardar_plantilla(**kw):
-    with _lock:
-        try:
-            with open(PLANTILLA, 'r', encoding='utf-8') as f:
-                d = json.load(f)
-        except Exception:
-            d = {}
-        d.update(kw)
-        os.makedirs(DIR, exist_ok=True)
-        with open(PLANTILLA, 'w', encoding='utf-8') as f:
-            json.dump(d, f, ensure_ascii=False, indent=1)
-
-
-def actualizar_plantilla():
-    """Recorre los partidos jugados del Aficionado A esta temporada y junta los jugadores de sus actas."""
-    import calendar
-    import competicion_scraper as cs
-    from alineacion_ig_wa import _sesion, COMPETICION
-    try:
-        _guardar_plantilla(actualizando=True, error='')
-        sess = _sesion()
-        cod, desde, hasta = cs._temporada_actual()
-        hoy = datetime.now().strftime('%d-%m-%Y')
-        partidos = [m for m in cs.fetch_temporada_matches(sess, cod_temporada=cod, fecha_desde=desde, fecha_hasta=hoy)
-                    if _norm(m.get('competicion')).startswith(COMPETICION)
-                    and 'FUENTELARREYNA' in _norm(f"{m.get('nombre_casa')} {m.get('nombre_fuera')}")]
-        mapas, nombres = {}, set()
-        for m in partidos:
-            dd, mm, yy = m['fecha'].split('-')
-            if (mm, yy) not in mapas:
-                ult = calendar.monthrange(int(yy), int(mm))[1]
-                mapas[(mm, yy)] = cs.fetch_codacta_map(sess, cod_temporada=cod, fecha_desde=f'01-{mm}-{yy}',
-                                                       fecha_hasta=f'{ult:02d}-{mm}-{yy}')
-            hora = (m.get('hora') or '').strip()[:5]
-            codacta = mapas[(mm, yy)].get(f"{m['fecha']}_{hora}_{m.get('cod_equipo_casa')}_{m.get('cod_equipo_fuera')}")
-            if not codacta:
-                continue
-            al = cs.fetch_alineacion_convocados(sess, codacta, True) or {}
-            lado = 'casa' if 'FUENTELARREYNA' in _norm(m.get('nombre_casa')) else 'fuera'
-            nombres |= {j['nombre'].strip() for j in al.get(lado, []) if j.get('nombre')}
-        _guardar_plantilla(acta=sorted(nombres), actualizando=False, actualizada=datetime.now().isoformat(timespec='minutes'),
-                           partidos=len(partidos))
-        print(f'[GOL] Plantilla del Aficionado A: {len(nombres)} jugadores de {len(partidos)} partidos', flush=True)
-    except Exception as e:
-        _guardar_plantilla(actualizando=False, error=str(e)[:200])
-        print(f'[GOL] Error actualizando la plantilla: {e}', flush=True)
-
-
-# ---------- IA: celebración ----------
-
-def _clave_gemini():
-    try:
-        with open(os.path.join(BASE_DIR, 'secretos.json'), encoding='utf-8') as f:
-            cfg = json.load(f)
-    except Exception:
-        cfg = {}
-    return cfg.get('gemini_api_key') or cfg.get('GEMINI_API_KEY') or os.environ.get('GEMINI_API_KEY')
-
-
-def _modelos_gemini(clave):
-    """Modelos de imagen de Gemini a probar: los que funcionaron en probar_ia_imagen.py, o todos los de imagen."""
-    try:
-        with open(os.path.join(DIR, 'modelos_imagen.json'), encoding='utf-8') as f:
-            buenos = json.load(f).get('gemini') or []
-        if buenos:
-            return buenos
-    except Exception:
-        pass
-    import requests
-    r = requests.get('https://generativelanguage.googleapis.com/v1beta/models', params={'key': clave, 'pageSize': 300}, timeout=30)
-    return sorted([m['name'] for m in r.json().get('models', [])
-                   if 'image' in m['name'] and 'generateContent' in (m.get('supportedGenerationMethods') or [])])
-
-
-def _gemini(foto_jpg, prompt):
-    import requests
-    clave = _clave_gemini()
-    if not clave:
-        raise RuntimeError('no hay clave de Gemini')
-    errores = []
-    for modelo in _modelos_gemini(clave):
-        cuerpo = {'contents': [{'parts': [{'text': prompt},
-                                          {'inline_data': {'mime_type': 'image/jpeg', 'data': base64.b64encode(foto_jpg).decode()}}]}],
-                  'generationConfig': {'responseModalities': ['TEXT', 'IMAGE'], 'imageConfig': {'aspectRatio': '9:16'}}}
-        url = f'https://generativelanguage.googleapis.com/v1beta/{modelo}:generateContent'
-        r = requests.post(url, params={'key': clave}, json=cuerpo, timeout=240)
-        if r.status_code == 400 and 'imageConfig' in r.text:  # modelos sin esa opción
-            cuerpo['generationConfig'].pop('imageConfig')
-            r = requests.post(url, params={'key': clave}, json=cuerpo, timeout=240)
-        try:
-            j = r.json()
-        except Exception:
-            j = {}
-        if r.status_code == 200:
-            for c in j.get('candidates', []):
-                for p in (c.get('content') or {}).get('parts', []):
-                    d = p.get('inline_data') or p.get('inlineData')
-                    if d:
-                        return base64.b64decode(d['data'])
-            errores.append(f'{modelo}: sin imagen')
-        else:
-            errores.append(f"{modelo}: {((j.get('error') or {}).get('message') or r.text)[:60]}")
-    raise RuntimeError('Gemini: ' + ' | '.join(errores)[:300])
-
-
-def _url_publica_jpg(jpg):
-    """La foto en una URL pública con nombre aleatorio (static/publico, se borra a los 2 días), para Pollinations."""
-    import secrets
-    from instagram_historias import PUBLICO_DIR, URL_BASE
-    os.makedirs(PUBLICO_DIR, exist_ok=True)
-    nombre = secrets.token_urlsafe(24) + '.jpg'
-    with open(os.path.join(PUBLICO_DIR, nombre), 'wb') as f:
-        f.write(jpg)
-    return f'{URL_BASE}/static/publico/{nombre}', os.path.join(PUBLICO_DIR, nombre)
-
-
-def _pollinations(foto_jpg, prompt):
-    import requests
-    from urllib.parse import quote
-    clave = os.environ.get('POLLINATIONS_KEY', '').strip()
-    if not clave:
-        raise RuntimeError('Pollinations sin clave')
-    url_foto, ruta = _url_publica_jpg(foto_jpg)
-    errores = []
-    try:
-        for modelo in ('kontext', 'klein'):
-            r = requests.get(f'https://gen.pollinations.ai/image/{quote(prompt)}',
-                             params={'model': modelo, 'image': url_foto, 'width': 720, 'height': 1280, 'nologo': 'true'},
-                             headers={'Authorization': f'Bearer {clave}'}, timeout=240)
-            if r.status_code == 200 and r.headers.get('content-type', '').startswith('image/'):
-                return r.content
-            errores.append(f'{modelo}: HTTP {r.status_code} {r.text[:80]}')
-    finally:
-        try:
-            os.remove(ruta)
-        except OSError:
-            pass
-    raise RuntimeError('Pollinations: ' + ' | '.join(errores)[:300])
-
-
-def generar_celebracion_ia(foto_jpg, prompt=None):
-    """Imagen (fondo verde) del jugador celebrando: primero Gemini (modelos gratis), si no, Pollinations."""
-    prompt = prompt or PROMPT_CELEBRACION
-    errores = []
-    for motor in (_gemini, _pollinations):
-        try:
-            return motor(foto_jpg, prompt)
-        except Exception as e:
-            errores.append(str(e))
-            print(f'[GOL] {motor.__name__}: {str(e)[:200]}', flush=True)
-    raise RuntimeError(' / '.join(errores)[:300])
 
 
 def quitar_verde(png):
@@ -258,20 +37,6 @@ def quitar_verde(png):
     out = Image.merge('RGBA', (r, g2, b, alfa))
     caja = alfa.point(lambda v: 255 if v > 128 else 0).getbbox()
     return out.crop(caja) if caja else out
-
-
-def _generar(slug, nombre):
-    try:
-        with open(_ruta('foto', slug), 'rb') as f:
-            foto = f.read()
-        recorte = quitar_verde(generar_celebracion_ia(foto))
-        os.makedirs(os.path.dirname(_ruta('candidato', slug)), exist_ok=True)
-        recorte.save(_ruta('candidato', slug))
-        _marcar(slug, generando=False, error='', candidato_en=datetime.now().isoformat(timespec='minutes'))
-        print(f'[GOL] Celebración generada: {nombre}', flush=True)
-    except Exception as e:
-        _marcar(slug, generando=False, error=str(e)[:200])
-        print(f'[GOL] Error generando {nombre}: {e}', flush=True)
 
 
 # ---------- imagen del gol ----------
@@ -442,137 +207,13 @@ def _permitido():
     return p()
 
 
-@gol_bp.route('/api/gol/jugadores')
-def api_jugadores():
-    if not _permitido():
-        return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
-    try:
-        if not os.path.exists(PLANTILLA):  # primera vez: se saca de las actas de la Federación
-            _guardar_plantilla(actualizando=True)
-            threading.Thread(target=actualizar_plantilla, daemon=True).start()
-        with open(PLANTILLA, 'r', encoding='utf-8') as f:
-            meta = json.load(f)
-        est = _leer()
-        out = []
-        for n in jugadores():
-            s = _slug(n)
-            e = est.get(s, {})
-            out.append({'nombre': n, 'corto': nombre_corto(n), 'slug': s, 'foto': os.path.exists(_ruta('foto', s)),
-                        'candidato': os.path.exists(_ruta('candidato', s)), 'aprobada': os.path.exists(_ruta('aprobada', s)),
-                        'generando': bool(e.get('generando')), 'error': e.get('error', '')})
-        return jsonify({'status': 'ok', 'jugadores': out, 'actualizando': bool(meta.get('actualizando')),
-                        'actualizada': meta.get('actualizada', ''), 'error_plantilla': meta.get('error', '')})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': f'Error en el servidor: {e}'[:250]})
-
-
-@gol_bp.route('/api/gol/plantilla', methods=['POST'])
-def api_plantilla():
-    """{'accion': 'actualizar'} → vuelve a leer las actas; {'accion': 'anadir', 'nombre': ...} → jugador a mano."""
-    if not _permitido():
-        return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
-    data = request.json or {}
-    if data.get('accion') == 'anadir':
-        nombre = ' '.join(str(data.get('nombre', '')).split()).upper()
-        if len(nombre) < 3:
-            return jsonify({'status': 'error', 'message': 'Escribe el nombre del jugador'})
-        try:
-            with open(PLANTILLA, 'r', encoding='utf-8') as f:
-                manual = json.load(f).get('manual', [])
-        except Exception:
-            manual = []
-        _guardar_plantilla(manual=sorted(set(manual) | {nombre}))
-        return jsonify({'status': 'ok'})
-    _guardar_plantilla(actualizando=True)
-    threading.Thread(target=actualizar_plantilla, daemon=True).start()
-    return jsonify({'status': 'ok', 'message': 'Leyendo las actas de la Federación…'})
-
-
-def _jugador_de(slug):
-    return next((n for n in jugadores() if _slug(n) == slug), None)
-
-
-@gol_bp.route('/api/gol/foto', methods=['POST'])
-def api_foto():
-    """Sube la foto de un jugador (se gira según el móvil y se reduce a 2000 px)."""
-    if not _permitido():
-        return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
-    from PIL import Image, ImageOps
-    slug = request.form.get('slug', '')
-    f = request.files.get('foto')
-    if not f or not _jugador_de(slug):
-        return jsonify({'status': 'error', 'message': 'Falta la foto o el jugador'})
-    try:
-        im = ImageOps.exif_transpose(Image.open(f.stream)).convert('RGB')
-        im.thumbnail((2000, 2000))
-        os.makedirs(os.path.dirname(_ruta('foto', slug)), exist_ok=True)
-        im.save(_ruta('foto', slug), quality=92)
-        return jsonify({'status': 'ok'})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': f'No se pudo guardar la foto: {e}'[:200]})
-
-
-@gol_bp.route('/api/gol/generar', methods=['POST'])
-def api_generar():
-    """Genera (en segundo plano) la celebración con IA a partir de la foto."""
-    if not _permitido():
-        return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
-    slug = (request.json or {}).get('slug', '')
-    nombre = _jugador_de(slug)
-    if not nombre or not os.path.exists(_ruta('foto', slug)):
-        return jsonify({'status': 'error', 'message': 'Primero sube la foto del jugador'})
-    if _leer().get(slug, {}).get('generando'):
-        return jsonify({'status': 'ok', 'message': 'Ya se está generando'})
-    _marcar(slug, generando=True, error='')
-    threading.Thread(target=_generar, args=(slug, nombre), daemon=True).start()
-    return jsonify({'status': 'ok', 'message': 'Generando… tarda 20-60 segundos'})
-
-
-@gol_bp.route('/api/gol/aprobar', methods=['POST'])
-def api_aprobar():
-    if not _permitido():
-        return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
-    slug = (request.json or {}).get('slug', '')
-    if not os.path.exists(_ruta('candidato', slug)):
-        return jsonify({'status': 'error', 'message': 'No hay celebración generada'})
-    os.makedirs(os.path.dirname(_ruta('aprobada', slug)), exist_ok=True)
-    os.replace(_ruta('candidato', slug), _ruta('aprobada', slug))
-    _marcar(slug, aprobada_en=datetime.now().isoformat(timespec='minutes'))
-    return jsonify({'status': 'ok'})
-
-
-@gol_bp.route('/api/gol/img/<tipo>/<slug>')
-def api_img(tipo, slug):
-    """Foto, celebración candidata o aprobada (solo para la pantalla de la intranet)."""
-    if not _permitido():
-        return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
-    if tipo not in ('foto', 'candidato', 'aprobada') or not re.fullmatch(r'[a-z0-9_]+', slug or ''):
-        return jsonify({'status': 'error'}), 404
-    ruta = _ruta(tipo, slug)
-    if not os.path.exists(ruta):
-        return jsonify({'status': 'error'}), 404
-    with open(ruta, 'rb') as f:
-        return Response(f.read(), mimetype='image/jpeg' if tipo == 'foto' else 'image/png', headers={'Cache-Control': 'no-store'})
-
-
 @gol_bp.route('/api/gol/vista')
 def api_vista():
-    """La historia del gol con ese jugador (candidata o aprobada), con datos de ejemplo. ?slug=…&tipo=candidato|aprobada|rival"""
+    """Ejemplo de la historia del gol del rival (solo resultado)."""
     if not _permitido():
         return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
-    from PIL import Image
-    slug, tipo = request.args.get('slug', ''), request.args.get('tipo', 'aprobada')
     try:
-        hoy = datetime.now().date()
-        if tipo == 'rival':
-            png = imagen_gol('1-1', 'CLUB FUENTELARREYNA A', 'RIVAL DE EJEMPLO', fecha_txt(hoy))
-        else:
-            nombre = _jugador_de(slug)
-            ruta = _ruta(tipo if tipo in ('candidato', 'aprobada') else 'aprobada', slug)
-            if not nombre or not os.path.exists(ruta):
-                return jsonify({'status': 'error', 'message': 'No hay celebración de ese jugador'})
-            png = imagen_gol('1-0', 'CLUB FUENTELARREYNA A', 'RIVAL DE EJEMPLO', fecha_txt(hoy), nombre_corto(nombre),
-                             "MIN 34'", Image.open(ruta))
+        png = imagen_gol('1-1', 'CLUB FUENTELARREYNA A', 'RIVAL DE EJEMPLO', fecha_txt(datetime.now().date()), '', "MIN 34'")
         return Response(png, mimetype='image/png', headers={'Cache-Control': 'no-store'})
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Error en el servidor: {e}'[:250]})
