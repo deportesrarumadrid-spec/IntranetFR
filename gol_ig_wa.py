@@ -79,10 +79,66 @@ def _marcar(slug, **kw):
         _escribir(d)
 
 
+PLANTILLA = os.path.join(DIR, 'plantilla.json')
+
+
 def jugadores():
-    """Plantilla actual del Aficionado A (sin bajas), en el orden de la hoja JUGADORES."""
-    from app import _plantillas_actuales
-    return _plantillas_actuales().get(EQUIPO.lower(), [])
+    """Plantilla del Aficionado A: los que han salido en las actas de la Federación esta temporada (nombre del acta,
+    'APELLIDOS, NOMBRE') más los añadidos a mano. El Aficionado A no está en la hoja JUGADORES de la intranet."""
+    try:
+        with open(PLANTILLA, 'r', encoding='utf-8') as f:
+            d = json.load(f)
+    except Exception:
+        d = {}
+    return sorted(set(d.get('acta', [])) | set(d.get('manual', [])), key=_norm)
+
+
+def _guardar_plantilla(**kw):
+    with _lock:
+        try:
+            with open(PLANTILLA, 'r', encoding='utf-8') as f:
+                d = json.load(f)
+        except Exception:
+            d = {}
+        d.update(kw)
+        os.makedirs(DIR, exist_ok=True)
+        with open(PLANTILLA, 'w', encoding='utf-8') as f:
+            json.dump(d, f, ensure_ascii=False, indent=1)
+
+
+def actualizar_plantilla():
+    """Recorre los partidos jugados del Aficionado A esta temporada y junta los jugadores de sus actas."""
+    import calendar
+    import competicion_scraper as cs
+    from alineacion_ig_wa import _sesion, COMPETICION
+    try:
+        _guardar_plantilla(actualizando=True, error='')
+        sess = _sesion()
+        cod, desde, hasta = cs._temporada_actual()
+        hoy = datetime.now().strftime('%d-%m-%Y')
+        partidos = [m for m in cs.fetch_temporada_matches(sess, cod_temporada=cod, fecha_desde=desde, fecha_hasta=hoy)
+                    if _norm(m.get('competicion')).startswith(COMPETICION)
+                    and 'FUENTELARREYNA' in _norm(f"{m.get('nombre_casa')} {m.get('nombre_fuera')}")]
+        mapas, nombres = {}, set()
+        for m in partidos:
+            dd, mm, yy = m['fecha'].split('-')
+            if (mm, yy) not in mapas:
+                ult = calendar.monthrange(int(yy), int(mm))[1]
+                mapas[(mm, yy)] = cs.fetch_codacta_map(sess, cod_temporada=cod, fecha_desde=f'01-{mm}-{yy}',
+                                                       fecha_hasta=f'{ult:02d}-{mm}-{yy}')
+            hora = (m.get('hora') or '').strip()[:5]
+            codacta = mapas[(mm, yy)].get(f"{m['fecha']}_{hora}_{m.get('cod_equipo_casa')}_{m.get('cod_equipo_fuera')}")
+            if not codacta:
+                continue
+            al = cs.fetch_alineacion_convocados(sess, codacta, True) or {}
+            lado = 'casa' if 'FUENTELARREYNA' in _norm(m.get('nombre_casa')) else 'fuera'
+            nombres |= {j['nombre'].strip() for j in al.get(lado, []) if j.get('nombre')}
+        _guardar_plantilla(acta=sorted(nombres), actualizando=False, actualizada=datetime.now().isoformat(timespec='minutes'),
+                           partidos=len(partidos))
+        print(f'[GOL] Plantilla del Aficionado A: {len(nombres)} jugadores de {len(partidos)} partidos', flush=True)
+    except Exception as e:
+        _guardar_plantilla(actualizando=False, error=str(e)[:200])
+        print(f'[GOL] Error actualizando la plantilla: {e}', flush=True)
 
 
 # ---------- IA: celebración ----------
@@ -317,9 +373,12 @@ def fecha_txt(d):
 
 
 def nombre_corto(nombre):
-    """'JUAN PEREZ GARCIA 600123123' → 'JUAN PÉREZ' (nombre y primer apellido, sin teléfonos)."""
+    """Nombre del acta 'GIMENEZ DEL CASTILLO, JAIME' → 'JAIME GIMENEZ'; escrito a mano, tal cual (sin teléfonos)."""
+    if ',' in str(nombre):
+        from alineacion_ig_wa import nombre_corto as nc
+        return nc(nombre)
     palabras = [w for w in str(nombre).split() if not any(c.isdigit() for c in w)]
-    return ' '.join(palabras[:2]).upper()
+    return ' '.join(palabras[:3]).upper()
 
 
 # ---------- pantalla (pestaña WHATSAPP) ----------
@@ -334,17 +393,45 @@ def api_jugadores():
     if not _permitido():
         return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
     try:
+        if not os.path.exists(PLANTILLA):  # primera vez: se saca de las actas de la Federación
+            _guardar_plantilla(actualizando=True)
+            threading.Thread(target=actualizar_plantilla, daemon=True).start()
+        with open(PLANTILLA, 'r', encoding='utf-8') as f:
+            meta = json.load(f)
         est = _leer()
         out = []
         for n in jugadores():
             s = _slug(n)
             e = est.get(s, {})
-            out.append({'nombre': n, 'slug': s, 'foto': os.path.exists(_ruta('foto', s)),
+            out.append({'nombre': n, 'corto': nombre_corto(n), 'slug': s, 'foto': os.path.exists(_ruta('foto', s)),
                         'candidato': os.path.exists(_ruta('candidato', s)), 'aprobada': os.path.exists(_ruta('aprobada', s)),
                         'generando': bool(e.get('generando')), 'error': e.get('error', '')})
-        return jsonify({'status': 'ok', 'jugadores': out})
+        return jsonify({'status': 'ok', 'jugadores': out, 'actualizando': bool(meta.get('actualizando')),
+                        'actualizada': meta.get('actualizada', ''), 'error_plantilla': meta.get('error', '')})
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Error en el servidor: {e}'[:250]})
+
+
+@gol_bp.route('/api/gol/plantilla', methods=['POST'])
+def api_plantilla():
+    """{'accion': 'actualizar'} → vuelve a leer las actas; {'accion': 'anadir', 'nombre': ...} → jugador a mano."""
+    if not _permitido():
+        return jsonify({'status': 'error', 'message': 'Sin permiso'}), 403
+    data = request.json or {}
+    if data.get('accion') == 'anadir':
+        nombre = ' '.join(str(data.get('nombre', '')).split()).upper()
+        if len(nombre) < 3:
+            return jsonify({'status': 'error', 'message': 'Escribe el nombre del jugador'})
+        try:
+            with open(PLANTILLA, 'r', encoding='utf-8') as f:
+                manual = json.load(f).get('manual', [])
+        except Exception:
+            manual = []
+        _guardar_plantilla(manual=sorted(set(manual) | {nombre}))
+        return jsonify({'status': 'ok'})
+    _guardar_plantilla(actualizando=True)
+    threading.Thread(target=actualizar_plantilla, daemon=True).start()
+    return jsonify({'status': 'ok', 'message': 'Leyendo las actas de la Federación…'})
 
 
 def _jugador_de(slug):
