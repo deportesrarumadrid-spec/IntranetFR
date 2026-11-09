@@ -4216,6 +4216,7 @@ from informe_veo import informe_veo_bp
 from resumen_mensual import mensual_bp
 from agenda_finde import agenda_bp
 from instagram_historias import instagram_bp
+from impresion_clasif import impresion_bp
 from loteria import loteria_bp
 app.register_blueprint(financiero_bp)
 app.register_blueprint(loteria_bp)
@@ -4248,6 +4249,7 @@ app.register_blueprint(informe_veo_bp)
 app.register_blueprint(mensual_bp)
 app.register_blueprint(agenda_bp)
 app.register_blueprint(instagram_bp)
+app.register_blueprint(impresion_bp)
 
 # --- SEGUIMIENTO COORD ENTRENAMIENTOS ---
 _SEG_COORD_FILE = os.path.join('static', 'data', 'seguimiento_coord_comentarios.json')

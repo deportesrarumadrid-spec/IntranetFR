@@ -285,8 +285,15 @@ function pollAutoSyncStatus() {
         })
         .catch(function() {});
 }
+{% if autoprint %}
+// Impresión automática desde el PC de la oficina: imprime al cargar y cierra la ventana
+window.addEventListener('load', function () {
+    setTimeout(function () { window.print(); setTimeout(function () { window.close(); }, 3000); }, 1500);
+});
+{% else %}
 pollAutoSyncStatus();
 setInterval(pollAutoSyncStatus, 4000);
+{% endif %}
 </script>
 </body>
 </html>

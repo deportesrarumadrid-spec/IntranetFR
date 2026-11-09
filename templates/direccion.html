@@ -2288,6 +2288,18 @@
                         <div id="igEstado" style="margin-top:8px; font-size:11px; font-weight:700;"></div>
                     </div>
                 </div>
+                <div class="card-coord" style="padding:16px;">
+                    <div style="font-size:12px; font-weight:900; color:#1e293b; margin-bottom:8px;">IMPRESIÓN DE CLASIFICACIONES (OFICINA)</div>
+                    <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
+                        El PC de la oficina imprime solo en la <b>Canon iX6800</b> todas las clasificaciones (como "Descargar clasificaciones")
+                        el <b>lunes desde las 15:00</b> o, si no, el <b>martes</b>, en cuanto el PC esté encendido. Si la impresora está apagada,
+                        avisa por WhatsApp a Rubén Pozón y Raúl Lucas, y se imprime al encenderla. Al imprimirse llega un ✅.</div>
+                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                        <button onclick="impCopiar()" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-copy"></i> COPIAR COMANDO DE INSTALACIÓN</button>
+                        <button onclick="impPrueba()" style="background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fas fa-print"></i> IMPRIMIR AHORA (PRUEBA)</button>
+                    </div>
+                    <div id="impEstado" style="margin-top:8px; font-size:11px; font-weight:700;"></div>
+                </div>
             </div>
         </div>
         <style>
@@ -2363,6 +2375,7 @@
         ivCargar();
         rmCargar();
         igCargar();
+        impCargar();
         if (_waPersonas.length || _waGrupos.length) return;
         const lista = document.getElementById('waLista');
         lista.innerHTML = '<div style="padding:14px; color:#94a3b8; font-size:12px;">Cargando...</div>';
@@ -2870,6 +2883,34 @@
         } catch (e) { alert('Error al guardar'); }
     }
     // ---- Agenda del finde ----
+    let _impComando = '';
+    async function impCargar(post) {
+        const box = document.getElementById('impEstado');
+        try {
+            const d = await (await fetch('/api/impresion', post ? { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(post) } : {})).json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            _impComando = d.comando;
+            const fe = x => x ? x.slice(8, 10) + '/' + x.slice(5, 7) + ' ' + x.slice(11, 16) : '';
+            const vivo = d.ultimo_contacto && (Date.now() - new Date(d.ultimo_contacto).getTime()) < 15 * 60000;
+            box.innerHTML = (d.ultimo_contacto
+                    ? (vivo ? '<span style="color:#16a34a;">✓ PC de la oficina conectado</span>'
+                            : `<span style="color:#64748b;">PC de la oficina visto por última vez el ${fe(d.ultimo_contacto)}</span>`)
+                    : '<span style="color:#d97706;">Aún no está instalado en el PC de la oficina</span>')
+                + (d.ultima_impresion ? `<div style="color:#64748b; font-weight:600; margin-top:4px;">Última impresión: ${fe(d.ultima_impresion)}</div>` : '')
+                + (d.prueba ? '<div style="color:#d97706; margin-top:4px;">🧪 Prueba pendiente: se imprimirá en menos de 5 minutos si el PC y la impresora están encendidos.</div>' : '')
+                + (d.ultimo_error ? `<div style="color:#ef4444; font-weight:600; margin-top:4px;">Último error: ${_waEsc(d.ultimo_error)}</div>` : '');
+        } catch (e) { box.innerHTML = `<span style="color:#ef4444;">${_waEsc(e.message || 'Error')}</span>`; }
+    }
+    async function impCopiar() {
+        if (!_impComando) await impCargar();
+        try { await navigator.clipboard.writeText(_impComando); alert('Comando copiado. Pégalo en PowerShell en el PC de la oficina y pulsa Enter (debe salir INSTALADO).'); }
+        catch (e) { prompt('Copia este comando y pégalo en PowerShell:', _impComando); }
+    }
+    async function impPrueba() {
+        if (!confirm('¿Imprimir ahora las clasificaciones en la oficina? (Los WhatsApp de la prueba solo te llegan a ti)')) return;
+        impCargar({ accion: 'prueba' });
+    }
     async function igCargar(post) {
         const box = document.getElementById('igEstado');
         try {

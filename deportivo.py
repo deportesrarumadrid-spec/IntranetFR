@@ -2105,13 +2105,18 @@ def clasificaciones():
 @deportivo_bp.route('/clasificaciones/pdf')
 def clasificaciones_pdf():
     usuario = session.get('usuario')
-    if not usuario:
+    # El PC de la oficina entra con su clave para imprimir solo (impresion_clasif.py)
+    from impresion_clasif import clave as _clave_impresion
+    import hmac
+    autoprint = bool(request.args.get('k')) and hmac.compare_digest(request.args.get('k', ''), _clave_impresion())
+    if not usuario and not autoprint:
         return redirect('/')
 
     from competicion_scraper import load_cached_data, _rival_coincide, intentar_autosync_background
     from datetime import datetime, timedelta
 
-    intentar_autosync_background()
+    if not autoprint:
+        intentar_autosync_background()
     cache = load_cached_data()
     equipos_pdf = []
 
@@ -2231,7 +2236,8 @@ def clasificaciones_pdf():
                            equipos=equipos_pdf,
                            last_updated=cache.get('last_updated', ''),
                            fecha_param=fecha_param,
-                           finde_label=finde_label)
+                           finde_label=finde_label,
+                           autoprint=autoprint and request.args.get('autoprint') == '1')
 
 
 @deportivo_bp.route('/api/sincronizar_rffm', methods=['POST'])
