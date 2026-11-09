@@ -604,14 +604,15 @@ def tick(ahora):
     for g in pendientes:
         pasado = (ahora - datetime.fromisoformat(g['enviado_en'])).total_seconds() / 60
         if pasado >= 30:
-            with _bloqueo():
+            with _bloqueo():  # se comprueba y se marca dentro del bloqueo: si dos procesos llegan a la vez, avisa uno
                 d = _leer()
                 x = _gol(d, g['id'])
-                if x['estado'].startswith('esperando'):
-                    x['estado'] = 'caducado'
-                    for t9 in list(d['esperando']):
-                        if d['esperando'][t9].get('gol') == g['id']:
-                            d['esperando'].pop(t9)
+                if not x['estado'].startswith('esperando'):
+                    continue
+                x['estado'] = 'caducado'
+                for t9 in list(d['esperando']):
+                    if d['esperando'][t9].get('gol') == g['id']:
+                        d['esperando'].pop(t9)
                 _escribir(d)
             for _, tel in _destinos(g):
                 _texto(tel, f"⌛ Nadie ha contestado en 30 min: el gol {g['resultado']} no se sube.")
@@ -620,7 +621,10 @@ def tick(ahora):
         if toca > g.get('recordatorios', 0):
             with _bloqueo():
                 d = _leer()
-                _gol(d, g['id'])['recordatorios'] = toca
+                x = _gol(d, g['id'])
+                if toca <= x.get('recordatorios', 0) or not x['estado'].startswith('esperando'):
+                    continue  # ya lo ha mandado otro proceso
+                x['recordatorios'] = toca
                 _escribir(d)
             for _, tel in _destinos(g):
                 _texto(tel, f"⏰ Recordatorio: gol {g['resultado']} pendiente. Responde OK para subirlo o NO.")
