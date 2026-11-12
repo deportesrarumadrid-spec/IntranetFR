@@ -172,6 +172,8 @@ def _rachas(filas, equipo_n, lista_bajas=None):
             continue
         if jug:
             est = r[4].strip().upper()
+            if est == 'NO' and len(r) > 6 and r[6].strip():
+                est = 'NO_NOTA'  # NO con nota (motivo apuntado): no cuenta como falta sin justificar
             prev = estado.get((jug, f))
             if prev is None or (prev[1] == 'NO' and est != 'NO'):  # mismo día repetido: cuenta si alguna vez no fue NO
                 estado[(jug, f)] = (r[2].strip(), est)
@@ -343,6 +345,19 @@ def tick(ahora):
     d = _leer()
     if not d.get('activo'):
         return
+    # Respuestas ya recibidas que aún no están en la lista de asistencias (las anteriores a este cambio)
+    if ahora.minute % 30 == 15:
+        for clave, c in list(d['casos'].items()):
+            if c['estado'] == 'respondido' and not c.get('prueba') and not c.get('apuntado') and c.get('respuesta'):
+                try:
+                    n = apuntar_en_asistencias(c['equipo'], c['jugador'], c['fechas'], c['respuesta'])
+                    with _lock:
+                        d2 = _leer()
+                        d2['casos'][clave]['apuntado'] = True
+                        _escribir(d2)
+                    print(f"[FALTAS] Motivo de {c['jugador']} apuntado en asistencias ({n} cambios)", flush=True)
+                except Exception as e:
+                    print(f"[FALTAS] apuntar {c['jugador']}: {e}", flush=True)
     # Si aún no se ha enviado el aviso de revisión, se envía solo a las 10:00 (de lunes a sábado)
     if d.get('preguntar_desde') == 'tras_revision' and (ahora.hour, ahora.minute) == (10, 0) and ahora.weekday() != 6:
         try:
@@ -437,6 +452,39 @@ def procesar_texto(tel, cuerpo, rep_id, usuario):
     return True
 
 
+def apuntar_en_asistencias(equipo, jugador, fechas, texto):
+    """En la lista de asistencias, esos días del jugador pasan de NO a AV y el motivo se añade a la nota
+    (OBSERVACIONES), detrás de lo que ya hubiera. Devuelve cuántas filas ha cambiado."""
+    import app
+    if not texto.strip():
+        return 0
+    with app._asis_lock():
+        ws = app.client.open(app.NOMBRE_EXCEL).worksheet('ASISTENCIAS')
+        filas = ws.get_all_values()
+        cab = [h.strip().upper() for h in filas[0]]
+        i_est, i_obs = cab.index('ESTADO'), cab.index('OBSERVACIONES')
+        objetivo = {f[:10] for f in fechas}
+        cambios = []
+        for n, r in enumerate(filas[1:], start=2):
+            if len(r) <= 2 or r[0].strip()[:10] not in objetivo or _norm(r[1]) != _norm(equipo) or _norm(r[2]) != _norm(jugador):
+                continue
+            obs = r[i_obs].strip() if len(r) > i_obs else ''
+            if texto.strip() in obs:
+                continue  # ya apuntado
+            cambios.append({'range': gspread_a1(n, i_obs + 1), 'values': [[f'{obs} | {texto.strip()}' if obs else texto.strip()]]})
+            if (r[i_est].strip().upper() if len(r) > i_est else '') == 'NO':
+                cambios.append({'range': gspread_a1(n, i_est + 1), 'values': [['AV']]})
+        if cambios:
+            ws.batch_update(cambios)
+            app._asis_cache.clear()
+    return len(cambios)
+
+
+def gspread_a1(fila, col):
+    from gspread.utils import rowcol_to_a1
+    return rowcol_to_a1(fila, col)
+
+
 def _responder(clave, respuesta, usuario, tel):
     """Guarda la respuesta, la apunta en AUSENCIAS SIN JUSTIFICAR, la reenvía y contesta 👌."""
     from whatsapp_envios import enviar_por_waha
@@ -455,6 +503,16 @@ def _responder(clave, respuesta, usuario, tel):
             guardar_motivo_dia('asistencia', c['equipo'], c['jugador'], f, respuesta[:500], usuario)
         except Exception as e:
             print(f"[FALTAS] guardar motivo: {e}", flush=True)
+    if not c.get('prueba'):
+        try:
+            apuntar_en_asistencias(c['equipo'], c['jugador'], c['fechas'], respuesta[:500])
+            with _lock:
+                d = _leer()
+                if clave in d['casos']:
+                    d['casos'][clave]['apuntado'] = True
+                    _escribir(d)
+        except Exception as e:
+            print(f"[FALTAS] apuntar en asistencias: {e}", flush=True)
     fechas_txt = ' y '.join(f[:5] for f in c['fechas'])
     texto = (f"Motivo falta · {_nombre(c['jugador'])} ({_bonito(c['equipo'])}) · {fechas_txt}\n"
              f"{usuario.split()[0].capitalize()}: \"{respuesta.strip()}\"")
