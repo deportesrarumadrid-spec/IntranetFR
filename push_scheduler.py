@@ -383,6 +383,12 @@ def _loop(flask_app):
                 gol_live_wa.tick(now)
             except Exception as e:
                 print(f"[SCHED] Goles: {e}", flush=True)
+            # TV del almacén: aviso si deja de dar señales
+            try:
+                import tv_almacen
+                tv_almacen.tick(now)
+            except Exception as e:
+                print(f"[SCHED] TV: {e}", flush=True)
 
         except Exception as e:
             print(f"[SCHED LOOP] {e}", flush=True)

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TV almacén</title>
+<style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    #img { width: 100vw; height: 100vh; object-fit: contain; display: block; }
+    #msg { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+           color: #94a3b8; font: 24px Arial, sans-serif; }
+</style>
+</head>
+<body>
+<img id="img" alt="">
+<div id="msg">Cargando clasificaciones…</div>
+<script src="/static/js/ida_vuelta.js"></script>
+<script>
+var K = {{ k|tojson }};
+var huella = '';
+
+function hash(txt) {
+    var h = 0;
+    for (var i = 0; i < txt.length; i++) { h = (h * 31 + txt.charCodeAt(i)) | 0; }
+    return String(h >>> 0);
+}
+
+function senal() {
+    fetch('/api/tv/senal?k=' + K, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                     body: JSON.stringify({ huella: huella }) }).catch(function () {});
+}
+
+function cargar() {
+    fetch('/api/tv/datos?k=' + K, { cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            if (d.status !== 'ok' || !d.partidos || !d.partidos.length) return;
+            var h = hash(JSON.stringify(d.partidos));
+            if (h !== huella) {
+                document.getElementById('img').src = idaVueltaCanvas(d.partidos).toDataURL('image/png');
+                document.getElementById('msg').style.display = 'none';
+                huella = h;
+            }
+        })
+        .catch(function () {})
+        .then(senal);
+}
+
+cargar();
+setInterval(cargar, 10 * 60 * 1000);
+// Recarga completa una vez al día (por si se actualiza la página)
+setTimeout(function () { location.reload(); }, 24 * 60 * 60 * 1000);
+</script>
+</body>
+</html>
