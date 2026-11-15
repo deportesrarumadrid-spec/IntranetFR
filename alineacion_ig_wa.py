@@ -301,7 +301,8 @@ def _escudo_en(img, escudo, cx, cy, lado):
     from PIL import Image
     e = escudo.convert('RGBA')
     e = e.crop(e.getbbox() or (0, 0, e.width, e.height))
-    e.thumbnail((lado, lado), Image.LANCZOS)
+    k = min(lado / e.width, lado / e.height)  # también agranda los pequeños: todos a la misma altura
+    e = e.resize((max(1, round(e.width * k)), max(1, round(e.height * k))), Image.LANCZOS)
     img.alpha_composite(e, (int(cx - e.width / 2), int(cy - e.height / 2)))
 
 
