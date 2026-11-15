@@ -402,9 +402,10 @@ def publicar(p, datos, solo_whatsapp=False):
     png = imagen_elegida(p, datos)
     tel = _tel_ruben()
     if solo_whatsapp:
-        if tel:
-            enviar_imagen(f'{tel}@c.us', png, f'🧪 PRUEBA alineación vs {rival} (no se ha subido a Instagram)')
-        return True, 'Imagen enviada a Rubén Pozón'
+        if not tel:
+            return False, 'No encuentro el teléfono de Rubén Pozón en PERFILES'
+        ok, det = enviar_imagen(f'{tel}@c.us', png, f'🧪 PRUEBA alineación vs {rival} (no se ha subido a Instagram)')
+        return (True, 'Imagen enviada a Rubén Pozón') if ok else (False, det)
     try:
         from instagram_historias import subir_historia
         ok, det = subir_historia(png)
@@ -530,7 +531,9 @@ def api_prueba():
         datos = alineacion(p, sess)
         if not datos:
             return jsonify({'status': 'error', 'message': f"La Federación no tiene la alineación del {p['fecha']}"})
-        publicar(p, datos, solo_whatsapp=True)
+        ok, det = publicar(p, datos, solo_whatsapp=True)
+        if not ok:
+            return jsonify({'status': 'error', 'message': det})
         return jsonify({'status': 'ok', 'message': f"Enviada a Rubén Pozón la alineación del {p['fecha']} vs {datos[0]}"})
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Error en el servidor: {e}'[:250]})
