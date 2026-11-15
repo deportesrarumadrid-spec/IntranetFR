@@ -133,6 +133,202 @@ def imagen(rival, titulares, suplentes):
     return buf.getvalue()
 
 
+# ---------- imagen con fotos (modelo nuevo) ----------
+# Plantilla con 12 huecos (3 filas × 4): 11 titulares en el orden del acta + el entrenador. Foto del jugador sin fondo
+# encima de cada barra blanca, dorsal arriba a la derecha y "NOMBRE APELLIDO" en la barra; abajo los escudos (primero
+# el local) y los suplentes. Las fotos están en la carpeta de Drive "FOTOS ALINEACION AFICIONADO A", con el nombre que
+# va en la barra ("ISAAC TORRES.jpg"); se cruzan con el acta por nombre + primer apellido.
+
+PLANTILLA_FOTOS = os.path.join(BASE_DIR, 'static', 'img', 'alineacion', 'plantilla_fotos.png')
+CARPETA_FOTOS = '1AkPbk4nlahVx_QiRsAzk-tPi2ScvA_36'  # creada una vez a mano: no crear otra desde aquí
+ENTRENADOR = 'ERNESTO LOPEZ'
+ESCUDO_CLUB = os.path.join(BASE_DIR, 'static', 'ESCUDO SIN FONDO.png')
+DIR = os.path.join(BASE_DIR, 'datos_privados', 'alineacion')
+COLUMNAS = [(34, 281), (288, 536), (543, 791), (799, 1046)]
+BARRAS = [(457, 512), (808, 863), (1159, 1215)]
+ALTO_FOTO = 295
+_recortando = False
+
+
+def fotos():
+    """[{'id', 'nombre', 'mod'}] de la carpeta de fotos de la alineación."""
+    from gol_live_wa import _drive
+    r = _drive().get('https://www.googleapis.com/drive/v3/files', params={
+        'q': f"'{CARPETA_FOTOS}' in parents and trashed=false and mimeType contains 'image/'",
+        'fields': 'files(id,name,modifiedTime)', 'pageSize': 300})
+    r.raise_for_status()
+    return [{'id': f['id'], 'mod': f.get('modifiedTime', ''),
+             'nombre': ' '.join(os.path.splitext(f['name'])[0].replace('_', ' ').split()).upper()}
+            for f in r.json().get('files', [])]
+
+
+def foto_de(nombre_acta, lista):
+    """Foto del jugador del acta ('TORRES MARTIN, PEDRO ISAAC' ↔ 'ISAAC TORRES'): uno de sus nombres + el principio
+    de sus apellidos."""
+    if ',' not in nombre_acta:
+        return next((f for f in lista if _norm(f['nombre']) == _norm(nombre_acta)), None)
+    ape, nom = [_norm(x).split() for x in nombre_acta.split(',', 1)]
+    for f in lista:
+        w = _norm(f['nombre']).split()
+        if len(w) >= 2 and w[0] in nom and ape[:len(w) - 1] == w[1:]:
+            return f
+    return None
+
+
+def _ruta_recorte(f):
+    return os.path.join(DIR, 'recortes', f"{f['id']}_{''.join(c for c in f.get('mod', '') if c.isdigit())}.png")
+
+
+def recorte_de(f):
+    from gol_live_wa import recorte, foto_bytes
+    return recorte(foto_bytes(f), _ruta_recorte(f))
+
+
+def preparar_recortes():
+    """Quita el fondo a una foto nueva de la carpeta (las demás en las siguientes llamadas)."""
+    for f in fotos():
+        ruta = _ruta_recorte(f)
+        if not os.path.exists(ruta) and not os.path.exists(ruta + '.error'):
+            try:
+                recorte_de(f)
+                print(f"[ALINEACION] Fondo quitado: {f['nombre']}", flush=True)
+            except Exception as e:
+                print(f"[ALINEACION] Fondo de {f['nombre']}: {e}", flush=True)
+                os.makedirs(os.path.dirname(ruta), exist_ok=True)
+                open(ruta + '.error', 'w').write(str(e)[:300])
+            return
+
+
+def _escudo_rival(rival):
+    """Imagen (RGBA) del escudo del rival sacada de las clasificaciones de la Federación que guarda la intranet."""
+    import hashlib
+    from PIL import Image
+    from competicion_scraper import load_cached_data, get_session
+    url = ''
+    for eq in (load_cached_data() or {}).get('equipos', []):
+        for it in eq.get('clasificacion') or []:
+            if _rival(it.get('equipo', '')) == rival and it.get('shield'):
+                url = it['shield']
+        for p in eq.get('calendario') or []:
+            if not url and _rival(p.get('rival', '')) == rival and p.get('rival_shield'):
+                url = p['rival_shield']
+        if url:
+            break
+    if not url:
+        return None
+    if url.startswith('/static/'):
+        return Image.open(os.path.join(BASE_DIR, url.lstrip('/'))).convert('RGBA')
+    ruta = os.path.join(DIR, 'escudos', hashlib.md5(url.encode()).hexdigest() + '.png')
+    if not os.path.exists(ruta):
+        r = get_session().get(url, timeout=15)
+        im = Image.open(io.BytesIO(r.content)).convert('RGBA')  # si no es una imagen, falla aquí
+        os.makedirs(os.path.dirname(ruta), exist_ok=True)
+        im.save(ruta)
+    return Image.open(ruta).convert('RGBA')
+
+
+def _pegar_jugador(img, rec, x0, x1, y_bar):
+    """Cabeza y tronco del jugador recortado, de pie sobre la barra y sin salirse de su hueco."""
+    from PIL import Image
+    W, H = rec.size
+    alto = int(H * 0.46) if H > 2.1 * W else min(H, int(W * 1.35))  # cuerpo entero → de cintura para arriba
+    parte = rec.crop((0, 0, W, alto))
+    parte = parte.crop(parte.getbbox() or (0, 0, W, alto))
+    ancho_c, alto_c = x1 - x0, ALTO_FOTO
+    s = (alto_c - 14) / parte.height
+    if parte.width * s > ancho_c * 1.3:  # brazos muy abiertos: que no se quede diminuto
+        s = ancho_c * 1.3 / parte.width
+    parte = parte.resize((max(1, int(parte.width * s)), max(1, int(parte.height * s))), Image.LANCZOS)
+    celda = Image.new('RGBA', (ancho_c, alto_c), (0, 0, 0, 0))
+    celda.alpha_composite(parte, ((ancho_c - parte.width) // 2, alto_c - parte.height)) if parte.width <= ancho_c else \
+        celda.alpha_composite(parte.crop(((parte.width - ancho_c) // 2, 0, (parte.width - ancho_c) // 2 + ancho_c, parte.height)),
+                              (0, alto_c - parte.height))
+    img.alpha_composite(celda, (x0, y_bar - alto_c))
+
+
+def _escudo_en(img, escudo, cx, cy, lado):
+    from PIL import Image
+    e = escudo.convert('RGBA')
+    e = e.crop(e.getbbox() or (0, 0, e.width, e.height))
+    e.thumbnail((lado, lado), Image.LANCZOS)
+    img.alpha_composite(e, (int(cx - e.width / 2), int(cy - e.height / 2)))
+
+
+def imagen_fotos(rival, titulares, suplentes, local=True, escudo_rival=None, lista_fotos=None):
+    """PNG 1080x1920 con el modelo de fotos. lista_fotos: fotos() (se lee de Drive si no se da)."""
+    from PIL import Image, ImageDraw
+    lista = fotos() if lista_fotos is None else lista_fotos
+    img = Image.open(PLANTILLA_FOTOS).convert('RGBA')
+    escudo = Image.open(ESCUDO_CLUB).convert('RGBA')
+    huecos = [(j, False) for j in titulares[:11]] + [({'nombre': ENTRENADOR, 'numero': ''}, True)]
+    d = ImageDraw.Draw(img)
+    for i, (j, es_entrenador) in enumerate(huecos):
+        (x0, x1), (b0, b1) = COLUMNAS[i % 4], BARRAS[i // 4]
+        f = next((x for x in lista if _norm(x['nombre']) == ENTRENADOR), None) if es_entrenador else foto_de(j['nombre'], lista)
+        rec = None
+        if f:
+            try:
+                rec = recorte_de(f)
+            except Exception as e:
+                print(f"[ALINEACION] foto de {f['nombre']}: {e}", flush=True)
+        if rec is not None:
+            _pegar_jugador(img, rec, x0, x1, b0)
+        else:  # sin foto: el escudo del club en su hueco
+            _escudo_en(img, escudo, (x0 + x1) / 2, b0 - ALTO_FOTO / 2, 150)
+        d = ImageDraw.Draw(img)
+        nombre = f['nombre'] if f else (ENTRENADOR if es_entrenador else nombre_corto(j['nombre']))
+        fn = _encajar(d, nombre, F_NEGRITA, 28, x1 - x0 - 18, minimo=14)
+        d.text(((x0 + x1) / 2, (b0 + b1) / 2 + 1), nombre, font=fn, fill=ROJO, anchor='mm')
+        if es_entrenador:
+            ft = _fuente(F_NEGRITA, 19)
+            d.text((x1 - 10, b0 - ALTO_FOTO + 14), 'ENTRENADOR', font=ft, fill='white', anchor='ra',
+                   stroke_width=2, stroke_fill=(90, 0, 0))
+        elif j.get('numero'):
+            fd = _fuente(F_NEGRITA, 50)
+            d.text((x1 - 10, b0 - ALTO_FOTO + 8), str(j['numero']), font=fd, fill='white', anchor='ra',
+                   stroke_width=2, stroke_fill=(90, 0, 0))
+    # Escudos (primero el local), a la izquierda de la raya de los suplentes
+    otro = escudo_rival
+    if otro is None:
+        try:
+            otro = _escudo_rival(rival)
+        except Exception as e:
+            print(f'[ALINEACION] escudo de {rival}: {e}', flush=True)
+    if otro is not None:
+        izq, der = (escudo, otro) if local else (otro, escudo)
+        _escudo_en(img, izq, 110, 1690, 130)
+        _escudo_en(img, der, 260, 1690, 130)
+    else:
+        _escudo_en(img, escudo, 185, 1690, 150)
+    # Suplentes: "NOMBRE APELLIDO, ..." a la derecha de la raya, debajo de "SUPLENTES:"
+    d = ImageDraw.Draw(img)
+    nombres = []
+    for j in suplentes:
+        f = foto_de(j['nombre'], lista)
+        nombres.append(f['nombre'] if f else nombre_corto(j['nombre']))
+    trozos = [n + (',' if i < len(nombres) - 1 else '') for i, n in enumerate(nombres)]  # no partir un nombre
+    for tam in (28, 26, 24, 22, 20, 18):
+        fs = _fuente(F_NORMAL, tam)
+        lineas, linea = [], ''
+        for palabra in trozos:
+            prueba = f'{linea} {palabra}'.strip()
+            if d.textlength(prueba, font=fs) <= 660:
+                linea = prueba
+            else:
+                lineas.append(linea)
+                linea = palabra
+        if linea:
+            lineas.append(linea)
+        paso = int(tam * 1.45)
+        if len(lineas) * paso <= 1795 - 1640:
+            break
+    for i, l in enumerate(lineas):
+        d.text((379, 1660 + i * paso), l, font=fs, fill='white', anchor='ls')
+    buf = io.BytesIO()
+    img.convert('RGB').save(buf, format='PNG', optimize=True)
+    return buf.getvalue()
+
+
 # ---------- Federación ----------
 
 def _sesion():
@@ -188,12 +384,22 @@ def _tel_ruben():
     return '34' + tel if len(tel) == 9 else tel
 
 
+def imagen_elegida(p, datos):
+    """Modelo con fotos; si falla (Drive, plantilla…), el modelo de texto de siempre."""
+    rival, tit, sup = datos
+    try:
+        return imagen_fotos(rival, tit, sup, local=p.get('local', True))
+    except Exception as e:
+        print(f'[ALINEACION] modelo con fotos: {e}; uso el de texto', flush=True)
+        return imagen(rival, tit, sup)
+
+
 def publicar(p, datos, solo_whatsapp=False):
     """Monta la imagen, la sube a la historia (salvo prueba) y avisa a Rubén. Devuelve (ok, texto)."""
     from objetivos_finde import enviar_imagen
     from app import enviar_whatsapp
     rival, tit, sup = datos
-    png = imagen(rival, tit, sup)
+    png = imagen_elegida(p, datos)
     tel = _tel_ruben()
     if solo_whatsapp:
         if tel:
@@ -214,7 +420,22 @@ def publicar(p, datos, solo_whatsapp=False):
 
 def tick(ahora):
     """Cada minuto (push_scheduler): a las 07:00 mira si hoy juega el Aficionado A; desde 30 min antes del partido,
-    cada 2 min busca la alineación; a los 10 min del inicio sin alineación, avisa y lo deja."""
+    cada 2 min busca la alineación; a los 10 min del inicio sin alineación, avisa y lo deja.
+    Cada 10 min, en segundo plano, quita el fondo a las fotos nuevas de la carpeta."""
+    global _recortando
+    if ahora.minute % 10 == 7 and not _recortando:
+        import threading
+
+        def _job():
+            global _recortando
+            try:
+                preparar_recortes()
+            except Exception as e:
+                print(f'[ALINEACION] recortes: {e}', flush=True)
+            finally:
+                _recortando = False
+        _recortando = True
+        threading.Thread(target=_job, daemon=True).start()
     d = _leer()
     if not d.get('activo'):
         return
@@ -325,6 +546,6 @@ def api_imagen():
         datos = alineacion(p, sess) if p else None
         if not datos:
             return jsonify({'status': 'error', 'message': 'No hay alineación reciente'})
-        return Response(imagen(*datos), mimetype='image/png', headers={'Cache-Control': 'no-store'})
+        return Response(imagen_elegida(p, datos), mimetype='image/png', headers={'Cache-Control': 'no-store'})
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Error en el servidor: {e}'[:250]})
