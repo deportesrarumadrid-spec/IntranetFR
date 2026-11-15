@@ -199,50 +199,101 @@ def preparar_recortes():
             return
 
 
+ESCUDOS_DIR = os.path.join(BASE_DIR, 'static', 'img', 'alineacion', 'escudos')  # rivales del grupo (Federación)
+
+
+def _fichero_escudo(rival):
+    import re
+    return os.path.join(ESCUDOS_DIR, re.sub(r'[^A-Z0-9]+', '_', _norm(rival)).strip('_') + '.png')
+
+
 def _escudo_rival(rival):
-    """Imagen (RGBA) del escudo del rival sacada de las clasificaciones de la Federación que guarda la intranet."""
-    import hashlib
+    """Escudo (RGBA) del rival, de los descargados de la Federación (static/img/alineacion/escudos), o None."""
     from PIL import Image
-    from competicion_scraper import load_cached_data, get_session
-    url = ''
-    for eq in (load_cached_data() or {}).get('equipos', []):
-        for it in eq.get('clasificacion') or []:
-            if _rival(it.get('equipo', '')) == rival and it.get('shield'):
-                url = it['shield']
-        for p in eq.get('calendario') or []:
-            if not url and _rival(p.get('rival', '')) == rival and p.get('rival_shield'):
-                url = p['rival_shield']
-        if url:
-            break
-    if not url:
+    ruta = _fichero_escudo(rival)
+    return Image.open(ruta).convert('RGBA') if os.path.exists(ruta) else None
+
+
+def cabeza(rec):
+    """(x_centro, y_arriba, ancho, alto) de la cabeza en la silueta recortada, o None. Baja por el centro del cuerpo
+    desde arriba hasta el cuello (donde la silueta se estrecha)."""
+    import numpy as np
+    a = np.array(rec.split()[3]) > 128
+    H, W = a.shape
+    _, xs = np.nonzero(a[int(H * 0.4):int(H * 0.6)])
+    if not len(xs):
         return None
-    if url.startswith('/static/'):
-        return Image.open(os.path.join(BASE_DIR, url.lstrip('/'))).convert('RGBA')
-    ruta = os.path.join(DIR, 'escudos', hashlib.md5(url.encode()).hexdigest() + '.png')
-    if not os.path.exists(ruta):
-        r = get_session().get(url, timeout=15)
-        im = Image.open(io.BytesIO(r.content)).convert('RGBA')  # si no es una imagen, falla aquí
-        os.makedirs(os.path.dirname(ruta), exist_ok=True)
-        im.save(ruta)
-    return Image.open(ruta).convert('RGBA')
+    margen = max(2, W // 30)
+
+    def tramo(y, x):
+        fila = a[y]
+        if not fila[x]:
+            cerca = np.nonzero(fila[max(0, x - margen):x + margen])[0]
+            if not len(cerca):
+                return None
+            x = max(0, x - margen) + int(cerca[len(cerca) // 2])
+        i = j = x
+        while i > 0 and fila[i - 1]:
+            i -= 1
+        while j < W - 1 and fila[j + 1]:
+            j += 1
+        return i, j
+
+    cx = int(np.median(xs))
+    top = next((y for y in range(H) if (t := tramo(y, cx)) and t[1] - t[0] >= 3), None)
+    if top is None:
+        return None
+    maxw, centro, anchos = 0, cx, []
+    for y in range(top, H):
+        t = tramo(y, centro)
+        if not t:
+            break
+        w, dy = t[1] - t[0], y - top
+        fin = (dy > max(6, 0.6 * maxw) and w < 0.8 * maxw) or (dy > 0.9 * maxw > 20 and w > 1.6 * maxw)
+        if fin:  # cuello (no un mechón de pelo de arriba), o se junta con hombros/manos
+            # mediana y no máximo: una mano pegada a la cabeza (saludo) no la hace más ancha
+            return centro, top, float(np.median(anchos)), dy
+        anchos.append(w)
+        if w > maxw:
+            maxw, centro = w, (t[0] + t[1]) // 2
+    return None
+
+
+def _fondo_celda(ancho, alto, claro=True):
+    """Rectángulo con degradado rojo (más claro en el centro de arriba), como los huecos del ejemplo."""
+    import numpy as np
+    from PIL import Image
+    yy, xx = np.mgrid[0:alto, 0:ancho]
+    d = np.sqrt(((xx - ancho / 2) / ancho) ** 2 + ((yy - alto * 0.35) / alto) ** 2) / 0.75
+    d = np.clip(d, 0, 1)[..., None]
+    centro, borde = (np.array([228, 48, 52]), np.array([150, 14, 20])) if claro else \
+        (np.array([150, 16, 22]), np.array([92, 6, 10]))
+    rgb = (centro * (1 - d) + borde * d).astype('uint8')
+    return Image.fromarray(np.dstack([rgb, np.full((alto, ancho), 255, 'uint8')]), 'RGBA')
+
+
+CABEZA_ANCHO = 74   # ancho de la cabeza en el hueco (igual para todos)
+CABEZA_ARRIBA = 26  # distancia de la coronilla al borde de arriba del hueco
 
 
 def _pegar_jugador(img, rec, x0, x1, y_bar):
-    """Cabeza y tronco del jugador recortado, de pie sobre la barra y sin salirse de su hueco."""
+    """Jugador dentro de su hueco, todos a la misma distancia: misma anchura de cabeza y cabeza a la misma altura.
+    Lo que sobra por abajo o por los lados se corta en el borde del hueco."""
     from PIL import Image
-    W, H = rec.size
-    alto = int(H * 0.46) if H > 2.1 * W else min(H, int(W * 1.35))  # cuerpo entero → de cintura para arriba
-    parte = rec.crop((0, 0, W, alto))
-    parte = parte.crop(parte.getbbox() or (0, 0, W, alto))
     ancho_c, alto_c = x1 - x0, ALTO_FOTO
-    s = (alto_c - 14) / parte.height
-    if parte.width * s > ancho_c * 1.3:  # brazos muy abiertos: que no se quede diminuto
-        s = ancho_c * 1.3 / parte.width
-    parte = parte.resize((max(1, int(parte.width * s)), max(1, int(parte.height * s))), Image.LANCZOS)
+    c = cabeza(rec)
+    if c:
+        cx, top, w, _ = c
+    else:
+        cx, top, w = rec.width // 2, 0, rec.width / 3.2
+    s = CABEZA_ANCHO / w
+    parte = rec.resize((max(1, int(rec.width * s)), max(1, int(rec.height * s))), Image.LANCZOS)
     celda = Image.new('RGBA', (ancho_c, alto_c), (0, 0, 0, 0))
-    celda.alpha_composite(parte, ((ancho_c - parte.width) // 2, alto_c - parte.height)) if parte.width <= ancho_c else \
-        celda.alpha_composite(parte.crop(((parte.width - ancho_c) // 2, 0, (parte.width - ancho_c) // 2 + ancho_c, parte.height)),
-                              (0, alto_c - parte.height))
+    dx, dy = int(ancho_c / 2 - cx * s), int(CABEZA_ARRIBA - top * s)
+    # recortar lo que se sale del hueco (alpha_composite no admite posiciones negativas)
+    caja = (max(0, -dx), max(0, -dy), min(parte.width, ancho_c - dx), min(parte.height, alto_c - dy))
+    if caja[2] > caja[0] and caja[3] > caja[1]:
+        celda.alpha_composite(parte.crop(caja), (max(0, dx), max(0, dy)))
     img.alpha_composite(celda, (x0, y_bar - alto_c))
 
 
@@ -254,8 +305,9 @@ def _escudo_en(img, escudo, cx, cy, lado):
     img.alpha_composite(e, (int(cx - e.width / 2), int(cy - e.height / 2)))
 
 
-def imagen_fotos(rival, titulares, suplentes, local=True, escudo_rival=None, lista_fotos=None):
-    """PNG 1080x1920 con el modelo de fotos. lista_fotos: fotos() (se lee de Drive si no se da)."""
+def imagen_fotos(rival, titulares, suplentes, local=True, escudo_rival=None, lista_fotos=None, fondo_claro=True):
+    """PNG 1080x1920 con el modelo de fotos. lista_fotos: fotos() (se lee de Drive si no se da).
+    Si no hay escudo del rival, sale solo el nuestro (imagen_fotos.sin_escudo queda en True)."""
     from PIL import Image, ImageDraw
     lista = fotos() if lista_fotos is None else lista_fotos
     img = Image.open(PLANTILLA_FOTOS).convert('RGBA')
@@ -264,6 +316,7 @@ def imagen_fotos(rival, titulares, suplentes, local=True, escudo_rival=None, lis
     d = ImageDraw.Draw(img)
     for i, (j, es_entrenador) in enumerate(huecos):
         (x0, x1), (b0, b1) = COLUMNAS[i % 4], BARRAS[i // 4]
+        img.alpha_composite(_fondo_celda(x1 - x0, ALTO_FOTO - 8, fondo_claro), (x0, b0 - ALTO_FOTO + 8))
         f = next((x for x in lista if _norm(x['nombre']) == ENTRENADOR), None) if es_entrenador else foto_de(j['nombre'], lista)
         rec = None
         if f:
@@ -279,21 +332,11 @@ def imagen_fotos(rival, titulares, suplentes, local=True, escudo_rival=None, lis
         nombre = f['nombre'] if f else (ENTRENADOR if es_entrenador else nombre_corto(j['nombre']))
         fn = _encajar(d, nombre, F_NEGRITA, 28, x1 - x0 - 18, minimo=14)
         d.text(((x0 + x1) / 2, (b0 + b1) / 2 + 1), nombre, font=fn, fill=ROJO, anchor='mm')
-        if es_entrenador:
-            ft = _fuente(F_NEGRITA, 19)
-            d.text((x1 - 10, b0 - ALTO_FOTO + 14), 'ENTRENADOR', font=ft, fill='white', anchor='ra',
-                   stroke_width=2, stroke_fill=(90, 0, 0))
-        elif j.get('numero'):
-            fd = _fuente(F_NEGRITA, 50)
-            d.text((x1 - 10, b0 - ALTO_FOTO + 8), str(j['numero']), font=fd, fill='white', anchor='ra',
-                   stroke_width=2, stroke_fill=(90, 0, 0))
+        if not es_entrenador and j.get('numero'):
+            d.text((x1 - 12, b0 - ALTO_FOTO + 18), str(j['numero']), font=_fuente(F_NEGRITA, 34), fill='white', anchor='ra')
     # Escudos (primero el local), a la izquierda de la raya de los suplentes
-    otro = escudo_rival
-    if otro is None:
-        try:
-            otro = _escudo_rival(rival)
-        except Exception as e:
-            print(f'[ALINEACION] escudo de {rival}: {e}', flush=True)
+    otro = escudo_rival if escudo_rival is not None else _escudo_rival(rival)
+    imagen_fotos.sin_escudo = otro is None
     if otro is not None:
         izq, der = (escudo, otro) if local else (otro, escudo)
         _escudo_en(img, izq, 110, 1690, 130)
@@ -399,12 +442,15 @@ def publicar(p, datos, solo_whatsapp=False):
     from objetivos_finde import enviar_imagen
     from app import enviar_whatsapp
     rival, tit, sup = datos
+    imagen_fotos.sin_escudo = False
     png = imagen_elegida(p, datos)
+    nota = (f"\n⚠️ No tengo el escudo de {rival}: ha salido solo el nuestro."
+            if getattr(imagen_fotos, 'sin_escudo', False) else '')
     tel = _tel_ruben()
     if solo_whatsapp:
         if not tel:
             return False, 'No encuentro el teléfono de Rubén Pozón en PERFILES'
-        ok, det = enviar_imagen(f'{tel}@c.us', png, f'🧪 PRUEBA alineación vs {rival} (no se ha subido a Instagram)')
+        ok, det = enviar_imagen(f'{tel}@c.us', png, f'🧪 PRUEBA alineación vs {rival} (no se ha subido a Instagram){nota}')
         return (True, 'Imagen enviada a Rubén Pozón') if ok else (False, det)
     try:
         from instagram_historias import subir_historia
@@ -412,7 +458,7 @@ def publicar(p, datos, solo_whatsapp=False):
     except Exception as e:
         ok, det = False, str(e)[:200]
     texto = (f"✅ Alineación del AFICIONADO A vs {rival} subida a la historia de Instagram" if ok else
-             f"⚠️ No se ha podido subir la alineación del AFICIONADO A vs {rival} a Instagram: {det}")
+             f"⚠️ No se ha podido subir la alineación del AFICIONADO A vs {rival} a Instagram: {det}") + nota
     if tel:
         enviar_imagen(f'{tel}@c.us', png, texto)
     print(f'[ALINEACION] {texto}', flush=True)
