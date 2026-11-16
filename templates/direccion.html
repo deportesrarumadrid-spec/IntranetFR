@@ -2344,6 +2344,18 @@
                     <div id="alPartidos" style="margin-top:8px; font-size:11px;"></div>
                 </div>
                 <div class="card-coord" style="padding:16px;">
+                    <div style="font-size:12px; font-weight:900; color:#1e293b; margin-bottom:8px;">CLASIFICACIONES (HISTORIAS DE INSTAGRAM)</div>
+                    <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
+                        Los <b>lunes a las 10:00</b> se sube una historia por categoría (Aficionados, Juveniles, Cadetes, Infantiles, Alevines,
+                        Benjamines y Prebenjamines) con 5 filas de la clasificación alrededor de cada equipo. Te llega por WhatsApp si se han subido.</div>
+                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                        <label style="font-size:11px; font-weight:800; display:flex; align-items:center; gap:6px; cursor:pointer; margin-right:6px;">
+                            <input type="checkbox" id="ciActivo" onchange="ciCargar({ activo: this.checked })"> ACTIVO</label>
+                        <button onclick="ciPrueba()" style="background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> PROBAR (SOLO A RUBÉN POZÓN)</button>
+                    </div>
+                    <div id="ciBox" style="margin-top:10px; font-size:12px;"></div>
+                </div>
+                <div class="card-coord" style="padding:16px;">
                     <div style="font-size:12px; font-weight:900; color:#1e293b; margin-bottom:8px;">GOLES AFICIONADO A EN DIRECTO (HISTORIA DE INSTAGRAM)</div>
                     <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
                         Durante el partido (del inicio a +2 h), Rubén Pozón o Joaquín Escriche escriben al WhatsApp del club
@@ -2448,6 +2460,7 @@
         gpsCargar();
         tvCargar();
         alCargar();
+        ciCargar();
         golCargar();
         if (_waPersonas.length || _waGrupos.length) return;
         const lista = document.getElementById('waLista');
@@ -3011,6 +3024,27 @@
         box.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Consultando la Federación...</span>';
         try {
             const d = await (await fetch('/api/whatsapp/alineacion/prueba', { method: 'POST' })).json();
+            box.innerHTML = d.status === 'ok' ? `<span style="color:#16a34a; font-weight:800;">✓ ${_waEsc(d.message)}</span>`
+                                              : `<span style="color:#ef4444; font-weight:700;">${_waEsc(d.message || 'Error')}</span>`;
+        } catch (e) { box.innerHTML = '<span style="color:#ef4444; font-weight:700;">Error al enviar</span>'; }
+    }
+    async function ciCargar(post) {
+        const box = document.getElementById('ciBox');
+        try {
+            const d = await (await fetch('/api/whatsapp/clasif_ig', post ? { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(post) } : {})).json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            document.getElementById('ciActivo').checked = d.activo;
+            const u = d.ultima || {};
+            box.innerHTML = u.fecha ? `<span style="color:${u.ok ? '#16a34a' : '#ef4444'}; font-weight:700;">Última: ${_waEsc(u.fecha.replace('T', ' '))} · ${_waEsc(u.texto || '')}</span>` : '';
+        } catch (e) { box.innerHTML = `<span style="color:#ef4444;">${_waEsc(e.message || 'Error')}</span>`; }
+    }
+    async function ciPrueba() {
+        if (!confirm('¿Enviar a RUBÉN POZÓN las historias de las clasificaciones? (No se sube nada a Instagram)')) return;
+        const box = document.getElementById('ciBox');
+        box.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Montando y enviando las imágenes...</span>';
+        try {
+            const d = await (await fetch('/api/whatsapp/clasif_ig/prueba', { method: 'POST' })).json();
             box.innerHTML = d.status === 'ok' ? `<span style="color:#16a34a; font-weight:800;">✓ ${_waEsc(d.message)}</span>`
                                               : `<span style="color:#ef4444; font-weight:700;">${_waEsc(d.message || 'Error')}</span>`;
         } catch (e) { box.innerHTML = '<span style="color:#ef4444; font-weight:700;">Error al enviar</span>'; }

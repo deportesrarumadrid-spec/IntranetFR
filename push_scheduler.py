@@ -377,6 +377,12 @@ def _loop(flask_app):
                 alineacion_ig_wa.tick(now)
             except Exception as e:
                 print(f"[SCHED] Alineación: {e}", flush=True)
+            # Clasificaciones en las historias de Instagram (lunes 10:00)
+            try:
+                import clasif_instagram
+                clasif_instagram.tick(now)
+            except Exception as e:
+                print(f"[SCHED] Clasificaciones IG: {e}", flush=True)
             # Goles en directo: recordatorios si nadie elige la opción
             try:
                 import gol_live_wa
