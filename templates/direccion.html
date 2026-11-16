@@ -3143,13 +3143,25 @@
     }
     function waUsarPlantilla(i) {
         const p = _waPlantillas[i];
-        if (!p) return;
-        document.getElementById('waTexto').value = p.texto;
-        _waSel.clear();
-        p.destinatarios.forEach(d => { _waSel.add(d.telefono); if (!_waNombre[d.telefono]) _waNombre[d.telefono] = d.usuario; });
-        waPintarLista();
-        document.getElementById('waResultado').innerHTML = `<span style="color:#64748b; font-weight:700;">Plantilla «${_waEsc(p.nombre)}» cargada: revisa el mensaje y elige enviar ahora, programar o repetir.</span>`;
-        document.getElementById('waTexto').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (!p) { alert('No encuentro esa plantilla: recarga la página (F5) y vuelve a probar.'); return; }
+        try {
+            const caja = document.getElementById('waTexto');
+            caja.value = p.texto || '';
+            _waSel.clear();
+            (p.destinatarios || []).forEach(d => { _waSel.add(d.telefono); if (!_waNombre[d.telefono]) _waNombre[d.telefono] = d.usuario; });
+            const pers = (p.destinatarios || []).some(d => _waPersonas.some(x => x.telefono === d.telefono));
+            if (pers && !(p.destinatarios || []).some(d => _waGrupos.some(x => x.telefono === d.telefono))) _waTab = 'ent';
+            waPintarLista();
+            const nombres = (p.destinatarios || []).map(d => _waEsc(_waNombre[d.telefono] || d.usuario)).join(', ');
+            document.getElementById('waResultado').innerHTML = `<div style="background:#fef9c3; border:1.5px solid #facc15; border-radius:8px; padding:8px 10px; color:#1e293b; font-weight:800;">
+                ✓ Plantilla «${_waEsc(p.nombre)}» cargada para: ${nombres || 'nadie'}.<br>
+                <span style="font-weight:600;">Aún NO se ha enviado: pulsa <b>ENVIAR WHATSAPP</b>, o elige antes <b>Programar</b> o <b>Repetir</b>.</span></div>`;
+            caja.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            caja.style.transition = 'box-shadow .3s'; caja.style.boxShadow = '0 0 0 4px #facc15';
+            setTimeout(() => { caja.style.boxShadow = ''; }, 2500);
+        } catch (e) {
+            alert('Error al cargar la plantilla: ' + (e && e.message ? e.message : e));
+        }
     }
     async function waGuardarPlantilla() {
         const texto = document.getElementById('waTexto').value.trim();
