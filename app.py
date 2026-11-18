@@ -4221,6 +4221,7 @@ from videoanalisis_wa import video_bp
 from gps_aviso_wa import gps_aviso_bp
 from alineacion_ig_wa import alineacion_bp
 from clasif_instagram import clasif_ig_bp
+from cumpleanos import cumple_bp
 from gol_ig_wa import gol_bp
 from gol_live_wa import gol_live_bp
 from tv_almacen import tv_bp
@@ -4261,6 +4262,7 @@ app.register_blueprint(video_bp)
 app.register_blueprint(gps_aviso_bp)
 app.register_blueprint(alineacion_bp)
 app.register_blueprint(clasif_ig_bp)
+app.register_blueprint(cumple_bp)
 app.register_blueprint(gol_bp)
 app.register_blueprint(gol_live_bp)
 app.register_blueprint(tv_bp)

@@ -383,6 +383,12 @@ def _loop(flask_app):
                 clasif_instagram.tick(now)
             except Exception as e:
                 print(f"[SCHED] Clasificaciones IG: {e}", flush=True)
+            # Cumpleaños de jugadores: aviso a los entrenadores (09:00) y lectura de la Federación (lunes 04:00)
+            try:
+                import cumpleanos
+                cumpleanos.tick(now)
+            except Exception as e:
+                print(f"[SCHED] Cumpleaños: {e}", flush=True)
             # Goles en directo: recordatorios si nadie elige la opción
             try:
                 import gol_live_wa

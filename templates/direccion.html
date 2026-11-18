@@ -2356,6 +2356,20 @@
                     <div id="ciBox" style="margin-top:10px; font-size:12px;"></div>
                 </div>
                 <div class="card-coord" style="padding:16px;">
+                    <div style="font-size:12px; font-weight:900; color:#1e293b; margin-bottom:8px;">CUMPLEAÑOS DE LOS JUGADORES (AVISO A LOS ENTRENADORES)</div>
+                    <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
+                        Cada día a las <b>09:00</b> les llega a los entrenadores de cada equipo un WhatsApp con los jugadores que cumplen años ese día.
+                        Las fechas de nacimiento salen de las licencias en vigor de la Federación (se leen los lunes de madrugada).</div>
+                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                        <label style="font-size:11px; font-weight:800; display:flex; align-items:center; gap:6px; cursor:pointer; margin-right:6px;">
+                            <input type="checkbox" id="cuActivo" onchange="cuCargar({ activo: this.checked })"> ACTIVO</label>
+                        <button onclick="cuLeer()" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fas fa-download"></i> LEER FEDERACIÓN</button>
+                        <button onclick="cuPrueba()" style="background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> PROBAR (SOLO A RUBÉN POZÓN)</button>
+                    </div>
+                    <div id="cuBox" style="margin-top:10px; font-size:12px;"></div>
+                    <div id="cuEquipos" style="margin-top:8px; font-size:11px;"></div>
+                </div>
+                <div class="card-coord" style="padding:16px;">
                     <div style="font-size:12px; font-weight:900; color:#1e293b; margin-bottom:8px;">GOLES AFICIONADO A EN DIRECTO (HISTORIA DE INSTAGRAM)</div>
                     <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
                         Durante el partido (del inicio a +2 h), Rubén Pozón o Joaquín Escriche escriben al WhatsApp del club
@@ -2461,6 +2475,7 @@
         tvCargar();
         alCargar();
         ciCargar();
+        cuCargar();
         golCargar();
         if (_waPersonas.length || _waGrupos.length) return;
         const lista = document.getElementById('waLista');
@@ -3045,6 +3060,53 @@
         box.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Montando y enviando las imágenes...</span>';
         try {
             const d = await (await fetch('/api/whatsapp/clasif_ig/prueba', { method: 'POST' })).json();
+            box.innerHTML = d.status === 'ok' ? `<span style="color:#16a34a; font-weight:800;">✓ ${_waEsc(d.message)}</span>`
+                                              : `<span style="color:#ef4444; font-weight:700;">${_waEsc(d.message || 'Error')}</span>`;
+        } catch (e) { box.innerHTML = '<span style="color:#ef4444; font-weight:700;">Error al enviar</span>'; }
+    }
+    let _cuTimer = null;
+    async function cuCargar(post) {
+        const box = document.getElementById('cuBox');
+        try {
+            const d = await (await fetch('/api/whatsapp/cumple', post ? { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(post) } : {})).json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            document.getElementById('cuActivo').checked = d.activo;
+            const ul = d.ultima_lectura || {}, ue = d.ultimo_envio || {};
+            let h = '';
+            if (d.leyendo) h += '<div style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Leyendo la Federación (puede tardar un par de minutos)...</div>';
+            else if (ul.fecha) h += `<div style="color:${ul.ok ? '#16a34a' : '#ef4444'}; font-weight:700;">Lectura ${_waEsc(ul.fecha.replace('T', ' '))}: ${_waEsc(ul.texto || '')}</div>`;
+            if (d.leido && !d.leyendo) h += `<div style="color:#64748b;">Datos de la Federación del ${_waEsc(d.leido.replace('T', ' '))}</div>`;
+            if (ue.fecha) h += `<div style="color:#64748b;">Último envío: ${_waEsc(ue.fecha.replace('T', ' '))} · ${ue.enviados} de ${ue.total} mensajes</div>`;
+            (d.fallos || []).forEach(f => h += `<div style="color:#ef4444;">${_waEsc(f)}</div>`);
+            box.innerHTML = h;
+            const eqs = d.equipos || [];
+            document.getElementById('cuEquipos').innerHTML = eqs.length ? '<div style="font-weight:900; color:#1e293b; margin-bottom:4px;">Equipos leídos</div>'
+                + eqs.map(e => {
+                    const mal = !e.perfiles || !(e.entrenadores || []).length || !e.jugadores;
+                    const ents = !e.perfiles ? 'SIN EQUIPO EN USUARIOS' : ((e.entrenadores || []).join(', ') || 'SIN ENTRENADOR');
+                    const c = e.control || {};
+                    const aviso = c.jugadores_pagina != null && c.jugadores_pagina !== e.jugadores ? ` <span style="color:#ef4444;">(la Federación dice ${c.jugadores_pagina})</span>` : '';
+                    return `<div style="padding:3px 0; border-bottom:1px solid #f1f5f9; ${mal ? 'color:#ef4444;' : ''}"><b>${_waEsc(e.equipo)}</b> · ${e.jugadores} jugadores${aviso} → ${_waEsc(e.perfiles || '')}: ${_waEsc(ents)}</div>`;
+                }).join('') : '';
+            clearTimeout(_cuTimer);
+            if (d.leyendo) _cuTimer = setTimeout(() => cuCargar(), 4000);
+        } catch (e) { box.innerHTML = `<span style="color:#ef4444;">${_waEsc(e.message || 'Error')}</span>`; }
+    }
+    async function cuLeer() {
+        const box = document.getElementById('cuBox');
+        try {
+            const d = await (await fetch('/api/whatsapp/cumple/leer', { method: 'POST' })).json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            cuCargar();
+        } catch (e) { box.innerHTML = `<span style="color:#ef4444; font-weight:700;">${_waEsc(e.message || 'Error')}</span>`; }
+    }
+    async function cuPrueba() {
+        if (!confirm('¿Enviar a RUBÉN POZÓN un mensaje de cumpleaños de prueba (indicando a quién iría)?')) return;
+        const box = document.getElementById('cuBox');
+        box.innerHTML = '<span style="color:#64748b;"><i class="fas fa-spinner fa-spin"></i> Enviando...</span>';
+        try {
+            const d = await (await fetch('/api/whatsapp/cumple/prueba', { method: 'POST' })).json();
             box.innerHTML = d.status === 'ok' ? `<span style="color:#16a34a; font-weight:800;">✓ ${_waEsc(d.message)}</span>`
                                               : `<span style="color:#ef4444; font-weight:700;">${_waEsc(d.message || 'Error')}</span>`;
         } catch (e) { box.innerHTML = '<span style="color:#ef4444; font-weight:700;">Error al enviar</span>'; }
