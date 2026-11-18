@@ -1,6 +1,7 @@
 {% extends 'dashboard.html' %}
 
 {% block content %}
+<style>/* Avisos siempre activos: se ocultan las casillas ACTIVO */ label:has(> input[type="checkbox"][id$="Activo"]) { display: none !important; }</style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -2135,7 +2136,7 @@
                     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
                         <div style="font-size:12px; font-weight:900; color:#1e293b;">AVISO DIARIO ASISTENCIAS/ENTRENAMIENTOS</div>
                         <label style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800; cursor:pointer;">
-                            <input type="checkbox" id="avActivo" onchange="avGuardar()"> <span id="avActivoTxt">—</span></label>
+                            <input type="checkbox" checked id="avActivo" onchange="avGuardar()"> <span id="avActivoTxt">—</span></label>
                         <span style="font-size:11px; font-weight:700;">a las <input type="time" id="avHora" onchange="avGuardar()" style="padding:4px 6px; border:1.5px solid #e2e8f0; border-radius:6px; font-family:inherit; font-size:12px;"></span>
                     </div>
                     <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
@@ -2153,7 +2154,7 @@
                     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
                         <div style="font-size:12px; font-weight:900; color:#1e293b;">AVISO FORMULARIO DE PARTIDO (FINDE)</div>
                         <label style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800; cursor:pointer;">
-                            <input type="checkbox" id="ffActivo" onchange="ffGuardar()"> <span id="ffActivoTxt">—</span></label>
+                            <input type="checkbox" checked id="ffActivo" onchange="ffGuardar()"> <span id="ffActivoTxt">—</span></label>
                     </div>
                     <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
                         A los entrenadores de los equipos con partido (sin Aficionados ni Debutantes): 2 h después del inicio del partido
@@ -2172,7 +2173,7 @@
                     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
                         <div style="font-size:12px; font-weight:900; color:#1e293b;">OBJETIVOS DEL FINDE (VIERNES 17:00)</div>
                         <label style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800; cursor:pointer;">
-                            <input type="checkbox" id="objActivo" onchange="objGuardar()"> <span id="objActivoTxt">—</span></label>
+                            <input type="checkbox" checked id="objActivo" onchange="objGuardar()"> <span id="objActivoTxt">—</span></label>
                     </div>
                     <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
                         Al grupo <b>FR Entrenadores</b>: la imagen de PLANIFICACIÓN — OBJETIVOS (OBJ FINES DE SEMANA) con el texto
@@ -2187,7 +2188,7 @@
                     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
                         <div style="font-size:12px; font-weight:900; color:#1e293b;">PREVIA DEL RIVAL (LUNES 22:00)</div>
                         <label style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800; cursor:pointer;">
-                            <input type="checkbox" id="prvActivo" onchange="prvGuardar()"> <span id="prvActivoTxt">—</span></label>
+                            <input type="checkbox" checked id="prvActivo" onchange="prvGuardar()"> <span id="prvActivoTxt">—</span></label>
                     </div>
                     <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
                         A cada entrenador, por cada equipo con partido el finde siguiente (sin Aficionados ni Debutantes; si descansa, nada):
@@ -2204,7 +2205,7 @@
                     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
                         <div style="font-size:12px; font-weight:900; color:#1e293b;">RESUMEN DEL FINDE (LUNES 20:00)</div>
                         <label style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800; cursor:pointer;">
-                            <input type="checkbox" id="resActivo" onchange="resGuardar()"> <span id="resActivoTxt">—</span></label>
+                            <input type="checkbox" checked id="resActivo" onchange="resGuardar()"> <span id="resActivoTxt">—</span></label>
                     </div>
                     <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
                         Al grupo <b>FR Entrenadores</b>: imagen de RESULTADOS — CUMPLIMIENTO de los objetivos (con el texto de totales debajo)
@@ -2220,7 +2221,7 @@
                     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
                         <div style="font-size:12px; font-weight:900; color:#1e293b;">FALTAS SEGUIDAS (2 NO SEGUIDOS)</div>
                         <label style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800; cursor:pointer;">
-                            <input type="checkbox" id="flActivo" onchange="flGuardar({ activo: this.checked })"> <span id="flActivoTxt">—</span></label>
+                            <input type="checkbox" checked id="flActivo" onchange="flGuardar({ activo: this.checked })"> <span id="flActivoTxt">—</span></label>
                     </div>
                     <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
                         Cuando un jugador tiene <b>NO</b> en 2 entrenamientos seguidos (desde el <span id="flDesde">01/11</span>), se pregunta el motivo a los entrenadores
@@ -2238,7 +2239,7 @@
                     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
                         <div style="font-size:12px; font-weight:900; color:#1e293b;">INFORME DEL PARTIDO DE VEO (MARTES 20:00)</div>
                         <label style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800; cursor:pointer;">
-                            <input type="checkbox" id="ivActivo" onchange="ivGuardar()"> <span id="ivActivoTxt">—</span></label>
+                            <input type="checkbox" checked id="ivActivo" onchange="ivGuardar()"> <span id="ivActivoTxt">—</span></label>
                     </div>
                     <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
                         A los entrenadores de cada equipo, el informe de su vídeo de Veo del último finde (Informe del Partido + Analytics)
@@ -2253,7 +2254,7 @@
                     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
                         <div style="font-size:12px; font-weight:900; color:#1e293b;">RESUMEN MENSUAL (DÍA 1, 10:00)</div>
                         <label style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800; cursor:pointer;">
-                            <input type="checkbox" id="rmActivo" onchange="rmGuardar()"> <span id="rmActivoTxt">—</span></label>
+                            <input type="checkbox" checked id="rmActivo" onchange="rmGuardar()"> <span id="rmActivoTxt">—</span></label>
                     </div>
                     <div style="font-size:11px; color:#64748b; line-height:1.6; margin-bottom:10px;">
                         A cada entrenador, una imagen por equipo (sin Aficionados ni Debutantes) con el mes que acaba de terminar
@@ -2282,7 +2283,7 @@
                             y te llega un WhatsApp con las imágenes y si se han subido.</div>
                         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                             <label style="font-size:11px; font-weight:800; display:flex; align-items:center; gap:6px; cursor:pointer;">
-                                <input type="checkbox" id="igActivo" onchange="igGuardar()"> ACTIVO</label>
+                                <input type="checkbox" checked id="igActivo" onchange="igGuardar()"> ACTIVO</label>
                             <button onclick="igSubir()" style="background:#c13584; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-instagram"></i> SUBIR AHORA A INSTAGRAM</button>
                         </div>
                         <div id="igEstado" style="margin-top:8px; font-size:11px; font-weight:700;"></div>
@@ -2307,7 +2308,7 @@
                         privado a los entrenadores de esos equipos qué día y a qué hora lo harán. Con cada respuesta (por privado o en el grupo)
                         se publica en el grupo el mensaje actualizado. Recordatorio a las 12:00 los dos días siguientes.</div>
                     <label style="font-size:11px; font-weight:800; display:flex; align-items:center; gap:6px; cursor:pointer; margin-bottom:10px;">
-                        <input type="checkbox" id="vaActivo" onchange="vaCargar({ activo: this.checked })"> ACTIVO (en el grupo de verdad)</label>
+                        <input type="checkbox" checked id="vaActivo" onchange="vaCargar({ activo: this.checked })"> ACTIVO (en el grupo de verdad)</label>
                     <div style="font-size:10px; font-weight:800; color:#94a3b8; margin-bottom:4px;">PRUEBA: PEGA UN MENSAJE COMO EL DE JOAQUÍN (TODO TE LLEGA SOLO A TI)</div>
                     <textarea id="vaTexto" style="width:100%; height:80px; padding:8px; border-radius:7px; border:1px solid #e2e8f0; font-family:inherit; font-size:12px; box-sizing:border-box;">Videoanalisis subido al drive. Finde del 31 octubre y 1 noviembre
 ・Juvenil "C": ✅
@@ -2322,7 +2323,7 @@
                         equipos ("hoy usáis los GPS, acordaos de ponérselos") y al grupo <b>Dirección</b> con los equipos del día.</div>
                     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                         <label style="font-size:11px; font-weight:800; display:flex; align-items:center; gap:6px; cursor:pointer;">
-                            <input type="checkbox" id="gpsActivo" onchange="gpsCargar({ activo: this.checked })"> ACTIVO</label>
+                            <input type="checkbox" checked id="gpsActivo" onchange="gpsCargar({ activo: this.checked })"> ACTIVO</label>
                         <button onclick="gpsPrueba()" style="background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> PROBAR (SOLO A RUBÉN POZÓN)</button>
                     </div>
                     <div id="gpsBox" style="margin-top:10px; font-size:12px;"></div>
@@ -2336,7 +2337,7 @@
                         Si a los 10 min del inicio no ha salido, no se sube nada y te avisa.</div>
                     <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                         <label style="font-size:11px; font-weight:800; display:flex; align-items:center; gap:6px; cursor:pointer; margin-right:6px;">
-                            <input type="checkbox" id="alActivo" onchange="alCargar({ activo: this.checked })"> ACTIVO</label>
+                            <input type="checkbox" checked id="alActivo" onchange="alCargar({ activo: this.checked })"> ACTIVO</label>
                         <button onclick="window.open('/api/whatsapp/alineacion/imagen?t=' + Date.now(), '_blank')" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="far fa-image"></i> VER ÚLTIMA ALINEACIÓN</button>
                         <button onclick="alPrueba()" style="background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> PROBAR (SOLO A RUBÉN POZÓN)</button>
                     </div>
@@ -2350,7 +2351,7 @@
                         Benjamines y Prebenjamines) con 5 filas de la clasificación alrededor de cada equipo. Te llega por WhatsApp si se han subido.</div>
                     <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                         <label style="font-size:11px; font-weight:800; display:flex; align-items:center; gap:6px; cursor:pointer; margin-right:6px;">
-                            <input type="checkbox" id="ciActivo" onchange="ciCargar({ activo: this.checked })"> ACTIVO</label>
+                            <input type="checkbox" checked id="ciActivo" onchange="ciCargar({ activo: this.checked })"> ACTIVO</label>
                         <button onclick="ciPrueba()" style="background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> PROBAR (SOLO A RUBÉN POZÓN)</button>
                     </div>
                     <div id="ciBox" style="margin-top:10px; font-size:12px;"></div>
@@ -2362,7 +2363,7 @@
                         Las fechas de nacimiento salen de las licencias en vigor de la Federación (se leen los lunes de madrugada).</div>
                     <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                         <label style="font-size:11px; font-weight:800; display:flex; align-items:center; gap:6px; cursor:pointer; margin-right:6px;">
-                            <input type="checkbox" id="cuActivo" onchange="cuCargar({ activo: this.checked })"> ACTIVO</label>
+                            <input type="checkbox" checked id="cuActivo" onchange="cuCargar({ activo: this.checked })"> ACTIVO</label>
                         <button onclick="cuLeer()" style="background:#1e293b; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fas fa-download"></i> LEER FEDERACIÓN</button>
                         <button onclick="cuPrueba()" style="background:#16a34a; color:white; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:800; cursor:pointer; font-family:inherit;"><i class="fab fa-whatsapp"></i> PROBAR (SOLO A RUBÉN POZÓN)</button>
                     </div>

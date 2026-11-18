@@ -36,7 +36,7 @@ def _leer():
             d = json.load(f)
     except Exception:
         d = {}
-    d.setdefault('activo', False)
+    d['activo'] = True  # siempre activo: sin casilla ACTIVO (Rubén Pozón, 18/11/2026)
     d.setdefault('partidos', {})
     return d
 

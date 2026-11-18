@@ -46,7 +46,7 @@ def _leer():
             d = json.load(f)
     except Exception:
         d = {}
-    d.setdefault('activo', True)
+    d['activo'] = True  # siempre activo: sin casilla ACTIVO (Rubén Pozón, 18/11/2026)
     d.setdefault('enviados', {})   # veo_id → {equipo, en}
     d.setdefault('avisados', {})   # veo_id de títulos que no encajan (ya avisado)
     return d

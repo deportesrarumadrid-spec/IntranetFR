@@ -56,7 +56,7 @@ def _leer():
             d = json.load(f)
     except Exception:
         d = {}
-    d.setdefault('activo', False)  # se activa desde la pantalla tras revisar la vista previa
+    d['activo'] = True  # siempre activo: sin casilla ACTIVO (Rubén Pozón, 18/11/2026)
     d.setdefault('casos', {})
     d.setdefault('esperando_jugador', {})  # tel → texto de una respuesta que aún no sé de qué jugador es
     if not d.get('activado_con_revision'):

@@ -29,7 +29,7 @@ def cargar_cfg():
             cfg = json.load(f)
     except Exception:
         cfg = {}
-    cfg.setdefault('activo', True)
+    cfg['activo'] = True  # siempre activo: sin casilla ACTIVO (Rubén Pozón, 18/11/2026)
     return cfg
 
 

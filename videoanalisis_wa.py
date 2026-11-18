@@ -61,7 +61,7 @@ def _leer():
             d = json.load(f)
     except Exception:
         d = {}
-    d.setdefault('activo', False)
+    d['activo'] = True  # siempre activo: sin casilla ACTIVO (Rubén Pozón, 18/11/2026)
     d.setdefault('findes', {})
     d.setdefault('esperando', {})  # tel → {'tipo': 'equipo'|'conflicto', ...}
     d.setdefault('mensajes', {})   # id de mensaje enviado → [finde, equipo]
