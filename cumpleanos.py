@@ -217,8 +217,10 @@ def leer_federacion():
         except Exception as ex:
             fallos.append(f'{_nombre_equipo(clave)}: {ex}'[:150])
             jug, info = [], {}
+        en_perfiles = _cruzar(clave, perfiles)
         lista.append({'codigo': cod, 'equipo': _nombre_equipo(clave), 'competicion': e['competicion'],
-                      'perfiles': _cruzar(clave, perfiles), 'jugadores': jug, 'control': info})
+                      'perfiles': en_perfiles, 'jugadores': jug, 'control': info,
+                      'entrenadores': [u + ('' if t else ' (sin teléfono)') for u, t in perfiles.get(en_perfiles, [])]})
     lista.sort(key=lambda x: (CATS.index(x['equipo'].split()[0]) if x['equipo'].split()[0] in CATS else 99, x['equipo']))
     d = _leer()
     d['equipos'] = lista
@@ -331,7 +333,7 @@ def _resumen(d):
     out = []
     for e in d['equipos']:
         out.append({'equipo': e['equipo'], 'perfiles': e.get('perfiles', ''), 'jugadores': len(e['jugadores']),
-                    'control': e.get('control', {})})
+                    'control': e.get('control', {}), 'entrenadores': e.get('entrenadores', [])})
     return out
 
 
@@ -343,13 +345,7 @@ def api_estado():
     if request.method == 'POST' and 'activo' in (request.json or {}):
         d['activo'] = bool(request.json['activo'])
         _escribir(d)
-    eqs = _resumen(d)
-    try:  # quién recibiría el aviso de cada equipo (para revisar el cruce; no se envía nada)
-        perfiles = _equipos_perfiles()
-        for e in eqs:
-            e['entrenadores'] = [u + ('' if t else ' (sin teléfono)') for u, t in perfiles.get(e['perfiles'], [])]
-    except Exception as ex:
-        print(f'[CUMPLE] PERFILES: {ex}', flush=True)
+    eqs = _resumen(d)  # sin consultar Google aquí: la pestaña carga muchas tarjetas a la vez
     return jsonify({'status': 'ok', 'activo': d['activo'], 'leido': d.get('leido', ''), 'equipos': eqs,
                     'fallos': d.get('fallos_lectura', []), 'ultimo_envio': d.get('ultimo_envio') or {},
                     'leyendo': _leyendo(d), 'ultima_lectura': d.get('ultima_lectura') or {}})
