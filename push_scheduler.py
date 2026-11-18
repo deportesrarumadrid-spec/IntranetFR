@@ -389,6 +389,12 @@ def _loop(flask_app):
                 cumpleanos.tick(now)
             except Exception as e:
                 print(f"[SCHED] Cumpleaños: {e}", flush=True)
+            # Formulario de partido: copia las respuestas del antiguo formulario de Google a la intranet (al arrancar y a las 03:00)
+            try:
+                import formulario_partido
+                formulario_partido.tick(now)
+            except Exception as e:
+                print(f"[SCHED] Formulario Google: {e}", flush=True)
             # Goles en directo: recordatorios si nadie elige la opción
             try:
                 import gol_live_wa

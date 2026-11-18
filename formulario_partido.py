@@ -26,6 +26,127 @@ def _jdm_default():
 
 formulario_partido_bp = Blueprint('formulario_partido_bp', __name__)
 
+# ---------- Hoja FORMULARIO_PARTIDOS: títulos y respuestas del antiguo formulario de Google ----------
+TITULOS = ['MARCA TEMPORAL', 'EQUIPO', 'RIVAL', 'EVAL_GLOBAL', 'EVAL_INTENSIDAD', 'EVAL_FISICO', 'FALLOS_EQUIPO',
+           'MEJORAR_FISICO', 'PORT_NOTA', 'PORT_FALLOS', 'RIVAL_DESTACADO', 'NUESTROS_MEJORES', 'NUESTROS_FLOJOS',
+           'AUDIO_ENVIADO']
+
+
+def _es_fecha(txt):
+    return bool(re.match(r'^\s*\d{1,2}/\d{1,2}/\d{2,4}', txt or ''))
+
+
+def con_titulos(filas):
+    """Filas de FORMULARIO_PARTIDOS con fila de títulos (la hoja de 2026/27 se creó sin ella)."""
+    if filas and filas[0] and _es_fecha(filas[0][0]):
+        return [TITULOS] + filas
+    return filas
+
+
+def asegurar_titulos(ws):
+    """Pone la fila de títulos si la hoja está vacía o empieza directamente por un formulario."""
+    filas = ws.get_all_values()
+    if not filas:
+        ws.append_row(TITULOS)
+    elif filas[0] and _es_fecha(filas[0][0]):
+        ws.insert_row(TITULOS, 1)
+
+
+def _equipo_google(nombre):
+    """'ALE A F7' → 'ALEVIN A F7'; 'ALE FEM F7' → 'ALEVIN FEMENINO' (nombres del antiguo formulario de Google)."""
+    n = ' '.join(str(nombre or '').upper().split())
+    if re.match(r'^ALE\s+FEM', n):
+        return 'ALEVIN FEMENINO'
+    return re.sub(r'^ALE\b', 'ALEVIN', n)
+
+
+def _fecha_dmY(txt):
+    p = (txt or '').strip().split()[0].split('/')
+    return datetime(int(p[2]) + (2000 if int(p[2]) < 100 else 0), int(p[1]), int(p[0]))
+
+
+def migrar_desde_google():
+    """Copia las respuestas del antiguo formulario de Google a FORMULARIO_PARTIDOS de su temporada (2025/26 → hoja sin
+    sufijo; 2026/27 → FORMULARIO_PARTIDOS_2026_2027...). No duplica (misma fecha y equipo). Devuelve el nº copiado."""
+    from app import client, NOMBRE_EXCEL, get_ws_name
+    from deportivo import ENCUESTA_PARTIDO_KEY
+    raw = client.open(NOMBRE_EXCEL)
+    raw = getattr(raw, '_ss', raw)  # sin el cambio automático de temporada: se elige la hoja de cada fila
+    google = client.open_by_key(ENCUESTA_PARTIDO_KEY).sheet1.get_all_values()[1:]
+    hojas, nuevas = {}, {}
+    for r in google:
+        g = lambda i: r[i].strip() if i < len(r) else ''
+        try:
+            f = _fecha_dmY(g(0))
+        except Exception:
+            continue
+        ini = f.year if f.month >= 8 else f.year - 1
+        nombre = get_ws_name('FORMULARIO_PARTIDOS', f'{ini}/{ini + 1}')
+        if nombre not in hojas:
+            ws = None
+            for t in ([nombre, 'FORMULARIO_PARTIDOS'] if ini == 2025 else [nombre]):  # 2025/26 usa la hoja sin sufijo
+                try:
+                    ws = raw.worksheet(t)
+                    break
+                except Exception:
+                    pass
+            if ws is None:
+                hojas[nombre] = None
+                continue
+            asegurar_titulos(ws)
+            hechos = set()
+            for x in ws.get_all_values()[1:]:
+                try:
+                    hechos.add((_fecha_dmY(x[0]).date(), ' '.join(x[1].upper().split())))
+                except Exception:
+                    pass
+            hojas[nombre] = (ws, hechos)
+            nuevas[nombre] = []
+        if not hojas[nombre]:
+            continue
+        ws, hechos = hojas[nombre]
+        eq = _equipo_google(g(1))
+        if (f.date(), eq) in hechos:
+            continue
+        hechos.add((f.date(), eq))
+        nuevas[nombre].append([g(0), eq] + [g(i) for i in range(2, 13)] + ['SI' if g(13) else 'NO'])
+    total = 0
+    for nombre, filas in nuevas.items():
+        if filas:
+            hojas[nombre][0].append_rows(filas, value_input_option='RAW')
+            total += len(filas)
+    print(f'[FORMULARIOS] Copiadas {total} respuestas del formulario de Google', flush=True)
+    return total
+
+
+_MIGRACION = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'datos_privados', 'formulario_google.json')
+
+
+def tick(ahora):
+    """push_scheduler: copia las respuestas de Google en cuanto arranca y luego cada día a las 03:00
+    (por si algún entrenador usa todavía el enlace antiguo antes de cerrarlo)."""
+    try:
+        with open(_MIGRACION, encoding='utf-8') as f:
+            ultimo = json.load(f).get('ultimo', '')
+    except Exception:
+        ultimo = ''
+    hoy = ahora.date().isoformat()
+    if ultimo == hoy or (ultimo and ahora.hour != 3):
+        return
+    os.makedirs(os.path.dirname(_MIGRACION), exist_ok=True)
+    with open(_MIGRACION, 'w', encoding='utf-8') as f:  # marcar antes: un intento al día
+        json.dump({'ultimo': hoy}, f)
+
+    def _job():  # en segundo plano: no retrasa el resto de avisos de ese minuto
+        try:
+            n = migrar_desde_google()
+            with open(_MIGRACION, 'w', encoding='utf-8') as f:
+                json.dump({'ultimo': hoy, 'copiadas': n, 'fecha': ahora.isoformat(timespec='minutes')}, f)
+        except Exception as e:
+            print(f'[FORMULARIOS] Error copiando del formulario de Google: {e}', flush=True)
+    import threading
+    threading.Thread(target=_job, daemon=True).start()
+
 @formulario_partido_bp.route('/formulario-partido', methods=['GET', 'POST'])
 def formulario_partido():
     # En GET, renderiza el formulario
@@ -59,7 +180,7 @@ def formulario_partido():
                 targets = {(dt_ref + timedelta(days=d)).strftime("%d/%m/%Y") for d in (0, 1)}
                 sh = client.open(main_app.gs_name)
                 ws_fp = sh.worksheet('FORMULARIO_PARTIDOS')
-                all_fp = ws_fp.get_all_values()
+                all_fp = con_titulos(ws_fp.get_all_values())
                 if all_fp:
                     hdrs = [str(h).strip() for h in all_fp[0]]
                     col_map = {
@@ -100,7 +221,7 @@ def formulario_partido():
                 ws = sh.worksheet('FORMULARIO_PARTIDOS')
             except:
                 ws = sh.add_worksheet(title='FORMULARIO_PARTIDOS', rows='1000', cols='20')
-                ws.append_row(['MARCA TEMPORAL', 'EQUIPO', 'RIVAL', 'EVAL_GLOBAL', 'EVAL_INTENSIDAD', 'EVAL_FISICO', 'FALLOS_EQUIPO', 'MEJORAR_FISICO', 'PORT_NOTA', 'PORT_FALLOS', 'RIVAL_DESTACADO', 'NUESTROS_MEJORES', 'NUESTROS_FLOJOS', 'AUDIO_ENVIADO'])
+            asegurar_titulos(ws)
             
             # Use provided date if exists, otherwise current time
             fecha_custom = data.get('fecha_partido', '').strip()
@@ -128,7 +249,7 @@ def formulario_partido():
                 data.get('rival_destacado', ''),
                 data.get('nuestros_mejores', ''),
                 data.get('nuestros_flojos', ''),
-                data.get('audio_enviado', 'NO')
+                ''  # AUDIO_ENVIADO: ya no se pregunta; la marca sale de los audios enviados por WhatsApp
             ]
             
             ws.append_row(row_data, value_input_option='USER_ENTERED')
@@ -153,6 +274,7 @@ def api_borrar_partido():
         client = main_app.gs_client
         sh = client.open(main_app.gs_name)
         ws = sh.worksheet('FORMULARIO_PARTIDOS')
+        asegurar_titulos(ws)
         all_v = ws.get_all_values()
         if not all_v:
             return jsonify({'status': 'ok'})
@@ -182,7 +304,7 @@ def api_formularios_partido():
         sh = client.open(main_app.gs_name)
         try:
             ws = sh.worksheet('FORMULARIO_PARTIDOS')
-            all_v = ws.get_all_values()
+            all_v = con_titulos(ws.get_all_values())
             if not all_v:
                 return jsonify([])
             headers = [str(h).strip() for h in all_v[0]]
@@ -195,6 +317,21 @@ def api_formularios_partido():
                     else:
                         row_dict[h] = ""
                 data.append(row_dict)
+            # AUDIO ENVIADO: según los audios que el entrenador manda por WhatsApp (INFORMES_SEMANALES del finde)
+            try:
+                from datetime import timedelta
+                from deportivo import _get_or_crear_sheet_informes_semanales
+                audios = {(r[0].strip(), ' '.join(r[1].upper().split())) for r in _get_or_crear_sheet_informes_semanales().get_all_values()
+                          if len(r) >= 3 and r[2].strip().upper() == 'SI'}
+                for d in data:
+                    try:
+                        f = _fecha_dmY(d.get('MARCA TEMPORAL', ''))
+                    except Exception:
+                        continue
+                    sab = (f - timedelta(days=(f.weekday() - 5) % 7)).strftime('%d/%m/%Y')
+                    d['AUDIO_ENVIADO'] = 'SI' if (sab, ' '.join(str(d.get('EQUIPO', '')).upper().split())) in audios else 'NO'
+            except Exception as e:
+                print(f"[FORMULARIOS] audios: {e}", flush=True)
             return jsonify(data)
         except:
             return jsonify([])

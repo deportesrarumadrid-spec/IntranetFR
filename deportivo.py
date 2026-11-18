@@ -2923,8 +2923,8 @@ def _eq_encuesta(nombre):
     return re.sub(r'\s+', ' ', n)
 
 def formularios_partido_detalle(client, nombre_excel):
-    """[(fecha, equipo_normalizado, mejores, peores)] de todos los formularios de partido: el de la intranet
-    (FORMULARIO_PARTIDOS de la temporada) y el formulario de Google de los entrenadores.
+    """[(fecha, equipo_normalizado, mejores, peores)] de todos los formularios de partido de la intranet
+    (FORMULARIO_PARTIDOS de la temporada; ahí se copian también las respuestas del antiguo formulario de Google).
     Ojo: la hoja de la intranet puede no tener fila de títulos (la primera fila ya es un formulario)."""
     from datetime import date as _date
     out = []
@@ -2957,10 +2957,8 @@ def formularios_partido_detalle(client, nombre_excel):
         _leer(client.open(nombre_excel).worksheet('FORMULARIO_PARTIDOS').get_all_values(), _nt_dep)
     except Exception as e:
         print(f"[FORMULARIOS] intranet: {e}", flush=True)
-    try:
-        _leer(client.open_by_key(ENCUESTA_PARTIDO_KEY).sheet1.get_all_values(), _eq_encuesta)
-    except Exception as e:
-        print(f"[FORMULARIOS] encuesta Google: {e}", flush=True)
+    # El antiguo formulario de Google ya no se lee aquí: formulario_partido.migrar_desde_google copia sus respuestas
+    # a FORMULARIO_PARTIDOS (si no, saldrían dos veces).
     return out
 
 

@@ -26,7 +26,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(BASE_DIR, 'datos_privados', 'formulario_finde.json')
 LOCK_FILE = os.path.join(BASE_DIR, 'datos_privados', '.formulario_finde.lock')
 URL_BASE = 'https://intranet.clubfuentelarreyna.com'
-FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSezt79kgOZisk52yRn8PF_5eWBBXeNxbVfCuRifIjxQo6hR5A/viewform'
+FORM_URL = 'https://intranet.clubfuentelarreyna.com/formulario-partido'  # formulario de la intranet (el de Google se dejó)
 HORA_RECORDATORIO = '17:00'
 HORAS_TRAS_INICIO = 2
 
@@ -270,12 +270,16 @@ def _formulario_hecho(sat, equipo, cache={}):
     return any(eq == n and sat - timedelta(days=1) <= f <= sat + timedelta(days=5) for f, eq in cache['filas'])
 
 
-def texto_mensaje(usuario, equipo, falta_formulario=True, falta_audio=True):
+def texto_mensaje(usuario, equipo, falta_formulario=True, falta_audio=True, sat=None):
     # Formato fijado por Dirección Deportiva (negrita de WhatsApp con *...*); solo sale lo que le falta
     nombre = (usuario or '').split()[0].capitalize() if usuario else ''
     t = f'Hola {nombre}, queda pendiente\n*{_bonito(equipo)}*\n'
     if falta_formulario:
-        t += f'→formulario de partido de:\n📝 {FORM_URL}\n'
+        from urllib.parse import urlencode
+        q = {'equipo': ' '.join(str(equipo).upper().split())}
+        if sat:
+            q['fecha'] = sat.isoformat()
+        t += f'→formulario de partido de:\n📝 {FORM_URL}?{urlencode(q)}\n'
     if falta_audio:
         t += '→envío audio a este chat\n'
     return t + '\nDirección Deportiva'
@@ -287,7 +291,7 @@ def _clave(sat, equipo, telefono):
 
 def _enviar_y_registrar(usuario, telefono, equipo, sat, momento, prueba=False, falta_formulario=True, falta_audio=True):
     from whatsapp_envios import enviar_con_id
-    ok, detalle, msg_id = enviar_con_id(telefono, texto_mensaje(usuario, equipo, falta_formulario, falta_audio))
+    ok, detalle, msg_id = enviar_con_id(telefono, texto_mensaje(usuario, equipo, falta_formulario, falta_audio, sat))
     with _bloqueo():
         d = _leer()
         k = _clave(sat, equipo, telefono) + ('|prueba' if prueba else '')

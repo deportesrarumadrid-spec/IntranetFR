@@ -444,7 +444,7 @@
         <span>SÁB {{ semana[5].numero if semana[5] }}</span>
         <span>DOM {{ semana[6].numero if semana[6] }}</span>
     </div>
-    <a href="https://forms.gle/sozVzJKkktKiRYzX8" target="_blank" class="btn-form">FORMULARIO PARTIDO</a>
+    {% set _dia_form = semana[5].numero if semana[5] else semana[6].numero %}<a href="/formulario-partido?equipo={{ equipo_defecto|urlencode }}&fecha={{ mes_actual }}-{{ '%02d' % _dia_form }}" target="_blank" class="btn-form">FORMULARIO PARTIDO</a>
 </div>
                 {% else %}
                 <div class="weekend" style="visibility:hidden;"></div>

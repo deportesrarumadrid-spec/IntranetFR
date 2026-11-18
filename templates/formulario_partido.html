@@ -188,16 +188,7 @@
                 </div>
             </div>
 
-            <div class="card" style="background: transparent; box-shadow: none; padding: 0; border: none;">
-                <label class="check-container">
-                    <input type="checkbox" name="audio_enviado" value="SI" required {% if datos_existentes.get('audio_enviado')=='SI' %}checked{% endif %}>
-                    <div class="check-custom"><i class="fas fa-check"></i></div>
-                    <div>
-                        <div style="font-family:'Archivo Black'; font-size:14px; text-transform:uppercase; margin-bottom: 2px;">Envía audio resumen</div>
-                        <div style="font-size:10px; font-weight:700; color:#64748b;">A coordinadores + Rubén</div>
-                    </div>
-                </label>
-            </div>
+            <!-- La casilla "Envía audio resumen" se quitó (18/11/2026): la marca sale de los audios enviados por WhatsApp -->
 
             <button type="submit" id="btnSubmit" class="btn-submit">
                 <i class="fas fa-paper-plane"></i> ENVIAR FORMULARIO
@@ -233,8 +224,6 @@
 
         // Marcar visualmente radios/checkboxes pre-seleccionados al cargar
         document.querySelectorAll('input[type="radio"]:checked').forEach(r => r.closest('.radio-label').classList.add('checked'));
-        const _cbAudio = document.querySelector('input[name="audio_enviado"]');
-        if (_cbAudio && _cbAudio.checked) _cbAudio.closest('.check-container').classList.add('checked');
 
         // Logica para estilos de radios
         document.querySelectorAll('input[type="radio"]').forEach(radio => {
@@ -251,7 +240,7 @@
 
         // Logica para checkbox
         const audioCheck = document.querySelector('input[name="audio_enviado"]');
-        audioCheck.addEventListener('change', function() {
+        if (audioCheck) audioCheck.addEventListener('change', function() {
             if(this.checked) {
                 this.closest('.check-container').classList.add('checked');
             } else {
